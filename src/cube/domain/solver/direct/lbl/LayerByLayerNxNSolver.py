@@ -600,9 +600,9 @@ class LayerByLayerNxNSolver(BaseSolver):
 
                 reason =  "L2 slices are not solved ["
                 l1t = self._get_layer1_tracker(face_trackers)
-                for row_index in range(self.cube.n_slices):
-                    if self._lbl_slices._row_solved(l1t, row_index):
-                        reason += str(row_index) + ","
+                for face_row in range(self.cube.n_slices):
+                    if self._lbl_slices._row_solved(l1t, face_row):
+                        reason += str(face_row) + ","
                 reason += "]"
 
                 return reason

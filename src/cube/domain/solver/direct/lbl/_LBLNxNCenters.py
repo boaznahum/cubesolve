@@ -144,7 +144,7 @@ class _LBLNxNCenters(SolverHelper):
         return self._tracker_holder.preserve_physical_faces()
 
     def solve_single_center_face_row(
-            self, l1_white_tracker: FaceTracker, target_face: FaceTracker, face_row: int
+            self, l1_tracker: FaceTracker, target_face: FaceTracker, face_row: int
     ) -> None:
         """
         Solve a single row of center pieces on a face.
@@ -153,19 +153,18 @@ class _LBLNxNCenters(SolverHelper):
         Properly handles cage preservation if preserve_cage=True.
 
         Args:
-            face_tracker: Face to solve
-            face_row: row index as defined in this package
-            :param target_face:
-            :param l1_white_tracker:
+            l1_tracker: Layer 1 face tracker
+            target_face: Face to solve
+            face_row: Distance from L1 face (0=closest, n_slices-1=farthest)
         """
 
         with self._logger.tab(lambda: f"{symbols.green_line(3)} Slice {face_row} {target_face.color_at_face_str} <-- all faces {symbols.green_line(3)}"):
 
-            with self._parent.with_sanity_check_previous_are_solved(l1_white_tracker, face_row, "_solve_single_center_slice_all_sources"):
-                self._solve_single_center_slice_all_sources(l1_white_tracker, target_face, face_row)
+            with self._parent.with_sanity_check_previous_are_solved(l1_tracker, face_row, "_solve_single_center_slice_all_sources"):
+                self._solve_single_center_slice_all_sources(l1_tracker, target_face, face_row)
 
 
-    def _slice_on_target_face_solved(self, l1_white_tracker: FaceTracker, target_face: FaceTracker, face_row: int) -> bool:
+    def _slice_on_target_face_solved(self, l1_tracker: FaceTracker, target_face: FaceTracker, face_row: int) -> bool:
         #del _target_face  # Unused - checks all faces, not just target
 
         # all over the solution we assume faces botton up is the ltr, but of course this is not true
@@ -173,10 +172,10 @@ class _LBLNxNCenters(SolverHelper):
 
         # what we need is a function that calculate the indexes relative to white face no matter where is it using the ltr system
 
-        assert l1_white_tracker.face is self.cube.down
+        assert l1_tracker.face is self.cube.down
 
         # claud: why just marked solved why not solved ?
-        for c in _common.get_center_row_pieces(self.cube, l1_white_tracker, target_face, face_row):
+        for c in _common.get_center_row_pieces(self.cube, l1_tracker, target_face, face_row):
             if not _is_cent_piece_marked_solved(c):
                 return False
 
@@ -184,7 +183,7 @@ class _LBLNxNCenters(SolverHelper):
 
 
 
-    def _solve_single_center_slice_all_sources(self, l1_white_tracker: FaceTracker, target_face: FaceTracker,
+    def _solve_single_center_slice_all_sources(self, l1_tracker: FaceTracker, target_face: FaceTracker,
                                                face_row: int) -> bool:
 
         work_was_done = False
@@ -192,9 +191,9 @@ class _LBLNxNCenters(SolverHelper):
         # maybe not need iterations
 
 
-        with self._track_row_center_slices_nad_mark_if_solved(l1_white_tracker, face_row):
+        with self._track_row_center_slices_nad_mark_if_solved(l1_tracker, face_row):
 
-            face_slice_solved = self._slice_on_target_face_solved(l1_white_tracker, target_face, face_row)
+            face_slice_solved = self._slice_on_target_face_solved(l1_tracker, target_face, face_row)
             if face_slice_solved:
                 self.debug(f"✅✅✅✅ All slices solved on face {target_face.face} row {face_row} ✅✅✅✅✅")
                 return  False
@@ -210,7 +209,7 @@ class _LBLNxNCenters(SolverHelper):
                     raise InternalSWError("Maximum number of iterations reached")
 
                 # position and tracking need to go inside
-                solved_count = self._solve_single_center_slice_all_sources_impl(l1_white_tracker, target_face,
+                solved_count = self._solve_single_center_slice_all_sources_impl(l1_tracker, target_face,
                                                                                 face_row)
                 self.debug(f"‼✅✅{solved_count} piece(s) solved {face_row} ‼✅✅")
 
@@ -221,7 +220,7 @@ class _LBLNxNCenters(SolverHelper):
                     if removed_count > 0:
                         raise InternalSWError(f"I moved pieces for {target_face} but still solve nothing")
 
-                face_slice_solved = self._slice_on_target_face_solved(l1_white_tracker, target_face, face_row)
+                face_slice_solved = self._slice_on_target_face_solved(l1_tracker, target_face, face_row)
 
 
                 if face_slice_solved:
@@ -230,7 +229,7 @@ class _LBLNxNCenters(SolverHelper):
                 else:
                     self.debug(f"‼️‼️‼️‼️Face {target_face} slice NOT  solved, trying to remove from some face ‼️‼️‼️‼️")
 
-                    removed_count = self._try_remove_all_pieces_from_target_face_and_other_faces(l1_white_tracker,
+                    removed_count = self._try_remove_all_pieces_from_target_face_and_other_faces(l1_tracker,
                                                                                                  target_face,
                                                                                                  face_row,
                                                                                                  False)
@@ -241,9 +240,9 @@ class _LBLNxNCenters(SolverHelper):
                     else:
                         self.debug(f"‼️‼️‼️‼️{removed_count} piece(s) moved, trying again slice {face_row} ‼️‼️‼️‼️")
 
-    def _solve_single_center_slice_all_sources_impl(self, l1_white_tracker: FaceTracker,
+    def _solve_single_center_slice_all_sources_impl(self, l1_tracker: FaceTracker,
                                                     target_face: FaceTracker,
-                                                    slice_row_index: int
+                                                    face_row: int
                                                     ) -> int:
         """
         Try to solve center slices from all source faces.
@@ -258,26 +257,26 @@ class _LBLNxNCenters(SolverHelper):
 
         source_face: FaceTracker
         for i, source_face in enumerate(source_faces):
-            if source_face is not l1_white_tracker:
+            if source_face is not l1_tracker:
                 with self._logger.tab(headline=lambda :f"{i+1} Target {target_face.color_at_face_str} <-- {source_face.color_at_face_str}"):
                     # === HEADLINE 1: SLICE ===
                     with self.ann.annotate(
-                            h1=lambda: f"Solving Face {target_face.color_at_face_str} Slice {slice_row_index} "
+                            h1=lambda: f"Solving Face {target_face.color_at_face_str} Slice {face_row} "
                                        f"{target_face.color}  from Source {source_face.color_at_face_str}"):
 
-                        if self._solve_single_center_slice_single_source_face(l1_white_tracker, target_face, source_face,
-                                                                              slice_row_index):
+                        if self._solve_single_center_slice_single_source_face(l1_tracker, target_face, source_face,
+                                                                              face_row):
                             pieces_solved += 1
 
         return pieces_solved
 
     @contextmanager
-    def _track_row_center_slices_nad_mark_if_solved(self, l1_white_tracker: FaceTracker, face_row: int) -> Generator[None, None, None]:
+    def _track_row_center_slices_nad_mark_if_solved(self, l1_tracker: FaceTracker, face_row: int) -> Generator[None, None, None]:
         """Track center slices in a row, cleanup on exit."""
 
-        for target_face in l1_white_tracker.adjusted_faces():
+        for target_face in l1_tracker.adjusted_faces():
 
-            for slice_piece in _common.get_center_row_pieces(self.cube, l1_white_tracker, target_face, face_row):
+            for slice_piece in _common.get_center_row_pieces(self.cube, l1_tracker, target_face, face_row):
 
                 mark_slice_and_v_mark_if_solved(slice_piece)
 
@@ -293,7 +292,7 @@ class _LBLNxNCenters(SolverHelper):
             # Clearing happens only in _setup_l1() when all slices are done.
             pass
 
-    def _try_remove_all_pieces_from_target_face_and_other_faces(self, l1_white_tracker: FaceTracker,
+    def _try_remove_all_pieces_from_target_face_and_other_faces(self, l1_tracker: FaceTracker,
                                                                 _target_face_tracker: FaceTracker,
                                                                 face_row: int,
                                                                 remove_all: bool) -> int:
@@ -310,19 +309,19 @@ class _LBLNxNCenters(SolverHelper):
         """
 
 
-        assert l1_white_tracker.face is self.cube.down # assume in right setup
-        assert l1_white_tracker.face.center.is3x3  # solved
+        assert l1_tracker.face is self.cube.down # assume in right setup
+        assert l1_tracker.face.center.is3x3  # solved
 
         pieces_moved = 0
 
-        for target_face_tracker in [_target_face_tracker] : #( f.face for f in l1_white_tracker.adjusted_faces() ) :
+        for target_face_tracker in [_target_face_tracker] : #( f.face for f in l1_tracker.adjusted_faces() ) :
 
             # now check is there a slice on my target
 
             target_color: Color = target_face_tracker.color
 
             # now find candidate_point
-            for point_to_solve_piece in _common.get_center_row_pieces(self.cube, l1_white_tracker, target_face_tracker, face_row):
+            for point_to_solve_piece in _common.get_center_row_pieces(self.cube, l1_tracker, target_face_tracker, face_row):
 
                 point: tuple[int, int] = point_to_solve_piece.index
 
@@ -341,7 +340,7 @@ class _LBLNxNCenters(SolverHelper):
                 for _ in range(4):
                     # try to move piece with the required color from other faces to up face
                     move_from_target_face: Face
-                    for move_from_target_face in l1_white_tracker.face.adjusted_faces():
+                    for move_from_target_face in l1_tracker.face.adjusted_faces():
 
                         # ALWAYS skip the target face - operating on it at any position
                         # would solve pieces in wrong rows
@@ -353,11 +352,11 @@ class _LBLNxNCenters(SolverHelper):
                         # Look for pieces with target_color on other faces that we can move out
                         if candidate_piece.color == target_color and not _is_cent_piece_marked_solved(candidate_piece):
 
-                            up_face = l1_white_tracker.opposite.face
+                            up_face = l1_tracker.opposite.face
                             self.debug(f"Moving {candidate_piece} from {move_from_target_face.color_at_face_str} to {up_face}")
                             # Move piece from up to this face, pushing the target_color piece to up
 
-                            with self._parent.with_sanity_check_previous_are_solved(l1_white_tracker, face_row, "removing piece from face"):
+                            with self._parent.with_sanity_check_previous_are_solved(l1_tracker, face_row, "removing piece from face"):
                                 with self._preserve_trackers():
                                     self._comm_helper.execute_commutator(
                                         up_face,  # source
@@ -383,7 +382,7 @@ class _LBLNxNCenters(SolverHelper):
     def _solve_single_center_slice_single_source_face(self, l1_tracker: FaceTracker,
                                                       target_face: FaceTracker,
                                                       source_face: FaceTracker,
-                                                      slice_row_index: int) -> bool:
+                                                      face_row: int) -> bool:
         """
         Solve center pieces from a specific source face.
 
@@ -392,27 +391,27 @@ class _LBLNxNCenters(SolverHelper):
 
         :param target_face: Target face tracker
         :param source_face: source face tracker
-        :param slice_row_index: row index to solve
+        :param face_row: row index to solve
         :return: True if work was done
         """
 
-        with self._logger.tab(lambda: f"➖〰️〰️〰️ Target {target_face.face} slice {slice_row_index} source {source_face.face} 〰️〰️〰️➖"):
+        with self._logger.tab(lambda: f"➖〰️〰️〰️ Target {target_face.face} slice {face_row} source {source_face.face} 〰️〰️〰️➖"):
             self.cmn.bring_face_front_preserve_down(target_face.face)
             assert target_face.face is self.cube.front
 
-            with self._parent.with_sanity_check_previous_are_solved(l1_tracker, slice_row_index, "_solve_single_center_piece_from_source_face_impl"):
+            with self._parent.with_sanity_check_previous_are_solved(l1_tracker, face_row, "_solve_single_center_piece_from_source_face_impl"):
                 return self._solve_single_center_piece_from_source_face_impl(l1_tracker,
                                                                              target_face, source_face,
-                                                                             slice_row_index)
+                                                                             face_row)
 
-    def _solve_single_center_piece_from_source_face_impl(self, l1_white_tracker: FaceTracker,
+    def _solve_single_center_piece_from_source_face_impl(self, l1_tracker: FaceTracker,
                                                          target_face: FaceTracker,
                                                          source_face: FaceTracker,
-                                                         slice_row_index: int) -> bool:
+                                                         face_row: int) -> bool:
 
         # we comae hre from setup
 
-        assert l1_white_tracker.face is self.cube.down
+        assert l1_tracker.face is self.cube.down
 
         self.cmn.bring_face_front_preserve_down(target_face.face)
 
@@ -422,7 +421,7 @@ class _LBLNxNCenters(SolverHelper):
         # assert source_face.face in [cube.up, cube.back]
 
         # mark all done
-        for slice_piece in _common.get_center_row_pieces(cube, l1_white_tracker, target_face, slice_row_index):
+        for slice_piece in _common.get_center_row_pieces(cube, l1_tracker, target_face, face_row):
 
             mark_slice_and_v_mark_if_solved(slice_piece)
 
@@ -430,7 +429,7 @@ class _LBLNxNCenters(SolverHelper):
         color = target_face.color
 
         if self._count_color_on_face(source_face.face, color) == 0:
-            self.debug(f"Working on slice {slice_row_index} @ {target_face.color_at_face_str} Found no piece {color} on {source_face.face.color_at_face_str}")
+            self.debug(f"Working on slice {face_row} @ {target_face.color_at_face_str} Found no piece {color} on {source_face.face.color_at_face_str}")
             return False  # nothing can be done here
 
 
@@ -451,7 +450,7 @@ class _LBLNxNCenters(SolverHelper):
             if _is_cent_piece_marked_solved(candidate_piece):
                 continue
 
-            self.debug(f"Working on slice {slice_row_index} Found piece candidate {candidate_piece}")
+            self.debug(f"Working on slice {face_row} Found piece candidate {candidate_piece}")
 
             # Search for blocks starting at rc (size controlled by config)
             blocks = self._search_blocks_starting_at(
@@ -462,7 +461,7 @@ class _LBLNxNCenters(SolverHelper):
             solved_block = False
             for block in blocks:
                 if self._try_solve_block(
-                    l1_white_tracker, slice_row_index,
+                    l1_tracker, face_row,
                     block, color, target_face.face, source_face.face
                 ):
                     work_done = True

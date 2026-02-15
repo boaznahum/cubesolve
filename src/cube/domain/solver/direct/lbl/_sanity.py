@@ -86,7 +86,7 @@ class SanityChecker:
 
         return info
 
-    def _get_destroyed_pieces_in_row(self, l1_tracker: FaceTracker, row_index: int) -> list[tuple[object, str]]:
+    def _get_destroyed_pieces_in_row(self, l1_tracker: FaceTracker, face_row: int) -> list[tuple[object, str]]:
         """Get all unsolved pieces in a row with their details.
 
         Returns:
@@ -95,27 +95,27 @@ class SanityChecker:
         from cube.domain.solver.direct.lbl._common import _get_row_pieces
 
         destroyed: list[tuple[object, str]] = []
-        for piece in _get_row_pieces(self.cube, l1_tracker, row_index):
+        for piece in _get_row_pieces(self.cube, l1_tracker, face_row):
             if not piece.match_faces:
                 info = self._format_piece_info(piece)
                 destroyed.append((piece, info))
         return destroyed
 
-    def sanity_check_previous_are_solved(self, l1_tracker: FaceTracker, row_index: int, op_name: str,
+    def sanity_check_previous_are_solved(self, l1_tracker: FaceTracker, face_row: int, op_name: str,
                                          row_solved_checker) -> None:
         """Check that all previous rows are still solved.
 
         Args:
             l1_tracker: Layer 1 face tracker
-            row_index: Current row being worked on
+            face_row: Distance from L1 face (0=closest, n_slices-1=farthest)
             op_name: Name of the operation (for error messages)
-            row_solved_checker: Callable that takes (l1_tracker, row_index) and returns bool
+            row_solved_checker: Callable that takes (l1_tracker, face_row) and returns bool
         """
         if self.enabled:
-            for prev_row_index in range(row_index):
-                if not row_solved_checker(l1_tracker, prev_row_index):
+            for prev_face_row in range(face_row):
+                if not row_solved_checker(l1_tracker, prev_face_row):
                     # Collect destroyed pieces with details
-                    destroyed = self._get_destroyed_pieces_in_row(l1_tracker, prev_row_index)
+                    destroyed = self._get_destroyed_pieces_in_row(l1_tracker, prev_face_row)
 
                     # Format detailed error message
                     error_lines = [
@@ -123,8 +123,8 @@ class SanityChecker:
                         "=" * 80,
                         "SANITY CHECK FAILED: Previous row corrupted",
                         f"  Operation: {op_name}",
-                        f"  Working on row: {row_index}",
-                        f"  Corrupted row: {prev_row_index}",
+                        f"  Working on row: {face_row}",
+                        f"  Corrupted row: {prev_face_row}",
                         f"  Destroyed pieces: {len(destroyed)}",
                         "-" * 80,
                     ]
@@ -141,7 +141,7 @@ class SanityChecker:
     def with_sanity_check_previous_are_solved(
         self,
         l1_tracker: FaceTracker,
-        row_index: int,
+        face_row: int,
         operation_name: str,
         row_solved_checker
     ) -> Generator[None, None, None]:
@@ -176,9 +176,9 @@ class SanityChecker:
 
         Args:
             l1_tracker: Layer 1 face tracker
-            row_index: Current row index being worked on
+            face_row: Current row index being worked on
             operation_name: Description of the operation (e.g., "removing piece from face")
-            row_solved_checker: Callable that takes (l1_tracker, row_index) and returns bool
+            row_solved_checker: Callable that takes (l1_tracker, face_row) and returns bool
 
         Usage:
             with self._sanity.with_sanity_check_previous_are_solved(tracker, row, "operation", self._row_solved):
@@ -186,10 +186,10 @@ class SanityChecker:
                 pass
         """
         # Before check - always runs
-        self.sanity_check_previous_are_solved(l1_tracker, row_index, f"before {operation_name}", row_solved_checker)
+        self.sanity_check_previous_are_solved(l1_tracker, face_row, f"before {operation_name}", row_solved_checker)
 
         yield
 
         # After check - only runs if no exception occurred during yield
         # (If user pressed abort, execution never reaches here)
-        self.sanity_check_previous_are_solved(l1_tracker, row_index, f"after {operation_name}", row_solved_checker)
+        self.sanity_check_previous_are_solved(l1_tracker, face_row, f"after {operation_name}", row_solved_checker)

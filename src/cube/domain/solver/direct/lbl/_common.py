@@ -3,6 +3,27 @@
 This module contains shared context managers and helper functions used
 by multiple LBL solver components (_LBLNxNCenters, _LBLSlices, etc.).
 
+FACE_ROW PARAMETER CONVENTION
+==============================
+
+Throughout the LBL solver code, the parameter `face_row` represents the distance
+of a horizontal slice/row from the Layer 1 (L1) face, regardless of cube orientation.
+
+Definition:
+    face_row: int
+        - Distance from L1 face (0=closest, n_slices-1=farthest)
+        - Range: [0, n_slices-1] where n_slices = cube.n - 2
+        - Independent of physical cube orientation
+        - Always measured from L1 face (determined by FIRST_FACE_COLOR config)
+
+Examples (5x5 cube, L1=WHITE on D face):
+    face_row=0: First middle layer above WHITE (closest to D)
+    face_row=1: Second middle layer
+    face_row=2: Third middle layer (closest to opposite face)
+
+The LBL solver solves layers bottom-to-top (face_row=0 first, then 1, 2, etc.),
+building up from the already-solved L1 face toward the unsolved L3 face.
+
 MARKER SYSTEM DOCUMENTATION
 ===========================
 
@@ -273,15 +294,15 @@ def _iterate_all_tracked_center_slices_index(target_face: FaceTracker) -> Iterat
 # =============================================================================
 
 
-def position_l1(slv: SolverHelper, l1_white_tracker: FaceTracker) -> None:
+def position_l1(slv: SolverHelper, l1_tracker: FaceTracker) -> None:
     """Position L1 (white face) down.
 
     Args:
         slv: Solver element providing access to cmn.bring_face_down
-        l1_white_tracker: The Layer 1 face tracker to position down
+        l1_tracker: The Layer 1 face tracker to position down
     """
-    slv.cmn.bring_face_down(l1_white_tracker.face)
-    assert l1_white_tracker.face is slv.cube.down
+    slv.cmn.bring_face_down(l1_tracker.face)
+    assert l1_tracker.face is slv.cube.down
 
 
 class setup_l1:
@@ -298,9 +319,9 @@ class setup_l1:
 
     __slots__ = ["_slv", "_l1_tracker"]
 
-    def __init__(self, slv: SolverHelper, l1_white_tracker: FaceTracker) -> None:
+    def __init__(self, slv: SolverHelper, l1_tracker: FaceTracker) -> None:
         self._slv = slv
-        self._l1_tracker = l1_white_tracker
+        self._l1_tracker = l1_tracker
 
     def __enter__(self) -> "setup_l1":
         position_l1(self._slv, self._l1_tracker)
@@ -335,7 +356,7 @@ def _get_side_face_trackers(
     return side_trackers
 
 
-def _get_all_row_pieces(cube, l1_tracker: FaceTracker, slice_row: int) -> tuple[Sequence[EdgeWing], Sequence[CenterSlice]]:
+def _get_all_row_pieces(cube, l1_tracker: FaceTracker, face_row: int) -> tuple[Sequence[EdgeWing], Sequence[CenterSlice]]:
     """Get all pieces (center slices and/or edge wings) at a given slice row.
 
     Args:
@@ -356,7 +377,7 @@ def _get_all_row_pieces(cube, l1_tracker: FaceTracker, slice_row: int) -> tuple[
 
     # Convert L1-relative distance to slice coordinate system
     cube_slice_index = slice_layout.distance_from_face_to_slice_index(
-        l1_tracker.face_name, slice_row, n_slices
+        l1_tracker.face_name, face_row, n_slices
     )
 
     slice_obj: Slice = cube.get_slice(slice_name)
@@ -369,12 +390,12 @@ def _get_all_row_pieces(cube, l1_tracker: FaceTracker, slice_row: int) -> tuple[
 
 
 
-def _get_row_pieces(cube, l1_tracker: FaceTracker, slice_row: int) -> Generator[PartSlice]:
-    """Get all pieces (center slices and/or edge wings) at a given slice row.
+def _get_row_pieces(cube, l1_tracker: FaceTracker, face_row: int) -> Generator[PartSlice]:
+    """Get all pieces (center slices and/or edge wings) at a given face row.
 
     Args:
         l1_tracker: Face tracker for Layer 1 face
-        slice_row: Distance from L1 face (0 = closest to L1)
+        face_row: Distance from L1 face (0=closest, n_slices-1=farthest)
 
     Yields:
         PartSlice objects at the given row based on config flags
@@ -384,7 +405,7 @@ def _get_row_pieces(cube, l1_tracker: FaceTracker, slice_row: int) -> Generator[
 
     # Get edge wings and center slices at this slice index
     # We only care about center slices (index [1])
-    pieces: tuple[Sequence[EdgeWing], Sequence[CenterSlice]] = _get_all_row_pieces(cube, l1_tracker, slice_row)
+    pieces: tuple[Sequence[EdgeWing], Sequence[CenterSlice]] = _get_all_row_pieces(cube, l1_tracker, face_row)
 
 
 
@@ -412,20 +433,20 @@ def get_expected_number_of_row_pieces(cube: Cube) -> int:
 
 
 def get_center_row_pieces(cube,
-                          l1_tracker: FaceTracker, for_face_t: FaceTracker | None, slice_row: int
+                          l1_tracker: FaceTracker, for_face_t: FaceTracker | None, face_row: int
                           ) -> Generator[CenterSlice]:
     #boaz: take cube from l1_tracker
-    """Get all pieces (center slices and/or edge wings) at a given slice row.
+    """Get all pieces (center slices and/or edge wings) at a given face row.
 
     Args:
         l1_tracker: Face tracker for Layer 1 face
-        slice_row: Distance from L1 face (0 = closest to L1)
+        face_row: Distance from L1 face (0=closest, n_slices-1=farthest)
 
     Yields:
         PartSlice objects at the given row based on config flags
         (BIG_LBL_RESOLVE_CENTER_SLICES and BIG_LBL_RESOLVE_EDGES_SLICES)
         :param cube:
-        :param slice_row:
+        :param face_row:
         :param l1_tracker:
         :param for_face_t: if None then for all faces
     """
@@ -438,7 +459,7 @@ def get_center_row_pieces(cube,
     # Convert L1-relative distance to slice coordinate system
     cube_slice_index = slice_layout.distance_from_face_to_slice_index(
 
-        l1_tracker.face_name, slice_row, cube.n_slices  # claude: why we need to pass n_slices !!! it should be in sized layout - slice !!
+        l1_tracker.face_name, face_row, cube.n_slices  # claude: why we need to pass n_slices !!! it should be in sized layout - slice !!
     )
 
     slice_name = cube.layout.get_slice_sandwiched_between_face_and_opposite(l1_tracker.face_name)

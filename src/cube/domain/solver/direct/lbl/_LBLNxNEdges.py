@@ -40,7 +40,7 @@ class _LBLNxNEdges(SolverHelper):
         self._e2e_comm = E2ECommutator(slv)
 
     def solve_single_center_face_row(
-            self, l1_white_tracker: FaceTracker, target_face_t: FaceTracker, face_row: int
+            self, l1_tracker: FaceTracker, target_face_t: FaceTracker, face_row: int
     ) -> None:
         """
         Solve edge slices on a single row of a face, starting from the L1 layer.
@@ -50,10 +50,9 @@ class _LBLNxNEdges(SolverHelper):
         from the L1 (white) face, not by its LTR row index.
 
         Args:
-            l1_white_tracker: FaceTracker for L1 (white) face. Must currently be at Down.
+            l1_tracker: FaceTracker for L1 (white) face. Must currently be at Down.
             target_face_t: FaceTracker for the face whose edges we're solving.
-            face_row: Distance from L1 face (0 = closest row to L1).
-                See class docstring for full explanation.
+            face_row: Distance from L1 face (0=closest, n_slices-1=farthest)
 
         Example (5x5 cube, L1=Down, target=Front):
             row_distance_from_l1=0 → solves edges on row 4 (bottom row of Front)
@@ -62,7 +61,7 @@ class _LBLNxNEdges(SolverHelper):
         """
 
         # see with _setup_l1
-        white: Face = l1_white_tracker.face
+        white: Face = l1_tracker.face
         cube = self.cube
         assert white is cube.down
 
@@ -77,7 +76,7 @@ class _LBLNxNEdges(SolverHelper):
 
             edge_info: FaceOrthogonalEdgesInfo = cube.sized_layout.get_orthogonal_index_by_distance_from_face(
                 target_face,
-                l1_white_tracker.face, face_row
+                l1_tracker.face, face_row
                 )
 
 
@@ -88,9 +87,9 @@ class _LBLNxNEdges(SolverHelper):
                 lambda: lambda: f"Working on edges {edge_info.wing_one.parent_name_index_position} {edge_info.wing_two.parent_name_index_position}")
 
             with self._logger.tab("🟰🟰🟰🟰🟰🟰🟰🟰🟰 PATCH !!!!!!!!!!!!!!!!!!!!!!!!"):
-                self._solve_single_edge_wing_on_face_try_two_sides(l1_white_tracker, target_face, edge_info, face_row)
+                self._solve_single_edge_wing_on_face_try_two_sides(l1_tracker, target_face, edge_info, face_row)
 
-    def _solve_single_edge_wing_on_face_try_two_sides(self, l1_white_tracker: FaceTracker, target_face: Face,
+    def _solve_single_edge_wing_on_face_try_two_sides(self, l1_tracker: FaceTracker, target_face: Face,
                                                       edge_info: FaceOrthogonalEdgesInfo, face_row: int) -> None:
         """PATCH PATCH PATCH try to solve one wing both sides."""
         cube = self.cube
@@ -159,7 +158,7 @@ class _LBLNxNEdges(SolverHelper):
                                     with self._logger.tab(f"patch: Working on {the_target_face} target {the_wing.parent_name_index_colors_position} source wing {st.slice.parent_name_index_colors}"):
 
 
-                                        solved = self._solve_one_side_edge_one_source(l1_white_tracker,
+                                        solved = self._solve_one_side_edge_one_source(l1_tracker,
                                                                                       the_target_face,
                                                                                       st,
                                                                                       face_row, the_wing)
@@ -170,7 +169,7 @@ class _LBLNxNEdges(SolverHelper):
                                     break
 
     def _solve_one_side_edge_one_source(self,
-                             l1_white_tracker: FaceTracker,
+                             l1_tracker: FaceTracker,
                              target_face: Face,
                              source_wing_t: EdgeWingTracker,
                              face_row: int, # for now for debug only
@@ -181,7 +180,7 @@ class _LBLNxNEdges(SolverHelper):
         Assume face is onthe front
         wing is left or right
 
-        :param l1_white_tracker:
+        :param l1_tracker:
         :param target_face:
         :param source_wing_t:
         :param face_row:
@@ -205,7 +204,7 @@ class _LBLNxNEdges(SolverHelper):
                     h1=lambda: f"Fixing edge wing {target_edge_wing.parent_name_and_index} -> {required_color_ordered} source:{source_wing_t.slice.parent_name_index_colors_position}",):
 
                 status = self._solve_edge_win_one_source(
-                    l1_white_tracker,
+                    l1_tracker,
                     source_wing_t,
                     target_face,
                     face_row,
@@ -218,7 +217,7 @@ class _LBLNxNEdges(SolverHelper):
 
                 return status
 
-    def _solve_edge_win_one_source(self, l1_white_tracker: FaceTracker,
+    def _solve_edge_win_one_source(self, l1_tracker: FaceTracker,
                                    source_slice_t: EdgeWingTracker,
                                    target_face: Face,
                                    face_row: int,  # for now for debug only
@@ -256,7 +255,7 @@ class _LBLNxNEdges(SolverHelper):
             with self._logger.tab(lambda  : title + " Solved edges"):
                 for i in range(face_row + 1):
                     with self._logger.tab(lambda: f"Row {i}"):
-                        for edge in _common.get_edge_row_pieces(cube, l1_white_tracker, i):
+                        for edge in _common.get_edge_row_pieces(cube, l1_tracker, i):
                             if edge.match_faces:
                                 self.debug(lambda : edge.parent_name_index_colors)
 
@@ -264,12 +263,12 @@ class _LBLNxNEdges(SolverHelper):
         st = source_slice_t
 
         print_solved_till_now(f"Before solving {target_edge_wing.parent_name_index_colors}")
-        status = self._solve_edge_wing_by_source(l1_white_tracker, target_face, target_edge_wing, st)
+        status = self._solve_edge_wing_by_source(l1_tracker, target_face, target_edge_wing, st)
         print_solved_till_now(f"After solving ({status}) {target_edge_wing.parent_name_index_colors}")
 
         return status
 
-    def _solve_edge_wing_by_source(self, l1_white_tracker: FaceTracker,
+    def _solve_edge_wing_by_source(self, l1_tracker: FaceTracker,
                                    target_face: Face,
                                    _target_edge_wing: EdgeWing,
                                    source_edge_wing_t: EdgeWingTracker) -> SmallStepSolveState:
@@ -300,7 +299,7 @@ class _LBLNxNEdges(SolverHelper):
 
                     self.debug(lambda : f"Before _bring_source_wing_to_top {target_face.name}={target_face.color}")
 
-                    self._bring_source_wing_to_top(l1_white_tracker, target_face, source_edge_wing_t)
+                    self._bring_source_wing_to_top(l1_tracker, target_face, source_edge_wing_t)
 
                     # still same face
                     assert target_face.color == target_face_color, f"After _bring_source_wing_to_top {target_face.name}={target_face.color}!={target_face_color}"
@@ -375,12 +374,12 @@ class _LBLNxNEdges(SolverHelper):
 
         return SmallStepSolveState.NOT_SOLVED
 
-    def _bring_source_wing_to_top(self, l1_white_tracker: FaceTracker, target_face: Face, source_edge_wing_t: EdgeWingTracker) -> None:
+    def _bring_source_wing_to_top(self, l1_tracker: FaceTracker, target_face: Face, source_edge_wing_t: EdgeWingTracker) -> None:
 
         target_face_color = target_face.color
 
 
-        with l1_white_tracker.parent.sanity_check_before_after_same_colors("_bring_source_wing_to_top", also_assert_cube_faces=True) as th:
+        with l1_tracker.parent.sanity_check_before_after_same_colors("_bring_source_wing_to_top", also_assert_cube_faces=True) as th:
 
             assert th.get_face_by_color(target_face_color) is self.cube.front
 
