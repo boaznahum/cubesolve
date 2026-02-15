@@ -30,12 +30,6 @@ from cube.domain.model.Face import Face
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.PartEdge import PartEdge
 
-# Import concrete implementations from separate files
-# These are re-exported so existing imports continue to work
-from cube.domain.tracker._simple_face_tracker import SimpleFaceTracker
-from cube.domain.tracker._marked_face_tracker import MarkedFaceTracker
-
-
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
     from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
@@ -243,6 +237,11 @@ class FaceTracker(ABC):
             yield holder
 
 
+# Import concrete implementations from separate files
+# These are re-exported so existing imports continue to work
+# Placed here (after FaceTracker definition) to avoid circular import
+from cube.domain.tracker._simple_face_tracker import SimpleFaceTracker  # noqa: E402
+from cube.domain.tracker._marked_face_tracker import MarkedFaceTracker  # noqa: E402
 
 __all__ = ["FaceTracker", "SimpleFaceTracker", "MarkedFaceTracker", "get_tracker_key_prefix"]
 
