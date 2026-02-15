@@ -103,7 +103,7 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
 
         # Set up perspective projection
         # Camera offset is typically [0, 0, -400], so far plane needs to be > 400
-        self._modern_renderer.set_perspective(width, height, fov_y=45.0, near=1.0, far=1000.0)
+        self._modern_renderer.set_perspective(width, height, fov_y=float(self._vs.fov_y), near=1.0, far=1000.0)
 
         # Create renderer adapter for Renderer protocol compatibility
         # This provides view.set_projection() without legacy GLU (B4 fix)
@@ -547,7 +547,7 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         gl.glViewport(0, 0, width, height)
         # Update projection for modern GL renderer (if initialized)
         if self._modern_renderer:
-            self._modern_renderer.set_perspective(width, height, fov_y=45.0, near=1.0, far=1000.0)
+            self._modern_renderer.set_perspective(width, height, fov_y=float(self._vs.fov_y), near=1.0, far=1000.0)
         # Update adapter's window size for screen_to_world (B4 fix)
         if self._renderer_adapter:
             self._renderer_adapter.update_window_size(width, height)
