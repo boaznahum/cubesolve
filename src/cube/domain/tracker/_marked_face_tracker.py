@@ -91,18 +91,25 @@ class MarkedFaceTracker(FaceTracker):
         """Remove current marker, create new marker on saved physical face.
 
         This is called after operations (like commutators) that may have moved
-        the marked center slice to a different physical face. We:
-        1. Cleanup the existing marker (wherever it ended up)
-        2. Find the physical face by saved name
-        3. Mark a center slice on that face with our tracking key
+        the marked center slice to a different physical face.
+
+        OPTIMIZATION: Check if marker is already on the correct face.
+        If yes, skip cleanup/re-mark (operation didn't move centers or they
+        ended up back where they started).
 
         Args:
             saved_face_name: The FaceName of the physical face to restore to.
         """
-        # 1. Cleanup existing marker, also visible one
-        self.cleanup(force_remove_visible=True) # force because we are going to put new one
+        # Smart check: If already on correct face, no action needed
+        if self.face.name == saved_face_name:
+            return  # Marker already correct - skip cleanup/re-mark
+
+        # Marker moved - restore it:
+        # 1. Cleanup existing marker (wherever it ended up)
+        self.cleanup(force_remove_visible=True)  # force because we're putting a new one
 
         # 2. Find face by saved name
         face = self._cube.face(saved_face_name)
 
+        # 3. Mark a center slice on that face with our tracking key
         _helper.find_and_track_slice(face, self._key, self._color)
