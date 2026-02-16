@@ -13,7 +13,9 @@
       "KillShell",
       "NotebookEdit",
       "Skill",
-      "TodoWrite"
+      "TodoWrite",
+      "mcp__ide__getDiagnostics",
+      "mcp__plugin_github_github__*"
     ]
   },
   "enabledPlugins": {
