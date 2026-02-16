@@ -28,6 +28,7 @@ from cube.domain.model.Color import Color
 from cube.domain.model.Face import Face
 from cube.domain.model.SliceName import SliceName
 from cube.domain.solver.AnnWhat import AnnWhat
+from cube.domain.solver.common.BlockStatistics import BlockStatistics
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.common.big_cube.commutator._supported_faces import _get_supported_pairs
 from cube.domain.solver.protocols import SolverElementsProvider
@@ -150,12 +151,22 @@ class CommutatorHelper(SolverHelper):
     # For opposite faces, there are 2 valid results; tests can iterate both.
     _test_result_index: int = 0
 
-    def __init__(self, solver: SolverElementsProvider) -> None:
+    def __init__(self, solver: SolverElementsProvider, topic: str = "Commutator") -> None:
         super().__init__(solver, "CommutatorHelper")
+        self._statistics = BlockStatistics()
+        self._topic = topic  # Name to use when recording statistics
 
     @property
     def n_slices(self) -> int:
         return self.cube.n_slices
+
+    def reset_statistics(self) -> None:
+        """Reset block solving statistics."""
+        self._statistics.reset()
+
+    def get_statistics(self) -> BlockStatistics:
+        """Get accumulated block solving statistics."""
+        return self._statistics
 
     @classmethod
     def _select_translation_result(
@@ -561,6 +572,10 @@ class CommutatorHelper(SolverHelper):
             # CAGE METHOD: Undo source rotation to preserve paired edges
             if preserve_state and source_setup_n_rotate:
                 self.op.play(source_setup_alg.prime)
+
+            # Record statistics - block size solved
+            block_size = target_block.size
+            self._statistics.add_block(topic=self._topic, block_size=block_size)
 
         final_algorithm = (source_setup_alg + cum + source_setup_alg.prime).simplify()
 

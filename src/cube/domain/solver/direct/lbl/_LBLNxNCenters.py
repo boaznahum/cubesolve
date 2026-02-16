@@ -6,6 +6,7 @@ from cube.domain.exceptions import InternalSWError
 from cube.domain.geometric.block import Block
 from cube.domain.geometric.geometry_types import Point
 from cube.domain.model import Color, Face
+from cube.domain.solver.common.BlockStatistics import BlockStatistics
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.common.big_cube.commutator.CommutatorHelper import CommutatorHelper
 from cube.domain.solver.direct.lbl import _common
@@ -134,10 +135,7 @@ class _LBLNxNCenters(SolverHelper):
 
         self._preserve_cage = preserve_cage
         self._tracker_holder: FacesTrackerHolder = tracker_holder
-        self._comm_helper = CommutatorHelper(slv)
-
-        # Statistics: count of blocks solved by size
-        self._block_stats: dict[int, int] = {}
+        self._comm_helper = CommutatorHelper(slv, topic="LBL-Centers")
 
     @property
     def _parent(self):
@@ -147,15 +145,11 @@ class _LBLNxNCenters(SolverHelper):
 
     def reset_statistics(self) -> None:
         """Reset block solving statistics."""
-        self._block_stats = {}
+        self._comm_helper.reset_statistics()
 
-    def get_statistics(self) -> dict[int, int]:
-        """Get block solving statistics (size -> count)."""
-        return self._block_stats.copy()
-
-    def _record_block_solved(self, block_size: int) -> None:
-        """Record that a block of given size was solved."""
-        self._block_stats[block_size] = self._block_stats.get(block_size, 0) + 1
+    def get_statistics(self) -> BlockStatistics:
+        """Get accumulated block solving statistics."""
+        return self._comm_helper.get_statistics()
 
     def _preserve_trackers(self) -> AbstractContextManager[object]:
         """Return context manager that preserves tracker markers around commutators."""
@@ -783,7 +777,6 @@ class _LBLNxNCenters(SolverHelper):
             assert solved
 
         self.debug(f"✅ Block {block} solved ({block.size} pieces)")
-        self._record_block_solved(block.size)
         return True
 
     @staticmethod

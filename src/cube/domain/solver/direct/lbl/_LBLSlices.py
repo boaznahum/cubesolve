@@ -35,6 +35,7 @@ from typing import TYPE_CHECKING, Tuple
 from cube.domain.algs import SlicedSliceAlg
 from cube.domain.algs.Algs import Algs
 from cube.domain.exceptions import InternalSWError
+from cube.domain.solver.common.BlockStatistics import BlockStatistics
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.tracker._face_trackers import FaceTracker
@@ -58,7 +59,7 @@ class _LBLSlices(SolverHelper):
         edges: NxNEdges helper for edge pairing
     """
 
-    __slots__ = ["_slv", "_last_centers", "_edges", "_sanity"]
+    __slots__ = ["_slv", "_last_centers", "_edges", "_sanity", "_accumulated_stats"]
 
     def __init__(self, slv: LayerByLayerNxNSolver) -> None:
 
@@ -73,9 +74,18 @@ class _LBLSlices(SolverHelper):
         self._last_centers: _LBLNxNCenters | None = None
         self._edges = _LBLNxNEdges(self)
         self._sanity = SanityChecker(self.cube, slv.config.lbl_sanity_check)
+        self._accumulated_stats = BlockStatistics()
 
     def _create_centers(self, th: FacesTrackerHolder) -> _LBLNxNCenters:
-        """Create fresh _LBLNxNCenters with the given tracker holder."""
+        """Create fresh _LBLNxNCenters with the given tracker holder.
+
+        NOTE: Statistics are accumulated, not lost. Each created instance
+        contributes to the accumulated statistics before being replaced.
+        """
+        # Accumulate previous instance's statistics before replacing
+        if self._last_centers is not None:
+            self._accumulated_stats.accumulate(self._last_centers.get_statistics())
+
         centers = _LBLNxNCenters(self, tracker_holder=th, preserve_cage=True)
         self._last_centers = centers
         return centers
@@ -86,29 +96,43 @@ class _LBLSlices(SolverHelper):
 
     def reset_statistics(self) -> None:
         """Reset statistics for all sub-helpers."""
+        self._accumulated_stats.reset()
         if self._last_centers is not None:
             self._last_centers.reset_statistics()
 
-    def get_statistics(self) -> dict[int, int]:
-        """Return block solving statistics (empty dict if no centers created)."""
-        if self._last_centers is None:
-            return {}
-        return self._last_centers.get_statistics()
+    def get_statistics(self) -> BlockStatistics:
+        """Return accumulated statistics from ALL center instances."""
+        stats = BlockStatistics()
+
+        # Add accumulated stats from previous instances
+        stats.accumulate(self._accumulated_stats)
+
+        # Add current instance stats
+        if self._last_centers is not None:
+            stats.accumulate(self._last_centers.get_statistics())
+
+        return stats
 
     def display_statistics(self) -> None:
-        """Display block solving statistics."""
-        if self._last_centers is None:
-            return
-        stats = self._last_centers.get_statistics()
+        """Display block solving statistics with per-topic breakdown."""
+        stats = self.get_statistics()
 
-        if not stats:
+        if stats.is_empty():
             return  # No blocks solved
 
-        # Build display string (sorted by block size)
-        parts = [f"{size}x1:{count}" for size, count in sorted(stats.items())]
-        total = sum(stats.values())
+        # Display per-topic breakdown
+        for topic in stats.get_all_topics():
+            topic_stats = stats.get_topic_stats(topic)
+            parts = [f"{size}x1:{count}" for size, count in sorted(topic_stats.items())]
+            total = sum(topic_stats.values())
+            self.debug(f"[{topic}] {', '.join(parts)} (total: {total} blocks)")
 
-        self.debug(f"Block statistics: {', '.join(parts)} (total: {total} blocks)")
+        # Display summary
+        summary = stats.get_summary_stats()
+        if len(stats.get_all_topics()) > 1:  # Only show summary if multiple topics
+            parts = [f"{size}x1:{count}" for size, count in sorted(summary.items())]
+            total = sum(summary.values())
+            self.debug(f"[SUMMARY] {', '.join(parts)} (total: {total} blocks)")
 
     # =========================================================================
     # State inspection
