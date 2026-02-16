@@ -103,16 +103,17 @@ class TestLBLBigCubeSolver:
 
         assert solver._is_l2_slices_solved(), "15x15 single E-slice not solved"
 
-        stats = solver.get_statistics()
+        stats = solver.get_block_statistics()
 
-        if stats:
+        if not stats.is_empty():
             # If blocks were used, verify big blocks were found
-            max_block_size = max(stats.keys())
+            summary = stats.get_summary_stats()
+            max_block_size = max(summary.keys())
             assert max_block_size > 1, (
                 f"Expected big blocks for structured single-slice disruption, "
-                f"got only 1x1: {stats}"
+                f"got only 1x1: {summary}"
             )
-            parts = [f"{size}x1:{count}" for size, count in sorted(stats.items())]
+            parts = [f"{size}x1:{count}" for size, count in sorted(summary.items())]
             print(f"\n[15x15 E-slice test] Block statistics: {', '.join(parts)}")
         else:
             # Pre-alignment solved it directly — optimal outcome
@@ -141,11 +142,11 @@ class TestLBLBigCubeSolver:
         assert solver._is_l2_slices_solved(), "15x15 center E-slice not solved"
 
         solve_ops = app.op.count - op_count_before
-        stats = solver.get_statistics()
+        stats = solver.get_block_statistics()
 
-        assert not stats, (
+        assert stats.is_empty(), (
             f"Expected global pre-alignment to solve center E-slice with 0 blocks, "
-            f"but got: {stats}"
+            f"but got: {stats.get_summary_stats()}"
         )
         # Global pre-align reverses with 3 E-slice rotations, no commutators
         assert solve_ops <= 4, (

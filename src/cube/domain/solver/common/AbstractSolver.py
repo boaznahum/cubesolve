@@ -6,6 +6,7 @@ from cube.domain.algs.Algs import Algs
 from cube.domain.exceptions import OpAborted
 from cube.domain.model import Cube
 from cube.domain.solver import Solver
+from cube.domain.solver.common.BlockStatistics import BlockStatistics
 from cube.domain.solver.common.CommonOp import CommonOp
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.solver import SolverResults, SolveStep
@@ -85,7 +86,7 @@ class AbstractSolver(Solver, ABC):
         try:
             with self._op.with_animation(animation=animation):
                 try:
-                    self.reset_statistics()
+                    self.reset_block_statistics()
                     count_before = self._op.count
                     result = self._solve_impl(what)
                     count_after = self._op.count
@@ -113,8 +114,8 @@ class AbstractSolver(Solver, ABC):
         """
         pass
 
-    def reset_statistics(self) -> None:
-        """Reset solver statistics before solving.
+    def reset_block_statistics(self) -> None:
+        """Reset block statistics before solving.
 
         Override in subclasses to reset any statistics counters.
         Called automatically by solve() before _solve_impl().
@@ -124,14 +125,27 @@ class AbstractSolver(Solver, ABC):
         pass
 
     def display_statistics(self) -> None:
-        """Display solver statistics after solving.
+        """Display block statistics collected from all sub-helpers.
 
-        Override in subclasses to display any collected statistics.
-        Called automatically by solve() after _solve_impl().
-
-        Default implementation does nothing.
+        Uses get_block_statistics() from the Solver protocol to aggregate
+        stats from the entire helper tree. Only the root solver's
+        display_statistics() runs (via solve() template method), so
+        child solvers don't duplicate output.
         """
-        pass
+        stats: BlockStatistics = self.get_block_statistics()
+        if stats.is_empty():
+            self.debug("[Statistics] No blocks used")
+            return
+        for topic in stats.get_all_topics():
+            topic_stats = stats.get_topic_stats(topic)
+            parts = [f"{size}x1:{count}" for size, count in sorted(topic_stats.items())]
+            total = sum(topic_stats.values())
+            self.debug(f"  [{topic}] {', '.join(parts)} (total: {total} blocks)")
+        if len(stats.get_all_topics()) > 1:
+            summary = stats.get_summary_stats()
+            parts = [f"{size}x1:{count}" for size, count in sorted(summary.items())]
+            total = sum(summary.values())
+            self.debug(f"[SUMMARY] {', '.join(parts)} (total: {total} blocks)")
 
     def diagnostic(self) -> None:
         """Default no-op diagnostic. Override in subclasses for detailed diagnostics."""

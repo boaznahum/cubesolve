@@ -1289,12 +1289,12 @@ class NxNCenters(SolverHelper):
 
         return Algs.M[c1 + 1:c2 + 1].prime
 
-    def reset_statistics(self) -> None:
+    def reset_block_statistics(self) -> None:
         """Reset block solving statistics."""
-        self._comm_helper.reset_statistics()
+        self._comm_helper.reset_block_statistics()
 
-    def get_statistics(self) -> BlockStatistics:
+    def get_block_statistics(self) -> BlockStatistics:
         """Get accumulated block solving statistics."""
-        return self._comm_helper.get_statistics()
+        return self._comm_helper.get_block_statistics()
 
     D_LEVEL = 3

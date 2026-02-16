@@ -31,15 +31,16 @@ class TestLBLBigCubeFullSolver:
         solver.solve(what=SolveStep.ALL, debug=False, animation=False)
 
         # PRINT STATISTICS
-        stats = solver.get_statistics()
+        block_stats = solver.get_block_statistics()
+        summary = block_stats.get_summary_stats()
         print(f"\n\n{'='*70}")
         print(f"BLOCK STATISTICS")
         print(f"{'='*70}")
-        print(f"Total blocks: {sum(stats.values())}")
-        print(f"Total pieces moved: {sum(size * count for size, count in stats.items())}")
+        print(f"Total blocks: {sum(summary.values())}")
+        print(f"Total pieces moved: {sum(size * count for size, count in summary.items())}")
         print(f"Block breakdown:")
-        for size in sorted(stats.keys()):
-            count = stats[size]
+        for size in sorted(summary.keys()):
+            count = summary[size]
             print(f"  Size {size}x1: {count} blocks ({size*count} pieces)")
         print(f"{'='*70}\n")
 

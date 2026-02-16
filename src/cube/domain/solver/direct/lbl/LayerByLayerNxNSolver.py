@@ -33,6 +33,7 @@ from cube.domain.exceptions.EvenCubeEdgeParityException import EvenCubeEdgeParit
 from cube.domain.model import Corner, Part, Color
 from cube.domain.solver.SolverName import SolverName
 from cube.domain.solver.common.BaseSolver import BaseSolver
+from cube.domain.solver.common.BlockStatistics import BlockStatistics
 from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
 from cube.domain.solver.common.big_cube.NxNCorners import NxNCorners
 from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
@@ -68,7 +69,8 @@ class LayerByLayerNxNSolver(BaseSolver):
     - Like Layer 1 but with restricted moves
     """
 
-    __slots__ = ["_nxn_edges", "_nxn_corners", "_shadow_helper", "_lbl_slices"]
+    __slots__ = ["_nxn_edges", "_nxn_corners", "_shadow_helper", "_lbl_slices",
+                 "_l3_edges", "_accumulated_temp_stats"]
 
     def __init__(self, op: OperatorProtocol, parent_logger: "ILogger") -> None:
         """
@@ -97,6 +99,9 @@ class LayerByLayerNxNSolver(BaseSolver):
 
         # L3 edges helper - solves L3 edges without disturbing L1/middle
         self._l3_edges = _LBLL3Edges(self)
+
+        # Accumulated stats from temporary helpers (L1/L3 NxNCenters instances)
+        self._accumulated_temp_stats = BlockStatistics()
 
     # =========================================================================
     # Public properties/methods (Solver protocol order)
@@ -482,6 +487,7 @@ class LayerByLayerNxNSolver(BaseSolver):
         with self.op.annotation.annotate(h2=f"L1 centers ({l1_tracker.color.name})"):
             centers = NxNCenters(self, preserve_cage=False, tracker_holder=th)
             centers.solve_single_face(th, l1_tracker)
+            self._accumulated_temp_stats.accumulate(centers.get_block_statistics())
 
     def _solve_layer1_edges(self, th: FacesTrackerHolder) -> None:
         """Solve only the Layer 1 face edges."""
@@ -741,6 +747,7 @@ class LayerByLayerNxNSolver(BaseSolver):
         with self.op.annotation.annotate(h2=f"L3 centers ({l3_tracker.color.name})"):
             centers = NxNCenters(self, preserve_cage=False, tracker_holder=th)
             centers.solve_single_face(th, l3_tracker)
+            self._accumulated_temp_stats.accumulate(centers.get_block_statistics())
 
     def _solve_layer3_edges(self, th: FacesTrackerHolder) -> None:
         """Solve only the Layer 3 face edges using safe algorithms.
@@ -788,22 +795,25 @@ class LayerByLayerNxNSolver(BaseSolver):
             self._solve_layer1_with_shadow(th, SolveStep.L3)
 
     # =========================================================================
-    # Statistics (override AbstractSolver)
+    # Statistics (override AbstractSolver/Solver)
     # =========================================================================
 
-    def reset_statistics(self) -> None:
+    def reset_block_statistics(self) -> None:
         """Reset solver statistics before solving."""
-        self._lbl_slices.reset_statistics()
-        self._l3_edges.reset_statistics()
+        self._lbl_slices.reset_block_statistics()
+        self._l3_edges.reset_block_statistics()
+        self._nxn_edges.reset_block_statistics()
+        self._nxn_corners.reset_block_statistics()
+        self._shadow_helper.reset_block_statistics()
+        self._accumulated_temp_stats.reset()
 
-    def get_statistics(self):
-        """Return block solving statistics from all helpers."""
-        from cube.domain.solver.common.BlockStatistics import BlockStatistics
+    def get_block_statistics(self) -> BlockStatistics:
+        """Return block solving statistics from ALL children."""
         stats = BlockStatistics()
-        stats.accumulate(self._lbl_slices.get_statistics())
-        stats.accumulate(self._l3_edges.get_statistics())
+        stats.accumulate(self._lbl_slices.get_block_statistics())
+        stats.accumulate(self._l3_edges.get_block_statistics())
+        stats.accumulate(self._nxn_edges.get_block_statistics())
+        stats.accumulate(self._nxn_corners.get_block_statistics())
+        stats.accumulate(self._shadow_helper.get_block_statistics())
+        stats.accumulate(self._accumulated_temp_stats)
         return stats
-
-    def display_statistics(self) -> None:
-        """Display solver statistics after solving."""
-        self._lbl_slices.display_statistics()

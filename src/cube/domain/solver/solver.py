@@ -2,14 +2,11 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from enum import Enum, auto
-from typing import TYPE_CHECKING
-
 from cube.domain.solver.protocols.OperatorProtocol import OperatorProtocol
 from cube.domain.solver.protocols.SolverElementsProvider import SolverElementsProvider
 from cube.domain.solver.SolverName import SolverName
 
-if TYPE_CHECKING:
-    from cube.domain.solver.common.BlockStatistics import BlockStatistics
+from cube.domain.solver.common.BlockStatistics import BlockStatistics
 
 
 
@@ -199,14 +196,9 @@ class Solver(SolverElementsProvider, ABC):
     def op(self) -> OperatorProtocol:
         pass
 
-    def get_statistics(self) -> dict[int, int] | BlockStatistics:
-        """Return block solving statistics. Override in subclasses that track stats.
-
-        Returns:
-            dict[int, int]: Legacy format (size -> count).
-            BlockStatistics: New format with topic tracking (used by LBL solver).
-        """
-        return {}
+    def get_block_statistics(self) -> BlockStatistics:
+        """Return block solving statistics. Override in subclasses that track stats."""
+        return BlockStatistics()
 
     @abstractmethod
     def supported_steps(self) -> list[SolveStep]:

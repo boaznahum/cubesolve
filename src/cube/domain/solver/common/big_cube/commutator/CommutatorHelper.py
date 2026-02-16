@@ -160,11 +160,11 @@ class CommutatorHelper(SolverHelper):
     def n_slices(self) -> int:
         return self.cube.n_slices
 
-    def reset_statistics(self) -> None:
+    def reset_block_statistics(self) -> None:
         """Reset block solving statistics."""
         self._statistics.reset()
 
-    def get_statistics(self) -> BlockStatistics:
+    def get_block_statistics(self) -> BlockStatistics:
         """Get accumulated block solving statistics."""
         return self._statistics
 

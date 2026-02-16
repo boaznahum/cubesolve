@@ -420,10 +420,10 @@ class _LBLNxNEdges(SolverHelper):
         """
         return f.color, s.get_other_face(f).color
 
-    def reset_statistics(self) -> None:
+    def reset_block_statistics(self) -> None:
         """Reset block solving statistics."""
-        self._e2e_comm.reset_statistics()
+        self._e2e_comm.reset_block_statistics()
 
-    def get_statistics(self) -> BlockStatistics:
+    def get_block_statistics(self) -> BlockStatistics:
         """Get accumulated block solving statistics."""
-        return self._e2e_comm.get_statistics()
+        return self._e2e_comm.get_block_statistics()

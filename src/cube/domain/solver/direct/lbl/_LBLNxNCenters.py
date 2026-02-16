@@ -143,13 +143,13 @@ class _LBLNxNCenters(SolverHelper):
         return cast(_LBLSlices, self._solver)
 
 
-    def reset_statistics(self) -> None:
+    def reset_block_statistics(self) -> None:
         """Reset block solving statistics."""
-        self._comm_helper.reset_statistics()
+        self._comm_helper.reset_block_statistics()
 
-    def get_statistics(self) -> BlockStatistics:
+    def get_block_statistics(self) -> BlockStatistics:
         """Get accumulated block solving statistics."""
-        return self._comm_helper.get_statistics()
+        return self._comm_helper.get_block_statistics()
 
     def _preserve_trackers(self) -> AbstractContextManager[object]:
         """Return context manager that preserves tracker markers around commutators."""

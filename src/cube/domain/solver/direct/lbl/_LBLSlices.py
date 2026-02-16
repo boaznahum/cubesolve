@@ -84,7 +84,7 @@ class _LBLSlices(SolverHelper):
         """
         # Accumulate previous instance's statistics before replacing
         if self._last_centers is not None:
-            self._accumulated_stats.accumulate(self._last_centers.get_statistics())
+            self._accumulated_stats.accumulate(self._last_centers.get_block_statistics())
 
         centers = _LBLNxNCenters(self, tracker_holder=th, preserve_cage=True)
         self._last_centers = centers
@@ -94,15 +94,15 @@ class _LBLSlices(SolverHelper):
     # Statistics
     # =========================================================================
 
-    def reset_statistics(self) -> None:
+    def reset_block_statistics(self) -> None:
         """Reset statistics for all sub-helpers."""
         self._accumulated_stats.reset()
         if self._last_centers is not None:
-            self._last_centers.reset_statistics()
+            self._last_centers.reset_block_statistics()
         if self._edges is not None:
-            self._edges.reset_statistics()
+            self._edges.reset_block_statistics()
 
-    def get_statistics(self) -> BlockStatistics:
+    def get_block_statistics(self) -> BlockStatistics:
         """Return accumulated statistics from ALL sub-helpers (centers and edges)."""
         stats = BlockStatistics()
 
@@ -111,34 +111,13 @@ class _LBLSlices(SolverHelper):
 
         # Add current center instance stats
         if self._last_centers is not None:
-            stats.accumulate(self._last_centers.get_statistics())
+            stats.accumulate(self._last_centers.get_block_statistics())
 
         # Add edge statistics
         if self._edges is not None:
-            stats.accumulate(self._edges.get_statistics())
+            stats.accumulate(self._edges.get_block_statistics())
 
         return stats
-
-    def display_statistics(self) -> None:
-        """Display block solving statistics with per-topic breakdown."""
-        stats = self.get_statistics()
-
-        if stats.is_empty():
-            return  # No blocks solved
-
-        # Display per-topic breakdown
-        for topic in stats.get_all_topics():
-            topic_stats = stats.get_topic_stats(topic)
-            parts = [f"{size}x1:{count}" for size, count in sorted(topic_stats.items())]
-            total = sum(topic_stats.values())
-            self.debug(f"[{topic}] {', '.join(parts)} (total: {total} blocks)")
-
-        # Display summary
-        summary = stats.get_summary_stats()
-        if len(stats.get_all_topics()) > 1:  # Only show summary if multiple topics
-            parts = [f"{size}x1:{count}" for size, count in sorted(summary.items())]
-            total = sum(summary.values())
-            self.debug(f"[SUMMARY] {', '.join(parts)} (total: {total} blocks)")
 
     # =========================================================================
     # State inspection

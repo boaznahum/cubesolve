@@ -78,6 +78,7 @@ class _LBLL3Edges(SolverHelper):
         # Composition: reuse existing edge methods
         self._nxn_edges = _LBLNxNEdges(slv)
         self._e2e_comm = E2ECommutator(slv)
+        self._accumulated_edge_stats = BlockStatistics()
 
     # =========================================================================
     # Main Entry Point
@@ -120,8 +121,9 @@ class _LBLL3Edges(SolverHelper):
 
             #now i ready to second phase, solving by RF' algorithm
 
-            helper:NxNEdges = NxNEdges(self, advanced_edge_parity=True, preserve_other_edges=True)
+            helper: NxNEdges = NxNEdges(self, advanced_edge_parity=True, preserve_other_edges=True)
             helper.solve_face_edges(l3_tracker)
+            self._accumulated_edge_stats.accumulate(helper.get_block_statistics())
 
 
     # =========================================================================
@@ -839,16 +841,18 @@ class _LBLL3Edges(SolverHelper):
 
         return None
 
-    def reset_statistics(self) -> None:
+    def reset_block_statistics(self) -> None:
         """Reset block solving statistics."""
-        self._nxn_edges.reset_statistics()
-        self._e2e_comm.reset_statistics()
+        self._nxn_edges.reset_block_statistics()
+        self._e2e_comm.reset_block_statistics()
+        self._accumulated_edge_stats.reset()
 
-    def get_statistics(self) -> BlockStatistics:
+    def get_block_statistics(self) -> BlockStatistics:
         """Get accumulated block solving statistics from all helpers."""
         stats = BlockStatistics()
-        stats.accumulate(self._nxn_edges.get_statistics())
-        stats.accumulate(self._e2e_comm.get_statistics())
+        stats.accumulate(self._nxn_edges.get_block_statistics())
+        stats.accumulate(self._e2e_comm.get_block_statistics())
+        stats.accumulate(self._accumulated_edge_stats)
         return stats
 
 
