@@ -77,7 +77,7 @@ class _LBLL3Edges(SolverHelper):
 
         # Composition: reuse existing edge methods
         self._nxn_edges = _LBLNxNEdges(slv)
-        self._e2e_comm = E2ECommutator(slv, topic="LBL-L3Edges")
+        self._e2e_comm = E2ECommutator(slv)
 
     # =========================================================================
     # Main Entry Point
@@ -841,21 +841,14 @@ class _LBLL3Edges(SolverHelper):
 
     def reset_statistics(self) -> None:
         """Reset block solving statistics."""
-        if hasattr(self._nxn_edges, 'reset_statistics'):
-            self._nxn_edges.reset_statistics()
+        self._nxn_edges.reset_statistics()
         self._e2e_comm.reset_statistics()
 
     def get_statistics(self) -> BlockStatistics:
         """Get accumulated block solving statistics from all helpers."""
         stats = BlockStatistics()
-
-        # Accumulate from _nxn_edges if it has statistics
-        if hasattr(self._nxn_edges, 'get_statistics'):
-            stats.accumulate(self._nxn_edges.get_statistics())
-
-        # Accumulate from _e2e_comm
+        stats.accumulate(self._nxn_edges.get_statistics())
         stats.accumulate(self._e2e_comm.get_statistics())
-
         return stats
 
 

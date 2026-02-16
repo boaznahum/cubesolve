@@ -135,7 +135,7 @@ class _LBLNxNCenters(SolverHelper):
 
         self._preserve_cage = preserve_cage
         self._tracker_holder: FacesTrackerHolder = tracker_holder
-        self._comm_helper = CommutatorHelper(slv, topic="LBL-Centers")
+        self._comm_helper = CommutatorHelper(slv)
 
     @property
     def _parent(self):

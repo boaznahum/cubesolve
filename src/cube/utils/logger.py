@@ -220,6 +220,11 @@ class Logger(ILogger):
         # Root's debug_all or effective debug_on
         return self._root._debug_all or effective_debug
 
+    @property
+    def prefix(self) -> str:
+        """Return the raw prefix string (without 'DEBUG:' header)."""
+        return self._prefix
+
     def debug_prefix(self) -> str:
         """Return the combined prefix for output."""
         if self._delegate is not None and self._prefix:

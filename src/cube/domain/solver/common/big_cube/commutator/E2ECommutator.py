@@ -22,11 +22,11 @@ class E2ECommutator(SolverHelper):
 
     D_LEVEL = 3
 
-    def __init__(self, slv: SolverElementsProvider, topic: str = "E2ECommutator") -> None:
+    def __init__(self, slv: SolverElementsProvider) -> None:
         super().__init__(slv, "E2EComm")
         self._logger.set_level(E2ECommutator.D_LEVEL)
         self._statistics = BlockStatistics()
-        self._topic = topic  # Name to use when recording statistics
+        self._topic = self._logger.prefix  # Use logger prefix as topic for traceability
 
     def reset_statistics(self) -> None:
         """Reset block solving statistics."""

@@ -151,10 +151,10 @@ class CommutatorHelper(SolverHelper):
     # For opposite faces, there are 2 valid results; tests can iterate both.
     _test_result_index: int = 0
 
-    def __init__(self, solver: SolverElementsProvider, topic: str = "Commutator") -> None:
-        super().__init__(solver, "CommutatorHelper")
+    def __init__(self, solver: SolverElementsProvider) -> None:
+        super().__init__(solver, "CommHelper")
         self._statistics = BlockStatistics()
-        self._topic = topic  # Name to use when recording statistics
+        self._topic = self._logger.prefix  # Use logger prefix as topic for traceability
 
     @property
     def n_slices(self) -> int:

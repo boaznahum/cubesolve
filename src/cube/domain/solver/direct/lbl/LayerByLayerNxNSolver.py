@@ -794,21 +794,14 @@ class LayerByLayerNxNSolver(BaseSolver):
     def reset_statistics(self) -> None:
         """Reset solver statistics before solving."""
         self._lbl_slices.reset_statistics()
-        if hasattr(self._l3_edges, 'reset_statistics'):
-            self._l3_edges.reset_statistics()
+        self._l3_edges.reset_statistics()
 
     def get_statistics(self):
         """Return block solving statistics from all helpers."""
         from cube.domain.solver.common.BlockStatistics import BlockStatistics
         stats = BlockStatistics()
-
-        # Aggregate from _lbl_slices
         stats.accumulate(self._lbl_slices.get_statistics())
-
-        # Aggregate from _l3_edges if it has statistics
-        if hasattr(self._l3_edges, 'get_statistics'):
-            stats.accumulate(self._l3_edges.get_statistics())
-
+        stats.accumulate(self._l3_edges.get_statistics())
         return stats
 
     def display_statistics(self) -> None:

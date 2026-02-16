@@ -161,7 +161,7 @@ class NxNCenters(SolverHelper):
         self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS = cfg.optimize_big_cube_centers_search_blocks
 
         # Use CommutatorHelper for block search operations
-        self._comm_helper = CommutatorHelper(slv, topic="NxNCenters")
+        self._comm_helper = CommutatorHelper(slv)
 
     def _is_solved(self):
         return all((f.center.is3x3 for f in self.cube.faces)) and self.cube.is_boy

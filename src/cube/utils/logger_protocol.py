@@ -79,6 +79,11 @@ class ILogger(Protocol):
         """
         ...
 
+    @property
+    def prefix(self) -> str:
+        """Return the raw prefix string (without 'DEBUG:' header)."""
+        ...
+
     def debug_prefix(self) -> str:
         """Return the standard debug prefix."""
         ...
