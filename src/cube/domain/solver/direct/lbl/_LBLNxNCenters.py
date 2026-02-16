@@ -558,8 +558,32 @@ class _LBLNxNCenters(SolverHelper):
             cell_predicate=unsolved_cell_predicate
         )
 
-        # Extract Block objects from (size, Block) tuples and return
-        blocks = [b for _, b in raw_blocks]
+        # Expand max-extension blocks into all intermediate sub-blocks.
+        # search_big_block() only returns 1x1 and the maximum extension per start point.
+        # The old path generates ALL intermediate sizes (1x1, 1x2, ..., 1xW) which allows
+        # _try_solve_block to find the largest block the source face can actually provide.
+        blocks: list[Block] = []
+        seen: set[Block] = set()
+        for _, block in raw_blocks:
+            start = block.start
+            end = block.end
+            if block.size <= 1:
+                # 1x1 block — add as-is
+                if block not in seen:
+                    seen.add(block)
+                    blocks.append(block)
+            else:
+                # Generate all intermediate sub-blocks from start to end.
+                # With max_rows=1, rows are always equal (1×W strips).
+                # Generate 1×1, 1×2, ..., 1×W all starting at the same point.
+                for c in range(start[1], end[1] + 1):
+                    sub = Block(start, Point(end[0], c))
+                    if sub not in seen and self._comm_helper.is_valid_block(sub.start, sub.end):
+                        seen.add(sub)
+                        blocks.append(sub)
+
+        # Sort by size descending (largest first) — matches old path behavior
+        blocks.sort(key=lambda b: b.size, reverse=True)
         return blocks
 
     def _search_blocks_starting_at(
