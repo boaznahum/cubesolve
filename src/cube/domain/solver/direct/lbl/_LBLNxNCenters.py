@@ -464,23 +464,38 @@ class _LBLNxNCenters(SolverHelper):
         # TOGGLE: Use new optimized CommutatorHelper.search_big_block() or old _search_blocks_starting_at()
         USE_NEW_SEARCH = True
 
-        # NEW OPTIMIZED: Call search_big_block() ONCE per row, then process all blocks
-        # This is more efficient than old approach (called per position)
+        # NEW OPTIMIZED: Call search_big_block() ONCE per row, then process
+        # blocks position-by-position (matching OLD path's greedy-local strategy).
         if USE_NEW_SEARCH:
             blocks_all = self._get_all_blocks_in_row_optimized(
-                target_face, color, max_block_size
+                target_face, color
             )
-            # Process blocks by trying each one
+
+            # Group blocks by start position, preserving size-descending order within each group
+            blocks_by_start: dict[Point, list[Block]] = {}
             for block in blocks_all:
-                # Skip if block's starting position was already solved
-                if target_face.face.center.get_center_slice(block[0]).color == color:
+                blocks_by_start.setdefault(block.start, []).append(block)
+
+            # Process position-by-position (row-major order, matching OLD path)
+            for rc in _iterate_all_tracked_center_slices_index(target_face):
+                candidate_piece = target_face.face.center.get_center_slice(rc)
+
+                if candidate_piece.color == color:
+                    continue
+                if _is_cent_piece_marked_solved(candidate_piece):
                     continue
 
-                if self._try_solve_block(
-                    l1_tracker, face_row,
-                    block, color, target_face.face, source_face.face
-                ):
-                    work_done = True
+                blocks_for_pos = blocks_by_start.get(rc, [])
+                if not blocks_for_pos:
+                    continue
+
+                for block in blocks_for_pos:
+                    if self._try_solve_block(
+                        l1_tracker, face_row,
+                        block, color, target_face.face, source_face.face
+                    ):
+                        work_done = True
+                        break  # Move to next position (matches OLD path)
         else:
             # OLD: Iterate position-by-position, call _search_blocks_starting_at() for each
             for rc in _iterate_all_tracked_center_slices_index(target_face):
@@ -524,19 +539,18 @@ class _LBLNxNCenters(SolverHelper):
         self,
         target_face: FaceTracker,
         required_color: Color,
-        max_block_size: int
     ) -> list[Block]:
         """
         Get all blocks in the current row using CommutatorHelper.search_big_block().
 
         OPTIMIZED: Calls search_big_block() ONCE for the entire row,
-        then returns all blocks found. More efficient than calling
-        _search_blocks_starting_at() for each unsolved position.
+        then returns all blocks found (including intermediate sizes).
+        More efficient than calling _search_blocks_starting_at() for each
+        unsolved position.
 
         Args:
             target_face: Target face tracker
             required_color: Color that pieces should have
-            max_block_size: Maximum block size (1 = single pieces, >1 = larger blocks)
 
         Returns:
             List of valid blocks, sorted by size descending (largest first)
