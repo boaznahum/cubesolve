@@ -8,7 +8,6 @@ from cube.domain.algs import Alg, Algs
 from cube.domain.model import EdgeWing
 from cube.domain.model.Slice import Slice
 from cube.domain.solver.AnnWhat import AnnWhat
-from cube.domain.solver.common.BlockStatistics import BlockStatistics
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.protocols import SolverElementsProvider
 
@@ -25,16 +24,6 @@ class E2ECommutator(SolverHelper):
     def __init__(self, slv: SolverElementsProvider) -> None:
         super().__init__(slv, "E2EComm")
         self._logger.set_level(E2ECommutator.D_LEVEL)
-        self._statistics = BlockStatistics()
-        self._topic = self._logger.prefix  # Use logger prefix as topic for traceability
-
-    def reset_block_statistics(self) -> None:
-        """Reset block solving statistics."""
-        self._statistics.reset()
-
-    def get_block_statistics(self) -> BlockStatistics:
-        """Get accumulated block solving statistics."""
-        return self._statistics
 
     def try_right_or_left_edge_to_edge_commutator_by_wings(self,
                                                            target_wing: EdgeWing,
@@ -283,6 +272,3 @@ class E2ECommutator(SolverHelper):
                            ):
             # 3-cycle: FU → FL/FR → BU → FU (or reverse for prime)
             self.op.play(alg.prime if is_prime else alg)
-
-            # Record statistics - edge wing is 1x1 block
-            self._statistics.add_block(topic=self._topic, block_size=1)

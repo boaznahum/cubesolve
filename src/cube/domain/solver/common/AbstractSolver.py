@@ -6,7 +6,7 @@ from cube.domain.algs.Algs import Algs
 from cube.domain.exceptions import OpAborted
 from cube.domain.model import Cube
 from cube.domain.solver import Solver
-from cube.domain.solver.common.BlockStatistics import BlockStatistics
+from cube.domain.solver.common.CenterBlockStatistics import CenterBlockStatistics
 from cube.domain.solver.common.CommonOp import CommonOp
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.solver import SolverResults, SolveStep
@@ -132,20 +132,26 @@ class AbstractSolver(Solver, ABC):
         display_statistics() runs (via solve() template method), so
         child solvers don't duplicate output.
         """
-        stats: BlockStatistics = self.get_block_statistics()
+        stats: CenterBlockStatistics = self.get_block_statistics()
         if stats.is_empty():
-            self.debug("[Statistics] No blocks used")
             return
+        # Strip solver's own prefix from topic names to avoid redundancy
+        my_prefix: str = self._logger.prefix + ":"
+        summary = stats.get_summary_stats()
+        total_blocks = sum(summary.values())
+        total_pieces = sum(size * count for size, count in summary.items())
+        self.debug(f"[Center Block Statistics] {total_blocks} blocks, {total_pieces} pieces moved")
         for topic in stats.get_all_topics():
+            display_topic = topic.replace(my_prefix, "")
             topic_stats = stats.get_topic_stats(topic)
-            parts = [f"{size}x1:{count}" for size, count in sorted(topic_stats.items())]
-            total = sum(topic_stats.values())
-            self.debug(f"  [{topic}] {', '.join(parts)} (total: {total} blocks)")
-        if len(stats.get_all_topics()) > 1:
-            summary = stats.get_summary_stats()
-            parts = [f"{size}x1:{count}" for size, count in sorted(summary.items())]
-            total = sum(summary.values())
-            self.debug(f"[SUMMARY] {', '.join(parts)} (total: {total} blocks)")
+            if topic_stats:
+                parts = [f"{size}x1:{count}" for size, count in sorted(topic_stats.items())]
+                total = sum(topic_stats.values())
+                self.debug(f"  [{display_topic}] {', '.join(parts)} (total: {total} blocks)")
+            else:
+                self.debug(f"  [{display_topic}] (no blocks)")
+        parts = [f"{size}x1:{count}" for size, count in sorted(summary.items())]
+        self.debug(f"  [SUMMARY] {', '.join(parts)} (total: {total_blocks} blocks)")
 
     def diagnostic(self) -> None:
         """Default no-op diagnostic. Override in subclasses for detailed diagnostics."""

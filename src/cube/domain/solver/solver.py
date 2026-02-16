@@ -6,7 +6,7 @@ from cube.domain.solver.protocols.OperatorProtocol import OperatorProtocol
 from cube.domain.solver.protocols.SolverElementsProvider import SolverElementsProvider
 from cube.domain.solver.SolverName import SolverName
 
-from cube.domain.solver.common.BlockStatistics import BlockStatistics
+from cube.domain.solver.common.CenterBlockStatistics import CenterBlockStatistics
 
 
 
@@ -196,9 +196,9 @@ class Solver(SolverElementsProvider, ABC):
     def op(self) -> OperatorProtocol:
         pass
 
-    def get_block_statistics(self) -> BlockStatistics:
+    def get_block_statistics(self) -> CenterBlockStatistics:
         """Return block solving statistics. Override in subclasses that track stats."""
-        return BlockStatistics()
+        return CenterBlockStatistics()
 
     @abstractmethod
     def supported_steps(self) -> list[SolveStep]:

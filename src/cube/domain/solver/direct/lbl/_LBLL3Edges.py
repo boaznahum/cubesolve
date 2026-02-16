@@ -12,8 +12,8 @@ from cube.domain.algs import Alg, Algs, SeqAlg
 from cube.domain.model import EdgeWing, Edge
 from cube.domain.model._part import EdgeName
 from cube.domain.solver import SolveStep
-from cube.domain.solver.common.BlockStatistics import BlockStatistics
 from cube.domain.solver.common.big_cube import NxNEdges
+from cube.domain.solver.common.CenterBlockStatistics import CenterBlockStatistics
 from cube.domain.solver.common.big_cube.commutator.E2ECommutator import E2ECommutator
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.direct.lbl._LBLNxNEdges import _LBLNxNEdges
@@ -78,7 +78,7 @@ class _LBLL3Edges(SolverHelper):
         # Composition: reuse existing edge methods
         self._nxn_edges = _LBLNxNEdges(slv)
         self._e2e_comm = E2ECommutator(slv)
-        self._accumulated_edge_stats = BlockStatistics()
+        self._accumulated_edge_stats = CenterBlockStatistics()
 
     # =========================================================================
     # Main Entry Point
@@ -847,13 +847,10 @@ class _LBLL3Edges(SolverHelper):
         self._e2e_comm.reset_block_statistics()
         self._accumulated_edge_stats.reset()
 
-    def get_block_statistics(self) -> BlockStatistics:
+    def get_block_statistics(self) -> CenterBlockStatistics:
         """Get accumulated block solving statistics from all helpers."""
-        stats = BlockStatistics()
+        stats = CenterBlockStatistics()
         stats.accumulate(self._nxn_edges.get_block_statistics())
         stats.accumulate(self._e2e_comm.get_block_statistics())
         stats.accumulate(self._accumulated_edge_stats)
         return stats
-
-
-

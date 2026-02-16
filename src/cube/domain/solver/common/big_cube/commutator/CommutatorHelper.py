@@ -28,7 +28,7 @@ from cube.domain.model.Color import Color
 from cube.domain.model.Face import Face
 from cube.domain.model.SliceName import SliceName
 from cube.domain.solver.AnnWhat import AnnWhat
-from cube.domain.solver.common.BlockStatistics import BlockStatistics
+from cube.domain.solver.common.CenterBlockStatistics import CenterBlockStatistics
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.common.big_cube.commutator._supported_faces import _get_supported_pairs
 from cube.domain.solver.protocols import SolverElementsProvider
@@ -153,8 +153,9 @@ class CommutatorHelper(SolverHelper):
 
     def __init__(self, solver: SolverElementsProvider) -> None:
         super().__init__(solver, "CommHelper")
-        self._statistics = BlockStatistics()
+        self._statistics = CenterBlockStatistics()
         self._topic = self._logger.prefix  # Use logger prefix as topic for traceability
+        self._statistics.register_topic(self._topic)
 
     @property
     def n_slices(self) -> int:
@@ -163,8 +164,9 @@ class CommutatorHelper(SolverHelper):
     def reset_block_statistics(self) -> None:
         """Reset block solving statistics."""
         self._statistics.reset()
+        self._statistics.register_topic(self._topic)  # Keep topic visible even when empty
 
-    def get_block_statistics(self) -> BlockStatistics:
+    def get_block_statistics(self) -> CenterBlockStatistics:
         """Get accumulated block solving statistics."""
         return self._statistics
 

@@ -15,7 +15,7 @@ from cube.domain.model import CenterSlice, Color, FaceName
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
-from cube.domain.solver.common.BlockStatistics import BlockStatistics
+from cube.domain.solver.common.CenterBlockStatistics import CenterBlockStatistics
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.common.big_cube.commutator.CommutatorHelper import CommutatorHelper
 from cube.domain.solver.protocols import SolverElementsProvider
@@ -1293,7 +1293,7 @@ class NxNCenters(SolverHelper):
         """Reset block solving statistics."""
         self._comm_helper.reset_block_statistics()
 
-    def get_block_statistics(self) -> BlockStatistics:
+    def get_block_statistics(self) -> CenterBlockStatistics:
         """Get accumulated block solving statistics."""
         return self._comm_helper.get_block_statistics()
 

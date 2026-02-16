@@ -6,7 +6,7 @@ from cube.domain.exceptions import InternalSWError
 from cube.domain.geometric.block import Block
 from cube.domain.geometric.geometry_types import Point
 from cube.domain.model import Color, Face
-from cube.domain.solver.common.BlockStatistics import BlockStatistics
+from cube.domain.solver.common.CenterBlockStatistics import CenterBlockStatistics
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.common.big_cube.commutator.CommutatorHelper import CommutatorHelper
 from cube.domain.solver.direct.lbl import _common
@@ -147,7 +147,7 @@ class _LBLNxNCenters(SolverHelper):
         """Reset block solving statistics."""
         self._comm_helper.reset_block_statistics()
 
-    def get_block_statistics(self) -> BlockStatistics:
+    def get_block_statistics(self) -> CenterBlockStatistics:
         """Get accumulated block solving statistics."""
         return self._comm_helper.get_block_statistics()
 

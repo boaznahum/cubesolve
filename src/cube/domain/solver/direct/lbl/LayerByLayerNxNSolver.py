@@ -33,7 +33,7 @@ from cube.domain.exceptions.EvenCubeEdgeParityException import EvenCubeEdgeParit
 from cube.domain.model import Corner, Part, Color
 from cube.domain.solver.SolverName import SolverName
 from cube.domain.solver.common.BaseSolver import BaseSolver
-from cube.domain.solver.common.BlockStatistics import BlockStatistics
+from cube.domain.solver.common.CenterBlockStatistics import CenterBlockStatistics
 from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
 from cube.domain.solver.common.big_cube.NxNCorners import NxNCorners
 from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
@@ -101,7 +101,7 @@ class LayerByLayerNxNSolver(BaseSolver):
         self._l3_edges = _LBLL3Edges(self)
 
         # Accumulated stats from temporary helpers (L1/L3 NxNCenters instances)
-        self._accumulated_temp_stats = BlockStatistics()
+        self._accumulated_temp_stats = CenterBlockStatistics()
 
     # =========================================================================
     # Public properties/methods (Solver protocol order)
@@ -487,7 +487,7 @@ class LayerByLayerNxNSolver(BaseSolver):
         with self.op.annotation.annotate(h2=f"L1 centers ({l1_tracker.color.name})"):
             centers = NxNCenters(self, preserve_cage=False, tracker_holder=th)
             centers.solve_single_face(th, l1_tracker)
-            self._accumulated_temp_stats.accumulate(centers.get_block_statistics())
+            self._accumulated_temp_stats.accumulate(centers.get_block_statistics(), topic_prefix="L1")
 
     def _solve_layer1_edges(self, th: FacesTrackerHolder) -> None:
         """Solve only the Layer 1 face edges."""
@@ -747,7 +747,7 @@ class LayerByLayerNxNSolver(BaseSolver):
         with self.op.annotation.annotate(h2=f"L3 centers ({l3_tracker.color.name})"):
             centers = NxNCenters(self, preserve_cage=False, tracker_holder=th)
             centers.solve_single_face(th, l3_tracker)
-            self._accumulated_temp_stats.accumulate(centers.get_block_statistics())
+            self._accumulated_temp_stats.accumulate(centers.get_block_statistics(), topic_prefix="L3")
 
     def _solve_layer3_edges(self, th: FacesTrackerHolder) -> None:
         """Solve only the Layer 3 face edges using safe algorithms.
@@ -807,9 +807,9 @@ class LayerByLayerNxNSolver(BaseSolver):
         self._shadow_helper.reset_block_statistics()
         self._accumulated_temp_stats.reset()
 
-    def get_block_statistics(self) -> BlockStatistics:
+    def get_block_statistics(self) -> CenterBlockStatistics:
         """Return block solving statistics from ALL children."""
-        stats = BlockStatistics()
+        stats = CenterBlockStatistics()
         stats.accumulate(self._lbl_slices.get_block_statistics())
         stats.accumulate(self._l3_edges.get_block_statistics())
         stats.accumulate(self._nxn_edges.get_block_statistics())

@@ -35,7 +35,7 @@ from typing import TYPE_CHECKING, Tuple
 from cube.domain.algs import SlicedSliceAlg
 from cube.domain.algs.Algs import Algs
 from cube.domain.exceptions import InternalSWError
-from cube.domain.solver.common.BlockStatistics import BlockStatistics
+from cube.domain.solver.common.CenterBlockStatistics import CenterBlockStatistics
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.tracker._face_trackers import FaceTracker
@@ -74,7 +74,7 @@ class _LBLSlices(SolverHelper):
         self._last_centers: _LBLNxNCenters | None = None
         self._edges = _LBLNxNEdges(self)
         self._sanity = SanityChecker(self.cube, slv.config.lbl_sanity_check)
-        self._accumulated_stats = BlockStatistics()
+        self._accumulated_stats = CenterBlockStatistics()
 
     def _create_centers(self, th: FacesTrackerHolder) -> _LBLNxNCenters:
         """Create fresh _LBLNxNCenters with the given tracker holder.
@@ -102,9 +102,9 @@ class _LBLSlices(SolverHelper):
         if self._edges is not None:
             self._edges.reset_block_statistics()
 
-    def get_block_statistics(self) -> BlockStatistics:
+    def get_block_statistics(self) -> CenterBlockStatistics:
         """Return accumulated statistics from ALL sub-helpers (centers and edges)."""
-        stats = BlockStatistics()
+        stats = CenterBlockStatistics()
 
         # Add accumulated stats from previous center instances
         stats.accumulate(self._accumulated_stats)
