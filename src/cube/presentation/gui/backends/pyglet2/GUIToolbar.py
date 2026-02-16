@@ -414,6 +414,15 @@ class GUIToolbar:
             min_width=45,
         )
 
+        # Add "Help" button
+        from cube.presentation.gui.commands.concrete import HelpCommand
+        self.add_button(
+            label="Help",
+            command=HelpCommand(),
+            tooltip="Print keyboard and mouse help to console",
+            min_width=45,
+        )
+
         # Add "Solve" button with Shift = Instant
         self.add_button(
             label="Solve",

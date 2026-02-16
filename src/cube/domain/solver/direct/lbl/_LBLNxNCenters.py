@@ -30,6 +30,24 @@ class _LBLNxNCenters(SolverHelper):
     This solver brings center pieces from source faces to target faces using
     single-piece or block commutators (3-cycle of center pieces).
 
+    DESIGN RATIONALE - TARGET-FIRST vs SOURCE-FIRST BLOCK SEARCH:
+    ==============================================================
+    NxNCenters uses a source-first approach: search_big_block() finds matching
+    blocks on the source face, then _block_commutator() moves them to target.
+    This class uses a target-first approach: iterate unsolved positions on the
+    target face row, then search for matching colors on source via rotation.
+
+    For row-constrained solving (LBL solves one row at a time), both approaches
+    find the same 1×N blocks and are algorithmically equivalent. Target-first
+    is preferred because:
+    1. Smaller search space (K unsolved positions in one row vs M positions on
+       entire source face)
+    2. Natural integration with marker protection (s2 validation in
+       _source_block_has_color_no_rotation) and row tracking (MARKER 3)
+    3. NxNCenters's source-first code cannot be reused: _point_on_source() is
+       hardcoded for front↔up/back, _block_commutator() lacks marker protection,
+       and search_big_block finds multi-row blocks invalid for row-by-row solving
+
     MODES OF OPERATION:
     ===================
 
@@ -408,7 +426,19 @@ class _LBLNxNCenters(SolverHelper):
                                                          target_face: FaceTracker,
                                                          source_face: FaceTracker,
                                                          face_row: int) -> bool:
+        """
+        Solve center pieces from a source face row using commutator search.
 
+        Now uses CommutatorHelper.search_big_block() with an unsolved cell predicate.
+        This integrates the "commutator search method" from NxNCenters while maintaining
+        LBL's row-by-row and marker protection constraints.
+
+        OPTIMIZATION: search_big_block() is called ONCE per row (not per position),
+        then all blocks found are processed. This is more efficient than the original
+        _search_blocks_starting_at() which searched from each unsolved position.
+
+        Toggle USE_NEW_SEARCH to compare with original _search_blocks_starting_at().
+        """
         # we comae hre from setup
 
         assert l1_tracker.face is self.cube.down
@@ -437,43 +467,106 @@ class _LBLNxNCenters(SolverHelper):
 
         max_block_size = _lbl_config.LBL_MAX_BLOCK_SIZE
 
-        # Unified approach: iterate piece-by-piece, try blocks starting at each position
-        for rc in _iterate_all_tracked_center_slices_index(target_face):
+        # TOGGLE: Use new optimized CommutatorHelper.search_big_block() or old _search_blocks_starting_at()
+        USE_NEW_SEARCH = True
 
-            candidate_piece = target_face.face.center.get_center_slice(rc)
-
-            # Skip if already correct color
-            if candidate_piece.color == color:
-                continue
-
-            # Skip if already solved by a previous block in this iteration
-            if _is_cent_piece_marked_solved(candidate_piece):
-                continue
-
-            self.debug(f"Working on slice {face_row} Found piece candidate {candidate_piece}")
-
-            # Search for blocks starting at rc (size controlled by config)
-            blocks = self._search_blocks_starting_at(
-                rc, target_face, color, max_size=max_block_size
+        # NEW OPTIMIZED: Call search_big_block() ONCE per row, then process all blocks
+        # This is more efficient than old approach (called per position)
+        if USE_NEW_SEARCH:
+            blocks_all = self._get_all_blocks_in_row_optimized(
+                target_face, color, max_block_size
             )
+            # Process blocks by trying each one
+            for block in blocks_all:
+                # Skip if block's starting position was already solved
+                if target_face.face.center.get_center_slice(block[0]).color == color:
+                    continue
 
-            # Try blocks largest first
-            solved_block = False
-            for block in blocks:
                 if self._try_solve_block(
                     l1_tracker, face_row,
                     block, color, target_face.face, source_face.face
                 ):
                     work_done = True
-                    solved_block = True
-                    break  # Move to next rc
+        else:
+            # OLD: Iterate position-by-position, call _search_blocks_starting_at() for each
+            for rc in _iterate_all_tracked_center_slices_index(target_face):
 
-            if not solved_block and len(blocks) > 0:
-                # All blocks failed - this shouldn't happen for 1x1 blocks
-                # but may happen for larger blocks if source doesn't have colors
-                self.debug(f"No block starting at {rc} could be solved")
+                candidate_piece = target_face.face.center.get_center_slice(rc)
+
+                # Skip if already correct color
+                if candidate_piece.color == color:
+                    continue
+
+                # Skip if already solved by a previous block in this iteration
+                if _is_cent_piece_marked_solved(candidate_piece):
+                    continue
+
+                self.debug(f"Working on slice {face_row} Found piece candidate {candidate_piece}")
+
+                # Search for blocks starting at rc (size controlled by config)
+                blocks = self._search_blocks_starting_at(
+                    rc, target_face, color, max_size=max_block_size
+                )
+
+                # Try blocks largest first
+                solved_block = False
+                for block in blocks:
+                    if self._try_solve_block(
+                        l1_tracker, face_row,
+                        block, color, target_face.face, source_face.face
+                    ):
+                        work_done = True
+                        solved_block = True
+                        break  # Move to next rc
+
+                if not solved_block and len(blocks) > 0:
+                    # All blocks failed - this shouldn't happen for 1x1 blocks
+                    # but may happen for larger blocks if source doesn't have colors
+                    self.debug(f"No block starting at {rc} could be solved")
 
         return work_done
+
+    def _get_all_blocks_in_row_optimized(
+        self,
+        target_face: FaceTracker,
+        required_color: Color,
+        max_block_size: int
+    ) -> list[Block]:
+        """
+        Get all blocks in the current row using CommutatorHelper.search_big_block().
+
+        OPTIMIZED: Calls search_big_block() ONCE for the entire row,
+        then returns all blocks found. More efficient than calling
+        _search_blocks_starting_at() for each unsolved position.
+
+        Args:
+            target_face: Target face tracker
+            required_color: Color that pieces should have
+            max_block_size: Maximum block size (1 = single pieces, >1 = larger blocks)
+
+        Returns:
+            List of valid blocks, sorted by size descending (largest first)
+        """
+        def unsolved_cell_predicate(f: Face, pt: Point) -> bool:
+            """Predicate: cell is unsolved (wrong color AND not marked solved)."""
+            piece = f.center.get_center_slice(pt)
+            return piece.color != required_color and not _is_cent_piece_marked_solved(piece)
+
+        # Call search_big_block ONCE for all positions in the row
+        # row_indices constrained to current row being solved
+        raw_blocks = self._comm_helper.search_big_block(
+            face=target_face.face,
+            color=required_color,
+            row_indices=range(self.n_slices),  # All positions in row (filtered by max_rows=1)
+            col_indices=None,                   # All columns
+            max_rows=1,                         # Height = 1 (single row, LBL constraint)
+            max_cols=None,                      # Width limit per config
+            cell_predicate=unsolved_cell_predicate
+        )
+
+        # Extract Block objects from (size, Block) tuples and return
+        blocks = [b for _, b in raw_blocks]
+        return blocks
 
     def _search_blocks_starting_at(
         self,

@@ -4,7 +4,7 @@ from __future__ import annotations
 import pytest
 
 from cube.domain.algs import Algs
-from .conftest import get_scramble_params, CUBE_SIZES_EVEN
+from tests_wip.big_lbl_2.conftest import get_scramble_params, CUBE_SIZES_EVEN
 from cube.application.AbstractApp import AbstractApp
 from cube.domain.solver.direct.lbl.LayerByLayerNxNSolver import LayerByLayerNxNSolver
 from cube.domain.solver.solver import SolveStep
@@ -28,7 +28,20 @@ class TestLBLBigCubeFullSolver:
 
         app.op.play(alg)
 
-        solver.solve(what=SolveStep.ALL, debug=True, animation=False)
+        solver.solve(what=SolveStep.ALL, debug=False, animation=False)
+
+        # PRINT STATISTICS
+        stats = solver.get_statistics()
+        print(f"\n\n{'='*70}")
+        print(f"BLOCK STATISTICS")
+        print(f"{'='*70}")
+        print(f"Total blocks: {sum(stats.values())}")
+        print(f"Total pieces moved: {sum(size * count for size, count in stats.items())}")
+        print(f"Block breakdown:")
+        for size in sorted(stats.keys()):
+            count = stats[size]
+            print(f"  Size {size}x1: {count} blocks ({size*count} pieces)")
+        print(f"{'='*70}\n")
 
         assert app.cube.solved, (
             f"Cube not solved (size={cube_size})"

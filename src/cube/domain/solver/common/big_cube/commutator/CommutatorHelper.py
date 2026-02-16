@@ -13,7 +13,7 @@ Coordinate system: Bottom-Up, Left-to-Right (BULR/LTR)
 - X increases rightward (ltr_x)
 """
 import sys
-from collections.abc import Collection, Iterable, Iterator
+from collections.abc import Callable, Collection, Iterable, Iterator
 from dataclasses import dataclass
 from typing import Tuple
 
@@ -1116,7 +1116,8 @@ class CommutatorHelper(SolverHelper):
         row_indices: Collection[int] | None = None,
         col_indices: Collection[int] | None = None,
         max_rows: int | None = None,
-        max_cols: int | None = None
+        max_cols: int | None = None,
+        cell_predicate: Callable[[Face, Point], bool] | None = None
     ) -> list[tuple[int, Block]]:
         """
         Search for all possible blocks of a color on a face, sorted by size.
@@ -1144,6 +1145,9 @@ class CommutatorHelper(SolverHelper):
                       If None, blocks can extend to the full grid height.
             max_cols: If provided, limit block width to this many columns.
                       If None, blocks can extend to the full grid width.
+            cell_predicate: Optional predicate(face, point) -> bool.
+                           If provided, ALL cells in a block must satisfy the predicate.
+                           If None, checks that all cells have the specified color.
 
         Returns:
             List of (size, Block) tuples, sorted by size descending.
@@ -1158,15 +1162,28 @@ class CommutatorHelper(SolverHelper):
 
             # Search column 2 only, max width 1 (vertical strips)
             blocks = helper.search_big_block(face, color, col_indices=[2], max_cols=1)
+
+            # LBL: With marker protection predicate
+            def unsolved_predicate(f, pt):
+                piece = f.center.get_center_slice(pt)
+                return piece.color != color and not is_marked_solved(piece)
+            blocks = helper.search_big_block(face, color, cell_predicate=unsolved_predicate)
         """
         center = face.center
         res: list[tuple[int, Block]] = []
         n = self.n_slices
 
+        # Define cell validation function
+        def cell_is_valid(pt: Point) -> bool:
+            if cell_predicate is not None:
+                return cell_predicate(face, pt)
+            else:
+                return center.get_center_slice(pt).color == color
+
         # Calculate extension limits based on max_rows/max_cols
         # r_limit and c_limit are computed per starting position
         for rc in self._2d_center_iter(row_indices, col_indices):
-            if center.get_center_slice(rc).color == color:
+            if cell_is_valid(rc):
                 # Collect 1x1 block only if valid (e.g., center on odd cube is invalid)
                 if self.is_valid_block(rc, rc):
                     res.append((1, Block(rc, rc)))
@@ -1184,8 +1201,8 @@ class CommutatorHelper(SolverHelper):
                     # Check validity of extended block
                     if not self.is_valid_block(extended_block.start, extended_block.end):
                         break
-                    # Only check color of the newly added cell (r, rc[1])
-                    if center.get_center_slice((r, rc[1])).color != color:
+                    # Only check if the newly added cell is valid
+                    if not cell_is_valid(Point(r, rc[1])):
                         break
                     r_max = r
 
@@ -1205,9 +1222,9 @@ class CommutatorHelper(SolverHelper):
                     # Check validity of extended block
                     if not self.is_valid_block(extended_block.start, extended_block.end):
                         break
-                    # Only check color of the newly added column cells
+                    # Only check if all newly added column cells are valid
                     new_col_valid = all(
-                        center.get_center_slice((row, c)).color == color
+                        cell_is_valid(Point(row, c))
                         for row in range(rc[0], r_max + 1)
                     )
                     if not new_col_valid:

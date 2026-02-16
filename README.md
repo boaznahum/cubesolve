@@ -37,6 +37,10 @@ Better to create a virtual environment, then
 
 https://user-images.githubusercontent.com/3913990/172692615-eb9aacf8-bc06-4a95-9aeb-c8ddd9519647.mp4
 
+## Quick Help
+
+**Click the "Help" button in the GUI** to print detailed keyboard and mouse help to the console. This shows all available commands organized by category.
+
 ## Keyboard/Mouse Control
 
     This can also be done by dragging mouse + right button

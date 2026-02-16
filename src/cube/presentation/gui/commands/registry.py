@@ -19,6 +19,7 @@ from .concrete import (
     BrightnessUpCommand,
     CubeRotateCommand,
     DebugInfoCommand,
+    HelpCommand,
     PanCommand,
     PauseToggleCommand,
     # Application
@@ -252,6 +253,7 @@ class Commands:
     TOGGLE_DEBUG = ToggleDebugCommand()
     TOGGLE_SANITY_CHECK = ToggleSanityCheckCommand()
     DEBUG_INFO = DebugInfoCommand()
+    HELP = HelpCommand()
 
     # =========================================================================
     # TESTING
