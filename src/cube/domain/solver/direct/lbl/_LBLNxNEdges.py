@@ -9,6 +9,7 @@ from cube.domain.solver.direct.lbl import _common, _lbl_config
 from cube.domain.solver.direct.lbl._common import mark_slice_and_v_mark_if_solved
 from cube.domain.tracker.PartSliceTracker import EdgeWingTracker, PartSliceTracker
 from cube.domain.tracker._face_trackers import FaceTracker
+from cube.domain.solver.common.BlockStatistics import BlockStatistics
 from cube.domain.solver.common.big_cube.commutator.E2ECommutator import E2ECommutator
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.protocols import SolverElementsProvider
@@ -37,7 +38,7 @@ class _LBLNxNEdges(SolverHelper):
     def __init__(self, slv: SolverElementsProvider) -> None:
         super().__init__(slv, "_LBLNxNEdges")
         self._logger.set_level(_LBLNxNEdges.D_LEVEL)
-        self._e2e_comm = E2ECommutator(slv)
+        self._e2e_comm = E2ECommutator(slv, topic="LBL-Edges")
 
     def solve_single_center_face_row(
             self, l1_tracker: FaceTracker, target_face_t: FaceTracker, face_row: int

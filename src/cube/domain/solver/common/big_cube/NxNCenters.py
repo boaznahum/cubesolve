@@ -15,6 +15,7 @@ from cube.domain.model import CenterSlice, Color, FaceName
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
+from cube.domain.solver.common.BlockStatistics import BlockStatistics
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.common.big_cube.commutator.CommutatorHelper import CommutatorHelper
 from cube.domain.solver.protocols import SolverElementsProvider
@@ -160,7 +161,7 @@ class NxNCenters(SolverHelper):
         self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS = cfg.optimize_big_cube_centers_search_blocks
 
         # Use CommutatorHelper for block search operations
-        self._comm_helper = CommutatorHelper(slv)
+        self._comm_helper = CommutatorHelper(slv, topic="NxNCenters")
 
     def _is_solved(self):
         return all((f.center.is3x3 for f in self.cube.faces)) and self.cube.is_boy
@@ -1287,5 +1288,13 @@ class NxNCenters(SolverHelper):
             c1, c2 = c2, c1
 
         return Algs.M[c1 + 1:c2 + 1].prime
+
+    def reset_statistics(self) -> None:
+        """Reset block solving statistics."""
+        self._comm_helper.reset_statistics()
+
+    def get_statistics(self) -> BlockStatistics:
+        """Get accumulated block solving statistics."""
+        return self._comm_helper.get_statistics()
 
     D_LEVEL = 3

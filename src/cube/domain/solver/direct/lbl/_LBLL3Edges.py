@@ -12,6 +12,7 @@ from cube.domain.algs import Alg, Algs, SeqAlg
 from cube.domain.model import EdgeWing, Edge
 from cube.domain.model._part import EdgeName
 from cube.domain.solver import SolveStep
+from cube.domain.solver.common.BlockStatistics import BlockStatistics
 from cube.domain.solver.common.big_cube import NxNEdges
 from cube.domain.solver.common.big_cube.commutator.E2ECommutator import E2ECommutator
 from cube.domain.solver.common.SolverHelper import SolverHelper
@@ -76,7 +77,7 @@ class _LBLL3Edges(SolverHelper):
 
         # Composition: reuse existing edge methods
         self._nxn_edges = _LBLNxNEdges(slv)
-        self._e2e_comm = E2ECommutator(slv)
+        self._e2e_comm = E2ECommutator(slv, topic="LBL-L3Edges")
 
     # =========================================================================
     # Main Entry Point
