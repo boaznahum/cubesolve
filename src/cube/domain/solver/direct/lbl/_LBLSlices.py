@@ -99,17 +99,23 @@ class _LBLSlices(SolverHelper):
         self._accumulated_stats.reset()
         if self._last_centers is not None:
             self._last_centers.reset_statistics()
+        if self._edges is not None:
+            self._edges.reset_statistics()
 
     def get_statistics(self) -> BlockStatistics:
-        """Return accumulated statistics from ALL center instances."""
+        """Return accumulated statistics from ALL sub-helpers (centers and edges)."""
         stats = BlockStatistics()
 
-        # Add accumulated stats from previous instances
+        # Add accumulated stats from previous center instances
         stats.accumulate(self._accumulated_stats)
 
-        # Add current instance stats
+        # Add current center instance stats
         if self._last_centers is not None:
             stats.accumulate(self._last_centers.get_statistics())
+
+        # Add edge statistics
+        if self._edges is not None:
+            stats.accumulate(self._edges.get_statistics())
 
         return stats
 

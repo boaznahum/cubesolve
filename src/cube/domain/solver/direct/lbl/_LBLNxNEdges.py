@@ -419,3 +419,11 @@ class _LBLNxNEdges(SolverHelper):
         :return:  (on face color, on_other color)
         """
         return f.color, s.get_other_face(f).color
+
+    def reset_statistics(self) -> None:
+        """Reset block solving statistics."""
+        self._e2e_comm.reset_statistics()
+
+    def get_statistics(self) -> BlockStatistics:
+        """Get accumulated block solving statistics."""
+        return self._e2e_comm.get_statistics()
