@@ -21,6 +21,7 @@ from cube.domain.exceptions import (
 )
 from cube.domain.solver._3x3.beginner.BeginnerSolver3x3 import BeginnerSolver3x3
 from cube.domain.solver.common.AbstractSolver import AbstractSolver
+from cube.domain.solver.common.CenterBlockStatistics import CenterBlockStatistics
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.protocols.ReducerProtocol import ReducerProtocol
 from cube.domain.solver.protocols.Solver3x3Protocol import Solver3x3Protocol
@@ -306,6 +307,18 @@ class NxNSolverOrchestrator(AbstractSolver):
             self.debug(sr.parity_summary())
 
         return sr
+
+    # =========================================================================
+    # Statistics (override AbstractSolver)
+    # =========================================================================
+
+    def reset_block_statistics(self) -> None:
+        """Reset statistics in both reducer and 3x3 solver."""
+        self._reducer.reset_block_statistics()
+
+    def get_block_statistics(self) -> CenterBlockStatistics:
+        """Aggregate block statistics from reducer."""
+        return self._reducer.get_block_statistics()
 
     def supported_steps(self) -> list[SolveStep]:
         """Return list of solve steps this solver supports.

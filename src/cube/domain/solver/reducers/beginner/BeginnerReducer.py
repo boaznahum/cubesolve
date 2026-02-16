@@ -7,6 +7,7 @@ Uses FacesTrackerHolder for even cube matching - see:
 from __future__ import annotations
 
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
+from cube.domain.solver.common.CenterBlockStatistics import CenterBlockStatistics
 from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.protocols.ReducerProtocol import ReductionResults
@@ -28,7 +29,7 @@ class BeginnerReducer(AbstractReducer):
     NxNEdges, NxNCorners) directly without needing a facade class.
     """
 
-    __slots__ = ["_nxn_edges", "_nxn_corners"]
+    __slots__ = ["_nxn_edges", "_nxn_corners", "_accumulated_temp_stats"]
 
     def __init__(
         self,
@@ -52,6 +53,7 @@ class BeginnerReducer(AbstractReducer):
         # Pass self (we implement SolverElementsProvider via AbstractReducer)
         self._nxn_edges = NxNEdges(self, advanced_edge_parity)
         self._nxn_corners = NxNCorners(self)
+        self._accumulated_temp_stats = CenterBlockStatistics()
 
     def is_reduced(self) -> bool:
         """Check if cube is already reduced to 3x3 state.
@@ -95,6 +97,10 @@ class BeginnerReducer(AbstractReducer):
         with FacesTrackerHolder(self) as holder:
             centers = NxNCenters(self)
             centers.solve(holder)
+            # Accumulate stats from temporary NxNCenters instance
+            self._accumulated_temp_stats.accumulate(
+                centers.get_block_statistics(), topic_prefix="Centers"
+            )
 
     def solve_edges(self) -> bool:
         """Solve only edges (second part of reduction).
@@ -123,6 +129,24 @@ class BeginnerReducer(AbstractReducer):
             inner slice moves disturb the reduced edge pairing.
         """
         self._nxn_corners.fix_corner_parity()
+
+    # =========================================================================
+    # Statistics (override AbstractReducer)
+    # =========================================================================
+
+    def reset_block_statistics(self) -> None:
+        """Reset block statistics before reduction."""
+        self._nxn_edges.reset_block_statistics()
+        self._nxn_corners.reset_block_statistics()
+        self._accumulated_temp_stats.reset()
+
+    def get_block_statistics(self) -> CenterBlockStatistics:
+        """Return block statistics from all children."""
+        stats = CenterBlockStatistics()
+        stats.accumulate(self._nxn_edges.get_block_statistics())
+        stats.accumulate(self._nxn_corners.get_block_statistics())
+        stats.accumulate(self._accumulated_temp_stats)
+        return stats
 
     def centers_solved(self) -> bool:
         """Check if centers are reduced."""
