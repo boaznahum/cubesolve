@@ -1,9 +1,12 @@
 """Factory for predefined marker configurations with singleton caching."""
 from __future__ import annotations
 
+from typing import Any
+
 from .IMarkerFactory import IMarkerFactory
 from ._marker_config import MarkerConfig, color_255_to_float
 from .MarkerShape import MarkerShape
+from ._outlined_circle_marker import OutlinedCircleMarker
 
 
 class MarkerFactory(IMarkerFactory):
@@ -24,7 +27,8 @@ class MarkerFactory(IMarkerFactory):
     """
 
     # Class-level cache for singleton instances
-    _cache: dict[tuple[str, ...], MarkerConfig] = {}
+    # Values can be MarkerConfig or any MarkerCreator (e.g., OutlinedCircleMarker)
+    _cache: dict[tuple[str, ...], Any] = {}
 
     # ============================================================
     # Animation Markers (used by solver/animation system)
@@ -387,6 +391,55 @@ class MarkerFactory(IMarkerFactory):
                 thickness=1.0,
                 height_offset=0.1,
                 character=character,
+            )
+        return MarkerFactory._cache[key]
+
+    # ============================================================
+    # Outlined Circle Markers (MarkerCreator-based)
+    # ============================================================
+
+    def create_outlined_circle(
+        self,
+        fill_color: tuple[float, float, float],
+        outline_color: tuple[float, float, float] = (0.0, 0.0, 0.0),
+        radius_factor: float = 0.4,
+        outline_width: float = 0.15,
+        height_offset: float = 0.12,
+        z_order: int = 0,
+    ) -> OutlinedCircleMarker:
+        """Create an outlined circle marker (filled circle with outline ring).
+
+        Used by face tracker to show tracked face color with visible outline.
+        Cached by all parameters.
+
+        Args:
+            fill_color: RGB color for the inner circle (0.0-1.0).
+            outline_color: RGB color for the outline ring (0.0-1.0).
+            radius_factor: Radius as fraction of cell size.
+            outline_width: Outline width as fraction of radius.
+            height_offset: Height above surface.
+            z_order: Drawing order.
+
+        Returns:
+            Cached OutlinedCircleMarker instance.
+        """
+        key = (
+            "outlined_circle",
+            str(fill_color),
+            str(outline_color),
+            str(radius_factor),
+            str(outline_width),
+            str(height_offset),
+            str(z_order),
+        )
+        if key not in MarkerFactory._cache:
+            MarkerFactory._cache[key] = OutlinedCircleMarker(
+                fill_color=fill_color,
+                outline_color=outline_color,
+                radius_factor=radius_factor,
+                outline_width=outline_width,
+                height_offset=height_offset,
+                z_order=z_order,
             )
         return MarkerFactory._cache[key]
 

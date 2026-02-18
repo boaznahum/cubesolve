@@ -34,19 +34,22 @@ Usage:
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from cube.domain.model.PartEdge import PartEdge
 
 from .MarkerShape import MarkerShape
 from ._marker_config import MarkerConfig, color_255_to_float, color_float_to_255
+from ._marker_creator_protocol import MarkerCreator
+from ._marker_toolkit import MarkerToolkit
+from ._outlined_circle_marker import OutlinedCircleMarker
 from .IMarkerFactory import IMarkerFactory
 from .MarkerFactory import MarkerFactory
 from .IMarkerManager import IMarkerManager
 from .MarkerManager import MarkerManager
 
-def get_markers_from_part_edge(part_edge: "PartEdge") -> list[MarkerConfig]:
+def get_markers_from_part_edge(part_edge: "PartEdge") -> list[MarkerCreator]:
     """Convenience function to read all markers from a PartEdge.
 
     This function reads markers from both attribute dictionaries (fixed_attributes,
@@ -59,25 +62,25 @@ def get_markers_from_part_edge(part_edge: "PartEdge") -> list[MarkerConfig]:
         part_edge: The sticker to get markers from
 
     Returns:
-        List of unique MarkerConfig objects, sorted by z_order.
+        List of unique MarkerCreator objects, sorted by z_order.
     """
-    all_markers: list[MarkerConfig] = []
+    all_markers: list[MarkerCreator] = []
     key = "markers"
 
     for attrs in [part_edge.fixed_attributes, part_edge.moveable_attributes]:
-        markers_dict: dict[str, MarkerConfig] | None = attrs.get(key)
+        markers_dict: dict[str, MarkerCreator] | None = attrs.get(key)
         if markers_dict:
             all_markers.extend(markers_dict.values())
 
     # Deduplicate: keep highest z_order for each unique config
-    # MarkerConfig is frozen/hashable, so can use as dict key
-    unique: dict[MarkerConfig, MarkerConfig] = {}
+    # Both MarkerConfig and OutlinedCircleMarker are frozen/hashable
+    unique: dict[Any, Any] = {}
     for marker in all_markers:
         if marker not in unique or marker.z_order > unique[marker].z_order:
             unique[marker] = marker
 
     # Sort by z_order (lowest first, so highest draws on top)
-    result = list(unique.values())
+    result: list[MarkerCreator] = list(unique.values())
     result.sort(key=lambda m: m.z_order)
     return result
 
@@ -85,10 +88,13 @@ def get_markers_from_part_edge(part_edge: "PartEdge") -> list[MarkerConfig]:
 __all__ = [
     "IMarkerFactory",
     "IMarkerManager",
+    "MarkerCreator",
+    "MarkerToolkit",
     "MarkerShape",
     "MarkerConfig",
     "MarkerFactory",
     "MarkerManager",
+    "OutlinedCircleMarker",
     "color_255_to_float",
     "color_float_to_255",
     "get_markers_from_part_edge",

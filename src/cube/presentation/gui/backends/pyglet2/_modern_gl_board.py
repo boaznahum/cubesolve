@@ -310,29 +310,27 @@ class ModernGLBoard:
                 and cell.part_slice in animated_parts
             )
 
-            # Get markers once per cell to avoid repeated lookups
-            markers = cell.get_markers()
 
             if is_animated:
                 cell.generate_face_vertices(animated_face_verts)
                 cell.generate_line_vertices(animated_line_verts)
-                cell.generate_cross_line_vertices(animated_line_verts, markers)
-                cell.generate_arrow_line_vertices(animated_line_verts)
-                cell.generate_character_line_vertices(animated_line_verts, markers)
-                # Collect animated marker geometry
+                # All markers (including cross/character lines) via toolkit
                 if animated_marker_verts is not None:
-                    cell.generate_marker_vertices(animated_marker_verts)
+                    cell.generate_marker_vertices(animated_marker_verts, animated_line_verts)
                     cell.generate_tracker_indicator_vertices(animated_marker_verts)
+                else:
+                    # Still need line-based markers even without marker verts
+                    cell.generate_marker_vertices([], animated_line_verts)
             else:
                 cell.generate_face_vertices(face_verts)
                 cell.generate_line_vertices(line_verts)
-                cell.generate_cross_line_vertices(line_verts, markers)
-                cell.generate_arrow_line_vertices(line_verts)
-                cell.generate_character_line_vertices(line_verts, markers)
-                # Collect static marker geometry
+                # All markers (including cross/character lines) via toolkit
                 if marker_verts is not None:
-                    cell.generate_marker_vertices(marker_verts)
+                    cell.generate_marker_vertices(marker_verts, line_verts)
                     cell.generate_tracker_indicator_vertices(marker_verts)
+                else:
+                    # Still need line-based markers even without marker verts
+                    cell.generate_marker_vertices([], line_verts)
 
     def _generate_textured_face_verts(
         self,
@@ -358,29 +356,25 @@ class ModernGLBoard:
                 and cell.part_slice in animated_parts
             )
 
-            # Get markers once per cell to avoid repeated lookups
-            markers = cell.get_markers()
 
             if is_animated:
                 if color in animated_verts_per_color:
                     cell.generate_textured_vertices(animated_verts_per_color[color], size)
                 cell.generate_line_vertices(animated_line_verts)
-                cell.generate_cross_line_vertices(animated_line_verts, markers)
-                cell.generate_arrow_line_vertices(animated_line_verts)
-                cell.generate_character_line_vertices(animated_line_verts, markers)
                 if animated_marker_verts is not None:
-                    cell.generate_marker_vertices(animated_marker_verts)
+                    cell.generate_marker_vertices(animated_marker_verts, animated_line_verts)
                     cell.generate_tracker_indicator_vertices(animated_marker_verts)
+                else:
+                    cell.generate_marker_vertices([], animated_line_verts)
             else:
                 if color in verts_per_color:
                     cell.generate_textured_vertices(verts_per_color[color], size)
                 cell.generate_line_vertices(line_verts)
-                cell.generate_cross_line_vertices(line_verts, markers)
-                cell.generate_arrow_line_vertices(line_verts)
-                cell.generate_character_line_vertices(line_verts, markers)
                 if marker_verts is not None:
-                    cell.generate_marker_vertices(marker_verts)
+                    cell.generate_marker_vertices(marker_verts, line_verts)
                     cell.generate_tracker_indicator_vertices(marker_verts)
+                else:
+                    cell.generate_marker_vertices([], line_verts)
 
     def generate_per_cell_textured_geometry(
         self,
@@ -467,30 +461,26 @@ class ModernGLBoard:
                 and cell.part_slice in animated_parts
             )
 
-            # Get markers once per cell to avoid repeated lookups
-            markers = cell.get_markers()
 
             if is_animated:
                 verts_per_texture.setdefault(texture_handle, [])
                 animated_verts_per_texture.setdefault(texture_handle, [])
                 cell.generate_full_uv_vertices(animated_verts_per_texture[texture_handle])
                 cell.generate_line_vertices(animated_line_verts)
-                cell.generate_cross_line_vertices(animated_line_verts, markers)
-                cell.generate_arrow_line_vertices(animated_line_verts)
-                cell.generate_character_line_vertices(animated_line_verts, markers)
                 if animated_marker_verts is not None:
-                    cell.generate_marker_vertices(animated_marker_verts)
+                    cell.generate_marker_vertices(animated_marker_verts, animated_line_verts)
                     cell.generate_tracker_indicator_vertices(animated_marker_verts)
+                else:
+                    cell.generate_marker_vertices([], animated_line_verts)
             else:
                 verts_per_texture.setdefault(texture_handle, [])
                 cell.generate_full_uv_vertices(verts_per_texture[texture_handle])
                 cell.generate_line_vertices(line_verts)
-                cell.generate_cross_line_vertices(line_verts, markers)
-                cell.generate_arrow_line_vertices(line_verts)
-                cell.generate_character_line_vertices(line_verts, markers)
                 if marker_verts is not None:
-                    cell.generate_marker_vertices(marker_verts)
+                    cell.generate_marker_vertices(marker_verts, line_verts)
                     cell.generate_tracker_indicator_vertices(marker_verts)
+                else:
+                    cell.generate_marker_vertices([], line_verts)
 
     def get_face_center(self, face_name: FaceName) -> ndarray:
         """Get the center point of a face."""

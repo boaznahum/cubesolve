@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from .MarkerShape import MarkerShape
 
 if TYPE_CHECKING:
-    pass
+    from ._marker_toolkit import MarkerToolkit
 
 
 @dataclass(frozen=True)
@@ -64,6 +64,54 @@ class MarkerConfig:
             raise ValueError(
                 f"MarkerConfig: thickness must be in (0, 1.0], got {self.thickness}"
             )
+
+    def _resolve_color(self, toolkit: "MarkerToolkit") -> tuple[float, float, float]:
+        """Resolve marker color, handling complementary color logic.
+
+        Args:
+            toolkit: The toolkit providing face_color and complementary_color.
+
+        Returns:
+            RGB color tuple (0.0-1.0).
+        """
+        if self.color is not None:
+            return self.color
+        if self.use_complementary_color:
+            return toolkit.complementary_color
+        return (1.0, 0.0, 1.0)  # Fallback magenta
+
+    def draw(self, toolkit: "MarkerToolkit") -> None:
+        """Draw this marker using toolkit primitives.
+
+        Dispatches to the appropriate toolkit method based on self.shape.
+        Implements the MarkerCreator protocol for backward compatibility.
+
+        Args:
+            toolkit: Backend-specific toolkit initialized with cell geometry.
+        """
+        color = self._resolve_color(toolkit)
+
+        if self.shape == MarkerShape.CROSS:
+            toolkit.draw_cross(color)
+
+        elif self.shape == MarkerShape.ARROW:
+            toolkit.draw_arrow(color, self.direction, self.radius_factor, self.thickness)
+
+        elif self.shape == MarkerShape.CHARACTER:
+            toolkit.draw_character(self.character, color, self.radius_factor)
+
+        elif self.shape == MarkerShape.CHECKMARK:
+            toolkit.draw_checkmark(color, self.radius_factor, self.thickness, self.height_offset)
+
+        elif self.shape == MarkerShape.BOLD_CROSS:
+            toolkit.draw_bold_cross(color, self.radius_factor, self.thickness, self.height_offset)
+
+        elif self.shape == MarkerShape.FILLED_CIRCLE:
+            toolkit.draw_filled_circle(self.radius_factor, color, self.height_offset)
+
+        elif self.shape == MarkerShape.RING:
+            inner_radius = self.radius_factor * (1.0 - self.thickness)
+            toolkit.draw_ring(inner_radius, self.radius_factor, color, self.height_offset)
 
 
 # Type alias for marker color (RGB 0-255 int or 0.0-1.0 float)

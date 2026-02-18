@@ -4,7 +4,6 @@ from cube.domain.model import Face, CenterSlice, Color
 # This is ONLY for on-screen display (marker_manager) — NOT used for solver logic.
 # Solver logic uses moveable_attributes with _TRACKER_KEY_PREFIX instead.
 _TRACKER_VISUAL_MARKER = "tracker_ct"
-_TRACKER_OUTLINE_SUFFIX = "_ol"
 
 # Map Color enum to RGB float tuples for marker rendering.
 # These match the standard Rubik's cube color scheme.
@@ -20,9 +19,6 @@ _COLOR_TO_RGB: dict[Color, tuple[float, float, float]] = {
 
 def tracer_visual_key(tracer_key: str) -> str:
     return _TRACKER_VISUAL_MARKER + tracer_key
-
-def tracer_outline_key(tracer_key: str) -> str:
-    return _TRACKER_VISUAL_MARKER + tracer_key + _TRACKER_OUTLINE_SUFFIX
 
 def _find_markable_center_slice(face: Face, color: Color) -> CenterSlice:
     """Find a center slice on the given face to mark.
@@ -51,28 +47,16 @@ def find_and_track_slice(face: Face, key: str, color: Color) -> None:
         edge = center_slice.edge
         edge.moveable_attributes[key] = color
 
-        # 5. Re-add visual markers on the new edge:
-        #    - Black outline ring (lower z_order, drawn first)
-        #    - Face-colored filled circle (higher z_order, drawn on top)
+        # 5. Add visual marker: outlined circle showing face color with black outline
         cube = face.cube
         if cube.config.face_tracker.annotate:
             mm = cube.sp.marker_manager
             mf = cube.sp.marker_factory
             face_rgb = _COLOR_TO_RGB.get(color, (1.0, 0.0, 1.0))  # fallback magenta
 
-            # Black outline ring - slightly larger, drawn underneath
-            outline = mf.create_ring(
-                color=(0.0, 0.0, 0.0),
-                radius_factor=0.5,
-                thickness=0.35,
-                height_offset=0.11,
+            # Single outlined circle marker: face-colored fill + black outline
+            marker = mf.create_outlined_circle(
+                fill_color=face_rgb,
+                outline_color=(0.0, 0.0, 0.0),
             )
-            mm.add_marker(edge, tracer_outline_key(key), outline, moveable=True)
-
-            # Face-colored filled circle - on top
-            dot = mf.create_filled_circle(
-                color=face_rgb,
-                radius_factor=0.4,
-                height_offset=0.12,
-            )
-            mm.add_marker(edge, tracer_visual_key(key), dot, moveable=True)
+            mm.add_marker(edge, tracer_visual_key(key), marker, moveable=True)

@@ -39,6 +39,153 @@ _inited = False
 
 _colors: dict[Color, _VColor] = {}
 
+# Complementary color map (0.0-1.0 float values for MarkerToolkit protocol)
+# Keyed by 0-255 face color (matching _colors dict) for legacy renderer lookup.
+_COMPLEMENTARY_MAP_FLOAT: dict[_VColor, tuple[float, float, float]] = {
+    (255, 0, 0): (0.0, 1.0, 1.0),
+    (0, 255, 0): (1.0, 0.0, 1.0),
+    (0, 0, 255): (1.0, 1.0, 0.0),
+    (255, 255, 0): (0.4, 0.2, 1.0),
+    (255, 128, 0): (0.0, 1.0, 1.0),
+    (255, 255, 255): (0.6, 0.0, 0.6),
+}
+
+
+def _color_float_to_vcolor(color: tuple[float, float, float]) -> _VColor:
+    """Convert RGB color from 0.0-1.0 float to 0-255 int."""
+    return (int(color[0] * 255), int(color[1] * 255), int(color[2] * 255))
+
+
+class LegacyCellToolkit:
+    """MarkerToolkit implementation for the legacy (display-list) renderer.
+
+    Translates abstract marker drawing primitives into OpenGL calls
+    via the Renderer's ShapeRenderer.
+
+    Implements the MarkerToolkit protocol.
+    """
+
+    __slots__ = [
+        '_vertexes', '_ortho_dir', '_renderer', '_face_color_255',
+        '_face_color_float', '_complementary_float', '_face_size',
+        '_base_radius', '_max_marker_radius',
+    ]
+
+    def __init__(
+        self,
+        vertexes: Sequence[ndarray],
+        ortho_direction: ndarray,
+        face_color_255: _VColor,
+        renderer: "Renderer",
+        max_marker_radius: float,
+    ) -> None:
+        self._vertexes = vertexes
+        self._ortho_dir = ortho_direction
+        self._renderer = renderer
+        self._face_color_255 = face_color_255
+        self._face_color_float: tuple[float, float, float] = (
+            face_color_255[0] / 255.0,
+            face_color_255[1] / 255.0,
+            face_color_255[2] / 255.0,
+        )
+        self._complementary_float = _COMPLEMENTARY_MAP_FLOAT.get(
+            face_color_255, (1.0, 0.0, 1.0)
+        )
+        self._max_marker_radius = max_marker_radius
+
+        # Calculate cell size and base radius
+        x_size: float = np.linalg.norm(vertexes[1] - vertexes[0])  # type: ignore
+        y_size: float = np.linalg.norm(vertexes[3] - vertexes[0])  # type: ignore
+        self._face_size: float = min(x_size, y_size)
+        self._base_radius: float = min(
+            self._face_size / 2.0 * 0.8, max_marker_radius
+        )
+
+    @property
+    def face_color(self) -> tuple[float, float, float]:
+        return self._face_color_float
+
+    @property
+    def complementary_color(self) -> tuple[float, float, float]:
+        return self._complementary_float
+
+    def draw_ring(
+        self,
+        inner_radius: float,
+        outer_radius: float,
+        color: tuple[float, float, float],
+        height: float,
+    ) -> None:
+        vx = self._vertexes
+        center = (vx[0] + vx[2]) / 2
+
+        r_outer = self._base_radius * outer_radius
+        r_inner = self._base_radius * inner_radius
+        h = height * self._face_size
+
+        p1 = center + self._ortho_dir * h
+        p2 = center - self._ortho_dir * h
+
+        marker_color = _color_float_to_vcolor(color)
+        self._renderer.shapes.full_cylinder(
+            _Cell._to_point3d(p1), _Cell._to_point3d(p2),
+            r_outer, r_inner, marker_color,
+        )
+
+    def draw_filled_circle(
+        self,
+        radius: float,
+        color: tuple[float, float, float],
+        height: float,
+    ) -> None:
+        self.draw_ring(0.0, radius, color, height)
+
+    def draw_cross(self, color: tuple[float, float, float]) -> None:
+        vx = self._vertexes
+        color_rgb = _color_float_to_vcolor(color)
+        points = [_Cell._to_point3d(v) for v in vx]
+        self._renderer.shapes.line(points[0], points[2], 2.0, color_rgb)
+        self._renderer.shapes.line(points[1], points[3], 2.0, color_rgb)
+
+    def draw_arrow(
+        self,
+        color: tuple[float, float, float],
+        direction: float,
+        radius_factor: float,
+        thickness: float,
+    ) -> None:
+        # Arrow markers not supported in legacy renderer
+        pass
+
+    def draw_checkmark(
+        self,
+        color: tuple[float, float, float],
+        radius_factor: float,
+        thickness: float,
+        height_offset: float,
+    ) -> None:
+        # Checkmark markers not supported in legacy renderer
+        pass
+
+    def draw_bold_cross(
+        self,
+        color: tuple[float, float, float],
+        radius_factor: float,
+        thickness: float,
+        height_offset: float,
+    ) -> None:
+        # Bold cross markers not supported in legacy renderer
+        pass
+
+    def draw_character(
+        self,
+        character: str,
+        color: tuple[float, float, float],
+        radius_factor: float,
+    ) -> None:
+        # Character markers not supported in legacy renderer
+        pass
+
 
 def _color_2_v_color(c: Color) -> _VColor:
     global _inited
@@ -420,12 +567,19 @@ class _Cell:
                     points = self._vertices_to_points(_vx)
                     renderer.shapes.lines_in_quad(points, _nn, 5, (138, 43, 226))
 
-            # Get markers using the new MarkerConfig system
+            # Get markers and draw using toolkit pattern
             _markers = get_markers_from_part_edge(part_edge)
 
             if _markers:
+                toolkit = LegacyCellToolkit(
+                    vertexes=_vx,
+                    ortho_direction=self._face_board.ortho_direction,
+                    face_color_255=facet_color,
+                    renderer=renderer,
+                    max_marker_radius=cfg.max_marker_radius,
+                )
                 for marker in _markers:
-                    self._create_markers(_vx, facet_color, marker)
+                    marker.draw(toolkit)
 
         if isinstance(part, Corner):
 

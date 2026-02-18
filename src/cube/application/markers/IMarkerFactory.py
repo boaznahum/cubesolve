@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Protocol, runtime_checkable
 
 from ._marker_config import MarkerConfig
+from ._outlined_circle_marker import OutlinedCircleMarker
 
 
 @runtime_checkable
@@ -120,5 +121,24 @@ class IMarkerFactory(Protocol):
         """Create a character marker.
 
         Multiple characters with different values can be placed on same cell.
+        """
+        ...
+
+    # ============================================================
+    # Outlined Circle Markers (MarkerCreator-based)
+    # ============================================================
+
+    def create_outlined_circle(
+        self,
+        fill_color: tuple[float, float, float],
+        outline_color: tuple[float, float, float] = (0.0, 0.0, 0.0),
+        radius_factor: float = 0.4,
+        outline_width: float = 0.15,
+        height_offset: float = 0.12,
+        z_order: int = 0,
+    ) -> OutlinedCircleMarker:
+        """Create an outlined circle marker (filled circle with outline ring).
+
+        Used by face tracker to show tracked face color with visible outline.
         """
         ...

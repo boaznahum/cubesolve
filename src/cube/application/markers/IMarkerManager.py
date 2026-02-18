@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     from cube.domain.model.PartEdge import PartEdge
-    from ._marker_config import MarkerConfig
+    from ._marker_creator_protocol import MarkerCreator
 
 
 @runtime_checkable
@@ -29,7 +29,7 @@ class IMarkerManager(Protocol):
         self,
         part_edge: "PartEdge",
         name: str,
-        marker: "MarkerConfig",
+        marker: "MarkerCreator",
         moveable: bool = True,
     ) -> None:
         """Add a marker to a PartEdge.
@@ -39,7 +39,7 @@ class IMarkerManager(Protocol):
         Args:
             part_edge: The sticker to mark
             name: Unique name for this marker on this PartEdge
-            marker: The marker configuration
+            marker: The marker (MarkerConfig or any MarkerCreator)
             moveable: If True, marker moves with the sticker color during rotations
                      (stored in moveable_attributes). If False, marker stays at physical
                      position (stored in fixed_attributes).
@@ -50,7 +50,7 @@ class IMarkerManager(Protocol):
         self,
         part_edge: "PartEdge",
         name: str,
-        marker: "MarkerConfig",
+        marker: "MarkerCreator",
     ) -> None:
         """Add a marker fixed to a position (structural markers).
 
@@ -60,7 +60,7 @@ class IMarkerManager(Protocol):
         Args:
             part_edge: The sticker to mark
             name: Unique name for this marker
-            marker: The marker configuration
+            marker: The marker (MarkerConfig or any MarkerCreator)
         """
         ...
 
@@ -102,7 +102,7 @@ class IMarkerManager(Protocol):
         """
         ...
 
-    def get_markers(self, part_edge: "PartEdge") -> list["MarkerConfig"]:
+    def get_markers(self, part_edge: "PartEdge") -> list["MarkerCreator"]:
         """Get all markers for a PartEdge, deduplicated and sorted.
 
         Retrieves markers from both attribute dictionaries. Visually
@@ -113,7 +113,7 @@ class IMarkerManager(Protocol):
             part_edge: The sticker to get markers from
 
         Returns:
-            List of unique MarkerConfig objects, sorted by z_order.
+            List of unique MarkerCreator objects, sorted by z_order.
         """
         ...
 

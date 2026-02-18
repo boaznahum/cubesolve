@@ -85,7 +85,6 @@ class MarkedFaceTracker(FaceTracker):
                     del s.edge.moveable_attributes[self._key]
                     if force_remove_visible or not self._cube.config.face_tracker.leave_last_annotation:
                         mm.remove_marker(s.edge, _helper.tracer_visual_key(self._key), moveable=True)
-                        mm.remove_marker(s.edge, _helper.tracer_outline_key(self._key), moveable=True)
                     return
 
     def restore_to_physical_face(self, saved_face_name: FaceName) -> None:
