@@ -123,6 +123,9 @@ SS_CODES: dict[SSCode, bool] = {
 
 ######  Viewer ########
 
+# Full mode - hides toolbar and status text, showing only 3D cube + animation annotations
+FULL_MODE = False
+
 
 VIEWER_MAX_SIZE_FOR_TEXTURE = 10  # All works but very slow
 

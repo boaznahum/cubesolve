@@ -208,6 +208,12 @@ KEY_BINDINGS_NORMAL: list[KeyBinding] = [
     (Keys.BACKSLASH, 0, Commands.SWITCH_SOLVER),
 
     # -------------------------------------------------------------------------
+    # Full Mode
+    # -------------------------------------------------------------------------
+    (Keys.F8, 0, Commands.FULL_MODE_TOGGLE),
+    (Keys.ESCAPE, 0, Commands.FULL_MODE_EXIT),
+
+    # -------------------------------------------------------------------------
     # Special
     # -------------------------------------------------------------------------
     (Keys.W, 0, Commands.ANNOTATE),
@@ -273,6 +279,12 @@ KEY_BINDINGS_ANIMATION: list[KeyBinding] = [
     # Solver Switch (works during animation)
     # -------------------------------------------------------------------------
     (Keys.BACKSLASH, 0, Commands.SWITCH_SOLVER),
+
+    # -------------------------------------------------------------------------
+    # Full Mode (works during animation)
+    # -------------------------------------------------------------------------
+    (Keys.F8, 0, Commands.FULL_MODE_TOGGLE),
+    (Keys.ESCAPE, 0, Commands.FULL_MODE_EXIT),
 
     # -------------------------------------------------------------------------
     # Application (Q quits even during animation)

@@ -19,6 +19,9 @@ from .concrete import (
     BrightnessUpCommand,
     CubeRotateCommand,
     DebugInfoCommand,
+    # Full mode
+    FullModeExitCommand,
+    FullModeToggleCommand,
     HelpCommand,
     PanCommand,
     PauseToggleCommand,
@@ -270,6 +273,12 @@ class Commands:
     RESET_CUBE_AND_VIEW = ResetCubeAndViewCommand()
     UNDO = UndoCommand()
     SWITCH_SOLVER = SwitchSolverCommand()
+
+    # =========================================================================
+    # FULL MODE
+    # =========================================================================
+    FULL_MODE_TOGGLE = FullModeToggleCommand()
+    FULL_MODE_EXIT = FullModeExitCommand()
 
     # =========================================================================
     # SPECIAL

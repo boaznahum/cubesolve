@@ -529,6 +529,55 @@ class GUIToolbar:
                     shift_command=ExecuteFileAlgCommand(slot=slot, inverse=True),
                 )
 
+    def draw_exit_only(self) -> None:
+        """Draw only a small exit button at top-right corner (for full mode).
+
+        Returns the command if clicked via handle_exit_click().
+        """
+        # Small "X" button at top-right
+        btn_size = 30
+        margin = 10
+        x = self._window_width - btn_size - margin
+        y = self._window_height - btn_size - margin
+
+        # Store position for click detection
+        self._exit_btn_x = x
+        self._exit_btn_y = y
+        self._exit_btn_size = btn_size
+
+        # Draw button background
+        bg = shapes.Rectangle(x, y, btn_size, btn_size, color=(60, 60, 60))
+        bg.opacity = 180
+        bg.draw()
+
+        # Draw "X" label
+        label = pyglet.text.Label(
+            "X",
+            font_size=14,
+            x=x + btn_size // 2,
+            y=y + btn_size // 2,
+            anchor_x='center',
+            anchor_y='center',
+            color=(255, 255, 255, 200),
+        )
+        label.draw()
+
+    def handle_exit_click(self, x: int, y: int) -> "Command | None":
+        """Handle click in full mode - only check exit button.
+
+        Returns FULL_MODE_EXIT command if exit button was clicked, None otherwise.
+        """
+        from cube.presentation.gui.commands import Commands
+
+        btn_x = getattr(self, '_exit_btn_x', 0)
+        btn_y = getattr(self, '_exit_btn_y', 0)
+        btn_size = getattr(self, '_exit_btn_size', 0)
+
+        if (btn_x <= x <= btn_x + btn_size and
+                btn_y <= y <= btn_y + btn_size):
+            return Commands.FULL_MODE_EXIT
+        return None
+
     def draw_tooltip(self) -> None:
         """Draw tooltip for hovered button (called after batch.draw)."""
         if not self._hover_button or not self._hover_button.tooltip:
@@ -649,6 +698,11 @@ def create_toolbar(window: PygletAppWindow) -> GUIToolbar:
 
     toolbar.add_separator()
 
+    toolbar.add_button(
+        "Full",
+        Commands.FULL_MODE_TOGGLE,
+        tooltip="Toggle full mode - hide toolbar (F8)",
+    )
     toolbar.add_button("Quit", Commands.QUIT)
 
     # === ROW 3: Solver Step Buttons + ROW 4: Animation/Debug ===

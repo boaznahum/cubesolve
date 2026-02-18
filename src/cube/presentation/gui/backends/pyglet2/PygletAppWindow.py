@@ -447,7 +447,7 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
 
         self._update_animation_text()
 
-        if not self.animation_running:
+        if not self.animation_running and not self._vs.full_mode:
             self._update_status_text()
             # DEBUG: Print F face grid when cube state changes
             current_mod = self._app.cube._modify_counter
@@ -530,14 +530,18 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         gl.glDisable(gl.GL_DEPTH_TEST)
 
         # Pyglet 2.0's label drawing uses modern GL internally
-        for t in self.text:
-            t.draw()
+        if not self._vs.full_mode:
+            for t in self.text:
+                t.draw()
         for t in self.animation_text:
             t.draw()
 
         # Draw native GUI toolbar
         if self._toolbar:
-            self._toolbar.draw()
+            if self._vs.full_mode:
+                self._toolbar.draw_exit_only()
+            else:
+                self._toolbar.draw()
 
         # Re-enable depth testing for next frame
         gl.glEnable(gl.GL_DEPTH_TEST)
@@ -602,7 +606,10 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         """Handle mouse press event (delegated from PygletWindow)."""
         # Check toolbar click first
         if self._toolbar:
-            cmd = self._toolbar.handle_click(x, y)
+            if self._vs.full_mode:
+                cmd = self._toolbar.handle_exit_click(x, y)
+            else:
+                cmd = self._toolbar.handle_click(x, y)
             if cmd:
                 self.inject_command(cmd)
                 return  # Don't pass to cube rotation handler

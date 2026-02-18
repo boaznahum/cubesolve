@@ -340,6 +340,13 @@ class HelpCommand(Command):
         print("  Switch to next available solver".ljust(55) + "| \\  (Backslash)")
         print("  Available: Beginner, LBL, Cage, Kociemba".ljust(55) + "|")
 
+        print("\n" + "FULL MODE (focus mode)".ljust(55) + "| KEY")
+        print("-" * 95)
+        print("  Toggle full mode (hide toolbar & status text)".ljust(55) + "| F8")
+        print("  Exit full mode (return to normal view)".ljust(55) + "| ESC")
+        print("  [Toolbar 'Full' button also toggles full mode]".ljust(55) + "|")
+        print("  [Small 'X' button in top-right exits full mode]".ljust(55) + "|")
+
         print("\n" + "APPLICATION".ljust(55) + "| KEY")
         print("-" * 95)
         print("  Quit application".ljust(55) + "| Q")
@@ -887,6 +894,28 @@ class SpecialAlgCommand(Command):
                Rs * 2 + F * 2)
 
         ctx.op.play(alg, False)
+        return CommandResult()
+
+
+# =============================================================================
+# FULL MODE COMMANDS
+# =============================================================================
+
+@dataclass(frozen=True)
+class FullModeToggleCommand(Command):
+    """Command to toggle full mode (hide/show toolbar and status text)."""
+
+    def execute(self, ctx: CommandContext) -> CommandResult:
+        ctx.vs.full_mode = not ctx.vs.full_mode
+        return CommandResult()
+
+
+@dataclass(frozen=True)
+class FullModeExitCommand(Command):
+    """Command to exit full mode (show toolbar and status text)."""
+
+    def execute(self, ctx: CommandContext) -> CommandResult:
+        ctx.vs.full_mode = False
         return CommandResult()
 
 

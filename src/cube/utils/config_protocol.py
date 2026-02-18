@@ -323,6 +323,11 @@ class ConfigProtocol(Protocol):
         """Show F1-F5 file algorithm buttons in toolbar."""
         ...
 
+    @property
+    def full_mode(self) -> bool:
+        """Whether app starts in full mode (hides toolbar/status text)."""
+        ...
+
     # ==========================================================================
     # Texture settings
     # ==========================================================================
