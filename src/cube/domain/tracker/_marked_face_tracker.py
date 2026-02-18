@@ -77,7 +77,7 @@ class MarkedFaceTracker(FaceTracker):
 
 
     def cleanup(self, force_remove_visible:bool = False) -> None:
-        """Search for and remove the specific key and visual marker from the marked slice."""
+        """Search for and remove the specific key and visual markers from the marked slice."""
         mm = self._cube.sp.marker_manager
         for f in self._cube.faces:
             for s in f.center.all_slices:
@@ -85,6 +85,7 @@ class MarkedFaceTracker(FaceTracker):
                     del s.edge.moveable_attributes[self._key]
                     if force_remove_visible or not self._cube.config.face_tracker.leave_last_annotation:
                         mm.remove_marker(s.edge, _helper.tracer_visual_key(self._key), moveable=True)
+                        mm.remove_marker(s.edge, _helper.tracer_outline_key(self._key), moveable=True)
                     return
 
     def restore_to_physical_face(self, saved_face_name: FaceName) -> None:
