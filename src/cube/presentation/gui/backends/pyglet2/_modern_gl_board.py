@@ -123,6 +123,10 @@ class ModernGLBoard:
 
         Shadow faces are duplicate faces rendered at offset positions
         so they're visible in the default isometric view.
+
+        The normal is flipped so that markers (raised along the normal)
+        appear on the viewer-facing side of the face, and lighting
+        is correct for the visible side.
         """
         self._shadow_faces.clear()
 
@@ -142,6 +146,11 @@ class ModernGLBoard:
                     up=np.array(up, dtype=np.float32),
                     size=self._size,
                 )
+                # Flip normal so markers face the viewer instead of away.
+                # L/D/B normals point away from the default isometric view;
+                # without flipping, markers are raised behind the face and
+                # occluded by the face quad's depth.
+                face.normal = -face.normal
                 self._shadow_faces[face_name] = face
 
     def update(self) -> None:
