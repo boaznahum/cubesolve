@@ -2,8 +2,234 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, Union
 
 from .base import Command, CommandContext, CommandResult
+
+if TYPE_CHECKING:
+    from cube.presentation.gui.key_bindings import KeyBindingService
+
+# A help entry is one of:
+#   (description, Command)          - key label auto-generated from binding
+#   (description, Command, Command) - show both bindings joined with " or "
+#   (description, str)              - literal key text
+#   (description, None)             - info-only line, no key column
+HelpEntry = Union[
+    tuple[str, Command],
+    tuple[str, Command, Command],
+    tuple[str, str],
+    tuple[str, None],
+]
+
+
+def _build_help_sections() -> list[tuple[str, list[HelpEntry]]]:
+    """Build the help sections data structure.
+
+    Deferred to avoid circular imports (Commands is in registry.py which imports this module).
+    """
+    from .registry import Commands
+
+    return [
+        ("FACE ROTATIONS", [
+            ("Rotate Right face clockwise", Commands.ROTATE_R),
+            ("Rotate Right face counter-clockwise", Commands.ROTATE_R_PRIME),
+            ("Rotate Left face clockwise", Commands.ROTATE_L),
+            ("Rotate Left face counter-clockwise", Commands.ROTATE_L_PRIME),
+            ("Rotate Up face clockwise", Commands.ROTATE_U),
+            ("Rotate Up face counter-clockwise", Commands.ROTATE_U_PRIME),
+            ("Rotate Down face clockwise", Commands.ROTATE_D),
+            ("Rotate Down face counter-clockwise", Commands.ROTATE_D_PRIME),
+            ("Rotate Front face clockwise", Commands.ROTATE_F),
+            ("Rotate Front face counter-clockwise", Commands.ROTATE_F_PRIME),
+            ("Rotate Back face clockwise", Commands.ROTATE_B),
+            ("Rotate Back face counter-clockwise", Commands.ROTATE_B_PRIME),
+        ]),
+
+        ("WIDE ROTATIONS (two outer layers)", [
+            ("Right two layers clockwise (Rw)", Commands.ROTATE_RW),
+            ("Right two layers counter-clockwise (Rw')", Commands.ROTATE_RW_PRIME),
+            ("Left two layers clockwise (Lw)", Commands.ROTATE_LW),
+            ("Left two layers counter-clockwise (Lw')", Commands.ROTATE_LW_PRIME),
+            ("Up two layers clockwise (Uw)", Commands.ROTATE_UW),
+            ("Up two layers counter-clockwise (Uw')", Commands.ROTATE_UW_PRIME),
+            ("Down two layers clockwise (Dw)", Commands.ROTATE_DW),
+            ("Down two layers counter-clockwise (Dw')", Commands.ROTATE_DW_PRIME),
+            ("Front two layers clockwise (Fw)", Commands.ROTATE_FW),
+            ("Front two layers counter-clockwise (Fw')", Commands.ROTATE_FW_PRIME),
+            ("Back two layers clockwise (Bw)", Commands.ROTATE_BW),
+            ("Back two layers counter-clockwise (Bw')", Commands.ROTATE_BW_PRIME),
+        ]),
+
+        ("SLICE MOVES (middle layers between faces)", [
+            ("Middle slice parallel to L-face (like Lw without L)", Commands.SLICE_M),
+            ("Middle slice counter-clockwise (M')", Commands.SLICE_M_PRIME),
+            ("Equatorial slice parallel to D-face (like Dw without D)", Commands.SLICE_E),
+            ("Equatorial slice counter-clockwise (E')", Commands.SLICE_E_PRIME),
+            ("Standing slice parallel to F-face (like Fw without F)", Commands.SLICE_S),
+            ("Standing slice counter-clockwise (S')", Commands.SLICE_S_PRIME),
+        ]),
+
+        ("CUBE ROTATIONS (entire cube, not faces)", [
+            ("Rotate whole cube on R-axis (equiv to Rw for solved)", Commands.CUBE_X),
+            ("Rotate whole cube on R-axis counter-clockwise (X')", Commands.CUBE_X_PRIME),
+            ("Rotate whole cube on U-axis (equiv to Uw for solved)", Commands.CUBE_Y),
+            ("Rotate whole cube on U-axis counter-clockwise (Y')", Commands.CUBE_Y_PRIME),
+            ("Rotate whole cube on F-axis (equiv to Fw for solved)", Commands.CUBE_Z),
+            ("Rotate whole cube on F-axis counter-clockwise (Z')", Commands.CUBE_Z_PRIME),
+        ]),
+
+        ("SCRAMBLING", [
+            ("Scramble cube with seed 0 (animated with moves shown)", Commands.SCRAMBLE_0),
+            ("Scramble cube with seed 1-9 (fast, not animated)", "1-9"),
+            ("Scramble from F.txt file in resources/scramble/", Commands.SCRAMBLE_F),
+            ("Scramble with F9 configured seed (from config.py)", Commands.SCRAMBLE_F9),
+            ("Special scramble variations (experiment)", "Shift/Alt+0-9"),
+            ("Scramble with testing (animate + step-by-step debug)", "Ctrl+1-9"),
+        ]),
+
+        ("SOLVING COMMANDS", [
+            ("Solve entire cube (animated, see every step)", Commands.SOLVE_ALL),
+            ("Solve entire cube instantly (no animation)", Commands.SOLVE_ALL_NO_ANIMATION),
+            ("Solve Layer 1: white cross + corners", Commands.SOLVE_L1),
+            ("Solve Layer 1 cross only (for practice)", Commands.SOLVE_L1X),
+            ("Solve Layer 2: middle edges around cube", Commands.SOLVE_L2),
+            ("Solve Layer 3: yellow face (OLL + PLL)", Commands.SOLVE_L3),
+            ("Solve Layer 3 cross only (for practice)", Commands.SOLVE_L3X),
+            ("Solve big cube centers (for 4x4, 5x5, 6x6...)", Commands.SOLVE_CENTERS),
+            ("Solve big cube edges (for 4x4, 5x5, 6x6...)", Commands.SOLVE_EDGES),
+        ]),
+
+        ("VIEW/CAMERA CONTROL", [
+            ("Rotate view around X-axis (negative direction)", Commands.VIEW_ALPHA_X_DEC),
+            ("Rotate view around X-axis (positive direction)", Commands.VIEW_ALPHA_X_INC),
+            ("Rotate view around Y-axis (negative direction)", Commands.VIEW_ALPHA_Y_DEC),
+            ("Rotate view around Y-axis (positive direction)", Commands.VIEW_ALPHA_Y_INC),
+            ("Rotate view around Z-axis (negative direction)", Commands.VIEW_ALPHA_Z_DEC),
+            ("Rotate view around Z-axis (positive direction)", Commands.VIEW_ALPHA_Z_INC),
+            ("Pan view up/down/left/right", "Arrow keys"),
+            ("Zoom in (make cube larger)", Commands.ZOOM_IN),
+            ("Zoom out (make cube smaller)", Commands.ZOOM_OUT),
+            ("Reset view to default camera position", Commands.VIEW_RESET),
+        ]),
+
+        ("ANIMATION & SPEED", [
+            ("Increase animation speed (faster moves)", Commands.SPEED_UP),
+            ("Decrease animation speed (slower moves)", Commands.SPEED_DOWN),
+            ("Pause/Resume animation (continue from where paused)", Commands.PAUSE_TOGGLE),
+            ("Toggle single-step mode (pause after EACH move)", Commands.SINGLE_STEP_TOGGLE),
+            ("Next step (when in single-step mode)", "Space"),
+            ("Stop animation immediately (abort solve/scramble)", "S  (during anim)"),
+        ]),
+
+        ("CUBE MODIFICATION", [
+            ("Increase cube size (2x2 -> 3x3 -> 4x4...)", Commands.SIZE_INC),
+            ("Decrease cube size (4x4 -> 3x3 -> 2x2...)", Commands.SIZE_DEC),
+            ("Reset cube to solved (all white, yellow on top)", Commands.RESET_CUBE),
+            ("Reset cube AND camera view to defaults", Commands.RESET_CUBE_AND_VIEW),
+            ("Undo last move (user move or solver step)", Commands.UNDO),
+        ]),
+
+        ("SLICE RANGE (for slicing on big cubes)", [
+            ("Increase start layer index for slicing", Commands.SLICE_START_INC),
+            ("Decrease start layer index for slicing", Commands.SLICE_START_DEC),
+            ("Increase end layer index for slicing", Commands.SLICE_STOP_INC),
+            ("Decrease end layer index for slicing", Commands.SLICE_STOP_DEC),
+            ("Reset to default slice range (all layers)", Commands.SLICE_RESET),
+        ]),
+
+        ("LIGHTING CONTROLS (pyglet2 backend only)", [
+            ("Decrease ambient light brightness (10%-150%)", Commands.BRIGHTNESS_DOWN),
+            ("Increase ambient light brightness (10%-150%)", Commands.BRIGHTNESS_UP),
+            ("Decrease background gray level (0%-50% darker)", Commands.BACKGROUND_DOWN),
+            ("Increase background gray level (0%-50% lighter)", Commands.BACKGROUND_UP),
+        ]),
+
+        ("TEXTURES (pyglet2 backend only)", [
+            ("Cycle through texture sets (solid -> set1 -> ...)", Commands.TEXTURE_SET_NEXT),
+            ("[Configure texture sets in config.py: TEXTURE_SETS]", None),
+            ("[Texture images in: src/cube/resources/faces/]", None),
+        ]),
+
+        ("SHADOWS (for LDB faces visibility)", [
+            ("Toggle shadow on Left face (easier to see depth)", Commands.SHADOW_TOGGLE_L),
+            ("Toggle shadow on Down face (easier to see depth)", Commands.SHADOW_TOGGLE_D),
+            ("Toggle shadow on Back face (easier to see depth)", Commands.SHADOW_TOGGLE_B),
+        ]),
+
+        ("RECORDING & PLAYBACK", [
+            ("Start recording moves (user and solver)", Commands.RECORDING_TOGGLE),
+            ("Stop recording moves", "Ctrl+P (again)"),
+            ("Play back last recording", Commands.RECORDING_PLAY),
+            ("Play last recording in reverse (undo moves)", Commands.RECORDING_PLAY_PRIME),
+            ("Delete last recording", Commands.RECORDING_CLEAR),
+            ("EXAMPLE: Record -> Scramble -> Solve -> Play reverse", None),
+            ("        This shows solve then unscrambles the cube", None),
+        ]),
+
+        ("DEBUG & TESTING", [
+            ("Toggle animation on/off globally", Commands.TOGGLE_ANIMATION),
+            ("Toggle solver debug mode (shows steps)", Commands.TOGGLE_DEBUG),
+            ("Toggle cube sanity check after every move (slow!)", Commands.TOGGLE_SANITY_CHECK),
+            ("Print debug info: camera angles, layer dist...", Commands.DEBUG_INFO),
+            ("Run full solver tests (compares all solvers)", Commands.TEST_RUN),
+            ("Rerun last test with same scramble", Commands.TEST_RUN_LAST),
+            ("Rerun last scramble (rescremble same pattern)", Commands.TEST_SCRAMBLE_LAST),
+            ("Print current solver state to console (button: Diag)", None),
+        ]),
+
+        ("SOLVERS & MODES", [
+            ("Switch to next available solver", Commands.SWITCH_SOLVER),
+            ("Available: Beginner, LBL, Cage, Kociemba", None),
+        ]),
+
+        ("FULL MODE (focus mode)", [
+            ("Toggle full mode (hide toolbar & status text)", Commands.FULL_MODE_TOGGLE),
+            ("Exit full mode (return to normal view)", Commands.FULL_MODE_EXIT),
+            ("[Toolbar 'Full' button also toggles full mode]", None),
+            ("[Small 'X' button in top-right exits full mode]", None),
+        ]),
+
+        ("APPLICATION", [
+            ("Quit application", Commands.QUIT),
+            ("Test annotations (developer debug)", Commands.ANNOTATE),
+            ("Test special algorithm (developer debug)", Commands.SPECIAL_ALG),
+        ]),
+    ]
+
+
+def _resolve_key_label(rest: tuple[object, ...], service: KeyBindingService) -> str:
+    """Resolve the key label from a help entry's non-description parts."""
+    if len(rest) == 1:
+        val = rest[0]
+        if val is None:
+            return ""
+        if isinstance(val, str):
+            return val
+        # It's a Command — show all bindings joined with " or "
+        labels: list[str] = service.get_all_key_labels(val)  # type: ignore[arg-type]
+        return " or ".join(labels) if labels else "?"
+    if len(rest) == 2:
+        # Two commands — join labels with " or "
+        result_parts: list[str] = []
+        for c in rest:
+            label: str | None = service.get_key_label(c)  # type: ignore[arg-type]
+            result_parts.append(label or "?")
+        return " or ".join(result_parts)
+    return "?"
+
+
+def _print_section(title: str, entries: list[HelpEntry], service: KeyBindingService) -> None:
+    """Print a help section with title and entries."""
+    print(f"\n{title.ljust(55)}| KEY")
+    print("-" * 95)
+    for entry in entries:
+        desc: str = entry[0]
+        rest: tuple[object, ...] = entry[1:]
+        key_label: str = _resolve_key_label(rest, service)
+        if key_label:
+            print(f"  {desc}".ljust(55) + f"| {key_label}")
+        else:
+            print(f"  {desc}".ljust(55) + "|")
 
 
 @dataclass(frozen=True)
@@ -12,175 +238,18 @@ class HelpCommand(Command):
 
     def execute(self, ctx: CommandContext) -> CommandResult:
         """Print comprehensive help with descriptions."""
+        from cube.presentation.gui.key_bindings import KEY_BINDINGS_NORMAL, KeyBindingService
+
+        service = KeyBindingService(KEY_BINDINGS_NORMAL)
+        help_sections = _build_help_sections()
+
         print("\n")
         print("=" * 95)
         print("RUBIK'S CUBE SOLVER - COMPLETE KEYBOARD & MOUSE GUIDE".center(95))
         print("=" * 95)
 
-        print("\n" + "FACE ROTATIONS".ljust(55) + "| KEY")
-        print("-" * 95)
-        print("  Rotate Right face clockwise".ljust(55) + "| R")
-        print("  Rotate Right face counter-clockwise".ljust(55) + "| Shift+R")
-        print("  Rotate Left face clockwise".ljust(55) + "| L")
-        print("  Rotate Left face counter-clockwise".ljust(55) + "| Shift+L")
-        print("  Rotate Up face clockwise".ljust(55) + "| U")
-        print("  Rotate Up face counter-clockwise".ljust(55) + "| Shift+U")
-        print("  Rotate Down face clockwise".ljust(55) + "| D")
-        print("  Rotate Down face counter-clockwise".ljust(55) + "| Shift+D")
-        print("  Rotate Front face clockwise".ljust(55) + "| F")
-        print("  Rotate Front face counter-clockwise".ljust(55) + "| Shift+F")
-        print("  Rotate Back face clockwise".ljust(55) + "| B")
-        print("  Rotate Back face counter-clockwise".ljust(55) + "| Shift+B")
-
-        print("\n" + "WIDE ROTATIONS (two outer layers)".ljust(55) + "| KEY")
-        print("-" * 95)
-        print("  Right two layers clockwise (Rw)".ljust(55) + "| Ctrl+R")
-        print("  Right two layers counter-clockwise (Rw')".ljust(55) + "| Ctrl+Shift+R")
-        print("  Left two layers clockwise (Lw)".ljust(55) + "| Ctrl+L")
-        print("  Left two layers counter-clockwise (Lw')".ljust(55) + "| Ctrl+Shift+L")
-        print("  Up two layers clockwise (Uw)".ljust(55) + "| Ctrl+U")
-        print("  Up two layers counter-clockwise (Uw')".ljust(55) + "| Ctrl+Shift+U")
-        print("  Down two layers clockwise (Dw)".ljust(55) + "| Ctrl+D")
-        print("  Down two layers counter-clockwise (Dw')".ljust(55) + "| Ctrl+Shift+D")
-        print("  Front two layers clockwise (Fw)".ljust(55) + "| Ctrl+F")
-        print("  Front two layers counter-clockwise (Fw')".ljust(55) + "| Ctrl+Shift+F")
-        print("  Back two layers clockwise (Bw)".ljust(55) + "| Ctrl+B")
-        print("  Back two layers counter-clockwise (Bw')".ljust(55) + "| Ctrl+Shift+B")
-
-        print("\n" + "SLICE MOVES (middle layers between faces)".ljust(55) + "| KEY")
-        print("-" * 95)
-        print("  Middle slice parallel to L-face (like Lw without L)".ljust(55) + "| M")
-        print("  Middle slice counter-clockwise (M')".ljust(55) + "| Shift+M")
-        print("  Equatorial slice parallel to D-face (like Dw without D)".ljust(55) + "| E")
-        print("  Equatorial slice counter-clockwise (E')".ljust(55) + "| Shift+E")
-        print("  Standing slice parallel to F-face (like Fw without F)".ljust(55) + "| S")
-        print("  Standing slice counter-clockwise (S')".ljust(55) + "| Shift+S")
-
-        print("\n" + "CUBE ROTATIONS (entire cube, not faces)".ljust(55) + "| KEY")
-        print("-" * 95)
-        print("  Rotate whole cube on R-axis (equiv to Rw for solved)".ljust(55) + "| X")
-        print("  Rotate whole cube on R-axis counter-clockwise (X')".ljust(55) + "| Shift+X")
-        print("  Rotate whole cube on U-axis (equiv to Uw for solved)".ljust(55) + "| Y")
-        print("  Rotate whole cube on U-axis counter-clockwise (Y')".ljust(55) + "| Shift+Y")
-        print("  Rotate whole cube on F-axis (equiv to Fw for solved)".ljust(55) + "| Z")
-        print("  Rotate whole cube on F-axis counter-clockwise (Z')".ljust(55) + "| Shift+Z")
-
-        print("\n" + "SCRAMBLING".ljust(55) + "| KEY")
-        print("-" * 95)
-        print("  Scramble cube with seed 0 (animated with moves shown)".ljust(55) + "| 0")
-        print("  Scramble cube with seed 1-9 (fast, not animated)".ljust(55) + "| 1-9")
-        print("  Scramble from F.txt file in resources/scramble/".ljust(55) + "| `  (backtick)")
-        print("  Scramble with F9 configured seed (from config.py)".ljust(55) + "| F9")
-        print("  Special scramble variations (experiment)".ljust(55) + "| Shift/Alt+0-9")
-        print("  Scramble with testing (animate + step-by-step debug)".ljust(55) + "| Ctrl+1-9")
-
-        print("\n" + "SOLVING COMMANDS".ljust(55) + "| KEY")
-        print("-" * 95)
-        print("  Solve entire cube (animated, see every step)".ljust(55) + "| /")
-        print("  Solve entire cube instantly (no animation)".ljust(55) + "| Shift+/")
-        print("  Solve Layer 1: white cross + corners".ljust(55) + "| F1")
-        print("  Solve Layer 1 cross only (for practice)".ljust(55) + "| Ctrl+F1")
-        print("  Solve Layer 2: middle edges around cube".ljust(55) + "| F2")
-        print("  Solve Layer 3: yellow face (OLL + PLL)".ljust(55) + "| F3")
-        print("  Solve Layer 3 cross only (for practice)".ljust(55) + "| Ctrl+F3")
-        print("  Solve big cube centers (for 4x4, 5x5, 6x6...)".ljust(55) + "| F4")
-        print("  Solve big cube edges (for 4x4, 5x5, 6x6...)".ljust(55) + "| F5")
-
-        print("\n" + "VIEW/CAMERA CONTROL".ljust(55) + "| KEY")
-        print("-" * 95)
-        print("  Rotate view around X-axis (negative direction)".ljust(55) + "| Ctrl+X")
-        print("  Rotate view around X-axis (positive direction)".ljust(55) + "| Alt+X")
-        print("  Rotate view around Y-axis (negative direction)".ljust(55) + "| Ctrl+Y")
-        print("  Rotate view around Y-axis (positive direction)".ljust(55) + "| Alt+Y")
-        print("  Rotate view around Z-axis (negative direction)".ljust(55) + "| Ctrl+Z")
-        print("  Rotate view around Z-axis (positive direction)".ljust(55) + "| Alt+Z")
-        print("  Pan view up/down/left/right".ljust(55) + "| Arrow keys")
-        print("  Zoom in (make cube larger)".ljust(55) + "| Ctrl+Up")
-        print("  Zoom out (make cube smaller)".ljust(55) + "| Ctrl+Down")
-        print("  Reset view to default camera position".ljust(55) + "| Alt+C")
-
-        print("\n" + "ANIMATION & SPEED".ljust(55) + "| KEY")
-        print("-" * 95)
-        print("  Increase animation speed (faster moves)".ljust(55) + "| Shift+Up or NumPad+")
-        print("  Decrease animation speed (slower moves)".ljust(55) + "| Shift+Down or NumPad-")
-        print("  Pause/Resume animation (continue from where paused)".ljust(55) + "| Space")
-        print("  Toggle single-step mode (pause after EACH move)".ljust(55) + "| Ctrl+Space")
-        print("  Next step (when in single-step mode)".ljust(55) + "| Space")
-        print("  Stop animation immediately (abort solve/scramble)".ljust(55) + "| S  (during anim)")
-
-        print("\n" + "CUBE MODIFICATION".ljust(55) + "| KEY")
-        print("-" * 95)
-        print("  Increase cube size (2x2 -> 3x3 -> 4x4...)".ljust(55) + "| =  (Equal)")
-        print("  Decrease cube size (4x4 -> 3x3 -> 2x2...)".ljust(55) + "| -  (Minus)")
-        print("  Reset cube to solved (all white, yellow on top)".ljust(55) + "| C")
-        print("  Reset cube AND camera view to defaults".ljust(55) + "| Ctrl+C")
-        print("  Undo last move (user move or solver step)".ljust(55) + "| ,  (Comma)")
-
-        print("\n" + "SLICE RANGE (for slicing on big cubes)".ljust(55) + "| KEY")
-        print("-" * 95)
-        print("  Increase start layer index for slicing".ljust(55) + "| [")
-        print("  Decrease start layer index for slicing".ljust(55) + "| Shift+[")
-        print("  Increase end layer index for slicing".ljust(55) + "| ]")
-        print("  Decrease end layer index for slicing".ljust(55) + "| Shift+]")
-        print("  Reset to default slice range (all layers)".ljust(55) + "| Alt+[")
-
-        print("\n" + "LIGHTING CONTROLS (pyglet2 backend only)".ljust(55) + "| KEY")
-        print("-" * 95)
-        print("  Decrease ambient light brightness (10%-150%)".ljust(55) + "| Ctrl+[")
-        print("  Increase ambient light brightness (10%-150%)".ljust(55) + "| Ctrl+]")
-        print("  Decrease background gray level (0%-50% darker)".ljust(55) + "| Ctrl+Shift+[")
-        print("  Increase background gray level (0%-50% lighter)".ljust(55) + "| Ctrl+Shift+]")
-
-        print("\n" + "TEXTURES (pyglet2 backend only)".ljust(55) + "| KEY")
-        print("-" * 95)
-        print("  Cycle through texture sets (solid -> set1 -> ...)".ljust(55) + "| Ctrl+Shift+T")
-        print("  [Configure texture sets in config.py: TEXTURE_SETS]".ljust(55) + "|")
-        print("  [Texture images in: src/cube/resources/faces/]".ljust(55) + "|")
-
-        print("\n" + "SHADOWS (for LDB faces visibility)".ljust(55) + "| KEY")
-        print("-" * 95)
-        print("  Toggle shadow on Left face (easier to see depth)".ljust(55) + "| F10")
-        print("  Toggle shadow on Down face (easier to see depth)".ljust(55) + "| F11")
-        print("  Toggle shadow on Back face (easier to see depth)".ljust(55) + "| F12")
-
-        print("\n" + "RECORDING & PLAYBACK".ljust(55) + "| KEY")
-        print("-" * 95)
-        print("  Start recording moves (user and solver)".ljust(55) + "| Ctrl+P")
-        print("  Stop recording moves".ljust(55) + "| Ctrl+P (again)")
-        print("  Play back last recording".ljust(55) + "| P")
-        print("  Play last recording in reverse (undo moves)".ljust(55) + "| Shift+P")
-        print("  Delete last recording".ljust(55) + "| Alt+P")
-        print("  EXAMPLE: Record -> Scramble -> Solve -> Play reverse".ljust(55) + "|")
-        print("          This shows solve then unscrambles the cube".ljust(55) + "|")
-
-        print("\n" + "DEBUG & TESTING".ljust(55) + "| KEY")
-        print("-" * 95)
-        print("  Toggle animation on/off globally".ljust(55) + "| O")
-        print("  Toggle solver debug mode (shows steps)".ljust(55) + "| Ctrl+O")
-        print("  Toggle cube sanity check after every move (slow!)".ljust(55) + "| Alt+O")
-        print("  Print debug info: camera angles, layer dist...".ljust(55) + "| I")
-        print("  Run full solver tests (compares all solvers)".ljust(55) + "| T")
-        print("  Rerun last test with same scramble".ljust(55) + "| Alt+T")
-        print("  Rerun last scramble (rescremble same pattern)".ljust(55) + "| Ctrl+T")
-        print("  Print current solver state to console (button: Diag)".ljust(55) + "|")
-
-        print("\n" + "SOLVERS & MODES".ljust(55) + "| KEY")
-        print("-" * 95)
-        print("  Switch to next available solver".ljust(55) + "| \\  (Backslash)")
-        print("  Available: Beginner, LBL, Cage, Kociemba".ljust(55) + "|")
-
-        print("\n" + "FULL MODE (focus mode)".ljust(55) + "| KEY")
-        print("-" * 95)
-        print("  Toggle full mode (hide toolbar & status text)".ljust(55) + "| F9")
-        print("  Exit full mode (return to normal view)".ljust(55) + "| ESC")
-        print("  [Toolbar 'Full' button also toggles full mode]".ljust(55) + "|")
-        print("  [Small 'X' button in top-right exits full mode]".ljust(55) + "|")
-
-        print("\n" + "APPLICATION".ljust(55) + "| KEY")
-        print("-" * 95)
-        print("  Quit application".ljust(55) + "| Q")
-        print("  Test annotations (developer debug)".ljust(55) + "| W")
-        print("  Test special algorithm (developer debug)".ljust(55) + "| A")
+        for title, entries in help_sections:
+            _print_section(title, entries, service)
 
         print("\n" + "=" * 95)
         print("MOUSE OPERATIONS".center(95))

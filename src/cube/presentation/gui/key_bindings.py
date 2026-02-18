@@ -414,3 +414,10 @@ class KeyBindingService:
             return None
         key, mods = entries[0]
         return format_key(key, mods)
+
+    def get_all_key_labels(self, command: Command) -> list[str]:
+        """Return all key bindings for a Command as readable strings."""
+        entries = self._command_to_keys.get(command)
+        if not entries:
+            return []
+        return [format_key(key, mods) for key, mods in entries]
