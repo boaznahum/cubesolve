@@ -295,3 +295,18 @@ class AppWindow(Protocol):
             )
         """
         ...
+
+    def show_popup(self, title: str, lines: list[str],
+                   line_colors: list[tuple[int, int, int, int]] | None = None) -> None:
+        """Show a modal text popup overlay.
+
+        Displays a scrollable text panel on top of the 3D view.
+        While visible, keyboard/mouse events are intercepted by the popup.
+        Close with Escape or OK button.
+
+        Args:
+            title: Title text displayed at top of panel
+            lines: Text lines to display (scrollable)
+            line_colors: Optional per-line RGBA color tuples
+        """
+        ...

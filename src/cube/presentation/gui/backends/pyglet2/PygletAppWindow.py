@@ -22,6 +22,7 @@ from cube.application.exceptions.app_exceptions import AppExit
 from cube.application.protocols import AnimatableViewer
 from cube.presentation.gui.backends.pyglet2 import main_g_mouse
 from cube.presentation.gui.backends.pyglet2.GUIToolbar import GUIToolbar, create_toolbar
+from cube.presentation.gui.backends.pyglet2.TextPopup import TextPopup
 from cube.presentation.gui.backends.pyglet2.ModernGLCubeViewer import ModernGLCubeViewer
 from cube.presentation.gui.backends.pyglet2.ModernGLRenderer import (
     ModernGLRenderer,
@@ -151,6 +152,9 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         # Native GUI toolbar (replaces ImGui complexity)
         # All button setup is centralized in create_toolbar() in GUIToolbar.py
         self._toolbar = create_toolbar(self)
+
+        # Text popup overlay (for Help, etc.)
+        self._popup: TextPopup = TextPopup(width, height)
 
         # Initial GUI update
         self.update_gui_elements()
@@ -429,6 +433,17 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         self._window.close()
         self._backend.event_loop.stop()
 
+    def show_popup(self, title: str, lines: list[str],
+                   line_colors: list[tuple[int, int, int, int]] | None = None) -> None:
+        """Show a modal text popup overlay.
+
+        Args:
+            title: Title text displayed at top of panel
+            lines: Text lines to display (scrollable)
+            line_colors: Optional per-line RGBA color tuples
+        """
+        self._popup.show(title, lines, line_colors)
+
     def cleanup(self) -> None:
         """Clean up resources when shutting down."""
         if self._modern_viewer is not None:
@@ -543,6 +558,10 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
             else:
                 self._toolbar.draw()
 
+        # Draw popup overlay (on top of everything)
+        if self._popup.is_visible:
+            self._popup.draw()
+
         # Re-enable depth testing for next frame
         gl.glEnable(gl.GL_DEPTH_TEST)
 
@@ -558,12 +577,18 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         # Update toolbar position
         if self._toolbar:
             self._toolbar.update_window_size(width, height)
+        # Update popup position
+        self._popup.update_window_size(width, height)
 
     def on_key_press(self, symbol: int, modifiers: int) -> None:
         """Handle key press event (delegated from PygletWindow).
 
         Converts native pyglet keys to abstract Keys and calls handle_key().
         """
+        # Route to popup first if visible (modal)
+        if self._popup.on_key_press(symbol, modifiers):
+            return
+
         self._vs.debug(False, f"on_key_press: symbol={symbol}, modifiers={modifiers}")
 
         # Track Shift key for toolbar button label updates
@@ -598,12 +623,19 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
 
     def on_mouse_drag(self, x: int, y: int, dx: int, dy: int, buttons: int, modifiers: int):
         """Handle mouse drag event (delegated from PygletWindow)."""
+        # Block drag events when popup is visible (modal)
+        if self._popup.is_visible:
+            return
         abstract_buttons = _convert_mouse_buttons(buttons)
         abstract_mods = _convert_modifiers(modifiers)
         return main_g_mouse.on_mouse_drag(self, x, y, dx, dy, abstract_buttons, abstract_mods)
 
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int):
         """Handle mouse press event (delegated from PygletWindow)."""
+        # Route to popup first if visible (modal)
+        if self._popup.on_mouse_press(x, y, button, modifiers):
+            return
+
         # Check toolbar click first
         if self._toolbar:
             if self._vs.full_mode:
@@ -623,10 +655,16 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
 
     def on_mouse_scroll(self, x: int, y: int, scroll_x: float, scroll_y: float):
         """Handle mouse scroll event (delegated from PygletWindow)."""
+        # Route to popup first if visible (modal)
+        if self._popup.on_mouse_scroll(x, y, scroll_x, scroll_y):
+            return
         return main_g_mouse.on_mouse_scroll(self, scroll_y)
 
     def on_mouse_motion(self, x: int, y: int, dx: int, dy: int):
         """Handle mouse motion event (delegated from PygletWindow)."""
+        # Route to popup first if visible (for hover effects)
+        if self._popup.on_mouse_motion(x, y, dx, dy):
+            return
         if self._toolbar:
             self._toolbar.handle_motion(x, y)
 

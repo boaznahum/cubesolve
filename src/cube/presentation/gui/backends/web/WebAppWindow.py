@@ -326,3 +326,8 @@ class WebAppWindow(AppWindow):
                 execute_next(index + 1)
 
         execute_next(0)
+
+    def show_popup(self, title: str, lines: list[str],
+                   line_colors: list[tuple[int, int, int, int]] | None = None) -> None:
+        """Show a modal text popup overlay (no-op for web backend)."""
+        pass

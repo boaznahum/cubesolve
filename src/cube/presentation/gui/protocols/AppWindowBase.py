@@ -352,6 +352,21 @@ class AppWindowBase(ABC):
         # Start executing commands
         execute_next(0)
 
+    def show_popup(self, title: str, lines: list[str],
+                   line_colors: list[tuple[int, int, int, int]] | None = None) -> None:
+        """Show a modal text popup overlay.
+
+        Default no-op implementation for backends without popup support.
+        Overridden by PygletAppWindow to show an in-window overlay.
+
+        Args:
+            title: Title text displayed at top of panel
+            lines: Text lines to display
+            line_colors: Optional per-line RGBA color tuples
+        """
+        # No-op for backends that don't support popups (console, headless, tkinter)
+        pass
+
     def _update_status_text(self) -> None:
         """Build status text labels.
 

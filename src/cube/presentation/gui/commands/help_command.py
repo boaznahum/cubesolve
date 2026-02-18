@@ -218,6 +218,19 @@ def _resolve_key_label(rest: tuple[object, ...], service: KeyBindingService) -> 
     return "?"
 
 
+# Mouse operations: (action_description, mouse_input)
+_MOUSE_ENTRIES: list[tuple[str, str]] = [
+    ("Rotate the cube model freely in 3D space", "Right-click + drag"),
+    ("Rotate cube FACES/SLICES (smart detection)", "Left-click + drag"),
+    ("Pan the view (move left/right/up/down)", "Alt + mouse drag"),
+    ("Zoom in/out (scroll up = zoom in)", "Mouse wheel scroll"),
+    ("Rotate slice counter-clockwise", "Shift + click on edge"),
+    ("Rotate slice clockwise", "Ctrl + click on edge"),
+    ("Rotate face (direction based on drag)", "Click on face center"),
+    ("Rotate adjacent faces", "Click on corner piece"),
+]
+
+
 def _print_section(title: str, entries: list[HelpEntry], service: KeyBindingService) -> None:
     """Print a help section with title and entries."""
     print(f"\n{title.ljust(55)}| KEY")
@@ -232,17 +245,102 @@ def _print_section(title: str, entries: list[HelpEntry], service: KeyBindingServ
             print(f"  {desc}".ljust(55) + "|")
 
 
+def build_help_lines(
+    service: "KeyBindingService",
+) -> tuple[list[str], list[tuple[int, int, int, int]]]:
+    """Build formatted help text lines and per-line colors for the popup.
+
+    Args:
+        service: Key binding service for resolving key labels
+
+    Returns:
+        Tuple of (lines, line_colors) suitable for TextPopup.show().
+    """
+    # Color constants for popup display
+    section_color: tuple[int, int, int, int] = (255, 215, 80, 255)  # Gold
+    entry_color: tuple[int, int, int, int] = (220, 220, 220, 255)  # Light gray
+    key_color: tuple[int, int, int, int] = (100, 220, 255, 255)  # Cyan
+    info_color: tuple[int, int, int, int] = (160, 160, 160, 255)  # Dimmer gray
+    mouse_header_color: tuple[int, int, int, int] = (255, 215, 80, 255)
+
+    lines: list[str] = []
+    colors: list[tuple[int, int, int, int]] = []
+
+    help_sections = _build_help_sections()
+
+    # Compute column width from longest description across ALL sections
+    # so the | separator aligns consistently everywhere
+    max_desc_len = 0
+    for _title, entries in help_sections:
+        for entry in entries:
+            max_desc_len = max(max_desc_len, len(f"    {entry[0]}"))
+    for mouse_desc, _mouse_key in _MOUSE_ENTRIES:
+        max_desc_len = max(max_desc_len, len(f"    {mouse_desc}"))
+    col_w = max_desc_len + 2  # +2 for space before |
+
+    for section_title, entries in help_sections:
+        # Blank line before section
+        lines.append("")
+        colors.append(entry_color)
+
+        # Section header
+        lines.append(f"  {section_title}".ljust(col_w) + "| KEY")
+        colors.append(section_color)
+
+        # Separator
+        lines.append("  " + "-" * (col_w + 20))
+        colors.append((80, 100, 140, 255))
+
+        for entry in entries:
+            desc: str = entry[0]
+            rest: tuple[object, ...] = entry[1:]
+            key_label: str = _resolve_key_label(rest, service)
+
+            if key_label:
+                line = f"    {desc}".ljust(col_w) + f"| {key_label}"
+                colors.append(key_color)
+            elif desc.startswith("["):
+                line = f"    {desc}".ljust(col_w) + "|"
+                colors.append(info_color)
+            else:
+                line = f"    {desc}".ljust(col_w) + "|"
+                colors.append(entry_color)
+            lines.append(line)
+
+    # Mouse operations section
+    lines.append("")
+    colors.append(entry_color)
+    lines.append(f"  {'MOUSE OPERATIONS'}".ljust(col_w) + "| ACTION")
+    colors.append(mouse_header_color)
+    lines.append("  " + "-" * (col_w + 20))
+    colors.append((80, 100, 140, 255))
+
+    for mouse_desc, mouse_key in _MOUSE_ENTRIES:
+        line = f"    {mouse_desc}".ljust(col_w) + f"| {mouse_key}"
+        lines.append(line)
+        colors.append(key_color)
+
+    # Footer
+    lines.append("")
+    colors.append(entry_color)
+    lines.append("  Press Escape or click OK to close")
+    colors.append(info_color)
+
+    return lines, colors
+
+
 @dataclass(frozen=True)
 class HelpCommand(Command):
-    """Command to print keyboard help to console with human-readable descriptions."""
+    """Command to print keyboard help to console and show popup overlay."""
 
     def execute(self, ctx: CommandContext) -> CommandResult:
-        """Print comprehensive help with descriptions."""
+        """Print comprehensive help with descriptions and show popup."""
         from cube.presentation.gui.key_bindings import KEY_BINDINGS_NORMAL, KeyBindingService
 
         service = KeyBindingService(KEY_BINDINGS_NORMAL)
         help_sections = _build_help_sections()
 
+        # --- Console output (unchanged) ---
         print("\n")
         print("=" * 95)
         print("RUBIK'S CUBE SOLVER - COMPLETE KEYBOARD & MOUSE GUIDE".center(95))
@@ -254,14 +352,17 @@ class HelpCommand(Command):
         print("\n" + "=" * 95)
         print("MOUSE OPERATIONS".center(95))
         print("=" * 95)
-        print("\n  Right-click + drag        -> Rotate the cube model freely in 3D space")
-        print("  Left-click + drag         -> Rotate cube FACES/SLICES (smart detection)")
-        print("  Alt + mouse drag          -> Pan the view (move left/right/up/down)")
-        print("  Mouse wheel scroll        -> Zoom in/out (scroll up = zoom in)")
-        print("  Shift + click on edge     -> Rotate slice counter-clockwise")
-        print("  Ctrl + click on edge      -> Rotate slice clockwise")
-        print("  Click on face center      -> Rotate face (direction based on drag)")
-        print("  Click on corner piece     -> Rotate adjacent faces")
+        for mouse_desc, mouse_key in _MOUSE_ENTRIES:
+            print(f"  {mouse_key.ljust(28)}-> {mouse_desc}")
 
         print("\n" + "=" * 95 + "\n")
+
+        # --- GUI popup overlay ---
+        popup_lines, popup_colors = build_help_lines(service)
+        ctx.window.show_popup(
+            "RUBIK'S CUBE SOLVER - KEYBOARD & MOUSE GUIDE",
+            popup_lines,
+            popup_colors,
+        )
+
         return CommandResult(no_gui_update=True)
