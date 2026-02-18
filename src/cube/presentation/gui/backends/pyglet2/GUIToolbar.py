@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from cube.application.AbstractApp import AbstractApp
     from cube.presentation.gui.backends.pyglet2.PygletAppWindow import PygletAppWindow
     from cube.presentation.gui.commands import Command
+    from cube.presentation.gui.key_bindings import KeyBindingService
 
 # Button style constants - bright and visible
 BUTTON_HEIGHT = 32
@@ -99,10 +100,12 @@ class GUIToolbar:
     - Call toolbar.update_window_size() in on_resize()
     """
 
-    def __init__(self, window_width: int, window_height: int):
+    def __init__(self, window_width: int, window_height: int,
+                 key_binding_service: "KeyBindingService | None" = None):
         """Initialize toolbar."""
         self._window_width = window_width
         self._window_height = window_height
+        self._key_binding_service = key_binding_service
         self._buttons: list[GUIButton] = []
         self._current_row = 0
         self._batch = pyglet.graphics.Batch()
@@ -140,6 +143,12 @@ class GUIToolbar:
             shift_command: "Command | None" = None,
     ) -> None:
         """Add a clickable button to current row."""
+        # Auto-enrich tooltip with key binding
+        if self._key_binding_service and command:
+            key_label = self._key_binding_service.get_key_label(command)
+            if key_label:
+                tooltip = f"{tooltip} [{key_label}]" if tooltip else key_label
+
         self._buttons.append(GUIButton(
             label=label,
             command=command,
@@ -415,7 +424,7 @@ class GUIToolbar:
         )
 
         # Add "Help" button
-        from cube.presentation.gui.commands.concrete import HelpCommand
+        from cube.presentation.gui.commands.help_command import HelpCommand
         self.add_button(
             label="Help",
             command=HelpCommand(),
@@ -586,16 +595,17 @@ class GUIToolbar:
         text = self._hover_button.tooltip
         btn = self._hover_button
 
-        # Position tooltip below button
-        tooltip_x = btn.x
-        tooltip_y = btn.y - 22
-
-        # Ensure tooltip stays on screen
-        if tooltip_y < 10:
-            tooltip_y = btn.y + BUTTON_HEIGHT + 5
-
         # Calculate text width (approximate)
         text_width = len(text) * 7 + 10
+
+        # Position tooltip below button, clamped to window edges
+        tooltip_x = min(btn.x, self._window_width - text_width - 5)
+        tooltip_x = max(tooltip_x, 5)
+        tooltip_y = btn.y - 22
+
+        # Ensure tooltip stays on screen vertically
+        if tooltip_y < 10:
+            tooltip_y = btn.y + BUTTON_HEIGHT + 5
 
         # Draw background
         self._tooltip_bg = shapes.Rectangle(
@@ -630,8 +640,10 @@ def create_toolbar(window: PygletAppWindow) -> GUIToolbar:
         Configured GUIToolbar ready to use
     """
     from cube.presentation.gui.commands import Commands
+    from cube.presentation.gui.key_bindings import KEY_BINDINGS_NORMAL, KeyBindingService
 
-    toolbar = GUIToolbar(window.width, window.height)
+    key_binding_service = KeyBindingService(KEY_BINDINGS_NORMAL)
+    toolbar = GUIToolbar(window.width, window.height, key_binding_service)
     app = window.app
     vs = app.vs
 
@@ -701,7 +713,7 @@ def create_toolbar(window: PygletAppWindow) -> GUIToolbar:
     toolbar.add_button(
         "Full",
         Commands.FULL_MODE_TOGGLE,
-        tooltip="Toggle full mode - hide toolbar (F8)",
+        tooltip="Toggle full mode - hide toolbar",
     )
     toolbar.add_button("Quit", Commands.QUIT)
 

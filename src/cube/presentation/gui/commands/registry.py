@@ -9,6 +9,7 @@ from cube.domain.geometric.cube_boy import FaceName
 from cube.domain.solver import SolveStep
 
 from .base import Command
+from .help_command import HelpCommand
 from .concrete import (
     # Special
     AnnotateCommand,
@@ -22,7 +23,6 @@ from .concrete import (
     # Full mode
     FullModeExitCommand,
     FullModeToggleCommand,
-    HelpCommand,
     PanCommand,
     PauseToggleCommand,
     # Application
