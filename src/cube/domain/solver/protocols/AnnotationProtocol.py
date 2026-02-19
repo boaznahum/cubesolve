@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Iterator
-from typing import TYPE_CHECKING, Callable, ContextManager, Protocol, Tuple, TypeAlias
+from typing import TYPE_CHECKING, Callable, ContextManager, Protocol, Tuple, TypeAlias, runtime_checkable
 
 if TYPE_CHECKING:
     from cube.application.markers._marker_creator_protocol import MarkerCreator
@@ -30,6 +30,7 @@ _HEAD: TypeAlias = "str | Callable[[], str] | None"
 AdditionalMarker: TypeAlias = "Tuple[SupportsAnnotation, AnnWhat, Callable[[], MarkerCreator]]"
 
 
+@runtime_checkable
 class AnnotationProtocol(Protocol):
     """
     Protocol defining what domain solvers need for annotation/visualization.

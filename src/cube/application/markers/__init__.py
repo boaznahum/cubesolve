@@ -38,7 +38,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from cube.domain.model.PartEdge import PartEdge
 
-from ._marker_config import color_255_to_float, color_float_to_255
+from ._marker_creators import color_255_to_float, color_float_to_255
 from ._marker_creator_protocol import MarkerCreator
 from ._marker_toolkit import MarkerToolkit
 from ._outlined_circle_marker import OutlinedCircleMarker

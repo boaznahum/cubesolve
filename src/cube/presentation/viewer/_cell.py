@@ -21,7 +21,7 @@ from cube.domain.model import (
 )
 from cube.domain.geometric.cube_boy import Color
 from cube.domain.model.Face import Face
-from cube.application.markers import get_markers_from_part_edge
+from cube.application.markers import MarkerToolkit, get_markers_from_part_edge
 from cube.domain.geometric import geometry_utils as geometry
 from cube.utils.config_protocol import ConfigProtocol
 
@@ -56,7 +56,7 @@ def _color_float_to_vcolor(color: tuple[float, float, float]) -> _VColor:
     return (int(color[0] * 255), int(color[1] * 255), int(color[2] * 255))
 
 
-class LegacyCellToolkit:
+class LegacyCellToolkit(MarkerToolkit):
     """MarkerToolkit implementation for the legacy (display-list) renderer.
 
     Translates abstract marker drawing primitives into OpenGL calls

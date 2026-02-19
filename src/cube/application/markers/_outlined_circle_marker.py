@@ -8,6 +8,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from ._marker_creator_protocol import MarkerCreator
+
 if TYPE_CHECKING:
     from ._marker_toolkit import MarkerToolkit
 
@@ -15,7 +17,7 @@ ColorRGB = tuple[float, float, float]
 
 
 @dataclass(frozen=True)
-class OutlinedCircleMarker:
+class OutlinedCircleMarker(MarkerCreator):
     """Circle marker with fill color + outline color.
 
     Draws two layers:

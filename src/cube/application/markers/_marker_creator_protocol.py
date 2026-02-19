@@ -4,8 +4,9 @@ MarkerCreator is the base protocol for all marker types. Each concrete
 implementation holds its own visual data (colors, sizes, etc.) and knows
 how to draw itself using abstract toolkit primitives.
 
-Concrete implementations: OutlinedCircleMarker, and MarkerConfig (legacy,
-used only inside MarkerFactory).
+Concrete implementations: RingMarker, FilledCircleMarker, CrossMarker,
+ArrowMarker, CheckmarkMarker, BoldCrossMarker, CharacterMarker,
+OutlinedCircleMarker.
 """
 from __future__ import annotations
 

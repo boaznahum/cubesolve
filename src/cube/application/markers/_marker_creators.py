@@ -8,10 +8,23 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from ._marker_creator_protocol import MarkerCreator
+
 if TYPE_CHECKING:
     from ._marker_toolkit import MarkerToolkit
 
 ColorRGB = tuple[float, float, float]
+ColorRGB255 = tuple[int, int, int]
+
+
+def color_255_to_float(color: ColorRGB255) -> ColorRGB:
+    """Convert RGB color from 0-255 range to 0.0-1.0 range."""
+    return (color[0] / 255.0, color[1] / 255.0, color[2] / 255.0)
+
+
+def color_float_to_255(color: ColorRGB) -> ColorRGB255:
+    """Convert RGB color from 0.0-1.0 range to 0-255 range."""
+    return (int(color[0] * 255), int(color[1] * 255), int(color[2] * 255))
 
 
 def _resolve_color(
@@ -28,7 +41,7 @@ def _resolve_color(
 
 
 @dataclass(frozen=True)
-class RingMarker:
+class RingMarker(MarkerCreator):
     """Ring (hollow circle) marker."""
 
     color: ColorRGB | None = None
@@ -45,7 +58,7 @@ class RingMarker:
 
 
 @dataclass(frozen=True)
-class FilledCircleMarker:
+class FilledCircleMarker(MarkerCreator):
     """Filled circle (solid disk) marker."""
 
     color: ColorRGB | None = None
@@ -60,7 +73,7 @@ class FilledCircleMarker:
 
 
 @dataclass(frozen=True)
-class CrossMarker:
+class CrossMarker(MarkerCreator):
     """X cross through cell corners."""
 
     color: ColorRGB = (0.0, 0.0, 0.0)
@@ -71,7 +84,7 @@ class CrossMarker:
 
 
 @dataclass(frozen=True)
-class ArrowMarker:
+class ArrowMarker(MarkerCreator):
     """Directional arrow marker."""
 
     color: ColorRGB = (0.0, 0.0, 0.0)
@@ -85,7 +98,7 @@ class ArrowMarker:
 
 
 @dataclass(frozen=True)
-class CheckmarkMarker:
+class CheckmarkMarker(MarkerCreator):
     """Checkmark (tick) marker."""
 
     color: ColorRGB = (0.0, 0.8, 0.0)
@@ -99,7 +112,7 @@ class CheckmarkMarker:
 
 
 @dataclass(frozen=True)
-class BoldCrossMarker:
+class BoldCrossMarker(MarkerCreator):
     """Bold X cross marker (capsule strokes)."""
 
     color: ColorRGB = (1.0, 0.2, 0.2)
@@ -113,7 +126,7 @@ class BoldCrossMarker:
 
 
 @dataclass(frozen=True)
-class CharacterMarker:
+class CharacterMarker(MarkerCreator):
     """Single character drawn with line segments."""
 
     character: str = ""

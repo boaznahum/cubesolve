@@ -4,10 +4,10 @@ from __future__ import annotations
 from typing import Any
 
 from .IMarkerFactory import IMarkerFactory
-from ._marker_config import color_255_to_float
 from ._marker_creator_protocol import MarkerCreator
 from ._marker_creators import (
     ArrowMarker,
+    color_255_to_float,
     BoldCrossMarker,
     CharacterMarker,
     CheckmarkMarker,

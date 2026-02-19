@@ -31,7 +31,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 from numpy import ndarray
 
-from cube.application.markers import get_markers_from_part_edge
+from cube.application.markers import MarkerToolkit, get_markers_from_part_edge
 from cube.application.markers._marker_creator_protocol import MarkerCreator
 from cube.domain.geometric.cube_boy import Color
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
@@ -176,7 +176,7 @@ def _get_complementary_color(face_color: tuple[float, float, float]) -> tuple[fl
     return _COMPLEMENTARY_COLORS.get(rounded, _DEFAULT_MARKER_COLOR)
 
 
-class ModernGLCellToolkit:
+class ModernGLCellToolkit(MarkerToolkit):
     """MarkerToolkit implementation for the modern (VBO-based) renderer.
 
     Translates abstract marker drawing primitives into vertex data appended
