@@ -80,7 +80,5 @@ def find_and_track_slice(face: Face, key: str, color: Color) -> None:
                     min_outline_width=ti.min_outline_width,
                 )
                 _cached_visual_face_marker[color] = marker
-            else:
-                marker = _cached_visual_face_marker[color]
 
             mm.add_marker(edge, tracer_visual_key(key), marker, moveable=True)
