@@ -111,6 +111,7 @@ This ensures animation is only enabled when **both** the caller wants it **and**
 | Noop classes (NoopMarkerFactory, NoopMarkerManager, NoopAnnotation) | commit 2 |
 | Conditional wiring in `_App.__init__` and `Operator.__init__` | commit 2 |
 | `OpAnnotation` inherits `AnnotationProtocol` | commit 2 |
+| `ConsoleAppWindow` remove redundant animation disable | commit 3 |
 
 ### NOT Taken — Marker Creator Refactor (the risky part)
 
@@ -123,12 +124,15 @@ This ensures animation is only enabled when **both** the caller wants it **and**
 | Remove `isinstance(MarkerConfig)` rendering from `_cell.py` | `_cell.py` | -200 | **High** — rendering pipeline |
 | Remove `isinstance(MarkerConfig)` rendering from `_modern_gl_cell.py` | `_modern_gl_cell.py` | -450 | **High** — rendering pipeline |
 | `MarkerConfig` → `MarkerCreator` type hints in `OpAnnotation.py` | `OpAnnotation.py` | ~20 | Low |
-| `ConsoleAppWindow` cleanup | `ConsoleAppWindow.py` | -4 | Low |
 | Design doc updates | `gui_abstraction.md`, `gui_components.puml` | minor | Low |
 
 ### Why It's Risky
 
 The rendering removal in `_cell.py` and `_modern_gl_cell.py` is **~650 lines** of `isinstance(MarkerConfig)` dispatch code deleted and replaced by the `MarkerCreator.draw(toolkit)` pattern. This is the most likely cause of the PyCharm test hang — the new `draw()` methods interact with the OpenGL rendering pipeline differently.
+
+### TODO / Design Gaps
+
+- **Single coordination point is not enforced.** `create_app_window()` correctly checks `backend.supports_animation`, but nothing prevents someone from calling `_create_app(animation=True)` and passing the app directly to a non-animation backend (e.g. `ConsoleAppWindow`). The removed guard in `ConsoleAppWindow` was a safety net for this case. Consider: (a) making backends assert/validate animation state on construction, or (b) making `_create_app` truly private so only `create_app_window()` can enable animation.
 
 ### Key Files Reference
 
