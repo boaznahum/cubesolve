@@ -39,7 +39,7 @@ class IMarkerManager(Protocol):
         Args:
             part_edge: The sticker to mark
             name: Unique name for this marker on this PartEdge
-            marker: The marker (MarkerConfig or any MarkerCreator)
+            marker: The MarkerCreator to add
             moveable: If True, marker moves with the sticker color during rotations
                      (stored in moveable_attributes). If False, marker stays at physical
                      position (stored in fixed_attributes).
@@ -60,7 +60,7 @@ class IMarkerManager(Protocol):
         Args:
             part_edge: The sticker to mark
             name: Unique name for this marker
-            marker: The marker (MarkerConfig or any MarkerCreator)
+            marker: The MarkerCreator to add
         """
         ...
 

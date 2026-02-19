@@ -13,7 +13,7 @@ from typing import (
 )
 
 from cube.application.exceptions.app_exceptions import InternalSWError
-from cube.application.markers import MarkerConfig
+from cube.application.markers._marker_creator_protocol import MarkerCreator
 from cube.domain.algs.Algs import Algs
 from cube.domain.model import Corner, Edge, Part, PartColorsID, PartEdge, PartSlice
 
@@ -54,7 +54,7 @@ class OpAnnotation(AnnotationProtocol):
         return self.op.animation_enabled
 
     # @contextmanager
-    def _w_slice_edges_annotate(self, _edges: Iterable[Tuple[PartEdge, bool, MarkerConfig]],
+    def _w_slice_edges_annotate(self, _edges: Iterable[Tuple[PartEdge, bool, MarkerCreator]],
                                 text: _HEADS | None = None):
 
         """
@@ -77,7 +77,7 @@ class OpAnnotation(AnnotationProtocol):
 
         #                  type,         key_index, marker_name
         slots: list[Tuple[Literal[1, 2, 3], int, str]] = []
-        s: Tuple[PartEdge, bool, MarkerConfig]
+        s: Tuple[PartEdge, bool, MarkerCreator]
         for s in slices:
             _slice: PartEdge = s[0]
             fixed = s[1]
@@ -173,7 +173,7 @@ class OpAnnotation(AnnotationProtocol):
             op.play(Algs.AN)
 
     def annotate(self, *elements: Tuple[SupportsAnnotation, AnnWhat],
-                 additional_markers: list[Tuple[SupportsAnnotation, AnnWhat, Callable[[], MarkerConfig]]] | None = None,
+                 additional_markers: list[Tuple[SupportsAnnotation, AnnWhat, Callable[[], MarkerCreator]]] | None = None,
                  h1: _HEAD = None,
                  h2: _HEAD = None,
                  h3: _HEAD = None,
@@ -204,7 +204,7 @@ class OpAnnotation(AnnotationProtocol):
 
     @contextmanager
     def _annotate(self, *elements: Tuple[SupportsAnnotation, AnnWhat],
-                  additional_markers: list[Tuple[SupportsAnnotation, AnnWhat, Callable[[], MarkerConfig]]] | None = None,
+                  additional_markers: list[Tuple[SupportsAnnotation, AnnWhat, Callable[[], MarkerCreator]]] | None = None,
                   h1: _HEAD = None,
                   h2: _HEAD = None,
                   h3: _HEAD = None,
@@ -212,14 +212,14 @@ class OpAnnotation(AnnotationProtocol):
 
         global _SLice_Tracking_UniqID
 
-        edges: list[Tuple[PartEdge, bool, MarkerConfig]] = []
+        edges: list[Tuple[PartEdge, bool, MarkerCreator]] = []
         cube = self.cube
         mf = cube.sp.marker_factory
 
         # we invoke a specific method, to stop recursively check for type
         # we already know the type
 
-        def process_slice_edge(_e: PartEdge, what: AnnWhat, custom_marker: MarkerConfig | None = None):
+        def process_slice_edge(_e: PartEdge, what: AnnWhat, custom_marker: MarkerCreator | None = None):
             if what == AnnWhat.Moved:
                 by_position = False
             elif what == AnnWhat.FixedPosition:
@@ -236,17 +236,17 @@ class OpAnnotation(AnnotationProtocol):
 
             edges.append((_e, by_position, marker))
 
-        def process_slice(s: PartSlice, what: AnnWhat, custom_marker: MarkerConfig | None = None):
+        def process_slice(s: PartSlice, what: AnnWhat, custom_marker: MarkerCreator | None = None):
             part_edge: PartEdge
             for part_edge in s.edges:
                 process_slice_edge(part_edge, what, custom_marker)
 
-        def process_part(e: Part, what: AnnWhat, custom_marker: MarkerConfig | None = None):
+        def process_part(e: Part, what: AnnWhat, custom_marker: MarkerCreator | None = None):
             s: PartSlice
             for s in e.all_slices:
                 process_slice(s, what, custom_marker)
 
-        def process_element(e: SupportsAnnotation, _what: AnnWhat, custom_marker: MarkerConfig | None = None):
+        def process_element(e: SupportsAnnotation, _what: AnnWhat, custom_marker: MarkerCreator | None = None):
 
             # check for clor id before iterator iterable
             if isinstance(e, frozenset):  # PartColorsID

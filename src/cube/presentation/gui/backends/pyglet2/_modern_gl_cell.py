@@ -45,7 +45,7 @@ from ._modern_gl_constants import CELL_TEXTURE_KEY
 # Number of segments for ring geometry (more = smoother circle)
 _RING_SEGMENTS = 32  # Increased for smoother 3D rings
 
-# Marker definitions now come from MarkerConfig - no static definitions needed
+# Marker definitions now come from MarkerCreator instances - no static definitions needed
 
 # Complementary colors for each cube face color (RGB 0.0-1.0)
 # These provide maximum contrast for visibility
@@ -838,7 +838,7 @@ class ModernGLCell:
         - f_attributes: markers on fixed positions (stay in place)
 
         Returns:
-            List of MarkerConfig objects, sorted by z_order.
+            List of MarkerCreator objects, sorted by z_order.
         """
         if self.part_edge is None:
             return []

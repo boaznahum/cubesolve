@@ -5,8 +5,7 @@ All marker operations should go through MarkerManager.
 
 Classes:
     IMarkerManager: Protocol defining the marker manager interface
-    MarkerConfig: Configuration dataclass for marker visual properties
-    MarkerShape: Enum defining marker shapes (RING, FILLED_CIRCLE, CROSS)
+    MarkerCreator: Protocol for marker objects (draw themselves via toolkit)
     MarkerFactory: Factory providing predefined markers (C0, C1, C2, ORIGIN, etc.)
     MarkerManager: Central manager implementing IMarkerManager
 
@@ -39,8 +38,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from cube.domain.model.PartEdge import PartEdge
 
-from .MarkerShape import MarkerShape
-from ._marker_config import MarkerConfig, color_255_to_float, color_float_to_255
+from ._marker_config import color_255_to_float, color_float_to_255
 from ._marker_creator_protocol import MarkerCreator
 from ._marker_toolkit import MarkerToolkit
 from ._outlined_circle_marker import OutlinedCircleMarker
@@ -75,7 +73,7 @@ def get_markers_from_part_edge(part_edge: "PartEdge") -> list[MarkerCreator]:
             all_markers.extend(markers_dict.values())
 
     # Deduplicate: keep highest z_order for each unique config
-    # Both MarkerConfig and OutlinedCircleMarker are frozen/hashable
+    # All marker creators are frozen dataclasses — hashable
     unique: dict[Any, Any] = {}
     for marker in all_markers:
         if marker not in unique or marker.z_order > unique[marker].z_order:
@@ -92,8 +90,6 @@ __all__ = [
     "IMarkerManager",
     "MarkerCreator",
     "MarkerToolkit",
-    "MarkerShape",
-    "MarkerConfig",
     "MarkerFactory",
     "MarkerManager",
     "NoopMarkerFactory",

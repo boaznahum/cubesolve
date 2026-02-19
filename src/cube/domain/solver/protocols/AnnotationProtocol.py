@@ -6,7 +6,7 @@ from collections.abc import Iterable, Iterator
 from typing import TYPE_CHECKING, Callable, ContextManager, Protocol, Tuple, TypeAlias
 
 if TYPE_CHECKING:
-    from cube.application.markers import MarkerConfig
+    from cube.application.markers._marker_creator_protocol import MarkerCreator
     from cube.domain.model._elements import PartColorsID
     from cube.domain.model.PartSlice import PartSlice
     from cube.domain.model.Part import Part
@@ -24,10 +24,10 @@ SupportsAnnotation: TypeAlias = "_ANN_ELEMENT_1 | Iterator[_ANN_ELEMENT_1] | Ite
 
 _HEAD: TypeAlias = "str | Callable[[], str] | None"
 
-# Type alias for additional markers with custom MarkerConfig
-# Tuple of (element, AnnWhat, factory_method that returns MarkerConfig)
+# Type alias for additional markers with custom MarkerCreator
+# Tuple of (element, AnnWhat, factory_method that returns MarkerCreator)
 # Element can be any SupportsAnnotation type (Part, PartSlice, PartEdge, etc.)
-AdditionalMarker: TypeAlias = "Tuple[SupportsAnnotation, AnnWhat, Callable[[], MarkerConfig]]"
+AdditionalMarker: TypeAlias = "Tuple[SupportsAnnotation, AnnWhat, Callable[[], MarkerCreator]]"
 
 
 class AnnotationProtocol(Protocol):
