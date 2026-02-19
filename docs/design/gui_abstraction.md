@@ -1175,57 +1175,60 @@ These would only need abstraction if adding another 3D backend (e.g., Vulkan).
 
 ## 6. Entry Point Usage
 
-### Current (main_g.py)
+### App Creation Flow (Backend Owns Animation)
 
-```python
-def main():
-    app = AbstractApp.create()
-    win = Window(app, 720, 720, "Cube")
-    pyglet.app.run()
+App is always created without animation. The backend injects animation if it supports it.
+This eliminates the circular dependency where App needed to know backend capabilities at birth.
+
+```
+Non-GUI:  AbstractApp.create_app()  →  app (no AM, Noop markers)
+
+GUI:      app = AbstractApp.create_app()
+          backend.create_app_window(app)
+            1. if supports_animation:
+                 am = AnimationManager(app.vs)
+                 app.enable_animation(am)        ← swaps Noop → real
+                 am.set_event_loop(event_loop)
+            2. AppWindow(app) → wired and ready
 ```
 
-### After Migration
+### GUI Entry Point (main_any_backend.py)
 
 ```python
-import pyglet
+from cube.main_any_backend import create_app_window
+
+def main(backend_name: str = "pyglet2"):
+    window = create_app_window(backend_name, cube_size=3)
+    window.run()
+```
+
+`create_app_window()` is a convenience wrapper that:
+1. Creates app via `AbstractApp.create_app()` (no animation)
+2. Calls `backend.create_app_window(app)` (backend injects animation if supported)
+3. If caller passed `animation=False`, disables animation via `op.toggle_animation_on(False)`
+
+### Direct Backend Usage
+
+```python
 from cube.application.AbstractApp import AbstractApp
 from cube.presentation.gui import BackendRegistry
-# Import pyglet backend to register it
-import cube.presentation.gui.backends.pyglet  # noqa: F401 - registers backend
-from cube.presentation.gui.backends.pyglet import Window
 
-def main(backend_name: str | None = None):
-    # Get backend instance (provides lazy renderer, window factory, etc.)
-    backend = BackendRegistry.get_backend(backend_name or "pyglet")
-
-    # Create app and window
-    # Window receives backend and gets renderer via backend.renderer
-    app = AbstractApp.create()
-    win = Window(app, 720, 720, "Cube", backend=backend)
-
-    # Run pyglet event loop
-    pyglet.app.run()
-
-if __name__ == '__main__':
-    main()
+backend = BackendRegistry.get_backend("pyglet2")
+app = AbstractApp.create_app(cube_size=3)
+window = backend.create_app_window(app)  # backend injects animation here
+window.run()
 ```
 
-### For Tests
+### For Tests (No GUI)
 
 ```python
-from cube.presentation.gui import BackendRegistry
 from cube.application.AbstractApp import AbstractApp
 
 def test_cube_operations():
-    # Use headless backend for fast testing
-    backend = BackendRegistry.get_backend('headless')
-
-    # Create app without GUI
-    app = AbstractApp.create_non_default(cube_size=3, animation=False)
-
-    # Test cube operations without GUI overhead
-    app.cube.rotate_face(FaceName.R, 1)
-    assert not app.cube.solved
+    app = AbstractApp.create_app(cube_size=3)
+    # app has Noop markers, no animation — lightweight and fast
+    app.op.play(Algs.U)
+    assert not app.cube.is_solved
 ```
 
 ---

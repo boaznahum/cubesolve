@@ -9,21 +9,30 @@ This is a Rubik's cube solver with a 3D GUI using pyglet/OpenGL. The codebase us
 
 ### Architecture
 ```
-main_any_backend.py → BackendRegistry.get_backend("pyglet")
-                              ↓
-                        GUIBackend
-                            ├── renderer → PygletRenderer
-                            ├── event_loop → PygletEventLoop
-                            └── create_app_window() → PygletAppWindow
-                                        ↓
-                              GCubeViewer → _Board → _FaceBoard → _Cell
+App Creation (backend owns animation):
+    app = AbstractApp.create_app()          ← always Noop markers, no AM
+    backend.create_app_window(app)          ← backend injects animation:
+        if supports_animation:
+            am = AnimationManager(app.vs)
+            app.enable_animation(am)        ← swaps Noop → real markers
+            am.set_event_loop(event_loop)
+        AppWindow(app, ...)
 
-PygletRenderer (implements Renderer protocol)
+Backend Components:
+    GUIBackendFactory
+        ├── renderer → PygletRenderer (lazy singleton)
+        ├── event_loop → PygletEventLoop (lazy singleton)
+        └── create_app_window() → PygletAppWindow
+
+Renderer (implements Renderer protocol):
     ├── shapes: ShapeRenderer (quad, triangle, line, sphere, etc.)
     ├── display_lists: DisplayListManager (gen_list, call_list, delete_list)
     └── view: ViewStateManager (matrix operations, screen_to_world)
 
-Command Pattern (keyboard handling)
+Viewer Hierarchy:
+    GCubeViewer → _Board → _FaceBoard → _Cell
+
+Command Pattern (keyboard handling):
     handle_key() → lookup_command() → Command.execute(ctx)
 ```
 
@@ -196,7 +205,7 @@ grep -r "import pyglet\|from pyglet" src/cube --include="*.py" | grep -v "presen
 ### Important Notes
 - Renderer is REQUIRED - RuntimeError if not configured
 - Display lists use internal IDs mapped to GL IDs via `DisplayListManager`
-- EventLoop is wired to AnimationManager via `am.set_event_loop(backend.event_loop)`
+- **Backend owns animation:** App always starts without AM. Backend calls `app.enable_animation(am)` + `am.set_event_loop(event_loop)` if it supports animation. No circular dependency.
 
 ---
 
@@ -252,9 +261,10 @@ The script uses Windows Text-to-Speech to say "Hey Friend! Claude needs your att
 
 ### Workflow:
 1. Make requested changes
-2. Show the user what was changed
-3. Ask: "Would you like me to commit these changes?"
-4. Only commit after receiving explicit approval
+2. **Review your own changes** — read the diff, check for redundant code, leftover patterns, or mistakes. Fix any issues BEFORE showing the user.
+3. Show the user what was changed
+4. Ask: "Would you like me to commit these changes?"
+5. Only commit after receiving explicit approval
 
 ### Pre-Commit Checklist (MANDATORY):
 Before committing, ALWAYS do these steps:

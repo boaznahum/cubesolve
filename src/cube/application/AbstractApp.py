@@ -32,32 +32,44 @@ class AbstractApp(metaclass=ABCMeta):
         quiet_all: bool = False,
         solver: SolverName | None = None,
     ) -> "AbstractApp":
-        """Create app without backend. No animation. For tests/scripts."""
-        return AbstractApp._create_app(
-            cube_size, animation=False,
-            debug_all=debug_all, quiet_all=quiet_all, solver=solver,
-        )
+        """Create app without animation. For tests, scripts, and as first step for GUI.
 
-    @staticmethod
-    def _create_app(
-        cube_size: int | None,
-        animation: bool = False,
-        debug_all: bool = False,
-        quiet_all: bool = False,
-        solver: SolverName | None = None,
-    ) -> "AbstractApp":
-        """Internal factory. animation=True only when backend supports it."""
+        The app is always born without animation (Noop markers, no AnimationManager).
+        Animation is injected later by the backend via ``enable_animation()``.
+
+        Creation flow::
+
+            Non-GUI (tests/scripts):
+                app = AbstractApp.create_app(cube_size=3)
+                # app has: NoopMarkerFactory, NoopMarkerManager, NoopAnnotation
+                # → ready to use, no animation
+
+            GUI:
+                app = AbstractApp.create_app(cube_size=3)
+                backend = BackendRegistry.get_backend("pyglet2")
+                window = backend.create_app_window(app)
+                # Inside create_app_window, backend calls:
+                #   am = AnimationManager(app.vs)
+                #   app.enable_animation(am)      ← swaps Noop → real objects
+                #   am.set_event_loop(event_loop)
+
+            enable_animation(am) injection chain::
+
+                _App.enable_animation(am)
+                  ├── _am              = am
+                  ├── _marker_factory  = MarkerFactory()        (was Noop)
+                  ├── _marker_manager  = MarkerManager()        (was Noop)
+                  └── _op.enable_animation(am, animation_enabled)
+                        ├── _animation_manager = am
+                        ├── _animation_enabled = True
+                        └── _annotation        = OpAnnotation   (was Noop)
+        """
         from .app import _App
         from .config_impl import AppConfig
 
-        # Create config first - it provides values to everything else
         config = AppConfig()
         vs = ApplicationAndViewState(config, debug_all=debug_all, quiet_all=quiet_all)
-        am: "AnimationManager | None" = None
-        if animation:
-            from cube.application.animation.AnimationManager import AnimationManager
-            am = AnimationManager(vs)
-        app: _App = _App(config, vs, am, cube_size, solver)
+        app: _App = _App(config, vs, cube_size, solver)
 
         return app
 
@@ -81,6 +93,11 @@ class AbstractApp(metaclass=ABCMeta):
     @abstractmethod
     def am(self) -> "AnimationManager | None":
         pass
+
+    @abstractmethod
+    def enable_animation(self, am: "AnimationManager") -> None:
+        """Inject animation support. Called by backend after app creation."""
+        raise NotImplementedError
 
     @property
     @abstractmethod

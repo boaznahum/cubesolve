@@ -74,11 +74,12 @@ def create_app_window(
     height: int = 720,
     title: str = "Cube Solver",
 ) -> "AppWindow":
-    """SINGLE POINT OF CREATION for app + backend.
+    """Convenience wrapper: create app, wire to backend, return AppWindow.
 
-    All code that needs an app with a GUI backend MUST go through this function.
-    It ensures animation is only enabled when the backend supports it.
-    Returns AppWindow (access app via window.app, backend via window.backend).
+    The backend is the authority on animation support. The app is always
+    created without animation; the backend injects it if supported.
+    Pass animation=False to explicitly disable animation even when the
+    backend supports it.
 
     Args:
         backend_name: Backend to use ("pyglet", "pyglet2", "tkinter", "console", "headless", "web").
@@ -103,17 +104,21 @@ def create_app_window(
         >>> window.run()
     """
     backend = BackendRegistry.get_backend(backend_name)
-    effective_animation = animation and backend.supports_animation
 
-    app = AbstractApp._create_app(
+    app = AbstractApp.create_app(
         cube_size=cube_size,
-        animation=effective_animation,
         debug_all=debug_all,
         quiet_all=quiet_all,
         solver=solver,
     )
 
-    return backend.create_app_window(app, width, height, title)
+    window = backend.create_app_window(app, width, height, title)
+
+    # If caller explicitly disabled animation, turn it off
+    if not animation:
+        app.op.toggle_animation_on(False)
+
+    return window
 
 
 def run_with_backend(

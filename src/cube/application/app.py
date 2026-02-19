@@ -28,16 +28,12 @@ class _App(AbstractApp, IServiceProvider):
     def __init__(self,
                  config: ConfigProtocol,
                  vs: ApplicationAndViewState,
-                 am: 'AnimationManager | None',
                  cube_size: int | None,
                  solver: SolverName | None = None) -> None:
         self._config = config
-        if am is not None:
-            self._marker_factory: IMarkerFactory = MarkerFactory()
-            self._marker_manager: IMarkerManager = MarkerManager()
-        else:
-            self._marker_factory = NoopMarkerFactory()
-            self._marker_manager = NoopMarkerManager()
+        # Always start with Noop markers; enable_animation() swaps them
+        self._marker_factory: IMarkerFactory = NoopMarkerFactory()
+        self._marker_manager: IMarkerManager = NoopMarkerManager()
         super().__init__()
 
         self._vs = vs
@@ -50,21 +46,24 @@ class _App(AbstractApp, IServiceProvider):
 
         self._cube = Cube(self.vs.cube_size, sp=self)
 
-        self._am = am
+        self._am: AnimationManager | None = None
 
-        self._op: Operator = Operator(self.cube,
-                                      self._vs,
-                                      am,
-                                      config.animation_enabled)
+        self._op: Operator = Operator(self.cube, self._vs)
 
         if solver is not None:
             self._slv: Solver = Solvers.by_name(solver, self.op)
         else:
             self._slv = Solvers.default(self.op)
 
-        # pp.alpha_x=0.30000000000000004 app.alpha_y=-0.4 app.alpha_z=0
-
         self.reset(None)
+
+    def enable_animation(self, am: 'AnimationManager') -> None:
+        """Inject animation support. Called by backend after app creation."""
+        assert self._am is None, "enable_animation() called twice"
+        self._am = am
+        self._marker_factory = MarkerFactory()
+        self._marker_manager = MarkerManager()
+        self._op.enable_animation(am, self._config.animation_enabled)
 
     def reset(self, cube_size: int | None = None):
         self.cube.reset(cube_size)

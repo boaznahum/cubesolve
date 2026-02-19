@@ -17,13 +17,14 @@ DEFAULT_BACKEND = "pyglet2"
 class BackendRegistry:
     """Registry for GUI backends.
 
-    IMPORTANT: Do NOT call backend.create_app_window(app) directly.
-    Use main_any_backend.create_app_window() — the single point of creation
-    that wires app + backend together with correct animation support.
+    The backend owns animation: calling backend.create_app_window(app)
+    injects animation support if the backend supports it.
+    main_any_backend.create_app_window() is a convenience wrapper.
 
     Example:
-        from cube.main_any_backend import create_app_window
-        window = create_app_window("pyglet2", cube_size=3)
+        backend = BackendRegistry.get_backend("pyglet2")
+        app = AbstractApp.create_app(cube_size=3)
+        window = backend.create_app_window(app)
         window.run()
     """
 

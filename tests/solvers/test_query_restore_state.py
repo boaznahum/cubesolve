@@ -111,7 +111,7 @@ class TestQueryRestoreState:
 
     def test_animation_disabled_inside_context(self, test_sp) -> None:
         """Test that animation is disabled inside context."""
-        app = AbstractApp._create_app(cube_size=3, animation=True)
+        app = AbstractApp.create_app(cube_size=3)
         cube = Cube(size=3, sp=test_sp)
         op = Operator(cube, app.vs)
 

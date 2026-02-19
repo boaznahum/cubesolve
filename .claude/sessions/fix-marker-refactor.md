@@ -35,16 +35,17 @@ User ran `git bisect` and identified:
 
 ---
 
-## Application Creation Flow
+## Application Creation Flow (Updated 2026-02-19)
 
-### Entry Points (where applications are created)
+**Design principle:** App is always born without animation. Backend injects animation if it supports it. No circular dependency.
+
+### Entry Points
 
 | Entry Point | Function | Animation? | Used By |
 |---|---|---|---|
 | **Tests/scripts** | `AbstractApp.create_app(cube_size, solver=...)` | Never | All non-GUI tests (~50 files) |
-| **GUI app** | `create_app_window(backend, cube_size=..., animation=True, ...)` | If backend supports it | `run_with_backend()`, CLI |
-| **GUI tests** | `AbstractApp._create_app(cube_size, animation=enable_animation)` | **Yes by default** (`--animate` defaults True) | `GUITestRunner` |
-| **Special tests** | `AbstractApp._create_app(cube_size=3, animation=True)` | Yes (explicit) | `test_query_restore_state` |
+| **GUI app** | `create_app_window(backend, cube_size=..., animation=True, ...)` | Backend injects if supported | `run_with_backend()`, CLI |
+| **GUI tests** | `create_app_window(backend, cube_size=..., animation=True, ...)` | Backend injects if supported | `GUITestRunner` |
 
 ### How Tests Get Noop (non-GUI tests)
 
@@ -52,100 +53,50 @@ User ran `git bisect` and identified:
 Test calls:  AbstractApp.create_app(cube_size=3)
                     │
                     ▼
-          _create_app(cube_size=3, animation=False)  ← hardcoded False
-                    │
-                    ▼
-          animation=False → am = None
-                    │
-                    ▼
-          _App.__init__(am=None)
+          _App.__init__(config, vs, cube_size)
+              ├── _am = None
               ├── NoopMarkerFactory()
               ├── NoopMarkerManager()
-              └── Operator(am=None) → NoopAnnotation()
+              └── Operator(cube, vs) → NoopAnnotation()
 ```
 
-### How GUI App Gets Real Objects
+### How GUI App Gets Real Objects (backend owns animation)
 
 ```
 CLI/main → create_app_window("pyglet2", animation=True)
                     │
                     ▼
-          effective_animation = True AND backend.supports_animation
-              ├── pyglet2: supports=True  → effective=True
-              ├── console: supports=False → effective=False
-              ├── headless: supports=False → effective=False
+          app = AbstractApp.create_app(...)       ← always Noop
                     │
                     ▼
-          _create_app(animation=True)
+          backend.create_app_window(app)          ← BACKEND IS AUTHORITY
+              │
+              ├── if animation_factory is not None:
+              │     am = AnimationManager(app.vs)
+              │     app.enable_animation(am)      ← swaps Noop → real
+              │     am.set_event_loop(event_loop)
+              │
+              └── AppWindow(app, ...)
                     │
                     ▼
-          am = AnimationManager(vs)
-                    │
-                    ▼
-          _App.__init__(am=AnimationManager)
-              ├── MarkerFactory()        (real)
-              ├── MarkerManager()        (real)
-              └── Operator(am=am) → OpAnnotation()  (real)
+          if not animation:                       ← caller opt-out
+              app.op.toggle_animation_on(False)
 ```
 
-### How GUI Tests Get Real Objects (important!)
+### enable_animation() Injection Chain
 
 ```
-GUITestRunner.run_test(enable_animation=True)  ← default from --animate flag
-                    │
-                    ▼
-          AbstractApp._create_app(animation=True)  ← bypasses create_app_window!
-                    │
-                    ▼
-          am = AnimationManager(vs)  → real MarkerFactory, MarkerManager, OpAnnotation
+app.enable_animation(am)
+  ├── assert _am is None          (guard: one-shot only)
+  ├── _am              = am
+  ├── _marker_factory  = MarkerFactory()       (was NoopMarkerFactory)
+  ├── _marker_manager  = MarkerManager()       (was NoopMarkerManager)
+  └── _op.enable_animation(am, config.animation_enabled)
+        ├── assert _animation_manager is None  (guard)
+        ├── _animation_manager = am
+        ├── _animation_enabled = animation_enabled
+        └── _annotation        = OpAnnotation  (was NoopAnnotation)
 ```
-
-**Note:** GUI tests bypass `create_app_window()` and call `_create_app()` directly.
-This means they get real marker objects when `enable_animation=True`.
-
-### Internal Factory: `AbstractApp._create_app()`
-
-```
-_create_app(cube_size, animation=False, ...)
-    │
-    ├── Creates AppConfig, ApplicationAndViewState
-    │
-    ├── animation=True?
-    │   ├── YES → AnimationManager(vs)  →  am = AnimationManager
-    │   └── NO  → am = None
-    │
-    └── _App(config, vs, am, cube_size, solver)
-```
-
-### Wiring Inside `_App.__init__(am)`
-
-```
-am is not None (animation)?
-├── YES (GUI with animation):
-│   ├── MarkerFactory()        ← real factory, creates MarkerConfig objects
-│   ├── MarkerManager()        ← real manager, writes markers to PartEdge attributes
-│   └── Operator(am=am)
-│       └── OpAnnotation(self) ← real annotation, draws solver steps on cube
-│
-└── NO (tests, scripts, headless):
-    ├── NoopMarkerFactory()    ← returns _NOOP singleton for all methods
-    ├── NoopMarkerManager()    ← all add/remove/get are silent no-ops
-    └── Operator(am=None)
-        └── NoopAnnotation()   ← annotate() returns nullcontext()
-```
-
-### Single Coordination Point: `create_app_window()`
-
-```python
-# src/cube/main_any_backend.py
-def create_app_window(backend_name, *, cube_size, animation=True, ...):
-    backend = BackendRegistry.get_backend(backend_name)
-    effective_animation = animation and backend.supports_animation  # ← key line
-    app = AbstractApp._create_app(cube_size, animation=effective_animation, ...)
-    return backend.create_app_window(app, width, height, title)
-```
-
-This ensures animation is only enabled when **both** the caller wants it **and** the backend supports it.
 
 ### Summary Table
 
@@ -153,8 +104,8 @@ This ensures animation is only enabled when **both** the caller wants it **and**
 |---|---|---|---|---|
 | `create_app()` (tests) | None | NoopMarkerFactory | NoopMarkerManager | NoopAnnotation |
 | `create_app_window("headless")` | None | NoopMarkerFactory | NoopMarkerManager | NoopAnnotation |
+| `create_app_window("console")` | None | NoopMarkerFactory | NoopMarkerManager | NoopAnnotation |
 | `create_app_window("pyglet2")` | AnimationManager | MarkerFactory | MarkerManager | OpAnnotation |
-| `_create_app(animation=True)` (GUI tests) | AnimationManager | MarkerFactory | MarkerManager | OpAnnotation |
 
 ---
 
@@ -204,8 +155,8 @@ Possible causes to investigate:
 
 ### TODO / Design Gaps
 
-- **TODO: Single coordination point is not enforced.** `create_app_window()` correctly checks `backend.supports_animation`, but nothing prevents calling `_create_app(animation=True)` and passing the app directly to a non-animation backend. GUITestRunner does exactly this. Consider: (a) making backends assert/validate animation state, or (b) making `_create_app` truly private.
-- **TODO: GUITestRunner bypasses coordination point.** It calls `_create_app()` directly, not `create_app_window()`. This means the `backend.supports_animation` check is skipped.
+- ~~**DONE: Single coordination point is not enforced.** Resolved by "backend owns animation" refactor — `_create_app()` removed, app always born without animation, backend injects via `enable_animation()`.~~
+- ~~**DONE: GUITestRunner bypasses coordination point.** Resolved — GUITestRunner now uses `create_app_window()` which delegates to backend.~~
 - **TODO: Find the breaking change.** The remaining diff (MarkerConfig→MarkerCreator swap) is the only suspect. Need to apply incrementally and test.
 
 ### Key Files Reference

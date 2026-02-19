@@ -410,6 +410,19 @@ class Operator(OperatorProtocol):
         if code is None or self._app_state.config.is_ss_code_enabled(code):
             self._app_state.single_step_mode = True
 
+    def enable_animation(self, am: 'AnimationManager', animation_enabled: bool) -> None:
+        """Inject animation support after construction.
+
+        Called by App.enable_animation() when a GUI backend provides an
+        AnimationManager.  Must only be called once (before any play() calls).
+        """
+        assert self._animation_manager is None, "enable_animation() called twice"
+        self._animation_manager = am
+        self._animation_enabled = animation_enabled
+
+        from cube.application.commands.op_annotation import OpAnnotation
+        self._annotation = OpAnnotation(self)
+
     def toggle_animation_on(self, enable: bool | None = None):
 
         if enable is None:

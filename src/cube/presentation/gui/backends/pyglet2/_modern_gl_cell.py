@@ -34,7 +34,6 @@ from numpy import ndarray
 from cube.application.markers import MarkerToolkit, get_markers_from_part_edge
 from cube.application.markers._marker_creator_protocol import MarkerCreator
 from cube.domain.geometric.cube_boy import Color
-from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 
 if TYPE_CHECKING:
     from cube.domain.model.PartSlice import PartSlice
