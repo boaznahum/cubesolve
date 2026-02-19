@@ -32,7 +32,7 @@ def test_scramble_and_solve(cube_size: int, sanity_check: bool, solver: SolverNa
     skip_if_not_supported(solver, cube_size)
     config.CHECK_CUBE_SANITY = sanity_check
 
-    app = AbstractApp.create_non_default(cube_size, animation=False, solver=solver)
+    app = AbstractApp.create_app(cube_size, solver=solver)
     cube = app.cube
 
     alg = Algs.scramble(cube.size, 4)
@@ -63,7 +63,7 @@ def test_scramble_by_seed_and_solve(seed: int, solver: SolverName):
     Which calls: app.scramble(seed, None, animation=False) then app.slv.solve()
     """
     skip_if_not_supported(solver, 3)
-    app = AbstractApp.create_non_default(cube_size=3, animation=False, solver=solver)
+    app = AbstractApp.create_app(cube_size=3, solver=solver)
 
     # Use app.scramble() same as GUI - this resets op and uses op.play()
     app.scramble(scramble_key=seed, scramble_size=None, animation=False, verbose=True)
@@ -88,7 +88,7 @@ def test_m_rotation_and_solve_kociemba():
     """
     from cube.domain.solver.SolverName import SolverName
 
-    app = AbstractApp.create_non_default(cube_size=3, animation=False, solver=SolverName.KOCIEMBA)
+    app = AbstractApp.create_app(cube_size=3, solver=SolverName.KOCIEMBA)
     cube = app.cube
 
     # Apply M rotation
@@ -122,7 +122,7 @@ def test_compare_all_solvers_summary():
     for solver_name in solvers:
         for seed in seeds:
             solver_enum = SolverName[solver_name]
-            app = AbstractApp.create_non_default(cube_size=3, animation=False, solver=solver_enum)
+            app = AbstractApp.create_app(cube_size=3, solver=solver_enum)
 
             # Apply scramble
             app.scramble(scramble_key=seed, scramble_size=None, animation=False, verbose=False)

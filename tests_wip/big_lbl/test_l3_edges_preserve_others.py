@@ -48,7 +48,7 @@ class TestL3EdgesPreserveOthers:
         """L3 edge solving must not modify L1 or middle-slice edges."""
 
         # Setup
-        app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
+        app = AbstractApp.create_app(cube_size=cube_size)
         solver = LayerByLayerNxNSolver(app.op, app.op.sp.logger)
 
         # Scramble
@@ -96,7 +96,7 @@ class TestL3EdgesPreserveOthersExtended:
     ) -> None:
         """Test 5x5 L3 edges with many scrambles to find edge cases."""
 
-        app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
+        app = AbstractApp.create_app(cube_size=cube_size)
         solver = LayerByLayerNxNSolver(app.op, app.op.sp.logger)
 
         app.scramble(scramble_seed, None, animation=False, verbose=False)

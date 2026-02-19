@@ -116,7 +116,7 @@ def test_second_block_corruption_minimal_reproduction():
     """
     # Create 12x12 cube
     cube_size = 12
-    app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
+    app = AbstractApp.create_app(cube_size=cube_size)
     cube = app.cube
     n_slices = cube.n_slices
 

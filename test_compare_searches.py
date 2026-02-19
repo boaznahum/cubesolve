@@ -21,7 +21,7 @@ def run_with_search_method(use_new: bool, seed: int = 12345) -> dict[int, int]:
     print(f"{'='*70}")
 
     # Create cube and solver
-    app = AbstractApp.create_non_default(cube_size=12, animation=False)
+    app = AbstractApp.create_app(cube_size=12)
     solver = LayerByLayerNxNSolver(app.op, app.op.sp.logger)
 
     # Apply random scramble

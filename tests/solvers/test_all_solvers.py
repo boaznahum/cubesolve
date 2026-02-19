@@ -45,7 +45,7 @@ def _run_solver_test(
     actual_seed: int = scramble_seed if scramble_seed is not None else session_random_seed
 
     # Create app (provides vs with config, operator, and cube)
-    app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
+    app = AbstractApp.create_app(cube_size=cube_size)
 
     # Create solver using app's operator (same as GUI)
     solver = Solvers.by_name(solver_name, app.op)
@@ -133,7 +133,7 @@ class TestSolverBasics:
         skip_if_not_supported(solver_name, 3)
 
         # Use app's operator (same as GUI)
-        app = AbstractApp.create_non_default(cube_size=3, animation=False)
+        app = AbstractApp.create_app(cube_size=3)
         solver = Solvers.by_name(solver_name, app.op)
 
         assert solver.is_solved, (

@@ -48,7 +48,7 @@ def test_checkmark_markers_on_centers(backend: str):
         config.GUI_TEST_MODE = True
 
         # Create app with 3x3 cube
-        app = AbstractApp.create_non_default(cube_size=5, animation=False)
+        app = AbstractApp.create_app(cube_size=5)
         cube = app.cube
 
         # Get marker factory and manager from service provider
@@ -132,7 +132,7 @@ def test_checkmark_markers_on_nxn_centers(cube_size: int, backend: str):
     try:
         config.GUI_TEST_MODE = True
 
-        app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
+        app = AbstractApp.create_app(cube_size=cube_size)
         cube = app.cube
 
         mf = cube.sp.marker_factory

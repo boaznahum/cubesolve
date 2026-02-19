@@ -32,7 +32,7 @@ def test_solve_preserves_boy(solver: SolverName) -> None:
     size = 4
     skip_if_not_supported(solver, size)
 
-    app = AbstractApp.create_non_default(size, animation=False, solver=solver)
+    app = AbstractApp.create_app(size, solver=solver)
     cube = app.cube
 
     a: algs.Alg = algs.Algs.scramble1(cube.size)

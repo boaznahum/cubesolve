@@ -114,7 +114,7 @@ class TestTrackerMajorityBug:
 
         Note: Current test passes but may not correctly reproduce the bug scenario.
         """
-        app = AbstractApp.create_non_default(cube_size=4, animation=False)
+        app = AbstractApp.create_app(cube_size=4)
 
         # Set up the problematic cube configuration
         _setup_even_distribution_cube(app)
@@ -156,7 +156,7 @@ class TestTrackerMajorityBug:
         color assignments, the L1 check may fail even though nothing
         changed except the cube orientation!
         """
-        app = AbstractApp.create_non_default(cube_size=4, animation=False)
+        app = AbstractApp.create_app(cube_size=4)
 
         # Set up the problematic cube configuration
         _setup_even_distribution_cube(app)
@@ -198,7 +198,7 @@ class TestTrackerMajorityBug:
         Mappings A and B should be equivalent (same colors to same logical faces).
         But with even distribution, they might differ randomly!
         """
-        app = AbstractApp.create_non_default(cube_size=4, animation=False)
+        app = AbstractApp.create_app(cube_size=4)
 
         # Set up the problematic cube configuration
         _setup_even_distribution_cube(app)
@@ -253,7 +253,7 @@ def test_random_scramble_tracker_validity(seed: int) -> None:
     This tests that normal scrambles (not the pathological even distribution)
     still work correctly. The bug is specific to even distributions.
     """
-    app = AbstractApp.create_non_default(cube_size=4, animation=False)
+    app = AbstractApp.create_app(cube_size=4)
 
     # Normal scramble
     app.scramble(seed, None, animation=False, verbose=False)

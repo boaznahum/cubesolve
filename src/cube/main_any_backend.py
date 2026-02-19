@@ -32,6 +32,7 @@ from cube.presentation.gui import BackendRegistry
 from cube.presentation.gui.commands import Commands
 
 if TYPE_CHECKING:
+    from cube.domain.solver.SolverName import SolverName
     from cube.presentation.gui.protocols import AppWindow
 
 
@@ -62,20 +63,29 @@ def _inject_commands(window: "AppWindow", commands_str: str) -> None:
 
 
 def create_app_window(
-    app: AbstractApp,
     backend_name: str = "pyglet",
+    *,
+    cube_size: int | None = None,
+    animation: bool = True,
+    debug_all: bool = False,
+    quiet_all: bool = False,
+    solver: "SolverName | None" = None,
     width: int = 900,
     height: int = 720,
     title: str = "Cube Solver",
 ) -> "AppWindow":
-    """Create an AppWindow with the specified backend.
+    """The ONLY factory for creating an app with a backend.
 
-    This is the main factory function for creating application windows.
-    Delegates to GUIBackend.create_app_window() which handles animation manager wiring.
+    Decides animation based on caller preference AND backend capability.
+    Returns AppWindow (access app via window.app).
 
     Args:
-        app: Application instance with cube, operator, solver.
         backend_name: Backend to use ("pyglet", "pyglet2", "tkinter", "console", "headless", "web").
+        cube_size: Cube size (default: from config).
+        animation: Enable animation (default: True). Only effective if backend supports it.
+        debug_all: Enable verbose logging.
+        quiet_all: Suppress all debug output.
+        solver: Solver to use (default: from config).
         width: Window width in pixels (ignored for console/headless).
         height: Window height in pixels (ignored for console/headless).
         title: Window title.
@@ -88,13 +98,20 @@ def create_app_window(
         ValueError: If the backend is not recognized.
 
     Example:
-        >>> app = AbstractApp.create()
-        >>> window = create_app_window(app, "tkinter")
+        >>> window = create_app_window("tkinter", cube_size=3)
         >>> window.run()
     """
-    # Get backend from registry and create window
-    # GUIBackendFactory.create_app_window() handles animation manager wiring
     backend = BackendRegistry.get_backend(backend_name)
+    effective_animation = animation and backend.supports_animation
+
+    app = AbstractApp._create_app(
+        cube_size=cube_size,
+        animation=effective_animation,
+        debug_all=debug_all,
+        quiet_all=quiet_all,
+        solver=solver,
+    )
+
     return backend.create_app_window(app, width, height, title)
 
 
@@ -141,24 +158,20 @@ def run_with_backend(
         >>> run_with_backend("tkinter")  # Run with tkinter
         >>> run_with_backend("headless", commands="SCRAMBLE_1,SOLVE_ALL,QUIT")
     """
-    # Create application
-    app = AbstractApp.create_non_default(
-        cube_size=cube_size,
-        animation=animation,
-        debug_all=debug_all,
-        quiet_all=quiet_all,
-    )
-
     window = None
     try:
-        # Create window with specified backend
+        # Create application and window via single coordination point
         window = create_app_window(
-            app,
-            backend_name=backend_name,
+            backend_name,
+            cube_size=cube_size,
+            animation=animation,
+            debug_all=debug_all,
+            quiet_all=quiet_all,
             width=width,
             height=height,
             title=title,
         )
+        app = window.app
 
         window.set_mouse_visible(True)
 

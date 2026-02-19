@@ -26,17 +26,27 @@ class AbstractApp(metaclass=ABCMeta):
 
 
     @staticmethod
-    def create() -> "AbstractApp":
-        return AbstractApp.create_non_default(None)
-
-    @staticmethod
-    def create_non_default(
-        cube_size: int | None,
-        animation: bool = True,
+    def create_app(
+        cube_size: int | None = None,
         debug_all: bool = False,
         quiet_all: bool = False,
         solver: SolverName | None = None,
     ) -> "AbstractApp":
+        """Create app without backend. No animation. For tests/scripts."""
+        return AbstractApp._create_app(
+            cube_size, animation=False,
+            debug_all=debug_all, quiet_all=quiet_all, solver=solver,
+        )
+
+    @staticmethod
+    def _create_app(
+        cube_size: int | None,
+        animation: bool = False,
+        debug_all: bool = False,
+        quiet_all: bool = False,
+        solver: SolverName | None = None,
+    ) -> "AbstractApp":
+        """Internal factory. animation=True only when backend supports it."""
         from .app import _App
         from .config_impl import AppConfig
 

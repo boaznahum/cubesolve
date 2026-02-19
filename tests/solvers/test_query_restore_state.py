@@ -25,7 +25,7 @@ class TestQueryRestoreState:
     def test_cube_state_restored_after_context(self, test_sp) -> None:
         """Test that cube state is restored after exiting context."""
         # Setup
-        app = AbstractApp.create_non_default(cube_size=3, animation=False)
+        app = AbstractApp.create_app(cube_size=3)
         cube = Cube(size=3, sp=test_sp)
         op = Operator(cube, app.vs)
 
@@ -58,7 +58,7 @@ class TestQueryRestoreState:
 
     def test_query_mode_flag_set_inside_context(self, test_sp) -> None:
         """Test that _in_query_mode flag is True inside context."""
-        app = AbstractApp.create_non_default(cube_size=3, animation=False)
+        app = AbstractApp.create_app(cube_size=3)
         cube = Cube(size=3, sp=test_sp)
         op = Operator(cube, app.vs)
 
@@ -73,7 +73,7 @@ class TestQueryRestoreState:
 
     def test_nested_contexts_restore_correctly(self, test_sp) -> None:
         """Test that nested contexts restore state correctly."""
-        app = AbstractApp.create_non_default(cube_size=3, animation=False)
+        app = AbstractApp.create_app(cube_size=3)
         cube = Cube(size=3, sp=test_sp)
         op = Operator(cube, app.vs)
 
@@ -111,7 +111,7 @@ class TestQueryRestoreState:
 
     def test_animation_disabled_inside_context(self, test_sp) -> None:
         """Test that animation is disabled inside context."""
-        app = AbstractApp.create_non_default(cube_size=3, animation=True)
+        app = AbstractApp._create_app(cube_size=3, animation=True)
         cube = Cube(size=3, sp=test_sp)
         op = Operator(cube, app.vs)
 
@@ -127,7 +127,7 @@ class TestQueryRestoreState:
 
     def test_state_restored_even_on_exception(self, test_sp) -> None:
         """Test that state is restored even if exception occurs inside context."""
-        app = AbstractApp.create_non_default(cube_size=3, animation=False)
+        app = AbstractApp.create_app(cube_size=3)
         cube = Cube(size=3, sp=test_sp)
         op = Operator(cube, app.vs)
 

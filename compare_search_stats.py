@@ -14,7 +14,7 @@ def run_test(use_new_search: bool) -> dict[int, int]:
     import cube.domain.solver.direct.lbl._LBLNxNCenters as lbl_module
 
     # Create cube and solver
-    app = AbstractApp.create_non_default(cube_size=12, animation=False)
+    app = AbstractApp.create_app(cube_size=12)
     solver = LayerByLayerNxNSolver(app.op, app.op.sp.logger)
 
     # Apply scramble

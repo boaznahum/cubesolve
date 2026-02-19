@@ -47,7 +47,7 @@ def _same_face_id(pair: tuple[FaceName, FaceName]) -> str:
 
 def create_common_op(cube_size: int) -> tuple[CommonOp, Cube]:
     """Create a CommonOp instance using app's built-in solver."""
-    app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
+    app = AbstractApp.create_app(cube_size=cube_size)
     return app.slv.cmn, app.op.cube
 
 

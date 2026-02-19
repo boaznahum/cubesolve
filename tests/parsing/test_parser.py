@@ -73,7 +73,7 @@ def test_single_move_parse_round_trip(move: str, cube_size: int) -> None:
 @pytest.mark.parametrize("cube_size", [3, 4, 5])
 def test_single_move_inverse_returns_solved(move: str, cube_size: int) -> None:
     """Test that move followed by its inverse returns to solved state."""
-    app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
+    app = AbstractApp.create_app(cube_size=cube_size)
 
     # Verify cube starts solved
     assert app.cube.solved, "Cube should start solved"
@@ -110,7 +110,7 @@ TWO_MOVE_SEQUENCES = [
 @pytest.mark.parametrize("cube_size", [3, 4, 5])
 def test_two_move_sequence_inverse(seq: str, cube_size: int) -> None:
     """Test that two-move sequence + inverse returns to solved."""
-    app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
+    app = AbstractApp.create_app(cube_size=cube_size)
 
     assert app.cube.solved, "Cube should start solved"
 
@@ -138,7 +138,7 @@ FOUR_MOVE_SEQUENCES = [
 @pytest.mark.parametrize("cube_size", [3, 4, 5])
 def test_four_move_sequence_inverse(seq: str, cube_size: int) -> None:
     """Test that four-move sequence + inverse returns to solved."""
-    app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
+    app = AbstractApp.create_app(cube_size=cube_size)
 
     assert app.cube.solved, "Cube should start solved"
 
@@ -164,7 +164,7 @@ GROUPED_SEQUENCES = [
 @pytest.mark.parametrize("cube_size", [3, 4, 5])
 def test_grouped_sequence_parse(seq: str, cube_size: int) -> None:
     """Test that grouped sequences can be parsed."""
-    app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
+    app = AbstractApp.create_app(cube_size=cube_size)
 
     parsed = Algs.parse(seq)
 
@@ -178,7 +178,7 @@ def test_grouped_sequence_parse(seq: str, cube_size: int) -> None:
 @pytest.mark.parametrize("cube_size", [3, 4, 5])
 def test_sexy_move_six_times_identity(cube_size: int) -> None:
     """Test that (R U R' U') x 6 = identity."""
-    app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
+    app = AbstractApp.create_app(cube_size=cube_size)
 
     assert app.cube.solved, "Cube should start solved"
 
@@ -216,8 +216,8 @@ def test_scramble_round_trip(seed: int, cube_size: int) -> None:
     parsed = Algs.parse(str(printable))
 
     # Create two cubes
-    app1 = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
-    app2 = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
+    app1 = AbstractApp.create_app(cube_size=cube_size)
+    app2 = AbstractApp.create_app(cube_size=cube_size)
 
     # Apply original to cube1
     printable.play(app1.cube)
@@ -242,8 +242,8 @@ def test_scramble_same_cube_state(seed: int, cube_size: int) -> None:
     scramble = Algs.scramble(cube_size, seed, seq_length=20)
 
     # Create two cubes
-    app1 = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
-    app2 = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
+    app1 = AbstractApp.create_app(cube_size=cube_size)
+    app2 = AbstractApp.create_app(cube_size=cube_size)
 
     # Apply original scramble to cube1
     scramble.play(app1.cube)
@@ -267,7 +267,7 @@ def test_scramble_same_cube_state(seed: int, cube_size: int) -> None:
 @pytest.mark.parametrize("cube_size", CUBE_SIZES)
 def test_scramble_inverse_returns_solved(seed: int, cube_size: int) -> None:
     """Test that scramble + inverse returns to solved."""
-    app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
+    app = AbstractApp.create_app(cube_size=cube_size)
 
     assert app.cube.solved, "Cube should start solved"
 
@@ -285,7 +285,7 @@ def test_scramble_inverse_returns_solved(seed: int, cube_size: int) -> None:
 @pytest.mark.parametrize("cube_size", CUBE_SIZES)
 def test_scramble_parsed_inverse_returns_solved(seed: int, cube_size: int) -> None:
     """Test that scramble applied, then parsed inverse returns to solved."""
-    app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
+    app = AbstractApp.create_app(cube_size=cube_size)
 
     assert app.cube.solved, "Cube should start solved"
 

@@ -47,7 +47,7 @@ class TestBigLBLEven:
         """Test L1 solving on even cubes."""
 
         # Setup
-        app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
+        app = AbstractApp.create_app(cube_size=cube_size)
         solver = LayerByLayerNxNSolver(app.op, app.op.sp.logger)
 
         # Scramble
@@ -69,7 +69,7 @@ class TestBigLBLEven:
         """L3 edge solving must not modify L1 or middle-slice edges."""
 
         # Setup
-        app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
+        app = AbstractApp.create_app(cube_size=cube_size)
         solver = LayerByLayerNxNSolver(app.op, app.op.sp.logger)
 
         # Scramble

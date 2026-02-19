@@ -174,7 +174,7 @@ class GUITestRunner:
                 print(f"  Backend: {backend}, Cube size: {cube_size}, Animation: {enable_animation}, Timeout: {timeout_sec}s")
 
             # Create app and backend
-            app = AbstractApp.create_non_default(cube_size=cube_size, animation=enable_animation)
+            app = AbstractApp._create_app(cube_size=cube_size, animation=enable_animation)
             gui_backend = BackendRegistry.get_backend(backend)
             event_loop = gui_backend.event_loop
 

@@ -16,7 +16,7 @@ def _cage(app: AbstractApp) -> CageNxNSolver:
 @pytest.mark.parametrize("size", [5, 7])
 def test_cage_solver_status_on_solved_cube(size: int) -> None:
     """Test status reporting on a solved cube."""
-    app = AbstractApp.create_non_default(cube_size=size, animation=False)
+    app = AbstractApp.create_app(cube_size=size)
 
     solver = _cage(app)
 
@@ -27,7 +27,7 @@ def test_cage_solver_status_on_solved_cube(size: int) -> None:
 @pytest.mark.parametrize("size", [5, 7])
 def test_cage_solver_status_on_scrambled_cube(size: int) -> None:
     """Test status reporting on a scrambled cube."""
-    app = AbstractApp.create_non_default(cube_size=size, animation=False)
+    app = AbstractApp.create_app(cube_size=size)
 
     # Scramble
     app.scramble(42, None, animation=False, verbose=False)
@@ -43,7 +43,7 @@ def test_cage_solver_status_on_scrambled_cube(size: int) -> None:
 @pytest.mark.parametrize("size", [5, 7])
 def test_cage_solver_state_inspection(size: int) -> None:
     """Test stateless inspection methods."""
-    app = AbstractApp.create_non_default(cube_size=size, animation=False)
+    app = AbstractApp.create_app(cube_size=size)
     solver = _cage(app)
 
     # On solved cube
@@ -63,7 +63,7 @@ def test_cage_solver_state_inspection(size: int) -> None:
 @pytest.mark.parametrize("size", [3])
 def test_cage_solver_on_3x3(size: int) -> None:
     """Test that 3x3 cube is trivially solved (no edges/centers to reduce)."""
-    app = AbstractApp.create_non_default(cube_size=size, animation=False)
+    app = AbstractApp.create_app(cube_size=size)
     solver = _cage(app)
 
     # 3x3 has no edge/center reduction needed - is3x3 is always True
@@ -74,7 +74,7 @@ def test_cage_solver_on_3x3(size: int) -> None:
 @pytest.mark.parametrize("size", [5, 7])
 def test_cage_solver_solves_edges(size: int) -> None:
     """Test that cage solver can solve edges on odd cubes."""
-    app = AbstractApp.create_non_default(cube_size=size, animation=False)
+    app = AbstractApp.create_app(cube_size=size)
 
     # Scramble
     app.scramble(42, None, animation=False, verbose=False)
@@ -100,7 +100,7 @@ def test_cage_solver_solves_edges(size: int) -> None:
 @pytest.mark.parametrize("seed", range(10))
 def test_cage_solver_parity_detection(seed: int) -> None:
     """Test parity detection across multiple scrambles on 5x5."""
-    app = AbstractApp.create_non_default(cube_size=5, animation=False)
+    app = AbstractApp.create_app(cube_size=5)
 
     # Scramble with different seeds
     app.scramble(seed, None, animation=False, verbose=False)
@@ -125,7 +125,7 @@ def test_cage_solver_solves_corners(size: int) -> None:
     - Corners: positioned correctly
     - Centers: SOLVED (Phase 2 complete)
     """
-    app = AbstractApp.create_non_default(cube_size=size, animation=False)
+    app = AbstractApp.create_app(cube_size=size)
 
     # Scramble
     app.scramble(42, None, animation=False, verbose=False)
@@ -161,7 +161,7 @@ def test_cage_solver_solves_corners(size: int) -> None:
 @pytest.mark.parametrize("size", [4, 6])
 def test_cage_solver_even_cube_status(size: int) -> None:
     """Test status reporting on even cubes."""
-    app = AbstractApp.create_non_default(cube_size=size, animation=False)
+    app = AbstractApp.create_app(cube_size=size)
 
     solver = _cage(app)
 
@@ -173,7 +173,7 @@ def test_cage_solver_even_cube_status(size: int) -> None:
 @pytest.mark.parametrize("size", [4, 6])
 def test_cage_solver_even_cube_solves(size: int) -> None:
     """Test that cage solver can solve even cubes using shadow cube approach."""
-    app = AbstractApp.create_non_default(cube_size=size, animation=False)
+    app = AbstractApp.create_app(cube_size=size)
 
     # Scramble
     app.scramble(42, None, animation=False, verbose=False)
@@ -191,7 +191,7 @@ def test_cage_solver_even_cube_solves(size: int) -> None:
 @pytest.mark.parametrize("seed", range(5))
 def test_cage_solver_even_cube_multiple_scrambles(seed: int) -> None:
     """Test even cube solving with multiple scramble seeds."""
-    app = AbstractApp.create_non_default(cube_size=4, animation=False)
+    app = AbstractApp.create_app(cube_size=4)
 
     # Scramble with different seeds
     app.scramble(seed, None, animation=False, verbose=False)

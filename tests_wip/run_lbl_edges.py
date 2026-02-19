@@ -16,7 +16,7 @@ def main():
     seed = 0  # This seed fails in tests
 
     print(f"Creating {cube_size}x{cube_size} cube...")
-    app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
+    app = AbstractApp.create_app(cube_size=cube_size)
     cube = app.cube
 
     # Create LBL_BIG solver (LayerByLayerNxNSolver)

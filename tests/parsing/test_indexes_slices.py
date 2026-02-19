@@ -10,7 +10,7 @@ def test_slice_play_and_inverse():
     """Test that playing a slice algorithm and its inverse returns to original state."""
     n = 8
 
-    app = AbstractApp.create_non_default(n, animation=False)
+    app = AbstractApp.create_app(n)
     cube = app.cube
 
     alg = Algs.scramble(cube.size, 4)
