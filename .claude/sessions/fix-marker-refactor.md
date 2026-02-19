@@ -22,14 +22,16 @@ User ran `git bisect` and identified:
 | # | Hash | Description | Status |
 |---|---|---|---|
 | 1 | `e17cd6a8` | Rename `create_non_default()` → `create_app()` / `_create_app()`, single factory coordination, update ~30 test files | All tests pass |
-| 2 | pending | Add Noop classes + conditional wiring (NoopMarkerFactory, NoopMarkerManager, NoopAnnotation) | All tests pass |
+| 2 | `87d512b3` | Add Noop classes + conditional wiring (NoopMarkerFactory, NoopMarkerManager, NoopAnnotation) | All tests pass |
+| 3 | `501817f4` | Remove redundant animation disable from ConsoleAppWindow + add assertions | All tests pass |
+| 4 | `1fb2bb19` | Remove dead marker rendering methods from _cell.py and _modern_gl_cell.py (~650 lines) | All tests pass |
 
 ### Current State (2026-02-19)
 
-- Branch: `fix-marker-refactor` (pushed to origin)
+- Branch: `fix-marker-refactor` (pushed to origin, 4 commits)
 - Parent branch: based on `8d3f8fa6` (parent of bad commit)
 - All tests pass (non-GUI and GUI)
-- Commit 1 pushed, commit 2 staged but not yet committed
+- **Next:** Find the breaking change in the remaining diff
 
 ---
 
@@ -41,8 +43,65 @@ User ran `git bisect` and identified:
 |---|---|---|---|
 | **Tests/scripts** | `AbstractApp.create_app(cube_size, solver=...)` | Never | All non-GUI tests (~50 files) |
 | **GUI app** | `create_app_window(backend, cube_size=..., animation=True, ...)` | If backend supports it | `run_with_backend()`, CLI |
-| **GUI tests** | `AbstractApp._create_app(cube_size, animation=enable_animation)` | Variable | `GUITestRunner` |
+| **GUI tests** | `AbstractApp._create_app(cube_size, animation=enable_animation)` | **Yes by default** (`--animate` defaults True) | `GUITestRunner` |
 | **Special tests** | `AbstractApp._create_app(cube_size=3, animation=True)` | Yes (explicit) | `test_query_restore_state` |
+
+### How Tests Get Noop (non-GUI tests)
+
+```
+Test calls:  AbstractApp.create_app(cube_size=3)
+                    │
+                    ▼
+          _create_app(cube_size=3, animation=False)  ← hardcoded False
+                    │
+                    ▼
+          animation=False → am = None
+                    │
+                    ▼
+          _App.__init__(am=None)
+              ├── NoopMarkerFactory()
+              ├── NoopMarkerManager()
+              └── Operator(am=None) → NoopAnnotation()
+```
+
+### How GUI App Gets Real Objects
+
+```
+CLI/main → create_app_window("pyglet2", animation=True)
+                    │
+                    ▼
+          effective_animation = True AND backend.supports_animation
+              ├── pyglet2: supports=True  → effective=True
+              ├── console: supports=False → effective=False
+              ├── headless: supports=False → effective=False
+                    │
+                    ▼
+          _create_app(animation=True)
+                    │
+                    ▼
+          am = AnimationManager(vs)
+                    │
+                    ▼
+          _App.__init__(am=AnimationManager)
+              ├── MarkerFactory()        (real)
+              ├── MarkerManager()        (real)
+              └── Operator(am=am) → OpAnnotation()  (real)
+```
+
+### How GUI Tests Get Real Objects (important!)
+
+```
+GUITestRunner.run_test(enable_animation=True)  ← default from --animate flag
+                    │
+                    ▼
+          AbstractApp._create_app(animation=True)  ← bypasses create_app_window!
+                    │
+                    ▼
+          am = AnimationManager(vs)  → real MarkerFactory, MarkerManager, OpAnnotation
+```
+
+**Note:** GUI tests bypass `create_app_window()` and call `_create_app()` directly.
+This means they get real marker objects when `enable_animation=True`.
 
 ### Internal Factory: `AbstractApp._create_app()`
 
@@ -95,7 +154,7 @@ This ensures animation is only enabled when **both** the caller wants it **and**
 | `create_app()` (tests) | None | NoopMarkerFactory | NoopMarkerManager | NoopAnnotation |
 | `create_app_window("headless")` | None | NoopMarkerFactory | NoopMarkerManager | NoopAnnotation |
 | `create_app_window("pyglet2")` | AnimationManager | MarkerFactory | MarkerManager | OpAnnotation |
-| `_create_app(animation=True)` | AnimationManager | MarkerFactory | MarkerManager | OpAnnotation |
+| `_create_app(animation=True)` (GUI tests) | AnimationManager | MarkerFactory | MarkerManager | OpAnnotation |
 
 ---
 
@@ -108,31 +167,46 @@ This ensures animation is only enabled when **both** the caller wants it **and**
 | Rename `create_non_default()` → `create_app()` / `_create_app()` | `e17cd6a8` |
 | `create_app_window()` as single coordination point | `e17cd6a8` |
 | Update ~30 test files to use `create_app()` | `e17cd6a8` |
-| Noop classes (NoopMarkerFactory, NoopMarkerManager, NoopAnnotation) | commit 2 |
-| Conditional wiring in `_App.__init__` and `Operator.__init__` | commit 2 |
-| `OpAnnotation` inherits `AnnotationProtocol` | commit 2 |
-| `ConsoleAppWindow` remove redundant animation disable | commit 3 |
+| Noop classes (NoopMarkerFactory, NoopMarkerManager, NoopAnnotation) | `87d512b3` |
+| Conditional wiring in `_App.__init__` and `Operator.__init__` | `87d512b3` |
+| `OpAnnotation` inherits `AnnotationProtocol` | `87d512b3` |
+| ConsoleAppWindow assertions (was: remove redundant animation disable) | `501817f4` |
+| Remove dead marker rendering from `_cell.py` (~196 lines) | `1fb2bb19` |
+| Remove dead marker rendering from `_modern_gl_cell.py` (~450 lines) | `1fb2bb19` |
 
-### NOT Taken — Marker Creator Refactor (the risky part)
+### NOT Taken — MarkerConfig → MarkerCreator Swap
 
-| Change | Files | Lines | Risk |
+These are the **only remaining changes** and must contain the breaking change:
+
+| Change | Files | Risk | Notes |
 |---|---|---|---|
-| Delete `MarkerShape` enum | `MarkerShape.py` | -27 | Low |
-| Delete `MarkerConfig` dispatch (`if shape==`) | `_marker_config.py` | -115 | **High** — this is the god-class removal |
-| New concrete MarkerCreator classes (Ring, FilledCircle, Cross, Arrow, Checkmark, BoldCross, Character) | `_marker_creators.py` | +125 | **High** — new drawing code |
-| Slim down `MarkerFactory` to use concrete creators | `MarkerFactory.py` | net -100 | Medium |
-| Remove `isinstance(MarkerConfig)` rendering from `_cell.py` | `_cell.py` | -200 | **High** — rendering pipeline |
-| Remove `isinstance(MarkerConfig)` rendering from `_modern_gl_cell.py` | `_modern_gl_cell.py` | -450 | **High** — rendering pipeline |
-| `MarkerConfig` → `MarkerCreator` type hints in `OpAnnotation.py` | `OpAnnotation.py` | ~20 | Low |
-| Design doc updates | `gui_abstraction.md`, `gui_components.puml` | minor | Low |
+| New concrete MarkerCreator classes | `_marker_creators.py` (+125 lines, NEW) | Medium | RingMarker, FilledCircleMarker, CrossMarker, ArrowMarker, CheckmarkMarker, BoldCrossMarker, CharacterMarker |
+| MarkerFactory returns concrete creators | `MarkerFactory.py` (net -100) | **Suspect** | `MarkerConfig(shape=RING, ...)` → `RingMarker(...)` etc. |
+| Delete `MarkerConfig` class body | `_marker_config.py` (-115) | **Suspect** | Removes draw() dispatch method |
+| Delete `MarkerShape` enum | `MarkerShape.py` (-27) | Low | Just an enum |
+| Type hints: MarkerConfig → MarkerCreator | `IMarkerFactory.py`, `OpAnnotation.py`, `AnnotationProtocol.py` | Low | Pure type changes |
+| Docstring update | `_marker_creator_protocol.py` | None | Comment only |
+| `__init__.py` export changes | `markers/__init__.py` | Low | Remove MarkerConfig/MarkerShape from exports |
 
-### Why It's Risky
+### Analysis: Why These Could Cause a Hang
 
-The rendering removal in `_cell.py` and `_modern_gl_cell.py` is **~650 lines** of `isinstance(MarkerConfig)` dispatch code deleted and replaced by the `MarkerCreator.draw(toolkit)` pattern. This is the most likely cause of the PyCharm test hang — the new `draw()` methods interact with the OpenGL rendering pipeline differently.
+The draw() logic is **functionally identical**:
+- Old: `MarkerConfig.draw(toolkit)` → dispatch by `self.shape` enum → `toolkit.draw_X(...)`
+- New: `RingMarker.draw(toolkit)` → directly calls `toolkit.draw_ring(...)`
+
+Same toolkit methods, same arguments. **No behavioral difference in rendering.**
+
+Possible causes to investigate:
+1. **Import-time issue** — circular imports when loading `_marker_creators.py`?
+2. **Class-level cache** — `MarkerFactory._cache` is class-level dict, shared across instances. Old code cached `MarkerConfig`, new caches concrete creators. Could stale cache entries cause issues?
+3. **Hashability difference** — `get_markers_from_part_edge()` deduplicates markers by using them as dict keys. MarkerConfig had ALL fields (shape, direction, character even when unused). Concrete classes only have relevant fields. Different hash = different dedup behavior?
+4. **PyCharm-specific** — PyCharm debugger interaction with frozen dataclasses? (user said "from PyCharm")
 
 ### TODO / Design Gaps
 
-- **Single coordination point is not enforced.** `create_app_window()` correctly checks `backend.supports_animation`, but nothing prevents someone from calling `_create_app(animation=True)` and passing the app directly to a non-animation backend (e.g. `ConsoleAppWindow`). The removed guard in `ConsoleAppWindow` was a safety net for this case. Consider: (a) making backends assert/validate animation state on construction, or (b) making `_create_app` truly private so only `create_app_window()` can enable animation.
+- **TODO: Single coordination point is not enforced.** `create_app_window()` correctly checks `backend.supports_animation`, but nothing prevents calling `_create_app(animation=True)` and passing the app directly to a non-animation backend. GUITestRunner does exactly this. Consider: (a) making backends assert/validate animation state, or (b) making `_create_app` truly private.
+- **TODO: GUITestRunner bypasses coordination point.** It calls `_create_app()` directly, not `create_app_window()`. This means the `backend.supports_animation` check is skipped.
+- **TODO: Find the breaking change.** The remaining diff (MarkerConfig→MarkerCreator swap) is the only suspect. Need to apply incrementally and test.
 
 ### Key Files Reference
 
@@ -142,4 +216,5 @@ The rendering removal in `_cell.py` and `_modern_gl_cell.py` is **~650 lines** o
 - `src/cube/application/commands/Operator.py` — annotation wiring
 - `src/cube/application/markers/` — factory/manager + Noop variants
 - `src/cube/domain/solver/protocols/NoopAnnotation.py`
-- `tests/gui/tester/GUITestRunner.py` — GUI test app creation
+- `tests/gui/tester/GUITestRunner.py` — GUI test app creation (bypasses create_app_window!)
+- `tests/gui/conftest.py` — `--animate` defaults True, `--speed-up` defaults 3

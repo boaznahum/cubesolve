@@ -21,7 +21,7 @@ from cube.domain.model import (
 )
 from cube.domain.geometric.cube_boy import Color
 from cube.domain.model.Face import Face
-from cube.application.markers import MarkerToolkit, get_markers_from_part_edge
+from cube.application.markers import get_markers_from_part_edge
 from cube.domain.geometric import geometry_utils as geometry
 from cube.utils.config_protocol import ConfigProtocol
 
