@@ -35,12 +35,13 @@ def _find_markable_center_slice(face: Face, color: Color) -> CenterSlice:
     if True:
         n = face.n_slices
         return face.center.get_slice((n // 2, n // 2))
-    # Prefer a slice matching our target color
-    for s in face.center.all_slices:
-        if s.color == color:
-            return s
-    # Fallback to first available slice
-    return next(iter(face.center.all_slices))
+    else:
+        # Prefer a slice matching our target color
+        for s in face.center.all_slices:
+            if s.color == color:
+                return s
+        # Fallback to first available slice
+        return next(iter(face.center.all_slices))
 
 def find_and_track_slice(face: Face, key: str, color: Color) -> None:
 
