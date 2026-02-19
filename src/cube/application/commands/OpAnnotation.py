@@ -18,6 +18,7 @@ from cube.domain.algs.Algs import Algs
 from cube.domain.model import Corner, Edge, Part, PartColorsID, PartEdge, PartSlice
 
 from .AnnWhat import AnnWhat
+from ...domain.solver.protocols import AnnotationProtocol
 
 if TYPE_CHECKING:
     from .Operator import Operator
@@ -41,7 +42,7 @@ SupportsAnnotation: TypeAlias = _ANN_ELEMENT_1 | Iterator[_ANN_ELEMENT_1] | Iter
     [], _ANN_ELEMENT_1]
 
 
-class OpAnnotation:
+class OpAnnotation(AnnotationProtocol):
 
     def __init__(self, op: _OP) -> None:
         super().__init__()

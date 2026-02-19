@@ -46,8 +46,10 @@ from ._marker_toolkit import MarkerToolkit
 from ._outlined_circle_marker import OutlinedCircleMarker
 from .IMarkerFactory import IMarkerFactory
 from .MarkerFactory import MarkerFactory
+from .NoopMarkerFactory import NoopMarkerFactory
 from .IMarkerManager import IMarkerManager
 from .MarkerManager import MarkerManager
+from .NoopMarkerManager import NoopMarkerManager
 
 def get_markers_from_part_edge(part_edge: "PartEdge") -> list[MarkerCreator]:
     """Convenience function to read all markers from a PartEdge.
@@ -94,6 +96,8 @@ __all__ = [
     "MarkerConfig",
     "MarkerFactory",
     "MarkerManager",
+    "NoopMarkerFactory",
+    "NoopMarkerManager",
     "OutlinedCircleMarker",
     "color_255_to_float",
     "color_float_to_255",

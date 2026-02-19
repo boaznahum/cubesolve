@@ -2,7 +2,14 @@ from typing import TYPE_CHECKING, Any
 
 from cube.application.AbstractApp import AbstractApp
 from cube.application.commands.Operator import Operator
-from cube.application.markers import IMarkerFactory, IMarkerManager, MarkerFactory, MarkerManager
+from cube.application.markers import (
+    IMarkerFactory,
+    IMarkerManager,
+    MarkerFactory,
+    MarkerManager,
+    NoopMarkerFactory,
+    NoopMarkerManager,
+)
 from cube.application.state import ApplicationAndViewState
 from cube.utils.logger_protocol import ILogger
 from cube.domain.algs import Alg
@@ -25,8 +32,12 @@ class _App(AbstractApp, IServiceProvider):
                  cube_size: int | None,
                  solver: SolverName | None = None) -> None:
         self._config = config
-        self._marker_factory = MarkerFactory()
-        self._marker_manager = MarkerManager()
+        if am is not None:
+            self._marker_factory: IMarkerFactory = MarkerFactory()
+            self._marker_manager: IMarkerManager = MarkerManager()
+        else:
+            self._marker_factory = NoopMarkerFactory()
+            self._marker_manager = NoopMarkerManager()
         super().__init__()
 
         self._vs = vs
