@@ -294,6 +294,8 @@ class MarkerFactory(IMarkerFactory):
         outline_width: float = 0.15,
         height_offset: float = 0.12,
         z_order: int = 0,
+        min_radius: float = 0.0,
+        min_outline_width: float = 0.0,
     ) -> MarkerCreator:
         """Create an outlined circle marker (filled circle with outline ring)."""
         key = (
@@ -304,6 +306,8 @@ class MarkerFactory(IMarkerFactory):
             str(outline_width),
             str(height_offset),
             str(z_order),
+            str(min_radius),
+            str(min_outline_width),
         )
         if key not in MarkerFactory._cache:
             MarkerFactory._cache[key] = OutlinedCircleMarker(
@@ -313,6 +317,8 @@ class MarkerFactory(IMarkerFactory):
                 outline_width=outline_width,
                 height_offset=height_offset,
                 z_order=z_order,
+                min_radius=min_radius,
+                min_outline_width=min_outline_width,
             )
         return MarkerFactory._cache[key]
 

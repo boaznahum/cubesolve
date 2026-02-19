@@ -317,7 +317,6 @@ class ModernGLBoard:
                 # All markers (including cross/character lines) via toolkit
                 if animated_marker_verts is not None:
                     cell.generate_marker_vertices(animated_marker_verts, animated_line_verts)
-                    cell.generate_tracker_indicator_vertices(animated_marker_verts)
                 else:
                     # Still need line-based markers even without marker verts
                     cell.generate_marker_vertices([], animated_line_verts)
@@ -327,7 +326,6 @@ class ModernGLBoard:
                 # All markers (including cross/character lines) via toolkit
                 if marker_verts is not None:
                     cell.generate_marker_vertices(marker_verts, line_verts)
-                    cell.generate_tracker_indicator_vertices(marker_verts)
                 else:
                     # Still need line-based markers even without marker verts
                     cell.generate_marker_vertices([], line_verts)
@@ -363,7 +361,6 @@ class ModernGLBoard:
                 cell.generate_line_vertices(animated_line_verts)
                 if animated_marker_verts is not None:
                     cell.generate_marker_vertices(animated_marker_verts, animated_line_verts)
-                    cell.generate_tracker_indicator_vertices(animated_marker_verts)
                 else:
                     cell.generate_marker_vertices([], animated_line_verts)
             else:
@@ -372,7 +369,6 @@ class ModernGLBoard:
                 cell.generate_line_vertices(line_verts)
                 if marker_verts is not None:
                     cell.generate_marker_vertices(marker_verts, line_verts)
-                    cell.generate_tracker_indicator_vertices(marker_verts)
                 else:
                     cell.generate_marker_vertices([], line_verts)
 
@@ -469,7 +465,6 @@ class ModernGLBoard:
                 cell.generate_line_vertices(animated_line_verts)
                 if animated_marker_verts is not None:
                     cell.generate_marker_vertices(animated_marker_verts, animated_line_verts)
-                    cell.generate_tracker_indicator_vertices(animated_marker_verts)
                 else:
                     cell.generate_marker_vertices([], animated_line_verts)
             else:
@@ -478,7 +473,6 @@ class ModernGLBoard:
                 cell.generate_line_vertices(line_verts)
                 if marker_verts is not None:
                     cell.generate_marker_vertices(marker_verts, line_verts)
-                    cell.generate_tracker_indicator_vertices(marker_verts)
                 else:
                     cell.generate_marker_vertices([], line_verts)
 

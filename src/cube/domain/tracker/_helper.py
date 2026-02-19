@@ -32,6 +32,9 @@ def _find_markable_center_slice(face: Face, color: Color) -> CenterSlice:
     Returns:
         A CenterSlice suitable for marking.
     """
+    if True:
+        n = face.n_slices
+        return face.center.get_slice((n // 2, n // 2))
     # Prefer a slice matching our target color
     for s in face.center.all_slices:
         if s.color == color:
@@ -52,11 +55,17 @@ def find_and_track_slice(face: Face, key: str, color: Color) -> None:
         if cube.config.face_tracker.annotate:
             mm = cube.sp.marker_manager
             mf = cube.sp.marker_factory
+            ti = cube.config.tracker_indicator
             face_rgb = _COLOR_TO_RGB.get(color, (1.0, 0.0, 1.0))  # fallback magenta
 
             # Single outlined circle marker: face-colored fill + black outline
             marker = mf.create_outlined_circle(
                 fill_color=face_rgb,
-                outline_color=(0.0, 0.0, 0.0),
+                outline_color=ti.outline_color,
+                radius_factor=ti.radius_factor,
+                outline_width=ti.outline_width_factor,
+                height_offset=ti.height_offset,
+                min_radius=ti.min_radius,
+                min_outline_width=ti.min_outline_width,
             )
             mm.add_marker(edge, tracer_visual_key(key), marker, moveable=True)

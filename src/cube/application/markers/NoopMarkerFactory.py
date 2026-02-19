@@ -115,5 +115,7 @@ class NoopMarkerFactory(IMarkerFactory):
         outline_width: float = 0.15,
         height_offset: float = 0.12,
         z_order: int = 0,
+        min_radius: float = 0.0,
+        min_outline_width: float = 0.0,
     ) -> MarkerCreator:
         return _NOOP

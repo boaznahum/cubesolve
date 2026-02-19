@@ -67,13 +67,6 @@ _COMPLEMENTARY_COLORS: dict[tuple[float, float, float], tuple[float, float, floa
 # Default marker color if face color not found (bright magenta)
 _DEFAULT_MARKER_COLOR = (1.0, 0.0, 1.0)
 
-# Tracker indicator configuration (small filled circle showing tracker's assigned color)
-# These indicators appear on center slices that are marked as tracker anchors (even cubes)
-# TODO: Move to ConfigProtocol for runtime configurability
-_TRACKER_INDICATOR_RADIUS_FACTOR = 0.25  # 25% of cell size (smaller than markers)
-_TRACKER_INDICATOR_HEIGHT = 0.10         # Height offset above surface
-_TRACKER_INDICATOR_OUTLINE_WIDTH = 0.15  # Black outline width as fraction of radius
-_TRACKER_INDICATOR_OUTLINE_COLOR = (0.0, 0.0, 0.0)  # Black outline for visibility
 
 # Border line color (black)
 _LINE_COLOR = (0.0, 0.0, 0.0)
@@ -211,6 +204,10 @@ class ModernGLCellToolkit(MarkerToolkit):
         self._cell_size = min(width, height)
 
         self._complementary = _get_complementary_color(color)
+
+    @property
+    def cell_size(self) -> float:
+        return self._cell_size
 
     @property
     def face_color(self) -> tuple[float, float, float]:
@@ -878,24 +875,6 @@ class ModernGLCell:
         """
         return self._color
 
-    def get_tracker_color(self) -> Color | None:
-        """Get the tracker anchor color if this cell is a tracked center.
-
-        For even cubes (4x4, 6x6), the tracker system marks one center slice
-        per face as an anchor. This method detects if this cell is such an
-        anchor and returns the tracker's assigned color.
-
-        Uses FacesTrackerHolder.get_tracked_edge_color() which is holder-agnostic
-        (returns color from ANY holder that marked this edge).
-
-        Returns:
-            The Color enum of the tracker's assigned color, or None if not tracked.
-        """
-        if self.part_edge is None:
-            return None
-
-        return FacesTrackerHolder.get_tracked_edge_color(self.part_edge)
-
     def generate_marker_vertices(self, dest: list[float], line_dest: list[float] | None = None) -> None:
         """Generate triangle vertices for all marker shapes.
 
@@ -928,170 +907,3 @@ class ModernGLCell:
         for marker in markers:
             marker.draw(toolkit)
 
-    def generate_tracker_indicator_vertices(self, dest: list[float]) -> None:
-        """Generate triangle vertices for tracker anchor indicator.
-
-        Creates a small filled circle showing the tracker's assigned color,
-        with a black outline for visibility (especially for white on white).
-        Only generated for cells that are tracked center slices (even cubes).
-
-        The indicator uses the tracker's assigned color directly (not complementary)
-        so the user can see which color "owns" this center piece.
-
-        Appends triangles to dest.
-        Each vertex: x, y, z, nx, ny, nz, r, g, b (9 floats)
-
-        Args:
-            dest: List to append vertex data to
-        """
-        tracker_color = self.get_tracker_color()
-        if tracker_color is None:
-            return
-
-        # Get RGB for the tracker's assigned color (NOT complementary)
-        from ._modern_gl_constants import COLOR_TO_RGB
-        rgb = COLOR_TO_RGB.get(tracker_color, (1.0, 1.0, 1.0))
-
-        # Calculate cell center and size
-        lb, rb, rt, lt = self._corners
-        center = (lb + rb + rt + lt) / 4.0
-
-        # Cell size (use minimum of width/height for radius)
-        width = float(np.linalg.norm(rb - lb))
-        height = float(np.linalg.norm(lt - lb))
-        cell_size = min(width, height)
-
-        # Normal vector
-        normal = (float(self._normal[0]), float(self._normal[1]), float(self._normal[2]))
-
-        # Calculate indicator size (smaller than markers)
-        inner_radius = cell_size * _TRACKER_INDICATOR_RADIUS_FACTOR
-        indicator_height = cell_size * _TRACKER_INDICATOR_HEIGHT
-
-        # Calculate outline dimensions
-        outline_width = inner_radius * _TRACKER_INDICATOR_OUTLINE_WIDTH
-        outer_radius = inner_radius + outline_width
-
-        # First: Draw black outline ring (slightly larger, behind the colored circle)
-        self._generate_3d_ring(
-            dest,
-            center,
-            inner_radius=inner_radius,  # Ring starts at inner edge
-            outer_radius=outer_radius,  # Ring extends to outer edge
-            height=indicator_height,
-            normal=normal,
-            color=_TRACKER_INDICATOR_OUTLINE_COLOR,
-        )
-
-        # Second: Draw colored filled circle (on top of the outline)
-        self._generate_3d_ring(
-            dest,
-            center,
-            inner_radius=0.0,  # Filled circle
-            outer_radius=inner_radius,  # Same size as outline's inner edge
-            height=indicator_height,
-            normal=normal,
-            color=rgb,
-        )
-
-    def _generate_3d_ring(
-        self,
-        dest: list[float],
-        base_center: ndarray,
-        inner_radius: float,
-        outer_radius: float,
-        height: float,
-        normal: tuple[float, float, float],
-        color: tuple[float, float, float],
-    ) -> None:
-        """Generate a 3D raised ring/cylinder shape.
-
-        Creates a cylinder with:
-        - Top face (ring or filled circle)
-        - Outer cylinder wall
-        - Inner cylinder wall (for rings with inner_radius > 0)
-
-        Args:
-            dest: List to append vertex data to
-            base_center: Center point at the base (cell surface)
-            inner_radius: Inner radius (0 for filled circle)
-            outer_radius: Outer radius
-            height: Height of the cylinder above the surface
-            normal: Face normal vector (nx, ny, nz)
-            color: RGB color (0.0-1.0 range)
-        """
-        nx, ny, nz = normal
-        r, g, b = color
-        normal_vec = np.array([nx, ny, nz])
-
-        # Top center is offset by height along the normal
-        top_center = base_center + normal_vec * height
-
-        # Create two perpendicular vectors in the plane of the ring
-        if abs(nx) < 0.9:
-            up = np.array([1.0, 0.0, 0.0])
-        else:
-            up = np.array([0.0, 1.0, 0.0])
-
-        tangent1 = np.cross(normal_vec, up)
-        tangent1 = tangent1 / np.linalg.norm(tangent1)
-        tangent2 = np.cross(normal_vec, tangent1)
-
-        # Generate segments
-        for i in range(_RING_SEGMENTS):
-            angle1 = 2 * math.pi * i / _RING_SEGMENTS
-            angle2 = 2 * math.pi * (i + 1) / _RING_SEGMENTS
-
-            cos1, sin1 = math.cos(angle1), math.sin(angle1)
-            cos2, sin2 = math.cos(angle2), math.sin(angle2)
-
-            # Direction vectors for this segment
-            dir1 = cos1 * tangent1 + sin1 * tangent2
-            dir2 = cos2 * tangent1 + sin2 * tangent2
-
-            # Points on outer circle (top and bottom)
-            outer_top1 = top_center + outer_radius * dir1
-            outer_top2 = top_center + outer_radius * dir2
-            outer_bot1 = base_center + outer_radius * dir1
-            outer_bot2 = base_center + outer_radius * dir2
-
-            # Points on inner circle (top and bottom)
-            inner_top1 = top_center + inner_radius * dir1
-            inner_top2 = top_center + inner_radius * dir2
-            inner_bot1 = base_center + inner_radius * dir1
-            inner_bot2 = base_center + inner_radius * dir2
-
-            # === TOP FACE (ring) ===
-            # Triangle 1: outer_top1, outer_top2, inner_top1
-            for p in [outer_top1, outer_top2, inner_top1]:
-                dest.extend([p[0], p[1], p[2], nx, ny, nz, r, g, b])
-            # Triangle 2: inner_top1, outer_top2, inner_top2
-            for p in [inner_top1, outer_top2, inner_top2]:
-                dest.extend([p[0], p[1], p[2], nx, ny, nz, r, g, b])
-
-            # === OUTER WALL ===
-            # Outward-facing normal for outer wall
-            out_norm1 = dir1
-            out_norm2 = dir2
-            out_norm_avg = (out_norm1 + out_norm2) / 2
-            out_norm_avg = out_norm_avg / np.linalg.norm(out_norm_avg)
-            onx, ony, onz = float(out_norm_avg[0]), float(out_norm_avg[1]), float(out_norm_avg[2])
-
-            # Triangle 1: outer_top1, outer_bot1, outer_top2
-            for p in [outer_top1, outer_bot1, outer_top2]:
-                dest.extend([p[0], p[1], p[2], onx, ony, onz, r, g, b])
-            # Triangle 2: outer_top2, outer_bot1, outer_bot2
-            for p in [outer_top2, outer_bot1, outer_bot2]:
-                dest.extend([p[0], p[1], p[2], onx, ony, onz, r, g, b])
-
-            # === INNER WALL (only if inner_radius > 0) ===
-            if inner_radius > 0.001:
-                # Inward-facing normal for inner wall (negative of outward)
-                inx, iny, inz = -onx, -ony, -onz
-
-                # Triangle 1: inner_top1, inner_top2, inner_bot1
-                for p in [inner_top1, inner_top2, inner_bot1]:
-                    dest.extend([p[0], p[1], p[2], inx, iny, inz, r, g, b])
-                # Triangle 2: inner_top2, inner_bot2, inner_bot1
-                for p in [inner_top2, inner_bot2, inner_bot1]:
-                    dest.extend([p[0], p[1], p[2], inx, iny, inz, r, g, b])

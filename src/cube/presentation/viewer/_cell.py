@@ -102,6 +102,10 @@ class LegacyCellToolkit(MarkerToolkit):
         )
 
     @property
+    def cell_size(self) -> float:
+        return self._face_size
+
+    @property
     def face_color(self) -> tuple[float, float, float]:
         return self._face_color_float
 

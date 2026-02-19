@@ -25,6 +25,15 @@ class MarkerToolkit(Protocol):
     """Abstract drawing primitives for markers. Implemented per backend."""
 
     @property
+    def cell_size(self) -> float:
+        """Cell size in world units.
+
+        Marker creators can use this to compute absolute minimum sizes
+        when proportional scaling gets too small (e.g., big cubes).
+        """
+        ...
+
+    @property
     def face_color(self) -> ColorRGB:
         """RGB color of the cell's face (0.0-1.0 range).
 

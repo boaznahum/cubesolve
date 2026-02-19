@@ -15,6 +15,10 @@ if TYPE_CHECKING:
 
 ColorRGB = tuple[float, float, float]
 
+# The toolkit scales radius factors by cell_size * _TOOLKIT_BASE_SCALE.
+# We need this to convert between absolute world units and factors.
+_TOOLKIT_BASE_SCALE = 0.4
+
 
 @dataclass(frozen=True)
 class OutlinedCircleMarker(MarkerCreator):
@@ -33,6 +37,8 @@ class OutlinedCircleMarker(MarkerCreator):
         outline_width: Outline width as fraction of radius (0.0-1.0).
         height_offset: Height above surface as fraction of cell size.
         z_order: Drawing order (higher = drawn on top).
+        min_radius: Minimum absolute radius in world units (0 = no minimum).
+        min_outline_width: Minimum absolute outline width in world units (0 = no minimum).
     """
 
     fill_color: ColorRGB
@@ -41,11 +47,35 @@ class OutlinedCircleMarker(MarkerCreator):
     outline_width: float = 0.15
     height_offset: float = 0.12
     z_order: int = 0
+    min_radius: float = 0.0
+    min_outline_width: float = 0.0
 
     def draw(self, toolkit: "MarkerToolkit") -> None:
-        """Draw outlined circle: outline ring underneath, filled circle on top."""
+        """Draw outlined circle: outline ring underneath, filled circle on top.
+
+        When min_radius or min_outline_width are set, the effective factors
+        are boosted so the actual rendered size meets the minimum. This ensures
+        visibility on big cubes where cells are tiny.
+        """
         inner_r = self.radius_factor
-        outer_r = inner_r + inner_r * self.outline_width
+
+        # Boost radius factor if actual size would be below minimum
+        if self.min_radius > 0:
+            base_r = toolkit.cell_size * _TOOLKIT_BASE_SCALE
+            if base_r > 0:
+                min_factor = self.min_radius / base_r
+                inner_r = max(inner_r, min_factor)
+
+        outline_r = inner_r * self.outline_width
+
+        # Boost outline if actual size would be below minimum
+        if self.min_outline_width > 0:
+            base_r = toolkit.cell_size * _TOOLKIT_BASE_SCALE
+            if base_r > 0:
+                min_outline_factor = self.min_outline_width / base_r
+                outline_r = max(outline_r, min_outline_factor)
+
+        outer_r = inner_r + outline_r
         # Outline ring (drawn first = underneath)
         toolkit.draw_ring(inner_r, outer_r, self.outline_color, self.height_offset)
         # Filled circle (drawn second = on top)

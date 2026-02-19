@@ -10,7 +10,7 @@ Environment Variables:
 import os
 
 from cube.application import _config as cfg
-from cube.config.face_tracer_config import FaceTrackerConfig
+from cube.config.face_tracer_config import FaceTrackerConfig, TrackerIndicatorConfig
 from cube.domain.model.Color import Color
 from cube.utils.config_protocol import AnimationTextDef, ArrowConfigProtocol, ConfigProtocol, MarkerDef
 from cube.utils.markers_config import MarkersConfig
@@ -203,6 +203,11 @@ class AppConfig(ConfigProtocol):
     def viewer_max_size_for_texture(self) -> int:
         """Maximum cube size for texture rendering."""
         return cfg.VIEWER_MAX_SIZE_FOR_TEXTURE
+
+    @property
+    def tracker_indicator(self) -> TrackerIndicatorConfig:
+        """Tracker indicator configuration (colored circle on tracked center slices)."""
+        return cfg.TRACKER_INDICATOR
 
     @property
     def viewer_draw_shadows(self) -> str:

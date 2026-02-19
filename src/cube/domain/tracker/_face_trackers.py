@@ -85,6 +85,16 @@ class FaceTracker(ABC):
         return self._color
 
     @property
+    def is_piece_tracking(self) -> bool:
+        """Whether this tracker works by marking and tracing a physical piece.
+
+        MarkedFaceTracker marks a center slice key in moveable_attributes
+        that travels with the piece during rotations.
+        SimpleFaceTracker uses a predicate — no piece is marked.
+        """
+        return False
+
+    @property
     def color_at_face_str(self) -> str:
         """Return color@face string representation of the tracked face.
 

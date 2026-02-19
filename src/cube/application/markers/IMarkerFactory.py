@@ -131,9 +131,12 @@ class IMarkerFactory(Protocol):
         outline_width: float = 0.15,
         height_offset: float = 0.12,
         z_order: int = 0,
+        min_radius: float = 0.0,
+        min_outline_width: float = 0.0,
     ) -> MarkerCreator:
         """Create an outlined circle marker (filled circle with outline ring).
 
         Used by face tracker to show tracked face color with visible outline.
+        min_radius/min_outline_width ensure visibility on big cubes.
         """
         ...

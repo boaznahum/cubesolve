@@ -726,18 +726,19 @@ class FacesTrackerHolder(FacesColorsProvider):
         # Invert to get color→face mapping for the tracker state table
         color_to_face: dict[Color, FaceName] = {color: face for face, color in tracker_current.items()}
 
-        # Show tracker state
-        lines.append("Tracker State:")
-        lines.append("  ┌──────────────┬────────┐")
-        lines.append("  │ Tracking     │ Face   │")
-        lines.append("  ├──────────────┼────────┤")
+        # Show tracker state (* = traces a physical piece)
+        lines.append("Tracker State: (* = piece-tracking)")
+        lines.append("  ┌──────────────┬────────┬───┐")
+        lines.append("  │ Tracking     │ Face   │ T │")
+        lines.append("  ├──────────────┼────────┼───┤")
         for tracker in self._trackers:
             color = tracker.color
             color_str = str(color)
             face = color_to_face.get(color)
             face_str = face.name if face is not None else "???"
-            lines.append(f"  │ {color_str:12s} │ {face_str:6s} │")
-        lines.append("  └──────────────┴────────┘")
+            mark = "*" if tracker.is_piece_tracking else " "
+            lines.append(f"  │ {color_str:12s} │ {face_str:6s} │ {mark} │")
+        lines.append("  └──────────────┴────────┴───┘")
 
         if include_cube_faces:
             lines.append("")
