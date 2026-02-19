@@ -39,9 +39,6 @@ class NoopMarkerFactory(IMarkerFactory):
     singleton — no validation, no CPU waste.
     """
 
-    def center_tracker(self) -> MarkerCreator:
-        return _NOOP
-
     def c0(self) -> MarkerCreator:
         return _NOOP
 

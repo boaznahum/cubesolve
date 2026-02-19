@@ -22,10 +22,6 @@ class IMarkerFactory(Protocol):
     # Animation Markers
     # ============================================================
 
-    def center_tracker(self) -> MarkerConfig:
-        """Center tracker marker - small filled circle on tracked center slices."""
-        ...
-
     def c0(self) -> MarkerConfig:
         """C0 marker - tracker anchor indicator."""
         ...
