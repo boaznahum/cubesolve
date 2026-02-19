@@ -20,10 +20,8 @@ if TYPE_CHECKING:
 class MarkerCreator(Protocol):
     """Stored on PartEdge. Knows its data + how to draw via toolkit."""
 
-    @property
-    def z_order(self) -> int:
-        """Drawing order (higher = drawn on top). Default 0."""
-        ...
+    z_order: int
+    """Drawing order (higher = drawn on top). Default 0."""
 
     def draw(self, toolkit: "MarkerToolkit") -> None:
         """Draw this marker using the provided toolkit primitives.
