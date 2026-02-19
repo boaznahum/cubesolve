@@ -123,6 +123,10 @@ class ModernGLBoard:
 
         Shadow faces are duplicate faces rendered at offset positions
         so they're visible in the default isometric view.
+
+        The normal is flipped so that markers (raised along the normal)
+        appear on the viewer-facing side of the face, and lighting
+        is correct for the visible side.
         """
         self._shadow_faces.clear()
 
@@ -142,6 +146,11 @@ class ModernGLBoard:
                     up=np.array(up, dtype=np.float32),
                     size=self._size,
                 )
+                # Flip normal so markers face the viewer instead of away.
+                # L/D/B normals point away from the default isometric view;
+                # without flipping, markers are raised behind the face and
+                # occluded by the face quad's depth.
+                face.normal = -face.normal
                 self._shadow_faces[face_name] = face
 
     def update(self) -> None:
@@ -232,6 +241,8 @@ class ModernGLBoard:
         np.ndarray,  # static line data
         dict[Color, np.ndarray],  # animated triangles per color
         np.ndarray | None,  # animated line data
+        np.ndarray | None,  # static marker triangles
+        np.ndarray | None,  # animated marker triangles
     ]:
         """Generate vertex data grouped by color for textured rendering.
 
@@ -242,12 +253,15 @@ class ModernGLBoard:
             animated_parts: Set of PartSlices being animated, or None
 
         Returns:
-            Tuple of (color_triangles, lines, animated_color_triangles, animated_lines)
+            Tuple of (color_triangles, lines, animated_color_triangles, animated_lines,
+                      marker_triangles, animated_marker_triangles)
         """
         verts_per_color: dict[Color, list[float]] = {c: [] for c in Color}
         animated_verts_per_color: dict[Color, list[float]] = {c: [] for c in Color}
         line_verts: list[float] = []
         animated_line_verts: list[float] = []
+        marker_verts: list[float] = []
+        animated_marker_verts: list[float] = []
 
         # Main faces
         for gl_face in self._faces.values():
@@ -255,6 +269,7 @@ class ModernGLBoard:
                 gl_face, animated_parts,
                 verts_per_color, line_verts,
                 animated_verts_per_color, animated_line_verts,
+                marker_verts, animated_marker_verts,
             )
 
         # Shadow faces
@@ -263,6 +278,7 @@ class ModernGLBoard:
                 gl_face, None,
                 verts_per_color, line_verts,
                 {}, [],
+                marker_verts, [],  # Markers only on static for shadow
             )
 
         return (
@@ -270,6 +286,8 @@ class ModernGLBoard:
             np.array(line_verts, dtype=np.float32),
             {c: np.array(v, dtype=np.float32) for c, v in animated_verts_per_color.items() if v},
             np.array(animated_line_verts, dtype=np.float32) if animated_line_verts else None,
+            np.array(marker_verts, dtype=np.float32) if marker_verts else None,
+            np.array(animated_marker_verts, dtype=np.float32) if animated_marker_verts else None,
         )
 
     def _generate_face_verts(
@@ -292,29 +310,25 @@ class ModernGLBoard:
                 and cell.part_slice in animated_parts
             )
 
-            # Get markers once per cell to avoid repeated lookups
-            markers = cell.get_markers()
 
             if is_animated:
                 cell.generate_face_vertices(animated_face_verts)
                 cell.generate_line_vertices(animated_line_verts)
-                cell.generate_cross_line_vertices(animated_line_verts, markers)
-                cell.generate_arrow_line_vertices(animated_line_verts)
-                cell.generate_character_line_vertices(animated_line_verts, markers)
-                # Collect animated marker geometry
+                # All markers (including cross/character lines) via toolkit
                 if animated_marker_verts is not None:
-                    cell.generate_marker_vertices(animated_marker_verts)
-                    cell.generate_tracker_indicator_vertices(animated_marker_verts)
+                    cell.generate_marker_vertices(animated_marker_verts, animated_line_verts)
+                else:
+                    # Still need line-based markers even without marker verts
+                    cell.generate_marker_vertices([], animated_line_verts)
             else:
                 cell.generate_face_vertices(face_verts)
                 cell.generate_line_vertices(line_verts)
-                cell.generate_cross_line_vertices(line_verts, markers)
-                cell.generate_arrow_line_vertices(line_verts)
-                cell.generate_character_line_vertices(line_verts, markers)
-                # Collect static marker geometry
+                # All markers (including cross/character lines) via toolkit
                 if marker_verts is not None:
-                    cell.generate_marker_vertices(marker_verts)
-                    cell.generate_tracker_indicator_vertices(marker_verts)
+                    cell.generate_marker_vertices(marker_verts, line_verts)
+                else:
+                    # Still need line-based markers even without marker verts
+                    cell.generate_marker_vertices([], line_verts)
 
     def _generate_textured_face_verts(
         self,
@@ -324,6 +338,8 @@ class ModernGLBoard:
         line_verts: list[float],
         animated_verts_per_color: dict[Color, list[float]],
         animated_line_verts: list[float],
+        marker_verts: list[float] | None = None,
+        animated_marker_verts: list[float] | None = None,
     ) -> None:
         """Generate textured vertices for one face, grouped by color."""
         size = self._size
@@ -338,23 +354,23 @@ class ModernGLBoard:
                 and cell.part_slice in animated_parts
             )
 
-            # Get markers once per cell to avoid repeated lookups
-            markers = cell.get_markers()
 
             if is_animated:
                 if color in animated_verts_per_color:
                     cell.generate_textured_vertices(animated_verts_per_color[color], size)
                 cell.generate_line_vertices(animated_line_verts)
-                cell.generate_cross_line_vertices(animated_line_verts, markers)
-                cell.generate_arrow_line_vertices(animated_line_verts)
-                cell.generate_character_line_vertices(animated_line_verts, markers)
+                if animated_marker_verts is not None:
+                    cell.generate_marker_vertices(animated_marker_verts, animated_line_verts)
+                else:
+                    cell.generate_marker_vertices([], animated_line_verts)
             else:
                 if color in verts_per_color:
                     cell.generate_textured_vertices(verts_per_color[color], size)
                 cell.generate_line_vertices(line_verts)
-                cell.generate_cross_line_vertices(line_verts, markers)
-                cell.generate_arrow_line_vertices(line_verts)
-                cell.generate_character_line_vertices(line_verts, markers)
+                if marker_verts is not None:
+                    cell.generate_marker_vertices(marker_verts, line_verts)
+                else:
+                    cell.generate_marker_vertices([], line_verts)
 
     def generate_per_cell_textured_geometry(
         self,
@@ -364,6 +380,8 @@ class ModernGLBoard:
         np.ndarray,  # static line data
         dict[int | None, np.ndarray],  # animated triangles per texture handle
         np.ndarray | None,  # animated line data
+        np.ndarray | None,  # static marker triangles
+        np.ndarray | None,  # animated marker triangles
     ]:
         """Generate vertex data grouped by cell texture handle.
 
@@ -377,12 +395,15 @@ class ModernGLBoard:
             animated_parts: Set of PartSlices being animated, or None
 
         Returns:
-            Tuple of (texture_triangles, lines, animated_texture_triangles, animated_lines)
+            Tuple of (texture_triangles, lines, animated_texture_triangles, animated_lines,
+                      marker_triangles, animated_marker_triangles)
         """
         verts_per_texture: dict[int | None, list[float]] = {}
         animated_verts_per_texture: dict[int | None, list[float]] = {}
         line_verts: list[float] = []
         animated_line_verts: list[float] = []
+        marker_verts: list[float] = []
+        animated_marker_verts: list[float] = []
 
         # Main faces
         for gl_face in self._faces.values():
@@ -390,6 +411,7 @@ class ModernGLBoard:
                 gl_face, animated_parts,
                 verts_per_texture, line_verts,
                 animated_verts_per_texture, animated_line_verts,
+                marker_verts, animated_marker_verts,
             )
 
         # Shadow faces
@@ -398,6 +420,7 @@ class ModernGLBoard:
                 gl_face, None,
                 verts_per_texture, line_verts,
                 {}, [],
+                marker_verts, [],  # Markers only on static for shadow
             )
 
         return (
@@ -405,6 +428,8 @@ class ModernGLBoard:
             np.array(line_verts, dtype=np.float32),
             {t: np.array(v, dtype=np.float32) for t, v in animated_verts_per_texture.items() if v},
             np.array(animated_line_verts, dtype=np.float32) if animated_line_verts else None,
+            np.array(marker_verts, dtype=np.float32) if marker_verts else None,
+            np.array(animated_marker_verts, dtype=np.float32) if animated_marker_verts else None,
         )
 
     def _generate_per_cell_textured_face_verts(
@@ -415,6 +440,8 @@ class ModernGLBoard:
         line_verts: list[float],
         animated_verts_per_texture: dict[int | None, list[float]],
         animated_line_verts: list[float],
+        marker_verts: list[float] | None = None,
+        animated_marker_verts: list[float] | None = None,
     ) -> None:
         """Generate vertices for one face, grouped by cell texture handle.
 
@@ -430,24 +457,24 @@ class ModernGLBoard:
                 and cell.part_slice in animated_parts
             )
 
-            # Get markers once per cell to avoid repeated lookups
-            markers = cell.get_markers()
 
             if is_animated:
                 verts_per_texture.setdefault(texture_handle, [])
                 animated_verts_per_texture.setdefault(texture_handle, [])
                 cell.generate_full_uv_vertices(animated_verts_per_texture[texture_handle])
                 cell.generate_line_vertices(animated_line_verts)
-                cell.generate_cross_line_vertices(animated_line_verts, markers)
-                cell.generate_arrow_line_vertices(animated_line_verts)
-                cell.generate_character_line_vertices(animated_line_verts, markers)
+                if animated_marker_verts is not None:
+                    cell.generate_marker_vertices(animated_marker_verts, animated_line_verts)
+                else:
+                    cell.generate_marker_vertices([], animated_line_verts)
             else:
                 verts_per_texture.setdefault(texture_handle, [])
                 cell.generate_full_uv_vertices(verts_per_texture[texture_handle])
                 cell.generate_line_vertices(line_verts)
-                cell.generate_cross_line_vertices(line_verts, markers)
-                cell.generate_arrow_line_vertices(line_verts)
-                cell.generate_character_line_vertices(line_verts, markers)
+                if marker_verts is not None:
+                    cell.generate_marker_vertices(marker_verts, line_verts)
+                else:
+                    cell.generate_marker_vertices([], line_verts)
 
     def get_face_center(self, face_name: FaceName) -> ndarray:
         """Get the center point of a face."""

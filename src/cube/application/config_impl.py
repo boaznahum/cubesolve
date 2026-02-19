@@ -10,7 +10,7 @@ Environment Variables:
 import os
 
 from cube.application import _config as cfg
-from cube.config.face_tracer_config import FaceTrackerConfig
+from cube.config.face_tracer_config import FaceTrackerConfig, TrackerIndicatorConfig
 from cube.domain.model.Color import Color
 from cube.utils.config_protocol import AnimationTextDef, ArrowConfigProtocol, ConfigProtocol, MarkerDef
 from cube.utils.markers_config import MarkersConfig
@@ -205,6 +205,11 @@ class AppConfig(ConfigProtocol):
         return cfg.VIEWER_MAX_SIZE_FOR_TEXTURE
 
     @property
+    def tracker_indicator(self) -> TrackerIndicatorConfig:
+        """Tracker indicator configuration (colored circle on tracked center slices)."""
+        return cfg.TRACKER_INDICATOR
+
+    @property
     def viewer_draw_shadows(self) -> str:
         """Faces to draw shadows for (e.g., 'LDB')."""
         return cfg.VIEWER_DRAW_SHADOWS
@@ -267,6 +272,11 @@ class AppConfig(ConfigProtocol):
     def show_file_algs(self) -> bool:
         """Show F1-F5 file algorithm buttons in toolbar."""
         return cfg.SHOW_FILE_ALGS
+
+    @property
+    def full_mode(self) -> bool:
+        """Whether app starts in full mode (hides toolbar/status text)."""
+        return cfg.FULL_MODE
 
     # ==========================================================================
     # Texture settings

@@ -14,7 +14,7 @@ Access config values through the ConfigProtocol interface instead.
 from dataclasses import dataclass
 from typing import Tuple
 
-from cube.config.face_tracer_config import FaceTrackerConfig
+from cube.config.face_tracer_config import FaceTrackerConfig, TrackerIndicatorConfig
 from cube.utils.markers_config import MarkersConfig
 
 ########## Some top important
@@ -123,6 +123,9 @@ SS_CODES: dict[SSCode, bool] = {
 
 ######  Viewer ########
 
+# Full mode - hides toolbar and status text, showing only 3D cube + animation annotations
+FULL_MODE = False
+
 
 VIEWER_MAX_SIZE_FOR_TEXTURE = 10  # All works but very slow
 
@@ -137,6 +140,9 @@ MARKERS_CONFIG.GUI_DRAW_MARKERS = False
 MARKERS_CONFIG.GUI_DRAW_SAMPLE_MARKERS = False
 MARKERS_CONFIG.GUI_DRAW_LTR_ORIGIN_ARROWS = True  # Draw LTR coordinate system markers (origin, X arrow, Y arrow)
 MARKERS_CONFIG.DRAW_CENTER_INDEXES = False  # Draw center index markers during rotation (SLOW - debug only)
+
+# Tracker indicator (colored circle on tracked center slices for even cubes)
+TRACKER_INDICATOR = TrackerIndicatorConfig()
 
 CELL_SIZE: int = 30
 

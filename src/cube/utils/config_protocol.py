@@ -8,7 +8,7 @@ All other code must access config through this protocol via context.
 
 from typing import TYPE_CHECKING, Protocol, Tuple, runtime_checkable
 
-from cube.config.face_tracer_config import FaceTrackerConfig
+from cube.config.face_tracer_config import FaceTrackerConfig, TrackerIndicatorConfig
 
 if TYPE_CHECKING:
     from cube.domain.model.Color import Color
@@ -246,6 +246,11 @@ class ConfigProtocol(Protocol):
         ...
 
     @property
+    def tracker_indicator(self) -> TrackerIndicatorConfig:
+        """Tracker indicator configuration (colored circle on tracked center slices)."""
+        ...
+
+    @property
     def viewer_draw_shadows(self) -> str:
         """Faces to draw shadows for (e.g., 'LDB')."""
         ...
@@ -321,6 +326,11 @@ class ConfigProtocol(Protocol):
     @property
     def show_file_algs(self) -> bool:
         """Show F1-F5 file algorithm buttons in toolbar."""
+        ...
+
+    @property
+    def full_mode(self) -> bool:
+        """Whether app starts in full mode (hides toolbar/status text)."""
         ...
 
     # ==========================================================================

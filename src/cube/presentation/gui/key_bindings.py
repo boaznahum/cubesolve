@@ -208,6 +208,12 @@ KEY_BINDINGS_NORMAL: list[KeyBinding] = [
     (Keys.BACKSLASH, 0, Commands.SWITCH_SOLVER),
 
     # -------------------------------------------------------------------------
+    # Full Mode
+    # -------------------------------------------------------------------------
+    (Keys.F8, 0, Commands.FULL_MODE_TOGGLE),
+    (Keys.ESCAPE, 0, Commands.FULL_MODE_EXIT),
+
+    # -------------------------------------------------------------------------
     # Special
     # -------------------------------------------------------------------------
     (Keys.W, 0, Commands.ANNOTATE),
@@ -275,6 +281,12 @@ KEY_BINDINGS_ANIMATION: list[KeyBinding] = [
     (Keys.BACKSLASH, 0, Commands.SWITCH_SOLVER),
 
     # -------------------------------------------------------------------------
+    # Full Mode (works during animation)
+    # -------------------------------------------------------------------------
+    (Keys.F8, 0, Commands.FULL_MODE_TOGGLE),
+    (Keys.ESCAPE, 0, Commands.FULL_MODE_EXIT),
+
+    # -------------------------------------------------------------------------
     # Application (Q quits even during animation)
     # -------------------------------------------------------------------------
     (Keys.Q, 0, Commands.QUIT),
@@ -315,3 +327,97 @@ def get_all_bindings(animation_running: bool = False) -> list[KeyBinding]:
     Useful for generating documentation or help screens.
     """
     return KEY_BINDINGS_ANIMATION if animation_running else KEY_BINDINGS_NORMAL
+
+
+# =============================================================================
+# REVERSE LOOKUP: Command → human-readable key label
+# =============================================================================
+
+# Build reverse map: key code → display name
+_KEY_NAMES: dict[int, str] = {}
+
+# Letters: attribute value → attribute name
+for _attr in dir(Keys):
+    if len(_attr) == 1 and _attr.isalpha():
+        _KEY_NAMES[getattr(Keys, _attr)] = _attr
+
+# Special display names
+_KEY_NAMES.update({
+    Keys.SPACE: "Space",
+    Keys.ESCAPE: "Esc",
+    Keys.RETURN: "Enter",
+    Keys.TAB: "Tab",
+    Keys.BACKSPACE: "Backspace",
+    Keys.DELETE: "Delete",
+    Keys.INSERT: "Insert",
+    Keys.LEFT: "Left",
+    Keys.RIGHT: "Right",
+    Keys.UP: "Up",
+    Keys.DOWN: "Down",
+    Keys.HOME: "Home",
+    Keys.END: "End",
+    Keys.PAGE_UP: "PgUp",
+    Keys.PAGE_DOWN: "PgDn",
+    Keys.GRAVE: "`",
+    Keys.SLASH: "/",
+    Keys.APOSTROPHE: "'",
+    Keys.MINUS: "-",
+    Keys.EQUAL: "=",
+    Keys.COMMA: ",",
+    Keys.PERIOD: ".",
+    Keys.BACKSLASH: "\\",
+    Keys.BRACKETLEFT: "[",
+    Keys.BRACKETRIGHT: "]",
+    Keys.NUM_ADD: "Num+",
+    Keys.NUM_SUBTRACT: "Num-",
+})
+
+# Numbers: _0 → "0", _1 → "1", etc.
+for _i in range(10):
+    _KEY_NAMES[getattr(Keys, f"_{_i}")] = str(_i)
+
+# Function keys: F1–F12
+for _i in range(1, 13):
+    _KEY_NAMES[getattr(Keys, f"F{_i}")] = f"F{_i}"
+
+
+def format_key(key: int, modifiers: int) -> str:
+    """Format a key + modifiers into a human-readable string like 'Ctrl+Shift+F8'."""
+    parts: list[str] = []
+    if modifiers & Modifiers.CTRL:
+        parts.append("Ctrl")
+    if modifiers & Modifiers.ALT:
+        parts.append("Alt")
+    if modifiers & Modifiers.SHIFT:
+        parts.append("Shift")
+    if modifiers & Modifiers.META:
+        parts.append("Meta")
+    parts.append(_KEY_NAMES.get(key, f"?{key}"))
+    return "+".join(parts)
+
+
+class KeyBindingService:
+    """Reverse lookup: Command → human-readable key binding string.
+
+    Parameterized by binding list — each backend can provide its own.
+    """
+
+    def __init__(self, bindings: list[KeyBinding]) -> None:
+        self._command_to_keys: dict[Command, list[tuple[int, int]]] = {}
+        for key, mods, cmd in bindings:
+            self._command_to_keys.setdefault(cmd, []).append((key, mods))
+
+    def get_key_label(self, command: Command) -> str | None:
+        """Return the primary key binding for a Command as a readable string, or None."""
+        entries = self._command_to_keys.get(command)
+        if not entries:
+            return None
+        key, mods = entries[0]
+        return format_key(key, mods)
+
+    def get_all_key_labels(self, command: Command) -> list[str]:
+        """Return all key bindings for a Command as readable strings."""
+        entries = self._command_to_keys.get(command)
+        if not entries:
+            return []
+        return [format_key(key, mods) for key, mods in entries]

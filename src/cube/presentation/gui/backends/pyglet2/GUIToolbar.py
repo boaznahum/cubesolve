@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from cube.application.AbstractApp import AbstractApp
     from cube.presentation.gui.backends.pyglet2.PygletAppWindow import PygletAppWindow
     from cube.presentation.gui.commands import Command
+    from cube.presentation.gui.key_bindings import KeyBindingService
 
 # Button style constants - bright and visible
 BUTTON_HEIGHT = 32
@@ -99,10 +100,12 @@ class GUIToolbar:
     - Call toolbar.update_window_size() in on_resize()
     """
 
-    def __init__(self, window_width: int, window_height: int):
+    def __init__(self, window_width: int, window_height: int,
+                 key_binding_service: "KeyBindingService | None" = None):
         """Initialize toolbar."""
         self._window_width = window_width
         self._window_height = window_height
+        self._key_binding_service = key_binding_service
         self._buttons: list[GUIButton] = []
         self._current_row = 0
         self._batch = pyglet.graphics.Batch()
@@ -140,6 +143,12 @@ class GUIToolbar:
             shift_command: "Command | None" = None,
     ) -> None:
         """Add a clickable button to current row."""
+        # Auto-enrich tooltip with key binding
+        if self._key_binding_service and command:
+            key_label = self._key_binding_service.get_key_label(command)
+            if key_label:
+                tooltip = f"{tooltip} [{key_label}]" if tooltip else key_label
+
         self._buttons.append(GUIButton(
             label=label,
             command=command,
@@ -415,7 +424,7 @@ class GUIToolbar:
         )
 
         # Add "Help" button
-        from cube.presentation.gui.commands.concrete import HelpCommand
+        from cube.presentation.gui.commands.help_command import HelpCommand
         self.add_button(
             label="Help",
             command=HelpCommand(),
@@ -529,6 +538,55 @@ class GUIToolbar:
                     shift_command=ExecuteFileAlgCommand(slot=slot, inverse=True),
                 )
 
+    def draw_exit_only(self) -> None:
+        """Draw only a small exit button at top-right corner (for full mode).
+
+        Returns the command if clicked via handle_exit_click().
+        """
+        # Small "X" button at top-right
+        btn_size = 30
+        margin = 10
+        x = self._window_width - btn_size - margin
+        y = self._window_height - btn_size - margin
+
+        # Store position for click detection
+        self._exit_btn_x = x
+        self._exit_btn_y = y
+        self._exit_btn_size = btn_size
+
+        # Draw button background
+        bg = shapes.Rectangle(x, y, btn_size, btn_size, color=(60, 60, 60))
+        bg.opacity = 180
+        bg.draw()
+
+        # Draw "X" label
+        label = pyglet.text.Label(
+            "X",
+            font_size=14,
+            x=x + btn_size // 2,
+            y=y + btn_size // 2,
+            anchor_x='center',
+            anchor_y='center',
+            color=(255, 255, 255, 200),
+        )
+        label.draw()
+
+    def handle_exit_click(self, x: int, y: int) -> "Command | None":
+        """Handle click in full mode - only check exit button.
+
+        Returns FULL_MODE_EXIT command if exit button was clicked, None otherwise.
+        """
+        from cube.presentation.gui.commands import Commands
+
+        btn_x = getattr(self, '_exit_btn_x', 0)
+        btn_y = getattr(self, '_exit_btn_y', 0)
+        btn_size = getattr(self, '_exit_btn_size', 0)
+
+        if (btn_x <= x <= btn_x + btn_size and
+                btn_y <= y <= btn_y + btn_size):
+            return Commands.FULL_MODE_EXIT
+        return None
+
     def draw_tooltip(self) -> None:
         """Draw tooltip for hovered button (called after batch.draw)."""
         if not self._hover_button or not self._hover_button.tooltip:
@@ -537,16 +595,17 @@ class GUIToolbar:
         text = self._hover_button.tooltip
         btn = self._hover_button
 
-        # Position tooltip below button
-        tooltip_x = btn.x
-        tooltip_y = btn.y - 22
-
-        # Ensure tooltip stays on screen
-        if tooltip_y < 10:
-            tooltip_y = btn.y + BUTTON_HEIGHT + 5
-
         # Calculate text width (approximate)
         text_width = len(text) * 7 + 10
+
+        # Position tooltip below button, clamped to window edges
+        tooltip_x = min(btn.x, self._window_width - text_width - 5)
+        tooltip_x = max(tooltip_x, 5)
+        tooltip_y = btn.y - 22
+
+        # Ensure tooltip stays on screen vertically
+        if tooltip_y < 10:
+            tooltip_y = btn.y + BUTTON_HEIGHT + 5
 
         # Draw background
         self._tooltip_bg = shapes.Rectangle(
@@ -581,8 +640,10 @@ def create_toolbar(window: PygletAppWindow) -> GUIToolbar:
         Configured GUIToolbar ready to use
     """
     from cube.presentation.gui.commands import Commands
+    from cube.presentation.gui.key_bindings import KEY_BINDINGS_NORMAL, KeyBindingService
 
-    toolbar = GUIToolbar(window.width, window.height)
+    key_binding_service = KeyBindingService(KEY_BINDINGS_NORMAL)
+    toolbar = GUIToolbar(window.width, window.height, key_binding_service)
     app = window.app
     vs = app.vs
 
@@ -649,6 +710,11 @@ def create_toolbar(window: PygletAppWindow) -> GUIToolbar:
 
     toolbar.add_separator()
 
+    toolbar.add_button(
+        "Full",
+        Commands.FULL_MODE_TOGGLE,
+        tooltip="Toggle full mode - hide toolbar",
+    )
     toolbar.add_button("Quit", Commands.QUIT)
 
     # === ROW 3: Solver Step Buttons + ROW 4: Animation/Debug ===

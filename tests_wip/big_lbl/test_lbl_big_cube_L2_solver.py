@@ -36,7 +36,7 @@ class TestLBLBigCubeSolver:
         """Test LBL_L1_Ctr step solves Layer 1 centers (even + odd cubes)."""
         actual_seed: int = scramble_seed if scramble_seed is not None else session_random_seed
 
-        app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
+        app = AbstractApp.create_app(cube_size=cube_size)
 
         solver = LayerByLayerNxNSolver(app.op, app.op.sp.logger)
 
@@ -64,7 +64,7 @@ class TestLBLBigCubeSolver:
         """Test LBL_SLICES_CTR step solves middle slices (even + odd cubes)."""
         actual_seed: int = scramble_seed if scramble_seed is not None else session_random_seed
 
-        app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
+        app = AbstractApp.create_app(cube_size=cube_size)
 
         solver = LayerByLayerNxNSolver(app.op, app.op.sp.logger)
 
@@ -91,7 +91,7 @@ class TestLBLBigCubeSolver:
         center piece, changing face.color and confusing the solver.
         E[6] is one slice below center — same effect without that issue.
         """
-        app = AbstractApp.create_non_default(cube_size=15, animation=False)
+        app = AbstractApp.create_app(cube_size=15)
         cube = app.cube
 
         # Rotate a single E slice near the center (not E[7] which moves face centers)
@@ -127,7 +127,7 @@ class TestLBLBigCubeSolver:
         this and reverses it with a single E-slice rotation (3x = inverse
         of 1x forward), requiring 0 commutator blocks.
         """
-        app = AbstractApp.create_non_default(cube_size=15, animation=False)
+        app = AbstractApp.create_app(cube_size=15)
         cube = app.cube
 
         # Rotate the center E-slice (E[7] on 15x15 moves face centers)
@@ -172,7 +172,7 @@ class TestLBLBigCubeSolver:
         """Test LBL_SLICES_CTR step solves middle slices."""
         actual_seed: int = scramble_seed if scramble_seed is not None else session_random_seed
 
-        app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
+        app = AbstractApp.create_app(cube_size=cube_size)
 
         solver = LayerByLayerNxNSolver(app.op, app.op.sp.logger)
 

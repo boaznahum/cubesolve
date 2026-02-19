@@ -44,24 +44,24 @@ def _face_pair_id(pair: tuple[FaceName, FaceName]) -> str:
 @pytest.fixture
 def app_4x4() -> AbstractApp:
     """Create a 4x4 cube app."""
-    return AbstractApp.create_non_default(4)
+    return AbstractApp.create_app(4)
 
 
 @pytest.fixture
 def app_5x5() -> AbstractApp:
     """Create a 5x5 cube app."""
-    return AbstractApp.create_non_default(5)
+    return AbstractApp.create_app(5)
 
 
 @pytest.fixture
 def app_6x6() -> AbstractApp:
     """Create a 6x6 cube app."""
-    return AbstractApp.create_non_default(6)
+    return AbstractApp.create_app(6)
 
 
 def create_app(cube_size: int) -> AbstractApp:
     """Create an app with specified cube size."""
-    return AbstractApp.create_non_default(cube_size, animation=False)
+    return AbstractApp.create_app(cube_size)
 
 
 def _cage(app: AbstractApp) -> CageNxNSolver:

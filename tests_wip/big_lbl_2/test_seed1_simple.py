@@ -14,7 +14,7 @@ def test_seed1_size12_simple():
     If bug is fixed, solver completes and cube is solved.
     """
     # Setup
-    app = AbstractApp.create_non_default(cube_size=12, animation=False)
+    app = AbstractApp.create_app(cube_size=12)
     app.scramble(1, None, animation=False, verbose=False)
 
     # Solve

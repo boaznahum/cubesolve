@@ -40,6 +40,7 @@ class WebAppWindow(AppWindow):
         backend: "GUIBackendFactory",
     ):
         self._app = app
+        self._backend = backend
         self._width = width
         self._height = height
         self._title = title
@@ -150,6 +151,11 @@ class WebAppWindow(AppWindow):
     def app(self) -> "AbstractApp":
         """Access the application instance."""
         return self._app
+
+    @property
+    def backend(self) -> "GUIBackendFactory":
+        """Access the GUI backend."""
+        return self._backend
 
     @property
     def viewer(self) -> "GCubeViewer":
@@ -326,3 +332,8 @@ class WebAppWindow(AppWindow):
                 execute_next(index + 1)
 
         execute_next(0)
+
+    def show_popup(self, title: str, lines: list[str],
+                   line_colors: list[tuple[int, int, int, int]] | None = None) -> None:
+        """Show a modal text popup overlay (no-op for web backend)."""
+        pass

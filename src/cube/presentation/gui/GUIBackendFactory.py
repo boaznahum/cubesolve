@@ -103,14 +103,19 @@ class GUIBackendFactory:
         height: int = 720,
         title: str = "Cube Solver",
     ) -> AppWindow:
-        """Create an AppWindow for this backend.
+        """Wire app to this backend and create an AppWindow.
 
-        This also wires up the animation manager to the event loop
-        and sets cube visibility based on whether the backend is headless.
+        If this backend supports animation, it creates an AnimationManager
+        and injects it into the app via app.enable_animation(am).
+        The app is always created without animation first (AbstractApp.create_app),
+        and animation is added here if the backend supports it.
         """
-        # Wire up animation manager to event loop
-        if app.am is not None:
-            app.am.set_event_loop(self.event_loop)
+        # Backend is the authority: inject animation if supported
+        if self._animation_factory is not None:
+            from cube.application.animation.AnimationManager import AnimationManager
+            am = AnimationManager(app.vs)
+            app.enable_animation(am)
+            am.set_event_loop(self.event_loop)
 
         # Set cube visibility based on backend type (visual vs headless)
         # This allows skipping texture direction updates for headless backends

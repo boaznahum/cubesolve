@@ -362,14 +362,13 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
                 self._line_data,
                 self._animated_triangles_per_texture,
                 self._animated_line_data,
+                self._marker_triangles,
+                self._animated_marker_triangles,
             ) = self._board.generate_per_cell_textured_geometry(self._animated_parts)
             self._face_triangles = None
             self._animated_face_triangles = None
             self._triangles_per_color.clear()
             self._animated_triangles_per_color.clear()
-            # TODO [#5]: Add marker support for per-cell textured mode
-            self._marker_triangles = None
-            self._animated_marker_triangles = None
 
             # Debug texture handles used in geometry
             self._debug_texture_lazy(lambda: self._format_geometry_debug())
@@ -379,14 +378,13 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
                 self._line_data,
                 self._animated_triangles_per_color,
                 self._animated_line_data,
+                self._marker_triangles,
+                self._animated_marker_triangles,
             ) = self._board.generate_textured_geometry(self._animated_parts)
             self._face_triangles = None
             self._animated_face_triangles = None
             self._triangles_per_texture.clear()
             self._animated_triangles_per_texture.clear()
-            # TODO [#6]: Add marker support for old textured mode
-            self._marker_triangles = None
-            self._animated_marker_triangles = None
         else:
             # Solid color mode (or textures disabled)
             (

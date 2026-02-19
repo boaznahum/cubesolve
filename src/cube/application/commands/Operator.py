@@ -16,12 +16,11 @@ from cube.domain.algs.SimpleAlg import SimpleAlg
 from cube.domain.model.Cube import Cube
 from cube.utils.SSCode import SSCode
 
+from ...domain.solver.protocols.AnnotationProtocol import AnnotationProtocol
 from ...domain.solver.protocols.OperatorProtocol import OperatorProtocol
 from ...utils.service_provider import IServiceProvider
 
 if TYPE_CHECKING:
-    from cube.application.commands.op_annotation import OpAnnotation
-
     from ..animation.AnimationManager import AnimationManager, OpProtocol
 
 
@@ -62,8 +61,12 @@ class Operator(OperatorProtocol):
         self._app_state = app_state
         self._self_annotation_running = False
 
-        from cube.application.commands.op_annotation import OpAnnotation
-        self._annotation: OpAnnotation = OpAnnotation(self)
+        if animation_manager is not None:
+            from cube.application.commands.op_annotation import OpAnnotation
+            self._annotation: AnnotationProtocol = OpAnnotation(self)
+        else:
+            from cube.domain.solver.protocols.NoopAnnotation import NoopAnnotation
+            self._annotation = NoopAnnotation()
 
         # Get config from app_state
         cfg = app_state.config
@@ -407,6 +410,19 @@ class Operator(OperatorProtocol):
         if code is None or self._app_state.config.is_ss_code_enabled(code):
             self._app_state.single_step_mode = True
 
+    def enable_animation(self, am: 'AnimationManager', animation_enabled: bool) -> None:
+        """Inject animation support after construction.
+
+        Called by App.enable_animation() when a GUI backend provides an
+        AnimationManager.  Must only be called once (before any play() calls).
+        """
+        assert self._animation_manager is None, "enable_animation() called twice"
+        self._animation_manager = am
+        self._animation_enabled = animation_enabled
+
+        from cube.application.commands.op_annotation import OpAnnotation
+        self._annotation = OpAnnotation(self)
+
     def toggle_animation_on(self, enable: bool | None = None):
 
         if enable is None:
@@ -424,5 +440,5 @@ class Operator(OperatorProtocol):
         self._aborted = True
 
     @property
-    def annotation(self) -> "OpAnnotation":
+    def annotation(self) -> AnnotationProtocol:
         return self._annotation

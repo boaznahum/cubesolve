@@ -144,6 +144,15 @@ https://user-images.githubusercontent.com/3913990/172851026-05582a7f-1c12-4732-a
     # Add "family" to TEXTURE_SETS in config.py
     ```
 
+### Full Mode (Focus Mode)
+    F8 - Toggle full mode (hide toolbar & status text, show only cube + annotations)
+    ESC - Exit full mode (return to normal view)
+
+    In full mode, only the 3D cube and solver step annotations are visible.
+    A small "X" button at the top-right corner also exits full mode.
+    The "Full" button in the toolbar toggles full mode on.
+    Configure `FULL_MODE = True` in config.py to start in full mode.
+
 ### Undo/Reset
 
     , (COMMA) - Undo last move (user or solver)
@@ -316,6 +325,8 @@ python -m cube.main_any_backend -c "SPEED_UP+SPEED_UP+SCRAMBLE_1+SOLVE_ALL+QUIT"
 | | C | Ctrl | `RESET_CUBE_AND_VIEW` | Reset cube and view |
 | | , | - | `UNDO` | Undo last move |
 | | \ | - | `SWITCH_SOLVER` | Switch between solvers |
+| **Full Mode** | F8 | - | `FULL_MODE_TOGGLE` | Toggle full mode (hide toolbar/status) |
+| | ESC | - | `FULL_MODE_EXIT` | Exit full mode |
 | **Special** | W | - | `ANNOTATE` | Toggle annotation mode |
 | | A | - | `SPECIAL_ALG` | Run special algorithm test |
 

@@ -5,7 +5,7 @@ from collections.abc import Iterable
 from typing import TYPE_CHECKING, Hashable, Any
 
 from .IMarkerManager import IMarkerManager
-from ._marker_config import MarkerConfig
+from ._marker_creator_protocol import MarkerCreator
 
 if TYPE_CHECKING:
     from cube.domain.model.PartEdge import PartEdge
@@ -62,7 +62,7 @@ class MarkerManager(IMarkerManager):
         self,
         part_edge: PartEdge,
         name: str,
-        marker: MarkerConfig,
+        marker: MarkerCreator,
         moveable: bool = True,
     ) -> None:
         """Add a marker to a PartEdge.
@@ -88,7 +88,7 @@ class MarkerManager(IMarkerManager):
         self,
         part_edge: PartEdge,
         name: str,
-        marker: MarkerConfig,
+        marker: MarkerCreator,
     ) -> None:
         """Add a marker fixed to a position (stored in fixed_attributes).
 
@@ -165,7 +165,7 @@ class MarkerManager(IMarkerManager):
                 count += 1
         return count
 
-    def get_markers(self, part_edge: PartEdge) -> list[MarkerConfig]:
+    def get_markers(self, part_edge: PartEdge) -> list[MarkerCreator]:
         """Get all markers for a PartEdge, deduplicated and sorted.
 
         Retrieves markers from both attribute dictionaries. Visually
@@ -176,27 +176,27 @@ class MarkerManager(IMarkerManager):
             part_edge: The sticker to get markers from
 
         Returns:
-            List of unique MarkerConfig objects, sorted by z_order.
+            List of unique MarkerCreator objects, sorted by z_order.
         """
-        all_markers: list[MarkerConfig] = []
+        all_markers: list[MarkerCreator] = []
 
         # Collect from both attribute dicts
         all_markers.extend(self._get_from_dict(part_edge.fixed_attributes))
         all_markers.extend(self._get_from_dict(part_edge.moveable_attributes))
 
         # Deduplicate: keep highest z_order for each unique config
-        # MarkerConfig is frozen/hashable, so can use as dict key
-        unique: dict[MarkerConfig, MarkerConfig] = {}
+        # MarkerCreator is frozen/hashable, so can use as dict key
+        unique: dict[MarkerCreator, MarkerCreator] = {}
         for marker in all_markers:
-            if marker not in unique or marker.z_order > unique[marker].z_order:
+            if marker not in unique or marker.get_z_order() > unique[marker].get_z_order():
                 unique[marker] = marker
 
         # Sort by z_order (lowest first, so highest draws on top)
         result = list(unique.values())
-        result.sort(key=lambda m: m.z_order)
+        result.sort(key=lambda m: m.get_z_order())
         return result
 
-    def get_markers_raw(self, part_edge: PartEdge) -> dict[str, MarkerConfig]:
+    def get_markers_raw(self, part_edge: PartEdge) -> dict[str, MarkerCreator]:
         """Get all markers with their names (no deduplication).
 
         Useful for debugging or when you need to know marker names.
@@ -205,22 +205,22 @@ class MarkerManager(IMarkerManager):
             part_edge: The sticker to get markers from
 
         Returns:
-            Dict of name -> MarkerConfig, merged from all attribute dicts.
+            Dict of name -> MarkerCreator, merged from all attribute dicts.
         """
-        result: dict[str, MarkerConfig] = {}
+        result: dict[str, MarkerCreator] = {}
 
         for attrs in [part_edge.fixed_attributes, part_edge.moveable_attributes]:
-            markers_dict: dict[str, MarkerConfig] | None = attrs.get(_MARKER_KEY)
+            markers_dict: dict[str, MarkerCreator] | None = attrs.get(_MARKER_KEY)
             if markers_dict:
                 result.update(markers_dict)
 
         return result
 
-    def get_moveable_markers(self, part_edge: PartEdge) -> list[MarkerConfig]:
+    def get_moveable_markers(self, part_edge: PartEdge) -> list[MarkerCreator]:
         """Get only moveable markers (from moveable_attributes)."""
         return self._get_from_dict(part_edge.moveable_attributes)
 
-    def get_fixed_markers(self, part_edge: PartEdge) -> list[MarkerConfig]:
+    def get_fixed_markers(self, part_edge: PartEdge) -> list[MarkerCreator]:
         """Get only fixed markers (from fixed_attributes)."""
         return self._get_from_dict(part_edge.fixed_attributes)
 
@@ -234,7 +234,7 @@ class MarkerManager(IMarkerManager):
     def has_marker(self, part_edge: PartEdge, name: str) -> bool:
         """Check if a PartEdge has a marker with the given name."""
         for attrs in [part_edge.fixed_attributes, part_edge.moveable_attributes]:
-            markers_dict: dict[str, MarkerConfig] | None = attrs.get(_MARKER_KEY)
+            markers_dict: dict[str, MarkerCreator] | None = attrs.get(_MARKER_KEY)
             if markers_dict and name in markers_dict:
                 return True
         return False
@@ -262,9 +262,9 @@ class MarkerManager(IMarkerManager):
     # ================================================================
 
     @staticmethod
-    def _add_to_dict(attrs: dict[Hashable, Any], name: str, marker: MarkerConfig) -> None:
+    def _add_to_dict(attrs: dict[Hashable, Any], name: str, marker: MarkerCreator) -> None:
         """Add a marker to an attributes dictionary."""
-        markers: dict[str, MarkerConfig] | None = attrs.get(_MARKER_KEY)
+        markers: dict[str, MarkerCreator] | None = attrs.get(_MARKER_KEY)
         if markers is None:
             attrs[_MARKER_KEY] = {name: marker}
         else:
@@ -273,7 +273,7 @@ class MarkerManager(IMarkerManager):
     @staticmethod
     def _remove_from_dict(attrs: dict[Hashable, Any], name: str) -> bool:
         """Remove a marker from an attributes dictionary by name."""
-        markers: dict[str, MarkerConfig] | None = attrs.get(_MARKER_KEY)
+        markers: dict[str, MarkerCreator] | None = attrs.get(_MARKER_KEY)
         if markers is None:
             return False
 
@@ -286,7 +286,7 @@ class MarkerManager(IMarkerManager):
         return False
 
     @staticmethod
-    def _get_from_dict(attrs: dict[Hashable, Any]) -> list[MarkerConfig]:
+    def _get_from_dict(attrs: dict[Hashable, Any]) -> list[MarkerCreator]:
         """Get marker values from an attributes dictionary."""
-        markers: dict[str, MarkerConfig] | None = attrs.get(_MARKER_KEY)
+        markers: dict[str, MarkerCreator] | None = attrs.get(_MARKER_KEY)
         return list(markers.values()) if markers else []

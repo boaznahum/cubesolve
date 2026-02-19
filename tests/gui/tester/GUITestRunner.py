@@ -37,9 +37,8 @@ import time
 import traceback
 
 from cube.application import _config as config
-from cube.application.AbstractApp import AbstractApp
 from cube.application.exceptions.app_exceptions import AppExit
-from cube.presentation.gui.factory import BackendRegistry
+from cube.main_any_backend import create_app_window
 from cube.presentation.gui.commands import Command, CommandSequence
 from tests.gui.tester.GUITestResult import GUITestResult
 from tests.gui.tester.GUITestTimeout import GUITestTimeout
@@ -173,13 +172,15 @@ class GUITestRunner:
                 print(f"Starting GUI test with commands: {cmd_seq}")
                 print(f"  Backend: {backend}, Cube size: {cube_size}, Animation: {enable_animation}, Timeout: {timeout_sec}s")
 
-            # Create app and backend
-            app = AbstractApp.create_non_default(cube_size=cube_size, animation=enable_animation)
-            gui_backend = BackendRegistry.get_backend(backend)
-            event_loop = gui_backend.event_loop
-
-            # Create app window using backend factory
-            win = gui_backend.create_app_window(app, 720, 720, "Cube Test")
+            # Single point of creation: app + backend wired together
+            win = create_app_window(
+                backend,
+                cube_size=cube_size,
+                animation=enable_animation,
+                width=720, height=720,
+                title="Cube Test",
+            )
+            event_loop = win.backend.event_loop
 
             # Start timeout watchdog
             watchdog = threading.Thread(target=timeout_watchdog, daemon=True)

@@ -25,7 +25,7 @@ def test_scramble_repeatable(solver_name: SolverName):
     size = 6
     skip_if_not_supported(solver_name, size)
 
-    app = AbstractApp.create_non_default(cube_size=size, animation=False, solver=solver_name)
+    app = AbstractApp.create_app(cube_size=size, solver=solver_name)
 
     cube = Cube(size=size, sp=_test_sp)
 

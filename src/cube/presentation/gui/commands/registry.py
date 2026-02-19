@@ -9,6 +9,7 @@ from cube.domain.geometric.cube_boy import FaceName
 from cube.domain.solver import SolveStep
 
 from .base import Command
+from .help_command import HelpCommand
 from .concrete import (
     # Special
     AnnotateCommand,
@@ -19,7 +20,9 @@ from .concrete import (
     BrightnessUpCommand,
     CubeRotateCommand,
     DebugInfoCommand,
-    HelpCommand,
+    # Full mode
+    FullModeExitCommand,
+    FullModeToggleCommand,
     PanCommand,
     PauseToggleCommand,
     # Application
@@ -270,6 +273,12 @@ class Commands:
     RESET_CUBE_AND_VIEW = ResetCubeAndViewCommand()
     UNDO = UndoCommand()
     SWITCH_SOLVER = SwitchSolverCommand()
+
+    # =========================================================================
+    # FULL MODE
+    # =========================================================================
+    FULL_MODE_TOGGLE = FullModeToggleCommand()
+    FULL_MODE_EXIT = FullModeExitCommand()
 
     # =========================================================================
     # SPECIAL

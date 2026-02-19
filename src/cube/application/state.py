@@ -131,6 +131,9 @@ class ApplicationAndViewState:
         self._brightness: float = config.lighting_brightness
         self._background_gray: float = config.lighting_background
 
+        # Full mode - hides toolbar and status text
+        self.full_mode: bool = config.full_mode
+
     @property
     def config(self) -> ConfigProtocol:
         """Access the configuration."""

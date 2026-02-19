@@ -17,10 +17,15 @@ DEFAULT_BACKEND = "pyglet2"
 class BackendRegistry:
     """Registry for GUI backends.
 
+    The backend owns animation: calling backend.create_app_window(app)
+    injects animation support if the backend supports it.
+    main_any_backend.create_app_window() is a convenience wrapper.
+
     Example:
         backend = BackendRegistry.get_backend("pyglet2")
-        renderer = backend.renderer
-        app_window = backend.create_app_window(app)
+        app = AbstractApp.create_app(cube_size=3)
+        window = backend.create_app_window(app)
+        window.run()
     """
 
     @classmethod

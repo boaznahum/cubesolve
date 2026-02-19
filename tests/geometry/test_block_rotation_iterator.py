@@ -18,7 +18,7 @@ from cube.domain.geometric.geometry_types import Point
 
 def create_app(cube_size: int) -> AbstractApp:
     """Create an app with specified cube size."""
-    return AbstractApp.create_non_default(cube_size, animation=False)
+    return AbstractApp.create_app(cube_size)
 
 
 class TestBlockRotationIterator:

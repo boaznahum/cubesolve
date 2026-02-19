@@ -237,7 +237,7 @@ def _is_center_position(n_slices: int, ltr_y: int, ltr_x: int) -> bool:
 @pytest.mark.parametrize("cube_size", [4, 7])  # Even cubes have known inner 2x2 issues
 def test_create_helper(cube_size: int) -> None:
     """Create a cube and instantiate the helper via a solver."""
-    app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
+    app = AbstractApp.create_app(cube_size=cube_size)
     solver = _cage(app)
     helper = CommutatorHelper(solver)
 
@@ -274,7 +274,7 @@ def test_commutator_supported_pairs(cube_size: int, face_pair: tuple[FaceName, F
     """
     source_face_name, target_face_name = face_pair
 
-    app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
+    app = AbstractApp.create_app(cube_size=cube_size)
     solver = _cage(app)
     helper = CommutatorHelper(solver)
     cube = app.cube
@@ -557,7 +557,7 @@ def test_commutator_raises_on_incompatible_blocks(cube_size: int) -> None:
     On a 3x3 center grid (5x5 cube), corner positions (0,0) and edge
     positions (0,1) are in different rotation orbits and cannot be aligned.
     """
-    app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
+    app = AbstractApp.create_app(cube_size=cube_size)
     solver = _cage(app)
     helper = CommutatorHelper(solver)
     cube = app.cube

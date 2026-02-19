@@ -76,8 +76,13 @@ class MarkedFaceTracker(FaceTracker):
             return found_cs.face
 
 
+    @property
+    def is_piece_tracking(self) -> bool:
+        """MarkedFaceTracker marks and traces a physical center slice."""
+        return True
+
     def cleanup(self, force_remove_visible:bool = False) -> None:
-        """Search for and remove the specific key and visual marker from the marked slice."""
+        """Search for and remove the specific key and visual markers from the marked slice."""
         mm = self._cube.sp.marker_manager
         for f in self._cube.faces:
             for s in f.center.all_slices:

@@ -29,7 +29,7 @@ class TestLBLBigCubeSolver:
         scramble_seed: int,
     ) -> None:
         """Test LBL_L1_Ctr step solves Layer 1 centers (even + odd cubes)."""
-        app = AbstractApp.create_non_default(cube_size=cube_size, animation=False)
+        app = AbstractApp.create_app(cube_size=cube_size)
 
         solver = LayerByLayerNxNSolver(app.op, app.op.sp.logger)
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Protocol, runtime_checkable
 
-from ._marker_config import MarkerConfig
+from ._marker_creator_protocol import MarkerCreator
 
 
 @runtime_checkable
@@ -14,30 +14,26 @@ class IMarkerFactory(Protocol):
     All code should depend on this protocol, not the concrete implementation.
 
     All factory methods should use caching (singleton pattern) - calling the same
-    method with the same arguments returns the same MarkerConfig instance every time.
+    method with the same arguments returns the same instance every time.
     """
 
     # ============================================================
     # Animation Markers
     # ============================================================
 
-    def center_tracker(self) -> MarkerConfig:
-        """Center tracker marker - small filled circle on tracked center slices."""
-        ...
-
-    def c0(self) -> MarkerConfig:
+    def c0(self) -> MarkerCreator:
         """C0 marker - tracker anchor indicator."""
         ...
 
-    def c1(self) -> MarkerConfig:
+    def c1(self) -> MarkerCreator:
         """C1 marker - moved piece indicator."""
         ...
 
-    def c2(self) -> MarkerConfig:
+    def c2(self) -> MarkerCreator:
         """C2 marker - destination slot indicator."""
         ...
 
-    def at_risk(self) -> MarkerConfig:
+    def at_risk(self) -> MarkerCreator:
         """At-risk marker - bold red X for pieces that may be destroyed."""
         ...
 
@@ -45,15 +41,15 @@ class IMarkerFactory(Protocol):
     # Coordinate Markers
     # ============================================================
 
-    def origin(self) -> MarkerConfig:
+    def origin(self) -> MarkerCreator:
         """Origin marker - face coordinate origin."""
         ...
 
-    def on_x(self) -> MarkerConfig:
+    def on_x(self) -> MarkerCreator:
         """On-X marker - X-axis direction indicator."""
         ...
 
-    def on_y(self) -> MarkerConfig:
+    def on_y(self) -> MarkerCreator:
         """On-Y marker - Y-axis direction indicator."""
         ...
 
@@ -61,15 +57,15 @@ class IMarkerFactory(Protocol):
     # LTR Coordinate System Markers
     # ============================================================
 
-    def ltr_origin(self) -> MarkerConfig:
+    def ltr_origin(self) -> MarkerCreator:
         """LTR origin marker - filled circle at coordinate origin."""
         ...
 
-    def ltr_arrow_x(self) -> MarkerConfig:
+    def ltr_arrow_x(self) -> MarkerCreator:
         """LTR X-axis arrow - red arrow pointing right."""
         ...
 
-    def ltr_arrow_y(self) -> MarkerConfig:
+    def ltr_arrow_y(self) -> MarkerCreator:
         """LTR Y-axis arrow - blue arrow pointing up."""
         ...
 
@@ -84,7 +80,7 @@ class IMarkerFactory(Protocol):
         thickness: float = 0.5,
         height_offset: float = 0.1,
         use_complementary_color: bool = False,
-    ) -> MarkerConfig:
+    ) -> MarkerCreator:
         """Create a custom ring marker."""
         ...
 
@@ -94,31 +90,53 @@ class IMarkerFactory(Protocol):
         radius_factor: float = 0.6,
         height_offset: float = 0.1,
         use_complementary_color: bool = False,
-    ) -> MarkerConfig:
+    ) -> MarkerCreator:
         """Create a custom filled circle marker."""
         ...
 
     def create_cross(
         self,
         color: tuple[float, float, float],
-    ) -> MarkerConfig:
+    ) -> MarkerCreator:
         """Create a custom cross marker."""
         ...
 
     def checkmark(
         self,
         color: tuple[float, float, float] = (0.0, 0.8, 0.0),
-    ) -> MarkerConfig:
-        """Create a thick green checkmark (✓) marker."""
+    ) -> MarkerCreator:
+        """Create a checkmark marker."""
         ...
 
     def char(
         self,
         character: str,
         color: tuple[float, float, float] = (0.0, 0.0, 0.0),
-    ) -> MarkerConfig:
+    ) -> MarkerCreator:
         """Create a character marker.
 
         Multiple characters with different values can be placed on same cell.
+        """
+        ...
+
+    # ============================================================
+    # Outlined Circle Markers
+    # ============================================================
+
+    def create_outlined_circle(
+        self,
+        fill_color: tuple[float, float, float],
+        outline_color: tuple[float, float, float] = (0.0, 0.0, 0.0),
+        radius_factor: float = 0.4,
+        outline_width: float = 0.15,
+        height_offset: float = 0.12,
+        z_order: int = 0,
+        min_radius: float = 0.0,
+        min_outline_width: float = 0.0,
+    ) -> MarkerCreator:
+        """Create an outlined circle marker (filled circle with outline ring).
+
+        Used by face tracker to show tracked face color with visible outline.
+        min_radius/min_outline_width ensure visibility on big cubes.
         """
         ...

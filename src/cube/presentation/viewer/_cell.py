@@ -21,7 +21,7 @@ from cube.domain.model import (
 )
 from cube.domain.geometric.cube_boy import Color
 from cube.domain.model.Face import Face
-from cube.application.markers import MarkerConfig, MarkerShape, get_markers_from_part_edge
+from cube.application.markers import MarkerToolkit, get_markers_from_part_edge
 from cube.domain.geometric import geometry_utils as geometry
 from cube.utils.config_protocol import ConfigProtocol
 
@@ -38,6 +38,157 @@ if TYPE_CHECKING:
 _inited = False
 
 _colors: dict[Color, _VColor] = {}
+
+# Complementary color map (0.0-1.0 float values for MarkerToolkit protocol)
+# Keyed by 0-255 face color (matching _colors dict) for legacy renderer lookup.
+_COMPLEMENTARY_MAP_FLOAT: dict[_VColor, tuple[float, float, float]] = {
+    (255, 0, 0): (0.0, 1.0, 1.0),
+    (0, 255, 0): (1.0, 0.0, 1.0),
+    (0, 0, 255): (1.0, 1.0, 0.0),
+    (255, 255, 0): (0.4, 0.2, 1.0),
+    (255, 128, 0): (0.0, 1.0, 1.0),
+    (255, 255, 255): (0.6, 0.0, 0.6),
+}
+
+
+def _color_float_to_vcolor(color: tuple[float, float, float]) -> _VColor:
+    """Convert RGB color from 0.0-1.0 float to 0-255 int."""
+    return (int(color[0] * 255), int(color[1] * 255), int(color[2] * 255))
+
+
+class LegacyCellToolkit(MarkerToolkit):
+    """MarkerToolkit implementation for the legacy (display-list) renderer.
+
+    Translates abstract marker drawing primitives into OpenGL calls
+    via the Renderer's ShapeRenderer.
+
+    Implements the MarkerToolkit protocol.
+    """
+
+    __slots__ = [
+        '_vertexes', '_ortho_dir', '_renderer', '_face_color_255',
+        '_face_color_float', '_complementary_float', '_face_size',
+        '_base_radius', '_max_marker_radius',
+    ]
+
+    def __init__(
+        self,
+        vertexes: Sequence[ndarray],
+        ortho_direction: ndarray,
+        face_color_255: _VColor,
+        renderer: "Renderer",
+        max_marker_radius: float,
+    ) -> None:
+        self._vertexes = vertexes
+        self._ortho_dir = ortho_direction
+        self._renderer = renderer
+        self._face_color_255 = face_color_255
+        self._face_color_float: tuple[float, float, float] = (
+            face_color_255[0] / 255.0,
+            face_color_255[1] / 255.0,
+            face_color_255[2] / 255.0,
+        )
+        self._complementary_float = _COMPLEMENTARY_MAP_FLOAT.get(
+            face_color_255, (1.0, 0.0, 1.0)
+        )
+        self._max_marker_radius = max_marker_radius
+
+        # Calculate cell size and base radius
+        x_size: float = np.linalg.norm(vertexes[1] - vertexes[0])  # type: ignore
+        y_size: float = np.linalg.norm(vertexes[3] - vertexes[0])  # type: ignore
+        self._face_size: float = min(x_size, y_size)
+        self._base_radius: float = min(
+            self._face_size / 2.0 * 0.8, max_marker_radius
+        )
+
+    @property
+    def cell_size(self) -> float:
+        return self._face_size
+
+    @property
+    def face_color(self) -> tuple[float, float, float]:
+        return self._face_color_float
+
+    @property
+    def complementary_color(self) -> tuple[float, float, float]:
+        return self._complementary_float
+
+    def draw_ring(
+        self,
+        inner_radius: float,
+        outer_radius: float,
+        color: tuple[float, float, float],
+        height: float,
+    ) -> None:
+        vx = self._vertexes
+        center = (vx[0] + vx[2]) / 2
+
+        r_outer = self._base_radius * outer_radius
+        r_inner = self._base_radius * inner_radius
+        h = height * self._face_size
+
+        p1 = center + self._ortho_dir * h
+        p2 = center - self._ortho_dir * h
+
+        marker_color = _color_float_to_vcolor(color)
+        self._renderer.shapes.full_cylinder(
+            _Cell._to_point3d(p1), _Cell._to_point3d(p2),
+            r_outer, r_inner, marker_color,
+        )
+
+    def draw_filled_circle(
+        self,
+        radius: float,
+        color: tuple[float, float, float],
+        height: float,
+    ) -> None:
+        self.draw_ring(0.0, radius, color, height)
+
+    def draw_cross(self, color: tuple[float, float, float]) -> None:
+        vx = self._vertexes
+        color_rgb = _color_float_to_vcolor(color)
+        points = [_Cell._to_point3d(v) for v in vx]
+        self._renderer.shapes.line(points[0], points[2], 2.0, color_rgb)
+        self._renderer.shapes.line(points[1], points[3], 2.0, color_rgb)
+
+    def draw_arrow(
+        self,
+        color: tuple[float, float, float],
+        direction: float,
+        radius_factor: float,
+        thickness: float,
+    ) -> None:
+        # Arrow markers not supported in legacy renderer
+        pass
+
+    def draw_checkmark(
+        self,
+        color: tuple[float, float, float],
+        radius_factor: float,
+        thickness: float,
+        height_offset: float,
+    ) -> None:
+        # Checkmark markers not supported in legacy renderer
+        pass
+
+    def draw_bold_cross(
+        self,
+        color: tuple[float, float, float],
+        radius_factor: float,
+        thickness: float,
+        height_offset: float,
+    ) -> None:
+        # Bold cross markers not supported in legacy renderer
+        pass
+
+    def draw_character(
+        self,
+        character: str,
+        color: tuple[float, float, float],
+        radius_factor: float,
+    ) -> None:
+        # Character markers not supported in legacy renderer
+        pass
 
 
 def _color_2_v_color(c: Color) -> _VColor:
@@ -420,12 +571,19 @@ class _Cell:
                     points = self._vertices_to_points(_vx)
                     renderer.shapes.lines_in_quad(points, _nn, 5, (138, 43, 226))
 
-            # Get markers using the new MarkerConfig system
+            # Get markers and draw using toolkit pattern
             _markers = get_markers_from_part_edge(part_edge)
 
             if _markers:
+                toolkit = LegacyCellToolkit(
+                    vertexes=_vx,
+                    ortho_direction=self._face_board.ortho_direction,
+                    face_color_255=facet_color,
+                    renderer=renderer,
+                    max_marker_radius=cfg.max_marker_radius,
+                )
                 for marker in _markers:
-                    self._create_markers(_vx, facet_color, marker)
+                    marker.draw(toolkit)
 
         if isinstance(part, Corner):
 
@@ -500,203 +658,6 @@ class _Cell:
                                 renderer.shapes.cross(points, cross_width_x, cross_color_x)
                             if attributes.get("on_y", False):
                                 renderer.shapes.cross(points, cross_width_y, cross_color_y)
-
-    def _create_markers_box(self, vertexes: Sequence[ndarray], color, marker: bool):
-
-        if not marker:
-            return
-
-        # vertex = [left_bottom3, right_bottom3, right_top3, left_top3]
-
-        ortho_dir: ndarray = self._face_board.ortho_direction
-        norm = np.linalg.norm(ortho_dir)
-        ortho_dir /= norm
-
-        vx = vertexes
-
-        center = (vx[0] + vx[2]) / 2
-
-        # a unit vectors
-        v1: list[ndarray] = [(v - center) / np.linalg.norm(v - center) for v in vx]
-
-        # [left_bottom3, right_bottom3, right_top3, left_top3]
-        bottom: list[ndarray] = []
-        top: list[ndarray] = []
-
-        _face_size = np.linalg.norm(vertexes[0] - vertexes[2])
-
-        height = 2
-        half_bottom_size = _face_size * 0.8 / 2.0
-        half_top_size = _face_size * 0.5 / 2.0
-
-        for v in v1:
-            p = center + v * half_bottom_size
-            bottom.append(p)
-            p = center + height * ortho_dir + v * half_top_size
-            top.append(p)
-
-        renderer = self._renderer
-        bottom_points = self._vertices_to_points(bottom)
-        top_points = self._vertices_to_points(top)
-        renderer.shapes.box_with_lines(bottom_points, top_points, color, 3, (0, 0, 0))
-
-    def _create_markers_sphere(self, vertexes: Sequence[ndarray], marker_color, marker: bool):
-
-        if not marker:
-            return
-
-        # vertex = [left_bottom3, right_bottom3, right_top3, left_top3]
-        vx = vertexes
-
-        center = (vx[0] + vx[2]) / 2
-
-        l1: float = np.linalg.norm(vertexes[0] - vertexes[1])  # type: ignore
-        l2: float = np.linalg.norm(vertexes[0] - vertexes[3])  # type: ignore
-        _face_size = min([l1, l2])
-
-        radius = _face_size / 2.0 * 0.8
-        radius = min([radius, self._config.max_marker_radius])
-
-        # this is also supported by glCallLine
-        renderer = self._renderer
-        center_point = self._to_point3d(center)
-        renderer.shapes.sphere(center_point, radius, marker_color)
-
-    def _create_markers_cycle(self, vertexes: Sequence[ndarray], marker_color,
-                              _radius: float,
-                              thick: float):
-
-        # vertex = [left_bottom3, right_bottom3, right_top3, left_top3]
-        vx = vertexes
-
-        center = (vx[0] + vx[2]) / 2
-
-        l1: float = np.linalg.norm(vertexes[0] - vertexes[1])  # type: ignore
-        l2: float = np.linalg.norm(vertexes[0] - vertexes[3])  # type: ignore
-        _face_size = min([l1, l2])
-
-        radius = _face_size / 2.0 * 0.8
-        radius = min([radius, self._config.max_marker_radius])
-
-        radius *= _radius
-
-        height: float = 0.01
-        r_outer = radius
-        r_inner = radius * (1 - thick)
-
-        center += self._face_board.ortho_direction * 30
-
-        p1 = center + self._face_board.ortho_direction * height
-
-        # this is also supported by glCallLine
-        # shapes.cylinder(p1, p2, r1, r2, marker_color)
-        renderer = self._renderer
-        # Our protocol uses center and normal vector
-        center_point = self._to_point3d(p1)
-        normal = self._to_point3d(self._face_board.ortho_direction)
-        renderer.shapes.disk(center_point, normal, r_inner, r_outer, marker_color)
-
-    def _create_markers(self, vertexes: Sequence[ndarray],
-                        facet_color: _VColor,
-                        marker: MarkerConfig):
-        """Draw a marker on the cell.
-
-        Args:
-            vertexes: Cell corner vertices [left_bottom, right_bottom, right_top, left_top]
-            facet_color: RGB color (0-255) of the face for complementary color calculation
-            marker: MarkerConfig containing all marker properties
-        """
-        # Skip cross markers - they should be handled separately as lines
-        if marker.shape == MarkerShape.CROSS:
-            # Draw cross as two diagonal lines
-            vx = vertexes
-            color_rgb: _VColor
-            if marker.color is not None:
-                # Convert from float (0.0-1.0) to int (0-255)
-                color_rgb = (
-                    int(marker.color[0] * 255),
-                    int(marker.color[1] * 255),
-                    int(marker.color[2] * 255),
-                )
-            else:
-                color_rgb = (0, 0, 0)  # Default black for cross
-
-            points = self._vertices_to_points(vx)
-            # Draw X through corners
-            self._renderer.shapes.line(points[0], points[2], 2.0, color_rgb)  # lb to rt
-            self._renderer.shapes.line(points[1], points[3], 2.0, color_rgb)  # rb to lt
-            return
-
-        # Ring or filled circle markers
-        vx = vertexes
-        center = (vx[0] + vx[2]) / 2
-
-        x_vec_size = vertexes[1] - vertexes[0]
-        y_vec_size = vertexes[3] - vertexes[0]
-
-        x_size: float = np.linalg.norm(x_vec_size)  # type: ignore
-        y_size: float = np.linalg.norm(y_vec_size)  # type: ignore
-        _face_size = min([x_size, y_size])
-
-        # Calculate radius
-        radius = _face_size / 2.0 * 0.8
-        radius = min([radius, self._config.max_marker_radius])
-        radius *= marker.radius_factor
-
-        # Calculate inner/outer radius based on shape
-        r_outer = radius
-        if marker.shape == MarkerShape.FILLED_CIRCLE:
-            r_inner = 0.0
-        else:  # RING
-            r_inner = radius * (1 - marker.thickness)
-
-        # Calculate height offset
-        height = marker.height_offset * _face_size
-
-        # Determine marker color
-        marker_color: _VColor
-        if marker.color is not None:
-            # Use explicit color (convert from float to int)
-            marker_color = (
-                int(marker.color[0] * 255),
-                int(marker.color[1] * 255),
-                int(marker.color[2] * 255),
-            )
-        elif marker.use_complementary_color:
-            # Compute complementary color from facet color
-            marker_color = self._get_complementary_color(facet_color)
-        else:
-            # Fallback to magenta
-            marker_color = (255, 0, 255)
-
-        p1 = center + self._face_board.ortho_direction * height
-        p2 = center - self._face_board.ortho_direction * height
-
-        renderer = self._renderer
-        p1_point = self._to_point3d(p1)
-        p2_point = self._to_point3d(p2)
-        renderer.shapes.full_cylinder(p1_point, p2_point, r_outer, r_inner, marker_color)
-
-    def _get_complementary_color(self, face_color: _VColor) -> _VColor:
-        """Get a complementary color for maximum contrast.
-
-        Args:
-            face_color: RGB tuple (0-255 range) of the face color
-
-        Returns:
-            RGB tuple (0-255) for the marker color
-        """
-        # Map common face colors to high-contrast complementary colors
-        # Values are approximate matches for the standard cube colors
-        complementary_map: dict[_VColor, _VColor] = {
-            (255, 0, 0): (0, 255, 255),      # Red -> Cyan
-            (0, 255, 0): (255, 0, 255),      # Green -> Magenta
-            (0, 0, 255): (255, 255, 0),      # Blue -> Yellow
-            (255, 255, 0): (102, 51, 255),   # Yellow -> Blue/Purple
-            (255, 128, 0): (0, 255, 255),    # Orange -> Cyan
-            (255, 255, 255): (153, 0, 153),  # White -> Dark Magenta
-        }
-        return complementary_map.get(face_color, (255, 0, 255))  # Default to magenta
 
     def gui_movable_gui_objects(self) -> Iterable[int]:
         return [ll for ls in self.gl_lists_movable.values() for ll in ls]

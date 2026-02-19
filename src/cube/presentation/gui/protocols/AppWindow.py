@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from cube.application.AbstractApp import AbstractApp
     from cube.application.protocols.AnimatableViewer import AnimatableViewer
     from cube.presentation.gui.commands import Command, CommandSequence
+    from cube.presentation.gui.factory import GUIBackend
     from cube.presentation.gui.protocols.Renderer import Renderer
 
 
@@ -46,6 +47,11 @@ class AppWindow(Protocol):
 
         Provides access to cube, operator, solver, animation manager.
         """
+        ...
+
+    @property
+    def backend(self) -> "GUIBackend":
+        """Access the GUI backend (renderer, event loop, animation factory)."""
         ...
 
     @property
@@ -293,5 +299,20 @@ class AppWindow(Protocol):
             window.inject_command_sequence(
                 Commands.Sleep(3) + Commands.SCRAMBLE_1 + Commands.QUIT
             )
+        """
+        ...
+
+    def show_popup(self, title: str, lines: list[str],
+                   line_colors: list[tuple[int, int, int, int]] | None = None) -> None:
+        """Show a modal text popup overlay.
+
+        Displays a scrollable text panel on top of the 3D view.
+        While visible, keyboard/mouse events are intercepted by the popup.
+        Close with Escape or OK button.
+
+        Args:
+            title: Title text displayed at top of panel
+            lines: Text lines to display (scrollable)
+            line_colors: Optional per-line RGBA color tuples
         """
         ...
