@@ -102,16 +102,6 @@ class _App(AbstractApp, IServiceProvider):
     def am(self) -> 'AnimationManager | None':
         return self._am
 
-    def disable_animation(self) -> None:
-        """Disable animation completely (nullify animation manager + operator flag).
-
-        Called by GUIBackendFactory.create_app_window() when the backend
-        does not support animation. This is the single coordination point
-        that ensures the app state matches backend capabilities.
-        """
-        self._am = None
-        self._op.toggle_animation_on(enable=False)
-
     @property
     def op(self) -> Operator:
         return self._op

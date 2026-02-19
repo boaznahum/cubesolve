@@ -74,10 +74,11 @@ def create_app_window(
     height: int = 720,
     title: str = "Cube Solver",
 ) -> "AppWindow":
-    """The ONLY factory for creating an app with a backend.
+    """SINGLE POINT OF CREATION for app + backend.
 
-    Decides animation based on caller preference AND backend capability.
-    Returns AppWindow (access app via window.app).
+    All code that needs an app with a GUI backend MUST go through this function.
+    It ensures animation is only enabled when the backend supports it.
+    Returns AppWindow (access app via window.app, backend via window.backend).
 
     Args:
         backend_name: Backend to use ("pyglet", "pyglet2", "tkinter", "console", "headless", "web").

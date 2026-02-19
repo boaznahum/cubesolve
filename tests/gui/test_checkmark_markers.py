@@ -16,9 +16,8 @@ Run for 5 seconds viewing time:
 import pytest
 
 from cube.application import _config as config
-from cube.application.AbstractApp import AbstractApp
 from cube.application.exceptions.app_exceptions import AppExit
-from cube.presentation.gui.factory import BackendRegistry
+from cube.main_any_backend import create_app_window
 from cube.presentation.gui.commands import Commands
 from tests.gui.tester.GUITestResult import GUITestResult
 
@@ -47,9 +46,11 @@ def test_checkmark_markers_on_centers(backend: str):
     try:
         config.GUI_TEST_MODE = True
 
-        # Create app with 3x3 cube
-        app = AbstractApp.create_app(cube_size=5)
-        cube = app.cube
+        # Single point of creation: app + backend wired together
+        win = create_app_window(backend, cube_size=5, animation=False,
+                                width=720, height=720, title="Checkmark Markers Test")
+        event_loop = win.backend.event_loop
+        cube = win.app.cube
 
         # Get marker factory and manager from service provider
         mf = cube.sp.marker_factory
@@ -63,11 +64,6 @@ def test_checkmark_markers_on_centers(backend: str):
             mm.add_marker(center_edge, "checkmark", checkmark, moveable=False)
 
         print(f"\nAdded checkmark markers to {len(list(cube.centers))} center pieces")
-
-        # Create backend and window
-        gui_backend = BackendRegistry.get_backend(backend)
-        event_loop = gui_backend.event_loop
-        win = gui_backend.create_app_window(app, 720, 720, "Checkmark Markers Test")
 
         # Schedule quit after viewing time using command sequence
         print(f"Will view markers for {view_duration} seconds then quit...")
@@ -132,8 +128,12 @@ def test_checkmark_markers_on_nxn_centers(cube_size: int, backend: str):
     try:
         config.GUI_TEST_MODE = True
 
-        app = AbstractApp.create_app(cube_size=cube_size)
-        cube = app.cube
+        # Single point of creation: app + backend wired together
+        win = create_app_window(backend, cube_size=cube_size, animation=False,
+                                width=720, height=720,
+                                title=f"Checkmark Markers - {cube_size}x{cube_size}")
+        event_loop = win.backend.event_loop
+        cube = win.app.cube
 
         mf = cube.sp.marker_factory
         mm = cube.sp.marker_manager
@@ -148,10 +148,6 @@ def test_checkmark_markers_on_nxn_centers(cube_size: int, backend: str):
                 marker_count += 1
 
         print(f"\nAdded {marker_count} checkmark markers to {cube_size}x{cube_size} cube centers")
-
-        gui_backend = BackendRegistry.get_backend(backend)
-        event_loop = gui_backend.event_loop
-        win = gui_backend.create_app_window(app, 720, 720, f"Checkmark Markers - {cube_size}x{cube_size}")
 
         # Schedule quit after viewing time using command sequence
         print(f"Will view markers for {view_duration} seconds then quit...")
