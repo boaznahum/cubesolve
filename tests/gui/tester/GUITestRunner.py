@@ -174,9 +174,9 @@ class GUITestRunner:
                 print(f"  Backend: {backend}, Cube size: {cube_size}, Animation: {enable_animation}, Timeout: {timeout_sec}s")
 
             # Create app and backend
-            # TODO: This bypasses create_app_window() coordination point.
-            #  It calls _create_app() directly, skipping backend.supports_animation check.
-            #  Consider using create_app_window() instead, see fix-marker-refactor.md
+            # Note: App is created with animation=enable_animation, but
+            # create_app_window() will disable animation if the backend
+            # doesn't support it (single coordination point).
             app = AbstractApp._create_app(cube_size=cube_size, animation=enable_animation)
             gui_backend = BackendRegistry.get_backend(backend)
             event_loop = gui_backend.event_loop

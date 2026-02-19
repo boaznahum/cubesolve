@@ -82,6 +82,15 @@ class AbstractApp(metaclass=ABCMeta):
     def am(self) -> "AnimationManager | None":
         pass
 
+    @abstractmethod
+    def disable_animation(self) -> None:
+        """Disable animation completely (nullify animation manager + operator flag).
+
+        Called by GUIBackendFactory.create_app_window() when the backend
+        does not support animation.
+        """
+        raise NotImplementedError
+
     @property
     @abstractmethod
     def op(self) -> Operator:

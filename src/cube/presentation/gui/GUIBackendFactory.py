@@ -108,6 +108,11 @@ class GUIBackendFactory:
         This also wires up the animation manager to the event loop
         and sets cube visibility based on whether the backend is headless.
         """
+        # If backend doesn't support animation, disable it completely
+        # so downstream code (e.g. ConsoleAppWindow) sees a consistent state.
+        if not self.supports_animation:
+            app.disable_animation()
+
         # Wire up animation manager to event loop
         if app.am is not None:
             app.am.set_event_loop(self.event_loop)

@@ -97,8 +97,7 @@ class ConsoleAppWindow(AppWindowBase, AppWindow):
         # Initialize base class (sets _app, _backend, _animation_manager, etc.)
         super().__init__(app, backend)
 
-        # Console doesn't support animation - disable it
-        # but still single pint of creation isn ot enforced, see todo in fix-marker-refactor.md
+        # Console doesn't support animation — create_app_window() disables it
         assert self._animation_manager is None
         assert app.op.animation_enabled is False
 
