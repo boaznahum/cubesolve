@@ -50,6 +50,9 @@ class OutlinedCircleMarker(MarkerCreator):
     min_radius: float = 0.0
     min_outline_width: float = 0.0
 
+    def get_z_order(self) -> int:
+        return self.z_order
+
     def draw(self, toolkit: "MarkerToolkit") -> None:
         """Draw outlined circle: outline ring underneath, filled circle on top.
 

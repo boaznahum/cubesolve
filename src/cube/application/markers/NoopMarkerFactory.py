@@ -15,8 +15,9 @@ class _NoopMarkerCreator(MarkerCreator):
 
     __slots__ = ()
 
-    @property
-    def z_order(self) -> int:
+    z_order: int = 0
+
+    def get_z_order(self) -> int:
         return 0
 
     def draw(self, toolkit: "MarkerToolkit") -> None:

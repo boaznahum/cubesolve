@@ -76,12 +76,12 @@ def get_markers_from_part_edge(part_edge: "PartEdge") -> list[MarkerCreator]:
     # All marker creators are frozen dataclasses — hashable
     unique: dict[Any, Any] = {}
     for marker in all_markers:
-        if marker not in unique or marker.z_order > unique[marker].z_order:
+        if marker not in unique or marker.get_z_order() > unique[marker].get_z_order():
             unique[marker] = marker
 
     # Sort by z_order (lowest first, so highest draws on top)
     result: list[MarkerCreator] = list(unique.values())
-    result.sort(key=lambda m: m.z_order)
+    result.sort(key=lambda m: m.get_z_order())
     return result
 
 

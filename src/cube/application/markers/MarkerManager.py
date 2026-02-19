@@ -188,12 +188,12 @@ class MarkerManager(IMarkerManager):
         # MarkerCreator is frozen/hashable, so can use as dict key
         unique: dict[MarkerCreator, MarkerCreator] = {}
         for marker in all_markers:
-            if marker not in unique or marker.z_order > unique[marker].z_order:
+            if marker not in unique or marker.get_z_order() > unique[marker].get_z_order():
                 unique[marker] = marker
 
         # Sort by z_order (lowest first, so highest draws on top)
         result = list(unique.values())
-        result.sort(key=lambda m: m.z_order)
+        result.sort(key=lambda m: m.get_z_order())
         return result
 
     def get_markers_raw(self, part_edge: PartEdge) -> dict[str, MarkerCreator]:

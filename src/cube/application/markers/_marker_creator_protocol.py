@@ -20,8 +20,9 @@ if TYPE_CHECKING:
 class MarkerCreator(Protocol):
     """Stored on PartEdge. Knows its data + how to draw via toolkit."""
 
-    z_order: int
-    """Drawing order (higher = drawn on top). Default 0."""
+    def get_z_order(self) -> int:
+        """Return drawing order (higher = drawn on top)."""
+        ...
 
     def draw(self, toolkit: "MarkerToolkit") -> None:
         """Draw this marker using the provided toolkit primitives.

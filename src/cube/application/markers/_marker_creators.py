@@ -51,6 +51,9 @@ class RingMarker(MarkerCreator):
     use_complementary_color: bool = False
     z_order: int = 0
 
+    def get_z_order(self) -> int:
+        return self.z_order
+
     def draw(self, toolkit: "MarkerToolkit") -> None:
         c = _resolve_color(self.color, self.use_complementary_color, toolkit)
         inner = self.radius_factor * (1.0 - self.thickness)
@@ -67,6 +70,9 @@ class FilledCircleMarker(MarkerCreator):
     use_complementary_color: bool = False
     z_order: int = 0
 
+    def get_z_order(self) -> int:
+        return self.z_order
+
     def draw(self, toolkit: "MarkerToolkit") -> None:
         c = _resolve_color(self.color, self.use_complementary_color, toolkit)
         toolkit.draw_filled_circle(self.radius_factor, c, self.height_offset)
@@ -78,6 +84,9 @@ class CrossMarker(MarkerCreator):
 
     color: ColorRGB = (0.0, 0.0, 0.0)
     z_order: int = 0
+
+    def get_z_order(self) -> int:
+        return self.z_order
 
     def draw(self, toolkit: "MarkerToolkit") -> None:
         toolkit.draw_cross(self.color)
@@ -93,6 +102,9 @@ class ArrowMarker(MarkerCreator):
     thickness: float = 1.0
     z_order: int = 0
 
+    def get_z_order(self) -> int:
+        return self.z_order
+
     def draw(self, toolkit: "MarkerToolkit") -> None:
         toolkit.draw_arrow(self.color, self.direction, self.radius_factor, self.thickness)
 
@@ -106,6 +118,9 @@ class CheckmarkMarker(MarkerCreator):
     thickness: float = 1.0
     height_offset: float = 0.08
     z_order: int = 0
+
+    def get_z_order(self) -> int:
+        return self.z_order
 
     def draw(self, toolkit: "MarkerToolkit") -> None:
         toolkit.draw_checkmark(self.color, self.radius_factor, self.thickness, self.height_offset)
@@ -121,6 +136,9 @@ class BoldCrossMarker(MarkerCreator):
     height_offset: float = 0.15
     z_order: int = 0
 
+    def get_z_order(self) -> int:
+        return self.z_order
+
     def draw(self, toolkit: "MarkerToolkit") -> None:
         toolkit.draw_bold_cross(self.color, self.radius_factor, self.thickness, self.height_offset)
 
@@ -133,6 +151,9 @@ class CharacterMarker(MarkerCreator):
     color: ColorRGB = (0.0, 0.0, 0.0)
     radius_factor: float = 0.8
     z_order: int = 0
+
+    def get_z_order(self) -> int:
+        return self.z_order
 
     def draw(self, toolkit: "MarkerToolkit") -> None:
         toolkit.draw_character(self.character, self.color, self.radius_factor)
