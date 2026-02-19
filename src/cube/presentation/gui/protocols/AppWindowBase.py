@@ -100,6 +100,11 @@ class AppWindowBase(ABC):
         return self._viewer
 
     @property
+    def backend(self) -> "GUIBackend":
+        """Access the GUI backend."""
+        return self._backend
+
+    @property
     def renderer(self) -> "Renderer":
         """Access the renderer."""
         return self._backend.renderer

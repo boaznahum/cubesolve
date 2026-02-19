@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from cube.application.AbstractApp import AbstractApp
     from cube.application.protocols.AnimatableViewer import AnimatableViewer
     from cube.presentation.gui.commands import Command, CommandSequence
+    from cube.presentation.gui.factory import GUIBackend
     from cube.presentation.gui.protocols.Renderer import Renderer
 
 
@@ -46,6 +47,11 @@ class AppWindow(Protocol):
 
         Provides access to cube, operator, solver, animation manager.
         """
+        ...
+
+    @property
+    def backend(self) -> "GUIBackend":
+        """Access the GUI backend (renderer, event loop, animation factory)."""
         ...
 
     @property
