@@ -65,6 +65,8 @@ class CubeLayout(Protocol):
         adjacent = layout.get_adjacent_faces(FaceName.F)  # (U, R, D, L)
     """
 
+    _layout_cache: "dict[frozenset[tuple[FaceName, Color]], CubeLayout]" = {}
+
     @staticmethod
     def create_layout(
         read_only: bool,
@@ -76,8 +78,11 @@ class CubeLayout(Protocol):
         Factory method to create layout instances without exposing
         the private implementation class.
 
+        Read-only layouts are cached by their face→color mapping,
+        so multiple cubes with the same color scheme share one layout.
+
         Args:
-            read_only: If True, layout cannot be modified (used for singletons).
+            read_only: If True, layout cannot be modified (cached).
             faces: Mapping of each face to its color.
             sp: Service provider for configuration access.
 
@@ -85,7 +90,18 @@ class CubeLayout(Protocol):
             CubeLayout instance with the given configuration.
         """
         from cube.domain.geometric._CubeLayout import _CubeLayout
-        return _CubeLayout(read_only, faces, sp)
+
+        if not read_only:
+            return _CubeLayout(read_only, faces, sp)
+
+        key = frozenset(faces.items())
+        cached = CubeLayout._layout_cache.get(key)
+        if cached is not None:
+            return cached
+
+        layout: CubeLayout = _CubeLayout(read_only, faces, sp)
+        CubeLayout._layout_cache[key] = layout
+        return layout
 
     @staticmethod
     def sanity_cost_assert_matches_scheme(

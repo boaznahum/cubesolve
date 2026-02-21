@@ -28,7 +28,7 @@ class ShadowCubeHelper(SolverHelper):
         from cube.domain.model.Cube import Cube
 
         # Create shadow 3x3 cube
-        shadow_cube = Cube(size=3, sp=self.cube.sp)
+        shadow_cube = Cube(size=3, sp=self.cube.sp, scheme=self.cube.original_scheme)
         shadow_cube.is_even_cube_shadow = self.cube.is_even
         self._copy_state_to_shadow(shadow_cube, th)
 

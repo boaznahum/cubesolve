@@ -348,7 +348,8 @@ class Cube(CubeSupplier):
 
     _slices: dict[SliceName, Slice]
 
-    def __init__(self, size: int, sp: IServiceProvider) -> None:
+    def __init__(self, size: int, sp: IServiceProvider,
+                 scheme: "CubeColorScheme | None" = None) -> None:
         super().__init__()
         self._size = size
         self._sp = sp
@@ -365,7 +366,7 @@ class Cube(CubeSupplier):
         from cube.domain.geometric.cube_layout import CubeLayout as CL
         from cube.domain.geometric._SizedCubeLayout import _SizedCubeLayout
 
-        self._original_scheme = cube_color_schemes.random_scheme()
+        self._original_scheme = scheme if scheme is not None else cube_color_schemes.random_scheme()
         self._layout: CubeLayout = CL.create_layout(True, self._original_scheme.faces, self._sp)
         self._sized_layout: SizedCubeLayout = _SizedCubeLayout(self)
         self._reset()

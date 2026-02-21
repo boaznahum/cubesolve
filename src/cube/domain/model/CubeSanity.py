@@ -18,10 +18,9 @@ WHAT GETS VALIDATED
 ===================
 
 1. CORNERS (all cube sizes):
-   - All 8 BOY corners must exist with valid color combinations:
-     * YOB, YRB, YOG, YRG (yellow layer)
-     * WOB, WRB, WOG, WRG (white layer)
-   - Raises if any corner has impossible colors (e.g., W-Y on same corner)
+   - All 8 corners must exist with valid color combinations
+     (derived from layout: each corner is 3 mutually adjacent faces)
+   - Raises if any corner has impossible colors (e.g., opposite colors on same corner)
 
 2. CENTER DISTRIBUTION (NxN cubes):
    - Each color must have exactly n_slices² center pieces
@@ -35,7 +34,7 @@ WHAT GETS VALIDATED
 
 4. 3x3-SPECIFIC (only when cube.is3x3 is True):
    - All 6 centers exist with valid colors
-   - All 12 edges exist with valid BOY color combinations
+   - All 12 edges exist with valid color combinations
 
 WHY THIS MATTERS FOR EVEN CUBES
 ===============================
@@ -85,21 +84,11 @@ class CubeSanity:
             For is_sanity() behavior (return bool instead of raise), use:
             cube.is_sanity(force_check=True)
         """
-        # Step 1: Validate all 8 corners exist with valid BOY color combinations
-
-        corners = [
-            (Color.YELLOW, Color.ORANGE, Color.BLUE),
-            (Color.YELLOW, Color.RED, Color.BLUE),
-            (Color.YELLOW, Color.ORANGE, Color.GREEN),
-            (Color.YELLOW, Color.RED, Color.GREEN),
-            (Color.WHITE, Color.ORANGE, Color.BLUE),
-            (Color.WHITE, Color.RED, Color.BLUE),
-            (Color.WHITE, Color.ORANGE, Color.GREEN),
-            (Color.WHITE, Color.RED, Color.GREEN),
-        ]
-
-        for corner in corners:
-            # find_corner_by_colors raises if corner doesn't exist
+        # Step 1: Validate all 8 corners exist with valid color combinations
+        # Derived from the cube's layout: each corner is 3 adjacent faces
+        layout = cube.layout
+        for _, (f1, f2, f3) in layout.corner_faces().items():
+            corner = (layout[f1], layout[f2], layout[f3])
             cube.find_corner_by_colors(CHelper.colors_id(corner))
 
         # Step 2: Validate center piece distribution (expensive but catches corruption)
@@ -113,26 +102,13 @@ class CubeSanity:
             return
 
         # Validate all 6 center colors exist
-        for c in Color:
+        for c in layout.colors():
             cube.find_part_by_colors(frozenset([c]))
 
-        # Validate all 12 edges exist with valid BOY color pairs
-        for c1, c2 in [
-            (Color.WHITE, Color.ORANGE),
-            (Color.WHITE, Color.BLUE),
-            (Color.WHITE, Color.GREEN),
-            (Color.WHITE, Color.RED),
-            (Color.YELLOW, Color.ORANGE),
-            (Color.YELLOW, Color.BLUE),
-            (Color.YELLOW, Color.GREEN),
-            (Color.YELLOW, Color.RED),
-
-            (Color.ORANGE, Color.BLUE),
-            (Color.BLUE, Color.RED),
-            (Color.RED, Color.GREEN),
-            (Color.GREEN, Color.ORANGE),
-        ]:
-            cube.find_part_by_colors(frozenset([c1, c2]))
+        # Validate all 12 edges exist with valid color pairs
+        # Derived from layout: each edge is 2 adjacent faces
+        for _, (f1, f2) in layout.edge_faces().items():
+            cube.find_part_by_colors(frozenset([layout[f1], layout[f2]]))
 
     @staticmethod
     def _check_nxn_centers(cube: Cube) -> None:
@@ -151,7 +127,7 @@ class CubeSanity:
         """
         n_slices = cube.n_slices
         dist: Mapping[Color, Mapping[Hashable, Sequence[tuple[int, int]]]] = cube.cqr.get_centers_dist()
-        for clr in Color:
+        for clr in cube.layout.colors():
             clr_dist = dist[clr]
 
             def _print_clr():
