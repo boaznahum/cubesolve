@@ -362,7 +362,6 @@ class Cube(CubeSupplier):
         self._listeners: list["CubeListener"] = []
         self._is_even_cube_shadow: bool = False
 
-        from cube.domain.geometric.cube_color_schemes import boy_scheme
         from cube.domain.geometric.cube_layout import CubeLayout as CL
         from cube.domain.geometric._SizedCubeLayout import _SizedCubeLayout
 
