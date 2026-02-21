@@ -21,28 +21,7 @@ from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model._elements import AxisName, EdgePosition
 
-# ============================================================================
-# PRIVATE GEOMETRY TABLES - Only accessed through CubeLayout methods
-# ============================================================================
-
-# Opposite face pairs (canonical direction)
-_OPPOSITE: dict[FaceName, FaceName] = {
-    FaceName.F: FaceName.B,
-    FaceName.U: FaceName.D,
-    FaceName.L: FaceName.R,
-}
-
-# Reverse mapping
-_REV_OPPOSITE: dict[FaceName, FaceName] = {v: k for k, v in _OPPOSITE.items()}
-
-# Bidirectional opposite mapping
-_ALL_OPPOSITE: dict[FaceName, FaceName] = {**_OPPOSITE, **_REV_OPPOSITE}
-
-# Adjacent faces (derived from opposite)
-_ADJACENT: dict[FaceName, tuple[FaceName, ...]] = {
-    face: tuple(f for f in FaceName if f != face and f != _ALL_OPPOSITE[face])
-    for face in FaceName
-}
+from cube.domain.geometric.cube_faces_scheme import CubeFacesScheme
 
 # Slice rotation faces: which face each slice rotates like
 _SLICE_ROTATION_FACE: dict[SliceName, FaceName] = {
@@ -78,6 +57,18 @@ class _CubeLayout(CubeLayout):
     and shared by all implementations.
     """
 
+    __slots__ = (
+        "_faces",
+        "_read_only",
+        "_sp",
+        "_edge_colors",
+        "_cache_manager",
+        "_slices",
+        "_internal_cube",
+        "_creating_internal_cube",
+        "_scheme",
+    )
+
     def __init__(self, read_only: bool, faces: Mapping[FaceName, Color],
                  sp: IServiceProvider) -> None:
         """Create a new CubeLayout.
@@ -92,6 +83,7 @@ class _CubeLayout(CubeLayout):
         self._sp = sp
         self._edge_colors: Collection[frozenset[Color]] | None = None
         self._cache_manager = CacheManager.create(sp.config)
+        self._scheme: CubeFacesScheme = CubeFacesScheme.inst()
 
         self._slices: Mapping[SliceName, SliceLayout] = {
             SliceName.S: _SliceLayout(SliceName.S, self, sp),
@@ -164,10 +156,11 @@ class _CubeLayout(CubeLayout):
 
         colors: set[frozenset[Color]] = set()
 
+        scheme = self._scheme
         for f1, c1 in self._faces.items():
             for f2, c2 in self._faces.items():
                 if f1 is not f2:
-                    if f2 is not _ALL_OPPOSITE[f1]:
+                    if f2 is not scheme.opposite(f1):
                         c = frozenset((c1, c2))
                         colors.add(c)
 
@@ -176,65 +169,12 @@ class _CubeLayout(CubeLayout):
         return self._edge_colors
 
     def edge_faces(self) -> dict["EdgeName", tuple[FaceName, FaceName]]:
-        """Get mapping from EdgeName to the two faces it connects.
-
-        Uses the internal 3x3 cube to iterate through all edges and extract
-        their face relationships. This ensures the mapping always matches the
-        actual cube structure.
-
-        Returns:
-            Dictionary mapping each EdgeName to a tuple of (face1, face2).
-            The two faces are adjacent (share an edge) and non-opposite.
-
-        Example:
-            edge_faces()[EdgeName.FU] = (FaceName.F, FaceName.U)
-        """
-
-        result: dict[EdgeName, tuple[FaceName, FaceName]] = {}
-
-        # Iterate through all edges in the internal 3x3 cube
-        for face in self._cube.faces:
-            for edge in face.edges:
-                edge_name: EdgeName = edge.name
-                if edge_name not in result:
-                    # Get the two faces this edge connects
-                    f1 = edge.e1.face.name
-                    f2 = edge.e2.face.name
-                    result[edge_name] = (f1, f2)
-
-        return result
+        """Get mapping from EdgeName to the two faces it connects."""
+        return self._scheme.edge_faces()
 
     def corner_faces(self) -> dict["CornerName", tuple[FaceName, FaceName, FaceName]]:
-        """Get mapping from CornerName to the three faces it connects.
-
-        Uses the internal 3x3 cube to iterate through all corners and extract
-        their face relationships. This ensures the mapping always matches the
-        actual cube structure.
-
-        Returns:
-            Dictionary mapping each CornerName to a tuple of (face1, face2, face3).
-            The three faces meet at a corner (all mutually adjacent).
-
-        Example:
-            corner_faces()[CornerName.FRU] = (FaceName.F, FaceName.R, FaceName.U)
-        """
-
-        result: dict[CornerName, tuple[FaceName, FaceName, FaceName]] = {}
-
-        # Iterate through all corners in the internal 3x3 cube
-        for face in self._cube.faces:
-            for corner in face.corners:
-                corner_name: CornerName = corner.name
-                if corner_name not in result:
-                    # Get the three faces this corner connects
-                    # Corner has a single slice with 3 edges (one per face)
-                    edges = corner._3x3_representative_edges
-                    f1 = edges[0].face.name
-                    f2 = edges[1].face.name
-                    f3 = edges[2].face.name
-                    result[corner_name] = (f1, f2, f3)
-
-        return result
+        """Get mapping from CornerName to the three faces it connects."""
+        return self._scheme.corner_faces()
 
     def opposite_color(self, color: Color) -> Color:
         """Get the color on the face opposite to the given color's face."""
@@ -261,13 +201,15 @@ class _CubeLayout(CubeLayout):
 
         # Check opposite colors
         # make sure that opposite colors on this, are the same in other layout
-        for f1, f2 in _OPPOSITE.items():
+        _scheme = self._scheme
+        for f1 in (FaceName.F, FaceName.U, FaceName.L):
+            f2 = _scheme.opposite(f1)
 
             c1 = other[f1]
             c2 = other[f2]
 
             this_c1_face: FaceName = this._find_face(c1)
-            this_c2_face = _ALL_OPPOSITE[this_c1_face]
+            this_c2_face = _scheme.opposite(this_c1_face)
 
             this_c2 = this._faces[this_c2_face]
             if c2 != this_c2:
@@ -311,30 +253,25 @@ class _CubeLayout(CubeLayout):
 
     def opposite(self, fn: FaceName) -> FaceName:
         """Get the face opposite to the given face."""
-        return _ALL_OPPOSITE[fn]
+        return self._scheme.opposite(fn)
 
     def is_adjacent(self, face1: FaceName, face2: FaceName) -> bool:
         """Check if two faces are adjacent (share an edge)."""
-        return face2 in _ADJACENT[face1]
+        return self._scheme.is_adjacent(face1, face2)
 
     def get_adjacent_faces(self, face: FaceName) -> tuple[FaceName, ...]:
         """Get all faces adjacent to the given face."""
-        return _ADJACENT[face]
+        return self._scheme.get_adjacent_faces(face)
 
     def get_face_neighbor(self, face_name: FaceName, position: EdgePosition) -> FaceName:
-        """Get the neighboring face at a specific edge position.
-
-        Uses the internal 3x3 cube to traverse face-edge relationships.
-        """
-        face = self._cube.face(face_name)
-        edge = face.get_edge(position)
-        return edge.get_other_face(face).name
+        """Get the neighboring face at a specific edge position."""
+        return self._scheme.get_face_neighbor(face_name, position)
 
     def get_slice_for_faces(self, source: FaceName, target: FaceName) -> SliceName | None:
         """Find which slice connects two faces."""
         for slice_name in SliceName:
             rotation_face = _SLICE_ROTATION_FACE[slice_name]
-            slice_faces = _ADJACENT[rotation_face]
+            slice_faces = self._scheme.get_adjacent_faces(rotation_face)
             if source in slice_faces and target in slice_faces:
                 return slice_name
         return None
@@ -346,7 +283,7 @@ class _CubeLayout(CubeLayout):
         result: list[SliceName] = []
         for slice_name in SliceName:
             rotation_face = _SLICE_ROTATION_FACE[slice_name]
-            slice_faces = _ADJACENT[rotation_face]
+            slice_faces = self._scheme.get_adjacent_faces(rotation_face)
             if source in slice_faces and target in slice_faces:
                 result.append(slice_name)
         return result
@@ -370,7 +307,7 @@ class _CubeLayout(CubeLayout):
         """Find which slice is parallel to a face."""
         for slice_name in SliceName:
             rotation_face = _SLICE_ROTATION_FACE[slice_name]
-            opposite_face = _ALL_OPPOSITE[rotation_face]
+            opposite_face = self._scheme.opposite(rotation_face)
             if face not in (rotation_face, opposite_face):
                 return slice_name
         raise ValueError(f"No slice parallel to {face}")
@@ -732,9 +669,7 @@ class _CubeLayout(CubeLayout):
 
     def get_face_neighbors_cw_names(self, face_name: FaceName) -> list[FaceName]:
         """Get the four neighboring face NAMES in clockwise rotation order."""
-        face = self._cube.face(face_name)
-        neighbors = self.get_face_neighbors_cw(face)
-        return [n.name for n in neighbors]
+        return self._scheme.get_face_neighbors_cw_names(face_name)
 
     def does_slice_cut_rows_or_columns(self, slice_name: SliceName, face_name: FaceName) -> CLGColRow:
         """Determine if a slice cuts rows or columns on a given face.
