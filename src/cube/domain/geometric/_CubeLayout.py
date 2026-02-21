@@ -21,7 +21,7 @@ from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model._elements import AxisName, EdgePosition
 
-from cube.domain.geometric.cube_faces_scheme import CubeFacesScheme
+from cube.domain.geometric.schematic_cube import SchematicCube
 
 # Slice rotation faces: which face each slice rotates like
 _SLICE_ROTATION_FACE: dict[SliceName, FaceName] = {
@@ -83,7 +83,7 @@ class _CubeLayout(CubeLayout):
         self._sp = sp
         self._edge_colors: Collection[frozenset[Color]] | None = None
         self._cache_manager = CacheManager.create(sp.config)
-        self._scheme: CubeFacesScheme = CubeFacesScheme.inst()
+        self._scheme: SchematicCube = SchematicCube.inst()
 
         self._slices: Mapping[SliceName, SliceLayout] = {
             SliceName.S: _SliceLayout(SliceName.S, self, sp),

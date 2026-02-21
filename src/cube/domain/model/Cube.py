@@ -424,6 +424,10 @@ class Cube(CubeSupplier):
 
         # see document right-top-left-coordinates.jpg
         # 12 edges
+        # DUPLICATION: These edge assignments encode face-neighbor topology.
+        # The same facts are duplicated in SchematicCube._EDGE_WIRING
+        # (cube/domain/geometric/schematic_cube.py) as abstract FaceName data.
+        # If you change wiring here, update _EDGE_WIRING there too.
         f._edge_top = u._edge_bottom = _create_edge(edges, f, u, True)
         f._edge_left = l._edge_right = _create_edge(edges, f, l, True)
         f._edge_right = r._edge_left = _create_edge(edges, f, r, True)
@@ -448,6 +452,11 @@ class Cube(CubeSupplier):
         self._edges_map = { e.name: e for e in edges }
 
         corners: list[Corner] = []
+        # DUPLICATION: These corner assignments encode which 3 faces meet at each corner.
+        # The same facts are derived in SchematicCube._derive_corner_faces()
+        # (cube/domain/geometric/schematic_cube.py) from the edge wiring.
+        # If you change wiring here, the corner derivation there should still hold,
+        # but verify.
 
         f._corner_top_left = l._corner_top_right = u._corner_bottom_left = _create_corner(corners, f, l, u)
         f._corner_top_right = r._corner_top_left = u._corner_bottom_right = _create_corner(corners, f, r, u)
