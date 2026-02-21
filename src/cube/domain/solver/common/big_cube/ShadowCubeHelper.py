@@ -32,7 +32,7 @@ class ShadowCubeHelper(SolverHelper):
         shadow_cube.is_even_cube_shadow = self.cube.is_even
         self._copy_state_to_shadow(shadow_cube, th)
 
-        assert shadow_cube.is_in_original_scheme, f"Shadow cube must match color scheme, face_colors={th.get_face_colors()}"
+        assert shadow_cube.match_original_scheme, f"Shadow cube must match color scheme, face_colors={th.get_face_colors()}"
 
         assert shadow_cube.is_sanity(force_check=True), "Shadow cube invalid before solving"
 
@@ -73,12 +73,12 @@ class ShadowCubeHelper(SolverHelper):
         if self._cube.is_even and fix_non_3x3_edges:
             modified = modified.with_fixed_non_3x3_edges(
                 cube=self._cube,
-                reference_scheme=self._cube.color_scheme
+                reference_scheme=self._cube.original_scheme
             )
         # Note: Odd cubes don't need this fix - their edges are always 3x3-valid
 
         # Step 4: Verify BOY layout (centers only)
-        assert modified.matches_scheme(self._cube.color_scheme), \
+        assert modified.matches_scheme(self._cube.original_scheme), \
             "Shadow cube colors must match color scheme"
 
         # Step 5: Apply to shadow cube (includes sanity check)

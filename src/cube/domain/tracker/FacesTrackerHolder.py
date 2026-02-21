@@ -683,7 +683,7 @@ class FacesTrackerHolder(FacesColorsProvider):
         faces: dict[FaceName, Color] = { f.face_name:f.color for f in self.trackers}
         from cube.domain.geometric.cube_color_scheme import CubeColorScheme
         candidate = CubeColorScheme(faces)
-        s = f"matches_scheme={self.cube.color_scheme.same(candidate)} {faces}"
+        s = f"matches_scheme={self.cube.original_scheme.same(candidate)} {faces}"
 
         return s
 

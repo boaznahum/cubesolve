@@ -101,7 +101,7 @@ class CubeLayout(Protocol):
         face_colors = faces()
         candidate = CubeColorScheme(face_colors)
 
-        ok = cube.color_scheme.same(candidate)
+        ok = cube.original_scheme.same(candidate)
 
         if not ok:
             print(candidate, file=sys.stderr)

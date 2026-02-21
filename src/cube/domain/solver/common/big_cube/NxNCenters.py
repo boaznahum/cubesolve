@@ -164,11 +164,11 @@ class NxNCenters(SolverHelper):
         self._comm_helper = CommutatorHelper(slv)
 
     def _is_solved(self):
-        return all((f.center.is3x3 for f in self.cube.faces)) and self.cube.is_in_original_scheme
+        return all((f.center.is3x3 for f in self.cube.faces)) and self.cube.match_original_scheme
 
     @staticmethod
     def is_cube_solved(cube: Cube):
-        return all((f.center.is3x3 for f in cube.faces)) and cube.is_in_original_scheme
+        return all((f.center.is3x3 for f in cube.faces)) and cube.match_original_scheme
 
     def solved(self) -> bool:
         """

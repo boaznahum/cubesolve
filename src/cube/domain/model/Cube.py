@@ -152,6 +152,7 @@ from .Edge import Edge
 from .Face import Face
 from .Part import Part
 from .PartEdge import PartEdge
+from ..geometric import cube_color_schemes
 
 if TYPE_CHECKING:
     from cube.domain.geometric.cube_color_scheme import CubeColorScheme
@@ -325,7 +326,7 @@ class Cube(CubeSupplier):
         "_slices",
         "_modify_counter",
         "_last_sanity_counter",
-        "_color_scheme",
+        "_original_scheme",
         "_cqr",
         "_sp",
         "_layout",
@@ -365,8 +366,8 @@ class Cube(CubeSupplier):
         from cube.domain.geometric.cube_layout import CubeLayout as CL
         from cube.domain.geometric._SizedCubeLayout import _SizedCubeLayout
 
-        self._color_scheme = boy_scheme()
-        self._layout: CubeLayout = CL.create_layout(True, self._color_scheme.faces, self._sp)
+        self._original_scheme = cube_color_schemes.random_scheme()
+        self._layout: CubeLayout = CL.create_layout(True, self._original_scheme.faces, self._sp)
         self._sized_layout: SizedCubeLayout = _SizedCubeLayout(self)
         self._reset()
 
@@ -1580,7 +1581,7 @@ class Cube(CubeSupplier):
 
     @property
     def is3x3(self):
-        return all(f.is3x3 for f in self.faces) and self.is_in_original_scheme
+        return all(f.is3x3 for f in self.faces) and self.match_original_scheme
 
     def reset(self, cube_size=None):
         """
@@ -1944,12 +1945,12 @@ class Cube(CubeSupplier):
         return slices
 
     @property
-    def color_scheme(self) -> "CubeColorScheme":
+    def original_scheme(self) -> "CubeColorScheme":
         """The color scheme this cube was created with."""
-        return self._color_scheme
+        return self._original_scheme
 
     @property
-    def is_in_original_scheme(self) -> bool:
+    def match_original_scheme(self) -> bool:
         """Check if cube centers match the color scheme it was created with.
 
         Compares current center colors against the cube's own color scheme,
@@ -1958,7 +1959,7 @@ class Cube(CubeSupplier):
         from cube.domain.geometric.cube_color_scheme import CubeColorScheme
         faces: dict[FaceName, Color] = {f.name: f.center.color for f in self._faces.values()}
         candidate = CubeColorScheme(faces)
-        return self._color_scheme.same(candidate)
+        return self._original_scheme.same(candidate)
 
     @property
     def is_even(self) -> bool:

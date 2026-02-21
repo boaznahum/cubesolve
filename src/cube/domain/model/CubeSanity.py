@@ -214,7 +214,7 @@ class CubeSanity:
 
         dist: Mapping[frozenset[Color], Mapping[Hashable, Sequence[int]]] = cqr.get_edges_dist()
         clr: PartColorsID
-        for clr in cube.color_scheme.edge_colors():
+        for clr in cube.original_scheme.edge_colors():
             clr_dist = dist[clr]
 
             def _print_clr():

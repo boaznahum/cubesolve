@@ -169,7 +169,7 @@ class BeginnerReducer(AbstractReducer):
 
         parts: list[str] = []
 
-        if cube.is_in_original_scheme:
+        if cube.match_original_scheme:
             parts.append("Scheme:True")
         else:
             parts.append("Scheme:False")

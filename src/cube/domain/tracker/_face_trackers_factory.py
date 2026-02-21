@@ -327,7 +327,7 @@ class NxNCentersFaceTrackers(SolverHelper):
 
         c12 = {two_first[0].color, two_first[1].color}
 
-        left_colors = set(cube.color_scheme.colors()) - c12
+        left_colors = set(cube.original_scheme.colors()) - c12
 
         # # can be any, still doesn't prevent BOY
         # There will always a face that contains a color that is not included in f1, f2
@@ -400,7 +400,7 @@ class NxNCentersFaceTrackers(SolverHelper):
 
         left_two_faces: set[Face] = {*cube.faces} - {f.face for f in four_first}
 
-        left_two_colors: set[Color] = set(self.cube.color_scheme.colors()) - first_4_colors
+        left_two_colors: set[Color] = set(self.cube.original_scheme.colors()) - first_4_colors
 
         c5: Color = left_two_colors.pop()
         c6: Color = left_two_colors.pop()
@@ -414,7 +414,7 @@ class NxNCentersFaceTrackers(SolverHelper):
         try1[f6.name] = c6
         candidate = CubeColorScheme(try1)
 
-        if not self.cube.color_scheme.same(candidate):
+        if not self.cube.original_scheme.same(candidate):
             # try 2
 
             f5, f6 = (f6, f5)
@@ -422,7 +422,7 @@ class NxNCentersFaceTrackers(SolverHelper):
             try1[f5.name] = c5
             try1[f6.name] = c6
             candidate = CubeColorScheme(try1)
-            assert self.cube.color_scheme.same(candidate)
+            assert self.cube.original_scheme.same(candidate)
 
 
         f5_track = self._create_tracker_on_face(parent_container, f5, c5)
@@ -469,7 +469,7 @@ class NxNCentersFaceTrackers(SolverHelper):
             if f not in left_two_faces:
                 return False
 
-            left_two_colors: set[Color] = set(self.cube.color_scheme.colors()) - first_4_colors
+            left_two_colors: set[Color] = set(self.cube.original_scheme.colors()) - first_4_colors
 
             assert color in left_two_colors
 
@@ -491,7 +491,7 @@ class NxNCentersFaceTrackers(SolverHelper):
             try1[f6.name] = c6
             candidate = CubeColorScheme(try1)
 
-            if self.cube.color_scheme.same(candidate):
+            if self.cube.original_scheme.same(candidate):
                 return True  # f/color make it a BOY
 
             f5, f6 = (f6, f5)
@@ -499,7 +499,7 @@ class NxNCentersFaceTrackers(SolverHelper):
             try1[f5.name] = c5
             try1[f6.name] = c6
             candidate = CubeColorScheme(try1)
-            assert self.cube.color_scheme.same(candidate)
+            assert self.cube.original_scheme.same(candidate)
 
             return False
 
@@ -573,7 +573,7 @@ class NxNCentersFaceTrackers(SolverHelper):
         cube = self.cube
 
         if colors is None:
-            colors = cube.color_scheme.colors()
+            colors = cube.original_scheme.colors()
 
         if faces is None:
             faces = cube.faces
