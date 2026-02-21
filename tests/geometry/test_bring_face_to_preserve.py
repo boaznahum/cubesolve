@@ -33,7 +33,7 @@ CUBE_SIZES = [3, 5]
 
 def _get_layout() -> CubeLayout:
     """Get a CubeLayout instance to query geometry."""
-    return CubeLayout.create_layout(True, boy_scheme().faces, _test_sp)
+    return CubeLayout.create_layout(boy_scheme().faces, _test_sp)
 
 
 def get_valid_combinations() -> list[tuple[FaceName, FaceName, FaceName]]:

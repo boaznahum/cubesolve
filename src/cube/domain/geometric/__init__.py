@@ -22,7 +22,6 @@ if TYPE_CHECKING:
 
 
 def create_layout(
-    read_only: bool,
     faces: Mapping[FaceName, Color],
     sp: IServiceProvider
 ) -> CubeLayout:
@@ -32,11 +31,7 @@ def create_layout(
         Use CubeLayout.create_layout() instead. This function is kept for
         backward compatibility and will be removed in a future version.
 
-    Factory function to create layout instances without exposing
-    the private implementation class.
-
     Args:
-        read_only: If True, layout cannot be modified (used for singletons).
         faces: Mapping of each face to its color.
         sp: Service provider for configuration access.
 
@@ -44,7 +39,7 @@ def create_layout(
         CubeLayout instance with the given configuration.
     """
     from cube.domain.geometric.cube_layout import CubeLayout
-    return CubeLayout.create_layout(read_only, faces, sp)
+    return CubeLayout.create_layout(faces, sp)
 
 
 __all__ = [

@@ -69,7 +69,6 @@ class CubeLayout(Protocol):
 
     @staticmethod
     def create_layout(
-        read_only: bool,
         faces: "Mapping[FaceName, Color]",
         sp: "IServiceProvider"
     ) -> "CubeLayout":
@@ -78,11 +77,10 @@ class CubeLayout(Protocol):
         Factory method to create layout instances without exposing
         the private implementation class.
 
-        Read-only layouts are cached by their face→color mapping,
-        so multiple cubes with the same color scheme share one layout.
+        Layouts are cached by their face→color mapping,
+        so multiple cubes with the same color scheme share one instance.
 
         Args:
-            read_only: If True, layout cannot be modified (cached).
             faces: Mapping of each face to its color.
             sp: Service provider for configuration access.
 
@@ -91,15 +89,12 @@ class CubeLayout(Protocol):
         """
         from cube.domain.geometric._CubeLayout import _CubeLayout
 
-        if not read_only:
-            return _CubeLayout(read_only, faces, sp)
-
         key = frozenset(faces.items())
         cached = CubeLayout._layout_cache.get(key)
         if cached is not None:
             return cached
 
-        layout: CubeLayout = _CubeLayout(read_only, faces, sp)
+        layout: CubeLayout = _CubeLayout(faces, sp)
         CubeLayout._layout_cache[key] = layout
         return layout
 
@@ -232,8 +227,7 @@ class CubeLayout(Protocol):
         """Create a mutable copy of this layout.
 
         Returns:
-            A new CubeLayout with the same face-color mapping,
-            but with read_only=False.
+            A new CubeLayout with the same face-color mapping.
         """
         ...
 

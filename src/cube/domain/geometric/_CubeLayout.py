@@ -68,16 +68,15 @@ class _CubeLayout(CubeLayout):
         "_scheme",
     )
 
-    def __init__(self, read_only: bool, faces: Mapping[FaceName, Color],
+    def __init__(self, faces: Mapping[FaceName, Color],
                  sp: IServiceProvider) -> None:
         """Create a new CubeLayout.
 
         Args:
-            read_only: If True, color scheme cannot be mutated (used for BOY singleton).
             faces: Mapping of each face to its color.
             sp: Service provider for configuration access.
         """
-        self._color_scheme = CubeColorScheme(faces, read_only=read_only)
+        self._color_scheme = CubeColorScheme(faces, read_only=True)
         self._sp = sp
         self._cache_manager = CacheManager.create(sp.config)
         self._scheme: SchematicCube = SchematicCube.inst()
@@ -155,8 +154,8 @@ class _CubeLayout(CubeLayout):
 
 
     def clone(self) -> _CubeLayout:
-        """Create a mutable copy of this layout."""
-        return _CubeLayout(False, self._color_scheme._faces, self._sp)
+        """Create a copy of this layout."""
+        return _CubeLayout(self._color_scheme._faces, self._sp)
 
     # ------------------------------------------------------------------
     # Geometry (delegated to SchematicCube)

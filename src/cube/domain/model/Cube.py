@@ -367,7 +367,7 @@ class Cube(CubeSupplier):
         from cube.domain.geometric._SizedCubeLayout import _SizedCubeLayout
 
         self._original_scheme = scheme if scheme is not None else cube_color_schemes.random_scheme()
-        self._layout: CubeLayout = CL.create_layout(True, self._original_scheme.faces, self._sp)
+        self._layout: CubeLayout = CL.create_layout(self._original_scheme.faces, self._sp)
         self._sized_layout: SizedCubeLayout = _SizedCubeLayout(self)
         self._reset()
 
