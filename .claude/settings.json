@@ -1,4 +1,7 @@
 {
+  "env": {
+    "CLAUDE_CODE_TMPDIR": ".claude/tmpdir"
+  },
   "permissions": {
     "allow": [
       "Bash",
@@ -17,9 +20,6 @@
       "mcp__ide__getDiagnostics",
       "mcp__plugin_github_github__*"
     ]
-  },
-  "enabledPlugins": {
-    "github@claude-plugins-official": true
   },
   "env": {
     "CLAUDE_CODE_TMPDIR": ".claude/tmpdir"
