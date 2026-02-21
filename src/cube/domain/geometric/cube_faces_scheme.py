@@ -22,7 +22,7 @@ from cube.domain.model._elements import EdgePosition
 from cube.domain.model._part import CornerName, EdgeName
 
 # ============================================================================
-# Lookup Tables — the fixed geometric facts
+# Fundamental facts — cannot be derived, define the cube orientation
 # ============================================================================
 
 # Opposite face pairs (canonical direction)
@@ -32,54 +32,8 @@ _OPPOSITE: dict[FaceName, FaceName] = {
     FaceName.L: FaceName.R,
 }
 
-# Reverse mapping
-_REV_OPPOSITE: dict[FaceName, FaceName] = {v: k for k, v in _OPPOSITE.items()}
-
-# Bidirectional opposite mapping
-_ALL_OPPOSITE: dict[FaceName, FaceName] = {**_OPPOSITE, **_REV_OPPOSITE}
-
-# Adjacent faces (all faces except self and opposite)
-_ADJACENT: dict[FaceName, tuple[FaceName, ...]] = {
-    face: tuple(f for f in FaceName if f != face and f != _ALL_OPPOSITE[face])
-    for face in FaceName
-}
-
-# CW neighbor ordering: [top, right, bottom, left] when looking at face from outside.
-# Derived from the edge assignments in Cube.__init__ — each face's
-# edge_top/edge_right/edge_bottom/edge_left connects to a specific neighbor.
-# Edge-to-faces mapping: which two faces each edge connects.
-# Derived from the edge assignments in Cube.__init__.
-_EDGE_FACES: dict[EdgeName, tuple[FaceName, FaceName]] = {
-    EdgeName.FU: (FaceName.F, FaceName.U),
-    EdgeName.FL: (FaceName.F, FaceName.L),
-    EdgeName.FR: (FaceName.F, FaceName.R),
-    EdgeName.FD: (FaceName.F, FaceName.D),
-    EdgeName.BU: (FaceName.B, FaceName.U),
-    EdgeName.BL: (FaceName.B, FaceName.L),
-    EdgeName.BR: (FaceName.B, FaceName.R),
-    EdgeName.BD: (FaceName.B, FaceName.D),
-    EdgeName.UR: (FaceName.U, FaceName.R),
-    EdgeName.RD: (FaceName.R, FaceName.D),
-    EdgeName.DL: (FaceName.D, FaceName.L),
-    EdgeName.LU: (FaceName.L, FaceName.U),
-}
-
-# Corner-to-faces mapping: which three faces each corner connects.
-# Derived from the corner assignments in Cube.__init__.
-_CORNER_FACES: dict[CornerName, tuple[FaceName, FaceName, FaceName]] = {
-    CornerName.FLU: (FaceName.F, FaceName.L, FaceName.U),
-    CornerName.FRU: (FaceName.F, FaceName.R, FaceName.U),
-    CornerName.FRD: (FaceName.F, FaceName.R, FaceName.D),
-    CornerName.FLD: (FaceName.F, FaceName.L, FaceName.D),
-    CornerName.BLU: (FaceName.B, FaceName.L, FaceName.U),
-    CornerName.BRU: (FaceName.B, FaceName.R, FaceName.U),
-    CornerName.BRD: (FaceName.B, FaceName.R, FaceName.D),
-    CornerName.BLD: (FaceName.B, FaceName.L, FaceName.D),
-}
-
-# CW neighbor ordering: [top, right, bottom, left] when looking at face from outside.
-# Derived from the edge assignments in Cube.__init__ — each face's
-# edge_top/edge_right/edge_bottom/edge_left connects to a specific neighbor.
+# CW neighbor ordering: [top, right, bottom, left] when looking at face
+# from outside the cube. This defines the orientation of each face.
 _FACE_NEIGHBORS_CW: dict[FaceName, list[FaceName]] = {
     FaceName.F: [FaceName.U, FaceName.R, FaceName.D, FaceName.L],
     FaceName.B: [FaceName.U, FaceName.L, FaceName.D, FaceName.R],
@@ -89,21 +43,91 @@ _FACE_NEIGHBORS_CW: dict[FaceName, list[FaceName]] = {
     FaceName.R: [FaceName.U, FaceName.B, FaceName.D, FaceName.F],
 }
 
+# ============================================================================
+# Derived facts — computed from the fundamentals above
+# ============================================================================
 
-# Map EdgePosition to CW neighbor index: [0]=TOP, [1]=RIGHT, [2]=BOTTOM, [3]=LEFT
-_EDGE_POSITION_TO_CW_INDEX: dict[EdgePosition, int] = {
-    EdgePosition.TOP: 0,
-    EdgePosition.RIGHT: 1,
-    EdgePosition.BOTTOM: 2,
-    EdgePosition.LEFT: 3,
+_REV_OPPOSITE: dict[FaceName, FaceName] = {v: k for k, v in _OPPOSITE.items()}
+_ALL_OPPOSITE: dict[FaceName, FaceName] = {**_OPPOSITE, **_REV_OPPOSITE}
+
+_ADJACENT: dict[FaceName, tuple[FaceName, ...]] = {
+    face: tuple(f for f in FaceName if f != face and f != _ALL_OPPOSITE[face])
+    for face in FaceName
+}
+
+
+def _derive_edge_faces() -> dict[EdgeName, tuple[FaceName, FaceName]]:
+    """Derive edge-to-faces mapping from CW neighbors.
+
+    Each edge connects a face to one of its CW neighbors.
+    EdgeName encodes the two faces (e.g. FU = Front-Up).
+    """
+    result: dict[EdgeName, tuple[FaceName, FaceName]] = {}
+    for face, neighbors in _FACE_NEIGHBORS_CW.items():
+        for neighbor in neighbors:
+            # EdgeName is named by the two face letters
+            name_str = face.value + neighbor.value
+            try:
+                edge_name = EdgeName(name_str)
+            except ValueError:
+                # Try reversed order
+                name_str = neighbor.value + face.value
+                try:
+                    edge_name = EdgeName(name_str)
+                except ValueError:
+                    continue
+            if edge_name not in result:
+                result[edge_name] = (FaceName(name_str[0]), FaceName(name_str[1]))
+    return result
+
+
+def _derive_corner_faces() -> dict[CornerName, tuple[FaceName, FaceName, FaceName]]:
+    """Derive corner-to-faces mapping from CW neighbors.
+
+    Each corner is where three mutually adjacent faces meet. A corner
+    of face F is at the intersection of two consecutive CW neighbors.
+    """
+    from itertools import permutations
+
+    result: dict[CornerName, tuple[FaceName, FaceName, FaceName]] = {}
+    for face, neighbors in _FACE_NEIGHBORS_CW.items():
+        for i in range(4):
+            n1 = neighbors[i]
+            n2 = neighbors[(i + 1) % 4]
+            # CornerName is 3 face letters; try all permutations
+            for perm in permutations((face, n1, n2)):
+                name_str = perm[0].value + perm[1].value + perm[2].value
+                try:
+                    corner_name = CornerName(name_str)
+                    if corner_name not in result:
+                        result[corner_name] = (
+                            FaceName(corner_name.value[0]),
+                            FaceName(corner_name.value[1]),
+                            FaceName(corner_name.value[2]),
+                        )
+                    break
+                except ValueError:
+                    continue
+    return result
+
+
+_EDGE_FACES: dict[EdgeName, tuple[FaceName, FaceName]] = _derive_edge_faces()
+_CORNER_FACES: dict[CornerName, tuple[FaceName, FaceName, FaceName]] = _derive_corner_faces()
+
+# EdgePosition → CW index: TOP=0, RIGHT=1, BOTTOM=2, LEFT=3
+# This follows directly from _FACE_NEIGHBORS_CW definition order.
+_CW_INDEX: dict[EdgePosition, int] = {
+    pos: i for i, pos in enumerate([
+        EdgePosition.TOP, EdgePosition.RIGHT, EdgePosition.BOTTOM, EdgePosition.LEFT
+    ])
 }
 
 
 class CubeFacesScheme:
     """Singleton holding the fixed face-topology facts of a Rubik's cube.
 
-    Works ONLY with FaceName — never accepts or returns physical parts
-    like Face or Edge.
+    Works ONLY with FaceName/EdgeName/CornerName — never accepts or returns
+    physical parts like Face or Edge.
     """
 
     _instance: CubeFacesScheme | None = None
@@ -150,30 +174,13 @@ class CubeFacesScheme:
         return list(_FACE_NEIGHBORS_CW[face_name])
 
     def get_face_neighbor(self, face_name: FaceName, position: EdgePosition) -> FaceName:
-        """Get the neighboring face at a specific edge position.
-
-        Args:
-            face_name: The face to get the neighbor for.
-            position: Which edge position (TOP, RIGHT, BOTTOM, LEFT).
-
-        Returns:
-            The FaceName of the neighboring face at that position.
-        """
-        idx = _EDGE_POSITION_TO_CW_INDEX[position]
-        return _FACE_NEIGHBORS_CW[face_name][idx]
+        """Get the neighboring face at a specific edge position."""
+        return _FACE_NEIGHBORS_CW[face_name][_CW_INDEX[position]]
 
     def edge_faces(self) -> dict[EdgeName, tuple[FaceName, FaceName]]:
-        """Get mapping from EdgeName to the two adjacent faces it connects.
-
-        Example:
-            scheme.edge_faces()[EdgeName.FU] == (FaceName.F, FaceName.U)
-        """
+        """Get mapping from EdgeName to the two adjacent faces it connects."""
         return dict(_EDGE_FACES)
 
     def corner_faces(self) -> dict[CornerName, tuple[FaceName, FaceName, FaceName]]:
-        """Get mapping from CornerName to the three faces it connects.
-
-        Example:
-            scheme.corner_faces()[CornerName.FRU] == (FaceName.F, FaceName.R, FaceName.U)
-        """
+        """Get mapping from CornerName to the three faces it connects."""
         return dict(_CORNER_FACES)
