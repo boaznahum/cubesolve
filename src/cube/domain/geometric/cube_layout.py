@@ -5,7 +5,7 @@ It also provides geometric utilities for determining face relationships
 (opposite, adjacent) which are fundamental to cube operations.
 
 The standard layout is BOY (Blue-Orange-Yellow on Front-Left-Up corner).
-See cube_boy.py for the canonical BOY definition.
+See cube_color_schemes.py for predefined color schemes.
 """
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ from abc import abstractmethod
 from collections.abc import Collection, Iterator, Mapping
 from typing import TYPE_CHECKING, Protocol, runtime_checkable, Tuple, Callable
 
+from cube.domain.geometric.cube_color_scheme import CubeColorScheme
 from cube.domain.geometric.FRotation import FUnitRotation
 from cube.domain.geometric.geometry_types import CLGColRow
 from cube.domain.geometric.slice_layout import SliceLayout
@@ -87,55 +88,25 @@ class CubeLayout(Protocol):
         return _CubeLayout(read_only, faces, sp)
 
     @staticmethod
-    def sanity_cost_assert_match_cube_layout(
+    def sanity_cost_assert_matches_scheme(
             cube: "Cube",
             faces: Callable[[], "Mapping[FaceName, Color]"]) -> None:
+        """Assert that *faces* match the cube's original color scheme.
 
-        sp = cube.sp
-        if not sp.config.solver_sanity_check_is_a_boy:
+        Gated behind ``solver_sanity_check_is_a_boy`` config flag.
+        """
+        if not cube.sp.config.solver_sanity_check_is_a_boy:
             return
 
-        layout = faces()
+        face_colors = faces()
+        candidate = CubeColorScheme(face_colors)
 
-        cl: CubeLayout = CubeLayout.create_layout(False, layout, sp)
+        ok = cube.color_scheme.same(candidate)
 
-        # acquittal we cheat here, we dont know that cube is a boy
-        c_layout = cube.original_layout
-        match_cube_layout = cl.same(c_layout)
+        if not ok:
+            print(candidate, file=sys.stderr)
 
-        if not match_cube_layout:
-            print(cl, file=sys.stderr)
-            print(file=sys.stderr)
-
-        assert match_cube_layout, f"\n{cl} \n-->\n{c_layout}"
-    @staticmethod
-    def sanity_cost_assert_is_boy(
-            sp: "IServiceProvider",
-            faces: Callable[[], "Mapping[FaceName, Color]"]) -> None:
-
-        """
-        But in some cases you want to check that it matches specif cube layout, but this is not the case
-        See Above
-        """
-
-
-        if not sp.config.solver_sanity_check_is_a_boy:
-            return
-
-        layout = faces()
-
-
-
-        cl: CubeLayout = CubeLayout.create_layout(False, layout, sp)
-
-        # acquittal we cheat here, we dont know that cube is a boy
-        is_boy = cl.is_boy()
-
-        if not is_boy:
-            print(cl, file=sys.stderr)
-            print(file=sys.stderr)
-
-        assert is_boy, f"Faces {layout} do not represent valid BOY layout"
+        assert ok, f"\n{candidate}"
 
 
     @property
@@ -239,57 +210,6 @@ class CubeLayout(Protocol):
         """
         ...
 
-    @abstractmethod
-    def same(self, other: CubeLayout) -> bool:
-        """Check if this layout is equivalent to another.
-
-        Two layouts are "same" if they represent the same color scheme,
-        possibly with the cube rotated to a different orientation.
-
-        This accounts for:
-        - Opposite color pairs must match
-        - Relative positions of colors around the cube
-
-        Args:
-            other: Another layout to compare with.
-
-        Returns:
-            True if layouts are equivalent, False otherwise.
-        """
-        ...
-
-    @abstractmethod
-    def is_boy(self) -> bool:
-        """Check if this layout matches the standard BOY color scheme.
-
-        BOY (Blue-Orange-Yellow) is the standard Rubik's cube color arrangement.
-        The name comes from the Front-Left-Up corner colors: Blue-Orange-Yellow.
-
-        UNFOLDED CUBE LAYOUT:
-        ====================
-                    ┌───────┐
-                    │   Y   │
-                    │   U   │  Yellow (Up)
-                    │       │
-            ┌───────┼───────┼───────┬───────┐
-            │   O   │   B   │   R   │   G   │
-            │   L   │   F   │   R   │   B   │
-            │       │       │       │       │
-            └───────┼───────┼───────┴───────┘
-                    │   W   │
-                    │   D   │  White (Down)
-                    │       │
-                    └───────┘
-
-        OPPOSITE FACES:
-            F (Blue)   ↔ B (Green)
-            U (Yellow) ↔ D (White)
-            L (Orange) ↔ R (Red)
-
-        Returns:
-            True if this layout matches the global BOY definition.
-        """
-        ...
 
     @abstractmethod
     def clone(self) -> CubeLayout:

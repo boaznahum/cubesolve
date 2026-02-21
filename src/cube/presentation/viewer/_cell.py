@@ -19,7 +19,7 @@ from cube.domain.model import (
     PartSlice,
     PartSliceHashID,
 )
-from cube.domain.geometric.cube_boy import Color
+from cube.domain.model.Color import Color
 from cube.domain.model.Face import Face
 from cube.application.markers import MarkerToolkit, get_markers_from_part_edge
 from cube.domain.geometric import geometry_utils as geometry

@@ -25,7 +25,7 @@ from cube.domain.model import (
     PartEdge,
     PartSlice,
 )
-from cube.domain.geometric.cube_boy import FaceName
+from cube.domain.model.FaceName import FaceName
 from cube.domain.model.Face import Face
 from cube.presentation.gui.protocols import AppWindow
 from cube.presentation.gui.types import Modifiers, MouseButton

@@ -11,7 +11,7 @@ from cube.application.Logger import Logger
 # noinspection PyMethodMayBeStatic
 from cube.domain import algs
 from cube.domain.model.Cube import Cube
-from cube.domain.geometric.cube_boy import FaceName
+from cube.domain.model.FaceName import FaceName
 from cube.utils.config_protocol import ConfigProtocol
 
 

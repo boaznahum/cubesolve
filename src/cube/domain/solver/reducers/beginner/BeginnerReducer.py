@@ -169,10 +169,10 @@ class BeginnerReducer(AbstractReducer):
 
         parts: list[str] = []
 
-        if cube.is_boy:
-            parts.append("Boy:True")
+        if cube.is_in_original_scheme:
+            parts.append("Scheme:True")
         else:
-            parts.append("Boy:False")
+            parts.append("Scheme:False")
 
         if self.centers_solved():
             parts.append("Centers")

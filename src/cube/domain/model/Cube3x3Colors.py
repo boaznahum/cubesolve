@@ -7,11 +7,11 @@ from typing import TYPE_CHECKING
 
 from cube.domain.model._part import CornerName, EdgeName
 from cube.domain.model.Color import Color
-from cube.domain.geometric.cube_layout import CubeLayout
 from cube.domain.model.FaceName import FaceName
 from cube.utils.service_provider import IServiceProvider
 
 if TYPE_CHECKING:
+    from cube.domain.geometric.cube_color_scheme import CubeColorScheme
     from cube.domain.model.Cube import Cube
 
 
@@ -95,7 +95,7 @@ class Cube3x3Colors:
     def with_fixed_non_3x3_edges(
         self,
         cube: "Cube",
-        reference_layout: "CubeLayout"
+        reference_scheme: "CubeColorScheme"
     ) -> "Cube3x3Colors":
         """Build valid 3x3 edge colors by matching big cube edges to template edges.
 
@@ -105,13 +105,13 @@ class Cube3x3Colors:
 
         Args:
             cube: The source cube to get 3x3-valid edges from (via edge.is3x3)
-            reference_layout: BOY layout template providing edge color-pairs
+            reference_scheme: Color scheme providing edge color-pairs
 
         Returns:
             New Cube3x3Colors with all 12 edges having valid template color-pairs.
 
         Algorithm:
-            1. Get template: 12 edge names → color-pairs (frozenset) from BOY layout
+            1. Get template: 12 edge names → color-pairs (frozenset) from scheme
             2. Get big cube: 3x3-valid edges → color-pairs (frozenset)
             3. Match by color-pair: template edge with {WHITE,RED} ← big cube edge with {WHITE,RED}
             4. For unmatched template edges: use template colors
@@ -127,7 +127,7 @@ class Cube3x3Colors:
         from cube.domain.exceptions import InternalSWError
 
         # Get all template color-pairs from BOY layout
-        available_pairs: set[frozenset[Color]] = set(reference_layout.edge_colors())
+        available_pairs: set[frozenset[Color]] = set(reference_scheme.edge_colors())
 
         # TWO-PASS algorithm to prioritize 3x3-valid edges:
         # Pass 1: Keep all 3x3-valid edges with valid color-pairs
@@ -193,32 +193,21 @@ class Cube3x3Colors:
         new_corners[corner] = self.corners[corner].with_color(face, color)
         return replace(self, corners=new_corners)
 
-    def get_layout(self, sp: IServiceProvider) -> CubeLayout:
-        """Create a CubeLayout from these center colors.
+    def matches_scheme(self, scheme: "CubeColorScheme") -> bool:
+        """Check if centers match the given color scheme.
+
+        Creates a CubeColorScheme from center colors and uses
+        rotation-aware comparison.
 
         Args:
-            sp: Service provider for configuration.
+            scheme: The color scheme to compare against.
 
         Returns:
-            CubeLayout representing the current center configuration.
+            True if centers match *scheme* up to whole-cube rotation.
         """
-        return CubeLayout.create_layout(False, self.centers, sp)
-
-    def is_boy(self, sp: IServiceProvider) -> bool:
-        """Check if centers match the standard BOY layout.
-
-        Uses CubeLayout.same() for proper comparison that handles
-        cube rotations correctly. Compares against the global BOY
-        instance from cube_boy.
-
-        Args:
-            sp: Service provider for configuration.
-
-        Returns:
-            True if this layout matches the BOY color scheme.
-        """
-        current: CubeLayout = self.get_layout(sp)
-        return current.is_boy()
+        from cube.domain.geometric.cube_color_scheme import CubeColorScheme as CCS
+        candidate = CCS(self.centers)
+        return scheme.same(candidate)
 
     def is_complete(self) -> bool:
         """Check if this has all required entries.
@@ -261,38 +250,33 @@ class Cube3x3Colors:
 
     @staticmethod
     def create_empty(sp: IServiceProvider) -> "Cube3x3Colors":
-        """Create a Cube3x3Colors with all WHITE placeholders using the global BOY layout.
+        """Create a Cube3x3Colors with all WHITE placeholders.
 
         All colors are initialized to WHITE and should be overwritten with actual colors.
-        The structure (which edges connect which faces) comes from the global BOY layout,
-        making CubeLayout the authority for all layout questions.
+        The structure (which edges connect which faces) comes from SchematicCube geometry.
 
         Args:
-            sp: Service provider to access the global BOY layout.
+            sp: Service provider (unused, kept for API compatibility).
 
         Returns:
             Cube3x3Colors with all edges/corners/centers initialized to WHITE.
 
         Note: The resulting structure won't be valid until all colors are set to actual values.
-
-        Example:
-            empty = Cube3x3Colors.create_empty(sp)
         """
-        from cube.domain.geometric import cube_boy
+        from cube.domain.geometric.schematic_cube import SchematicCube
 
-        # Get the global BOY layout (cached singleton)
-        boy_layout = cube_boy.get_boy_layout(sp)
+        scheme = SchematicCube.inst()
 
-        # Get edge-to-faces mapping from layout (the authoritative source)
-        edge_faces_map = boy_layout.edge_faces()
+        # Get edge-to-faces mapping from geometry (the authoritative source)
+        edge_faces_map = scheme.edge_faces()
 
         # Create empty edge colors for all 12 edges
         edges: dict[EdgeName, EdgeColors] = {}
         for edge_name, (f1, f2) in edge_faces_map.items():
             edges[edge_name] = EdgeColors({f1: Color.WHITE, f2: Color.WHITE})
 
-        # Get corner-to-faces mapping from layout (the authoritative source)
-        corner_faces_map = boy_layout.corner_faces()
+        # Get corner-to-faces mapping from geometry (the authoritative source)
+        corner_faces_map = scheme.corner_faces()
 
         # Create empty corner colors for all 8 corners
         corners: dict[CornerName, CornerColors] = {}

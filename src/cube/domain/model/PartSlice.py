@@ -7,7 +7,8 @@ from collections import defaultdict
 from collections.abc import Hashable, MutableSequence, Sequence
 from typing import TYPE_CHECKING, Any, Generic, Self, Tuple, TypeAlias, TypeVar
 
-from cube.domain.geometric.cube_boy import Color, FaceName
+from cube.domain.model.Color import Color
+from cube.domain.model.FaceName import FaceName
 from cube.domain.model.PartEdge import PartEdge
 
 from ._elements import (

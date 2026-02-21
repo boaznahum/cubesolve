@@ -2,7 +2,7 @@ from collections.abc import Iterable
 from enum import Enum, unique
 from typing import TYPE_CHECKING, TypeAlias
 
-from cube.domain.geometric.cube_boy import FaceName
+from cube.domain.model.FaceName import FaceName
 
 if TYPE_CHECKING:
     from .Cube import Cube

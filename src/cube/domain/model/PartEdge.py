@@ -1,7 +1,7 @@
 from collections.abc import Hashable
 from typing import TYPE_CHECKING, Any, TypeAlias
 
-from cube.domain.geometric.cube_boy import Color
+from cube.domain.model.Color import Color
 
 if TYPE_CHECKING:
     from .PartSlice import PartSlice

@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Callable, Collection, Protocol, runtime_checka
 if TYPE_CHECKING:
     from cube.domain.model.PartSlice import PartSlice
     from cube.domain.model.Cube import Cube
-    from cube.domain.geometric.cube_boy import FaceName
+    from cube.domain.model.FaceName import FaceName
 
 
 @runtime_checkable

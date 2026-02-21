@@ -68,7 +68,7 @@ Quick Start
     False
 
     # Find pieces
-    >>> from cube.domain.model.cube_boy import Color
+    >>> from cube.domain.model.Color import Color
     >>> white_red = frozenset([Color.WHITE, Color.RED])
     >>> edge = cube.find_edge_by_color(white_red)
 
@@ -143,7 +143,8 @@ from ._elements import AxisName, PartColorsID
 from .PartSlice import CornerSlice, EdgeWing, PartSlice
 from .Center import Center
 from .Corner import Corner
-from cube.domain.geometric.cube_boy import Color, FaceName
+from cube.domain.model.Color import Color
+from cube.domain.model.FaceName import FaceName
 from cube.domain.geometric.sized_cube_layout import SizedCubeLayout
 from ._part import EdgeName
 from .cube_slice import Slice, SliceName
@@ -153,6 +154,7 @@ from .Part import Part
 from .PartEdge import PartEdge
 
 if TYPE_CHECKING:
+    from cube.domain.geometric.cube_color_scheme import CubeColorScheme
     from cube.domain.geometric.cube_layout import CubeLayout
     from .Cube3x3Colors import Cube3x3Colors
     from .CubeListener import CubeListener
@@ -249,7 +251,7 @@ class Cube(CubeSupplier):
 
     Find pieces by color:
 
-    >>> from cube.domain.model.cube_boy import Color
+    >>> from cube.domain.model.Color import Color
     >>> # Find the white-red edge piece
     >>> white_red = frozenset([Color.WHITE, Color.RED])
     >>> edge = cube.find_edge_by_color(white_red)
@@ -323,7 +325,7 @@ class Cube(CubeSupplier):
         "_slices",
         "_modify_counter",
         "_last_sanity_counter",
-        "_original_layout",
+        "_color_scheme",
         "_cqr",
         "_sp",
         "_layout",
@@ -351,7 +353,7 @@ class Cube(CubeSupplier):
         self._sp = sp
         self._modify_counter = 0
         self._last_sanity_counter = 0
-        self._original_layout: CubeLayout | None = None
+        # Color scheme is set during layout creation below
         self._in_query_mode: bool = False  # Skip texture updates during query operations
         self._has_visible_presentation: bool = False  # True if visible backend is connected
         self._has_textures: bool = False  # True if textures are loaded
@@ -359,10 +361,12 @@ class Cube(CubeSupplier):
         self._listeners: list["CubeListener"] = []
         self._is_even_cube_shadow: bool = False
 
-        from cube.domain.geometric import cube_boy
+        from cube.domain.geometric.cube_color_schemes import boy_scheme
+        from cube.domain.geometric.cube_layout import CubeLayout as CL
         from cube.domain.geometric._SizedCubeLayout import _SizedCubeLayout
 
-        self._layout: CubeLayout = cube_boy.get_boy_layout(self._sp)
+        self._color_scheme = boy_scheme()
+        self._layout: CubeLayout = CL.create_layout(True, self._color_scheme.faces, self._sp)
         self._sized_layout: SizedCubeLayout = _SizedCubeLayout(self)
         self._reset()
 
@@ -378,8 +382,6 @@ class Cube(CubeSupplier):
             self._size = cube_size
 
         assert self._size >= 2
-        self._original_layout = None
-
         self._modify_counter = 0
         self._last_sanity_counter = 0
 
@@ -1577,7 +1579,7 @@ class Cube(CubeSupplier):
 
     @property
     def is3x3(self):
-        return all(f.is3x3 for f in self.faces) and self.is_boy
+        return all(f.is3x3 for f in self.faces) and self.is_in_original_scheme
 
     def reset(self, cube_size=None):
         """
@@ -1743,7 +1745,7 @@ class Cube(CubeSupplier):
         --------
         Find white-red edge:
 
-        >>> from cube.domain.model.cube_boy import Color
+        >>> from cube.domain.model.Color import Color
         >>> cube = Cube(size=3)
         >>> white_red = frozenset([Color.WHITE, Color.RED])
         >>> edge = cube.find_edge_by_color(white_red)
@@ -1826,7 +1828,7 @@ class Cube(CubeSupplier):
         --------
         Find white-red-blue corner:
 
-        >>> from cube.domain.model.cube_boy import Color
+        >>> from cube.domain.model.Color import Color
         >>> cube = Cube(size=3)
         >>> wrb = frozenset([Color.WHITE, Color.RED, Color.BLUE])
         >>> corner = cube.find_corner_by_colors(wrb)
@@ -1941,38 +1943,21 @@ class Cube(CubeSupplier):
         return slices
 
     @property
-    def original_layout(self) -> CubeLayout:
-        """
-
-        :return: BOY layout
-        """
-
-        if not self._original_layout:
-            from cube.domain.geometric.cube_layout import CubeLayout
-            faces: dict[FaceName, Color] = {f.name: f.original_color for f in self._faces.values()}
-            lo = CubeLayout.create_layout(True, faces, self._sp)
-
-            self._original_layout = lo
-
-        return self._original_layout
+    def color_scheme(self) -> "CubeColorScheme":
+        """The color scheme this cube was created with."""
+        return self._color_scheme
 
     @property
-    def current_layout(self) -> CubeLayout:
-        """
+    def is_in_original_scheme(self) -> bool:
+        """Check if cube centers match the color scheme it was created with.
 
-        :return: current layout, valid only in case of 3x3, guess center color by taking middle slice
+        Compares current center colors against the cube's own color scheme,
+        accounting for whole-cube rotations.
         """
-        from cube.domain.geometric.cube_layout import CubeLayout
+        from cube.domain.geometric.cube_color_scheme import CubeColorScheme
         faces: dict[FaceName, Color] = {f.name: f.center.color for f in self._faces.values()}
-        return CubeLayout.create_layout(False, faces, self._sp)
-
-    @property
-    def is_boy(self) -> bool:
-        """Check if cube is in standard BOY orientation.
-
-        Compares current center colors against the global BOY definition.
-        """
-        return self.current_layout.is_boy()
+        candidate = CubeColorScheme(faces)
+        return self._color_scheme.same(candidate)
 
     @property
     def is_even(self) -> bool:

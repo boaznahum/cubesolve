@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from cube.domain.geometric.cube_boy import Color
+from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
 
 

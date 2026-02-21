@@ -53,7 +53,8 @@ from numpy import ndarray
 
 from cube.application.protocols import AnimatableViewer
 from cube.domain.model.PartSlice import PartSlice
-from cube.domain.geometric.cube_boy import Color, FaceName
+from cube.domain.model.Color import Color
+from cube.domain.model.FaceName import FaceName
 from cube.domain.model.CubeListener import CubeListener
 
 from ._modern_gl_arrow import Arrow3D
@@ -1030,7 +1031,7 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
 
     def _format_texture_state(self, label: str) -> str:
         """Format compact texture state for Front face for debugging."""
-        from cube.domain.geometric.cube_boy import FaceName
+        from cube.domain.model.FaceName import FaceName
         cube_face = self._cube.face(FaceName.F)
         size = self._cube.size
 
@@ -1050,7 +1051,7 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
 
     def _format_cell_texture_state(self) -> str:
         """Format cell texture state for Front face."""
-        from cube.domain.geometric.cube_boy import FaceName
+        from cube.domain.model.FaceName import FaceName
         gl_face = self._board.faces[FaceName.F]
         size = self._cube.size
 

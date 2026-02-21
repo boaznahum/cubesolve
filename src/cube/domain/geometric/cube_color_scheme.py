@@ -5,6 +5,39 @@ The standard scheme is BOY (Blue-Orange-Yellow on the Front-Left-Up corner),
 but a scrambled cube can yield any valid permutation.
 
 NOT a singleton — unlike SchematicCube (fixed geometry), color schemes vary.
+
+When are two schemes the same?
+==============================
+
+Two color schemes are considered *the same* if one can be rotated (whole-cube
+rotation) to match the other.  The comparison (``same()``) checks:
+
+1. **Color set** — both schemes must use the same 6 colors.
+2. **Opposite-color pairs** — if Blue↔Green in one, then Blue↔Green in the other.
+3. **Orientation** — after aligning Front and Up colors, the Left color must match.
+
+This means the *physical arrangement* of stickers is identical; only the
+observer's point of view differs.
+
+Standard BOY (Blue-Orange-Yellow) color scheme::
+
+                ┌───────┐
+                │   Y   │
+                │   U   │  Yellow (Up)
+                │       │
+        ┌───────┼───────┼───────┬───────┐
+        │   O   │   B   │   R   │   G   │
+        │   L   │   F   │   R   │   B   │
+        │       │       │       │       │
+        └───────┼───────┼───────┴───────┘
+                │   W   │
+                │   D   │  White (Down)
+                │       │
+                └───────┘
+
+    Opposite pairs:  F(Blue)↔B(Green)  U(Yellow)↔D(White)  L(Orange)↔R(Red)
+
+See ``cube_color_schemes.py`` for predefined schemes (``boy_scheme()`` etc.).
 """
 
 from __future__ import annotations
@@ -40,6 +73,11 @@ class CubeColorScheme:
     # ------------------------------------------------------------------
     # Lookup
     # ------------------------------------------------------------------
+
+    @property
+    def faces(self) -> Mapping[FaceName, Color]:
+        """Read-only view of the face→color mapping."""
+        return self._faces
 
     def __getitem__(self, face: FaceName) -> Color:
         """Get the color assigned to *face*."""

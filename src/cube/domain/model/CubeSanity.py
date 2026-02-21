@@ -57,7 +57,7 @@ from cube.domain.exceptions import InternalSWError
 
 from ._elements import CHelper, PartColorsID
 from .Cube import Cube
-from cube.domain.geometric.cube_boy import Color
+from cube.domain.model.Color import Color
 
 
 class CubeSanity:
@@ -214,7 +214,7 @@ class CubeSanity:
 
         dist: Mapping[frozenset[Color], Mapping[Hashable, Sequence[int]]] = cqr.get_edges_dist()
         clr: PartColorsID
-        for clr in cube.original_layout.edge_colors():
+        for clr in cube.color_scheme.edge_colors():
             clr_dist = dist[clr]
 
             def _print_clr():

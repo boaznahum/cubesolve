@@ -5,7 +5,7 @@ Provides convenient access to commands like Commands.ROTATE_R
 while maintaining type safety.
 """
 from cube.domain.algs.Algs import Algs
-from cube.domain.geometric.cube_boy import FaceName
+from cube.domain.model.FaceName import FaceName
 from cube.domain.solver import SolveStep
 
 from .base import Command

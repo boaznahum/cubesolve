@@ -43,7 +43,6 @@ from cube.domain.tracker._face_trackers_factory import NxNCentersFaceTrackers
 from cube.domain.tracker._face_trackers import FaceTracker
 
 if TYPE_CHECKING:
-    from cube.domain.geometric.cube_layout import CubeLayout
     from cube.domain.model.Cube import Cube
     from cube.domain.model.Part import Part
     from cube.domain.solver.protocols import SolverElementsProvider
@@ -240,9 +239,8 @@ class FacesTrackerHolder(FacesColorsProvider):
         self._cache_modify_counter = current_counter
 
         from cube.domain.geometric.cube_layout import CubeLayout
-        CubeLayout.sanity_cost_assert_is_boy(
-            self.cube.sp,
-            # to get rid of the pyright complains it can be null
+        CubeLayout.sanity_cost_assert_matches_scheme(
+            self.cube,
             lambda: cast(dict[FaceName, Color], self._face_colors_cache)
         )
 
@@ -362,18 +360,6 @@ class FacesTrackerHolder(FacesColorsProvider):
 
 
 
-    def _trackers_layout(self) -> CubeLayout:
-        """Get the current tracker mapping as a CubeLayout.
-
-        Builds a CubeLayout from the trackers' face→color mapping.
-        Can be used to check is_boy() or compare with other layouts.
-
-        Returns:
-            CubeLayout representing current tracker state.
-        """
-        from cube.domain.geometric.cube_layout import CubeLayout
-        layout: dict[FaceName, Color] = self.face_colors
-        return CubeLayout.create_layout(False, layout, self._cube.sp)
 
 
     def cleanup(self) -> None:
@@ -695,7 +681,9 @@ class FacesTrackerHolder(FacesColorsProvider):
 
     def get_debug_str_faces(self) -> str:
         faces: dict[FaceName, Color] = { f.face_name:f.color for f in self.trackers}
-        s = f"is boy={self._trackers_layout().is_boy()} {faces}"
+        from cube.domain.geometric.cube_color_scheme import CubeColorScheme
+        candidate = CubeColorScheme(faces)
+        s = f"matches_scheme={self.cube.color_scheme.same(candidate)} {faces}"
 
         return s
 

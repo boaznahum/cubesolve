@@ -8,7 +8,7 @@ from cube.domain import algs
 from cube.domain.algs import Algs, SeqAlg
 from cube.domain.exceptions import InternalSWError
 from cube.domain.geometric.block import Block
-from cube.domain.geometric.cube_boy import color2long
+from cube.domain.model.Color import color2long
 from cube.domain.geometric.cube_layout import CubeLayout
 from cube.domain.geometric.geometry_types import Point
 from cube.domain.model import CenterSlice, Color, FaceName
@@ -164,16 +164,16 @@ class NxNCenters(SolverHelper):
         self._comm_helper = CommutatorHelper(slv)
 
     def _is_solved(self):
-        return all((f.center.is3x3 for f in self.cube.faces)) and self.cube.is_boy
+        return all((f.center.is3x3 for f in self.cube.faces)) and self.cube.is_in_original_scheme
 
     @staticmethod
     def is_cube_solved(cube: Cube):
-        return all((f.center.is3x3 for f in cube.faces)) and cube.is_boy
+        return all((f.center.is3x3 for f in cube.faces)) and cube.is_in_original_scheme
 
     def solved(self) -> bool:
         """
 
-        :return: if all centers have unique colors, and it is a boy
+        :return: if all centers have unique colors, and matches original scheme
         """
 
         return self._is_solved()
@@ -304,10 +304,10 @@ class NxNCenters(SolverHelper):
     #     print()
 
     # noinspection PyUnreachableCode,PyUnusedLocal
-    def _asserts_is_boy(self, faces: Iterable[FaceTracker]):
+    def _asserts_is_boy(self, faces: Iterable[FaceTracker]) -> None:
 
-        CubeLayout.sanity_cost_assert_match_cube_layout(self.cube,
-                                                        lambda: {f.face.name: f.color for f in faces} )
+        CubeLayout.sanity_cost_assert_matches_scheme(self.cube,
+                                                     lambda: {f.face.name: f.color for f in faces})
 
     def _do_center(self, tracker_holder: "FacesTrackerHolder", face_loc: FaceTracker, minimal_bring_one_color, use_back_too: bool, faces: Iterable[FaceTracker]) -> bool:
 

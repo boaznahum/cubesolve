@@ -23,7 +23,7 @@ def test_scramble1_preserves_boy_large_cube() -> None:
     a: algs.Alg = algs.Algs.scramble1(cube.size)
     a.play(cube)
 
-    assert cube.is_boy
+    assert cube.is_in_original_scheme
 
 
 @pytest.mark.parametrize("solver", SolverName.implemented())
@@ -40,4 +40,4 @@ def test_solve_preserves_boy(solver: SolverName) -> None:
 
     app.slv.solve()
 
-    assert cube.is_boy, f"Solver {solver.name} should preserve BOY orientation"
+    assert cube.is_in_original_scheme, f"Solver {solver.name} should preserve original color scheme"

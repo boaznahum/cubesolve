@@ -128,8 +128,6 @@ class _CubeLayout(CubeLayout):
         try:
             from cube.domain.model.Cube import Cube
             self._internal_cube = Cube(3, self._sp)
-            # Set the layout directly (Cube doesn't accept layout in __init__)
-            self._internal_cube._original_layout = self
         finally:
             self._creating_internal_cube = False
 
@@ -155,15 +153,6 @@ class _CubeLayout(CubeLayout):
         """Get the color on the face opposite to the given color's face."""
         return self._color_scheme.opposite_color(color)
 
-    def same(self, other: CubeLayout) -> bool:
-        """Check if this layout is equivalent to another."""
-        other_scheme = CubeColorScheme({f: other[f] for f in FaceName})
-        return self._color_scheme.same(other_scheme)
-
-    def is_boy(self) -> bool:
-        """Check if this layout matches the standard BOY color scheme."""
-        from cube.domain.geometric import cube_boy
-        return self.same(cube_boy.get_boy_layout(self._sp))
 
     def clone(self) -> _CubeLayout:
         """Create a mutable copy of this layout."""

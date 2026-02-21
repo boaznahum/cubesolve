@@ -16,7 +16,7 @@ import pytest
 
 from cube.application.AbstractApp import AbstractApp
 from cube.domain.exceptions import GeometryError, GeometryErrorCode
-from cube.domain.geometric import cube_boy
+from cube.domain.geometric.cube_color_schemes import boy_scheme
 from cube.domain.geometric.cube_layout import CubeLayout
 from cube.domain.model.Cube import Cube
 from cube.domain.model.FaceName import FaceName
@@ -33,7 +33,7 @@ CUBE_SIZES = [3, 5]
 
 def _get_layout() -> CubeLayout:
     """Get a CubeLayout instance to query geometry."""
-    return cube_boy.get_boy_layout(_test_sp)
+    return CubeLayout.create_layout(True, boy_scheme().faces, _test_sp)
 
 
 def get_valid_combinations() -> list[tuple[FaceName, FaceName, FaceName]]:

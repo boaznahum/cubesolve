@@ -18,7 +18,7 @@ from . import Edge, Part, PartEdge
 from ._elements import CubeState, PartColorsID
 from .PartSlice import CenterSlice, CornerSlice, EdgeWing, PartSlice
 from .Cube import Cube
-from cube.domain.geometric.cube_boy import Color
+from cube.domain.model.Color import Color
 from .Face import Face
 from .Part import TPartType
 

@@ -143,7 +143,7 @@ class FaceTracker(ABC):
 
     def _track_opposite(self) -> "SimpleFaceTracker":
         """Create tracker for the opposite face."""
-        second_color = self._cube.original_layout.opposite_color(self._color)
+        second_color = self._cube.color_scheme.opposite_color(self._color)
 
         def _pred(_f: Face) -> bool:
             return _f.opposite is self.face
