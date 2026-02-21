@@ -1293,6 +1293,7 @@ class Cube(CubeSupplier):
         neg_slice_index: bool
         slice_name: SliceName
 
+        # cluade: still hardcoded geomtertic !!!
         match face_name:
 
             case FaceName.R:
