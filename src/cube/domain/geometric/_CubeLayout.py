@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Mapping, Tuple
 from cube.domain.exceptions import GeometryError, GeometryErrorCode, InternalSWError
 from cube.domain.geometric.Face2FaceTranslator import Face2FaceTranslator
 from cube.domain.geometric.FRotation import FUnitRotation
+from cube.domain.geometric.cube_color_scheme import CubeColorScheme
 from cube.domain.model.Edge import Edge
 from cube.domain.model.SliceName import SliceName
 from cube.domain.geometric.cube_layout import CubeLayout
@@ -53,15 +54,13 @@ class _CubeLayout(CubeLayout):
     - Mutable layouts for comparison/manipulation
     - Geometric operations (opposite, adjacent faces)
 
-    The face geometry (opposite, adjacent) is defined at the protocol level
-    and shared by all implementations.
+    Color-scheme logic (face↔color lookup, comparison, rotation)
+    is delegated to the contained ``CubeColorScheme``.
     """
 
     __slots__ = (
-        "_faces",
-        "_read_only",
+        "_color_scheme",
         "_sp",
-        "_edge_colors",
         "_cache_manager",
         "_slices",
         "_internal_cube",
@@ -74,14 +73,12 @@ class _CubeLayout(CubeLayout):
         """Create a new CubeLayout.
 
         Args:
-            read_only: If True, layout cannot be modified (used for BOY singleton).
+            read_only: If True, color scheme cannot be mutated (used for BOY singleton).
             faces: Mapping of each face to its color.
             sp: Service provider for configuration access.
         """
-        self._faces: dict[FaceName, Color] = dict(faces)
-        self._read_only = read_only
+        self._color_scheme = CubeColorScheme(faces, read_only=read_only)
         self._sp = sp
-        self._edge_colors: Collection[frozenset[Color]] | None = None
         self._cache_manager = CacheManager.create(sp.config)
         self._scheme: SchematicCube = SchematicCube.inst()
 
@@ -138,109 +135,30 @@ class _CubeLayout(CubeLayout):
 
         return self._internal_cube
 
+    # ------------------------------------------------------------------
+    # Delegated to CubeColorScheme
+    # ------------------------------------------------------------------
+
     def __getitem__(self, face: FaceName) -> Color:
         """Get the color for a specific face."""
-        return self._faces[face]
-
-    def get_slice(self, slice_name: SliceName) -> SliceLayout:
-        return self._slices[slice_name]
+        return self._color_scheme[face]
 
     def colors(self) -> Collection[Color]:
         """Get all colors in this layout."""
-        return [*self._faces.values()]
+        return self._color_scheme.colors()
 
     def edge_colors(self) -> Collection[frozenset[Color]]:
         """Get all valid edge color combinations."""
-        if self._edge_colors is not None:
-            return self._edge_colors
-
-        colors: set[frozenset[Color]] = set()
-
-        scheme = self._scheme
-        for f1, c1 in self._faces.items():
-            for f2, c2 in self._faces.items():
-                if f1 is not f2:
-                    if f2 is not scheme.opposite(f1):
-                        c = frozenset((c1, c2))
-                        colors.add(c)
-
-        self._edge_colors = colors
-
-        return self._edge_colors
-
-    def edge_faces(self) -> dict["EdgeName", tuple[FaceName, FaceName]]:
-        """Get mapping from EdgeName to the two faces it connects."""
-        return self._scheme.edge_faces()
-
-    def corner_faces(self) -> dict["CornerName", tuple[FaceName, FaceName, FaceName]]:
-        """Get mapping from CornerName to the three faces it connects."""
-        return self._scheme.corner_faces()
+        return self._color_scheme.edge_colors()
 
     def opposite_color(self, color: Color) -> Color:
         """Get the color on the face opposite to the given color's face."""
-        return self._faces[self.opposite(self._find_face(color))]
+        return self._color_scheme.opposite_color(color)
 
     def same(self, other: CubeLayout) -> bool:
-        """Check if this layout is equivalent to another.
-
-        Args:
-            other: Another layout to compare with.
-
-        Returns:
-            True if layouts are equivalent, False otherwise.
-        """
-        # because this might be NxN in which center color have no meaning
-        # we need to check
-        for c in other.colors():
-            if not self._is_face(c):
-                return False
-
-        # so it safe to continue !!!
-
-        this = self.clone()
-
-        # Check opposite colors
-        # make sure that opposite colors on this, are the same in other layout
-        _scheme = self._scheme
-        for f1 in (FaceName.F, FaceName.U, FaceName.L):
-            f2 = _scheme.opposite(f1)
-
-            c1 = other[f1]
-            c2 = other[f2]
-
-            this_c1_face: FaceName = this._find_face(c1)
-            this_c2_face = _scheme.opposite(this_c1_face)
-
-            this_c2 = this._faces[this_c2_face]
-            if c2 != this_c2:
-                return False
-
-        # find color of other front
-        other_f_color: Color = other[FaceName.F]
-
-        this_f_match = this._find_face(other_f_color)
-
-        this._bring_face_to_front(this_f_match)
-        assert this._faces[FaceName.F] == other_f_color
-
-        # find UP color on other
-        other_u_color = other[FaceName.U]
-
-        this_u_match = this._find_face(other_u_color)
-        if this_u_match == FaceName.B:
-            return False  # on this it is on Back, can't match other layout
-
-        this._bring_face_up_preserve_front(this_u_match)  # preserve front
-        assert this._faces[FaceName.U] == other_u_color
-
-        other_l_color = other[FaceName.L]
-
-        this_l_color = this._faces[FaceName.L]
-
-        if other_l_color != this_l_color:
-            return False
-
-        return True  # same layout
+        """Check if this layout is equivalent to another."""
+        other_scheme = CubeColorScheme({f: other[f] for f in FaceName})
+        return self._color_scheme.same(other_scheme)
 
     def is_boy(self) -> bool:
         """Check if this layout matches the standard BOY color scheme."""
@@ -249,7 +167,22 @@ class _CubeLayout(CubeLayout):
 
     def clone(self) -> _CubeLayout:
         """Create a mutable copy of this layout."""
-        return _CubeLayout(False, self._faces, self._sp)
+        return _CubeLayout(False, self._color_scheme._faces, self._sp)
+
+    # ------------------------------------------------------------------
+    # Geometry (delegated to SchematicCube)
+    # ------------------------------------------------------------------
+
+    def get_slice(self, slice_name: SliceName) -> SliceLayout:
+        return self._slices[slice_name]
+
+    def edge_faces(self) -> dict["EdgeName", tuple[FaceName, FaceName]]:
+        """Get mapping from EdgeName to the two faces it connects."""
+        return self._scheme.edge_faces()
+
+    def corner_faces(self) -> dict["CornerName", tuple[FaceName, FaceName, FaceName]]:
+        """Get mapping from CornerName to the three faces it connects."""
+        return self._scheme.corner_faces()
 
     def opposite(self, fn: FaceName) -> FaceName:
         """Get the face opposite to the given face."""
@@ -299,7 +232,6 @@ class _CubeLayout(CubeLayout):
                 return slice_name
 
         raise GeometryError(GeometryErrorCode.INVALID_FACE, f"No slice sandwiched by {face}")
-
 
 
 
@@ -378,176 +310,19 @@ class _CubeLayout(CubeLayout):
             layer1_face, side_face, layer_slice_index
         )
 
-
-    def _is_face(self, color: Color) -> FaceName | None:
-        """Find which face has the given color, or None if not found."""
-        for f, c in self._faces.items():
-            if c == color:
-                return f
-        return None
-
-    def _find_face(self, color: Color) -> FaceName:
-        """Find which face has the given color.
-
-        Args:
-            color: The color to find.
-
-        Returns:
-            The face with that color.
-
-        Raises:
-            InternalSWError: If color is not found.
-        """
-        fn = self._is_face(color)
-
-        if fn:
-            return fn
-
-        raise InternalSWError(f"No such color {color} in {self}")
-
-    def _bring_face_to_front(self, f: FaceName) -> None:
-        """Rotate layout so the given face becomes Front.
-
-        Used internally by same() for layout comparison.
-
-        Args:
-            f: The face to bring to front position.
-        """
-        assert not self._read_only
-
-        if f != FaceName.F:
-
-            match f:
-
-                case FaceName.U:
-                    self._rotate_x(-1)
-
-                case FaceName.B:
-                    self._rotate_x(-2)
-
-                case FaceName.D:
-                    self._rotate_x(1)
-
-                case FaceName.L:
-                    self._rotate_y(-1)
-
-                case FaceName.R:
-                    self._rotate_y(1)
-
-                case _:
-                    raise InternalSWError(f"Unknown face {f}")
-
-    def _bring_face_up_preserve_front(self, face: FaceName) -> None:
-        """Rotate layout so the given face becomes Up, keeping Front unchanged.
-
-        Only works for faces adjacent to Front (not Back).
-
-        Args:
-            face: The face to bring to up position.
-
-        Raises:
-            InternalSWError: If face is Back (cannot preserve Front).
-        """
-        if face == FaceName.U:
-            return
-
-        if face == FaceName.B:
-            raise InternalSWError(f"{face} is not supported")
-
-        match face:
-
-            case FaceName.L:
-                self._rotate_z(1)
-
-            case FaceName.D:
-                self._rotate_z(2)
-
-            case FaceName.R:
-                self._rotate_z(-1)
-
-            case _:
-                raise InternalSWError(f" Unknown face {face.name}")
-
-    def _rotate_x(self, n: int) -> None:
-        """Rotate layout around R axis (like cube rotation x).
-
-        Args:
-            n: Number of 90° rotations (positive = U→F→D→B direction).
-        """
-        faces = self._faces
-
-        for _ in range(n % 4):
-            self._check()
-            f = faces[FaceName.F]
-            faces[FaceName.F] = faces[FaceName.D]
-            faces[FaceName.D] = faces[FaceName.B]
-            faces[FaceName.B] = faces[FaceName.U]
-            faces[FaceName.U] = f
-            self._check()
-
-    def _rotate_y(self, n: int) -> None:
-        """Rotate layout around U axis (like cube rotation y).
-
-        Args:
-            n: Number of 90° rotations (positive = F→L→B→R direction).
-        """
-        faces = self._faces
-
-        for _ in range(n % 4):
-            self._check()
-            f = faces[FaceName.F]
-            faces[FaceName.F] = faces[FaceName.R]
-            faces[FaceName.R] = faces[FaceName.B]
-            faces[FaceName.B] = faces[FaceName.L]
-            faces[FaceName.L] = f
-            self._check()
-
-    def _rotate_z(self, n: int) -> None:
-        """Rotate layout around F axis (like cube rotation z).
-
-        Args:
-            n: Number of 90° rotations (positive = U→L→D→R direction).
-        """
-        faces = self._faces
-
-        for _ in range(n % 4):
-            self._check()
-            u = faces[FaceName.U]
-            faces[FaceName.U] = faces[FaceName.L]
-            faces[FaceName.L] = faces[FaceName.D]
-            faces[FaceName.D] = faces[FaceName.R]
-            faces[FaceName.R] = u
-            self._check()
+    # ------------------------------------------------------------------
+    # Display
+    # ------------------------------------------------------------------
 
     def __str__(self) -> str:
-        faces: dict[FaceName, Color] = self._faces
-
-        def get_face_str(face_name: FaceName) -> str:
-            """Safely get face color value as string, or error message if missing."""
-            if face_name in faces:
-                return "[" + face_name.value + ":" + str(faces[face_name].value) + "]"
-            else:
-                return f"[{face_name.value} ❌❌]"
-
-        s = ""
-
-        s += "-" + get_face_str(FaceName.B) + "-" + "\n"
-        s += "-" + get_face_str(FaceName.U) + "-" + "\n"
-        s += get_face_str(FaceName.L) + get_face_str(FaceName.F) + get_face_str(FaceName.R) + "\n"
-        s += "-" + get_face_str(FaceName.D) + "-" + "\n"
-
-        return s
+        return str(self._color_scheme)
 
     def __repr__(self) -> str:
         return self.__str__()
 
-    def _check(self) -> None:
-        """Verify layout sanity (if config enables it)."""
-        if not self.config.check_cube_sanity:
-            return
-
-        for c in Color:
-            assert self._find_face(c)
+    # ------------------------------------------------------------------
+    # Face translation / edge geometry
+    # ------------------------------------------------------------------
 
     def translate_target_from_source(self,
                                      source_face: Face,
@@ -750,4 +525,3 @@ class _CubeLayout(CubeLayout):
         cache_key = ("CubeLayout.get_bring_face_alg_preserve", target, source, preserve)
         cache = self.cache_manager.get(cache_key, WholeCubeAlg)
         return cache.compute(compute_alg)
-
