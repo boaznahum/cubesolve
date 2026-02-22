@@ -18,6 +18,7 @@ from __future__ import annotations
 from enum import Enum, auto
 
 from cube.domain.model.Color import Color
+from cube.domain.model.Color import color2rgb_float
 from cube.domain.model.FaceName import FaceName
 
 # =============================================================================
@@ -64,24 +65,10 @@ SHADOW_OFFSETS: dict[FaceName, tuple[float, float, float]] = {
     FaceName.B: (0, 0, SHADOW_OFFSET_B * FACE_SIZE),
 }
 
-# =============================================================================
-# Color Mapping
-# =============================================================================
-# Cube face colors: Color enum -> RGB (0.0-1.0 normalized)
-# These colors match the standard Rubik's cube color scheme.
-
-COLOR_TO_RGB: dict[Color, tuple[float, float, float]] = {
-    Color.WHITE:  (1.0, 1.0, 1.0),      # Up face
-    Color.YELLOW: (1.0, 0.84, 0.0),     # Down face (golden yellow)
-    Color.GREEN:  (0.0, 0.61, 0.28),    # Front face (dark green)
-    Color.BLUE:   (0.0, 0.27, 0.68),    # Back face (dark blue)
-    Color.RED:    (0.72, 0.07, 0.20),   # Right face (dark red)
-    Color.ORANGE: (1.0, 0.35, 0.0),     # Left face
-}
 
 # Reverse mapping for texture grouping
 RGB_TO_COLOR: dict[tuple[float, float, float], Color] = {
-    v: k for k, v in COLOR_TO_RGB.items()
+    color2rgb_float(color): color for color in Color
 }
 
 # =============================================================================
@@ -91,6 +78,7 @@ RGB_TO_COLOR: dict[tuple[float, float, float], Color] = {
 # cells are grouped by their COLOR (not current face) so the texture
 # "sticks" to the piece as it moves around the cube.
 
+#claude: need to get rid of ir, use cube original schema
 COLOR_TO_HOME_FACE: dict[Color, FaceName] = {
     Color.GREEN:  FaceName.F,   # Green = Front
     Color.BLUE:   FaceName.B,   # Blue = Back

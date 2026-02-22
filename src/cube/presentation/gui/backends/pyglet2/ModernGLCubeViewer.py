@@ -256,7 +256,8 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
             # Old textured mode: draw each color group with its face texture
             for color, triangles in self._triangles_per_color.items():
                 if len(triangles) > 0:
-                    home_face = COLOR_TO_HOME_FACE.get(color)
+                    home_face = COLOR_TO_HOME_FACE[color]
+                    assert home_face
                     texture_handle = self._face_textures.get(home_face) if home_face else None
                     self._renderer.draw_textured_lit_triangles(triangles, texture_handle)
         else:
@@ -310,7 +311,7 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
             # Old textured mode
             for color, triangles in self._animated_triangles_per_color.items():
                 if len(triangles) > 0:
-                    home_face = COLOR_TO_HOME_FACE.get(color)
+                    home_face = COLOR_TO_HOME_FACE[color]
                     texture_handle = self._face_textures.get(home_face) if home_face else None
                     self._renderer.draw_textured_lit_triangles(triangles, texture_handle)
         else:

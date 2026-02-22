@@ -19,7 +19,7 @@ from cube.utils.markers_config import MarkersConfig
 
 ########## Some top important
 # Only initial value, can be changed
-CUBE_SIZE = 12
+CUBE_SIZE = 4
 
 # Enable cube caching for performance optimization
 # Env override: CUBE_DISABLE_CACHE=1 to disable
@@ -76,7 +76,7 @@ OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES = True
 OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES_ONLY_TARGET_ZERO = True
 OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS = True
 
-SOLVER_SANITY_CHECK_IS_A_BOY = True # NON-DEFAULT
+SOLVER_SANITY_CHECK_IS_A_BOY = False # NON-DEFAULT
 
 LBL_SANITY_CHECK = False  # performance
 

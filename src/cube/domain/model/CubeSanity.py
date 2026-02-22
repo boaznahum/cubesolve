@@ -57,6 +57,7 @@ from cube.domain.exceptions import InternalSWError
 from ._elements import CHelper, PartColorsID
 from .Cube import Cube
 from cube.domain.model.Color import Color
+from ..geometric.cube_color_scheme import CubeColorScheme
 
 
 class CubeSanity:
@@ -87,8 +88,9 @@ class CubeSanity:
         # Step 1: Validate all 8 corners exist with valid color combinations
         # Derived from the cube's layout: each corner is 3 adjacent faces
         layout = cube.layout
+        cs: CubeColorScheme = cube.layout.colors_schema()
         for _, (f1, f2, f3) in layout.corner_faces().items():
-            corner = (layout[f1], layout[f2], layout[f3])
+            corner = (cs[f1], cs[f2], cs[f3])
             cube.find_corner_by_colors(CHelper.colors_id(corner))
 
         # Step 2: Validate center piece distribution (expensive but catches corruption)
@@ -102,13 +104,13 @@ class CubeSanity:
             return
 
         # Validate all 6 center colors exist
-        for c in layout.colors():
+        for c in cs.colors():
             cube.find_part_by_colors(frozenset([c]))
 
         # Validate all 12 edges exist with valid color pairs
         # Derived from layout: each edge is 2 adjacent faces
         for _, (f1, f2) in layout.edge_faces().items():
-            cube.find_part_by_colors(frozenset([layout[f1], layout[f2]]))
+            cube.find_part_by_colors(frozenset([cs[f1], cs[f2]]))
 
     @staticmethod
     def _check_nxn_centers(cube: Cube) -> None:

@@ -31,13 +31,12 @@ from typing import TYPE_CHECKING
 import numpy as np
 from numpy import ndarray
 
-from cube.domain.model.Color import Color
+from cube.domain.model.Color import Color, color2rgb_float
 from cube.domain.model.FaceName import FaceName
 
 from ._modern_gl_cell import ModernGLCell
 from ._modern_gl_constants import (
     CELL_GAP_RATIO,
-    COLOR_TO_RGB,
     HALF_CUBE_SIZE,
 )
 
@@ -118,7 +117,7 @@ class ModernGLFace:
             for col in range(size):
                 # Get color and part_slice for this cell
                 color = self._get_cell_color(cube_face, row, col)
-                rgb = COLOR_TO_RGB.get(color, (0.5, 0.5, 0.5))
+                rgb = color2rgb_float(color)
                 part_slice = self._get_cell_part_slice(cube_face, row, col)
 
                 # Get PartEdge for this face (for texture lookup from c_attributes)

@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from rich.console import Console
 from rich.text import Text
 
-from cube.domain.model.Color import Color
+from cube.domain.model.Color import Color, TEXT_RICH_COLORS
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
 
@@ -161,7 +161,7 @@ def _render_face_row_rich(grid: list[list[Color]], row: int) -> Text:
     text = Text()
     for color in grid[row]:
         letter = _color_to_letter(color)
-        text.append(f"{letter} ", style=f"bold {_RICH_COLORS[color]}")
+        text.append(f"{letter} ", style=f"bold {TEXT_RICH_COLORS[color]}")
     return text
 
 

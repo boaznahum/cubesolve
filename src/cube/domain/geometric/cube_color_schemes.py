@@ -16,23 +16,35 @@ from cube.domain.geometric.cube_color_scheme import CubeColorScheme
 from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
 
-_BOY_FACES: dict[FaceName, Color] = {
-    FaceName.F: Color.BLUE,
-    FaceName.R: Color.RED,
-    FaceName.U: Color.YELLOW,
-    FaceName.L: Color.ORANGE,
-    FaceName.D: Color.WHITE,
-    FaceName.B: Color.GREEN,
-}
-
-
 def boy_scheme() -> CubeColorScheme:
     """Standard Western BOY (Blue-Orange-Yellow on the Front-Left-Up corner).
 
     Face colors:
         Front=Blue, Right=Red, Up=Yellow, Left=Orange, Down=White, Back=Green
     """
-    return CubeColorScheme(_BOY_FACES, read_only=True)
+    return CubeColorScheme({
+        FaceName.F: Color.BLUE,
+        FaceName.R: Color.RED,
+        FaceName.U: Color.YELLOW,
+        FaceName.L: Color.ORANGE,
+        FaceName.D: Color.WHITE,
+        FaceName.B: Color.GREEN,
+    }, read_only=True)
+
+def purple_pink() -> CubeColorScheme:
+    """Standard Western BOY (Blue-Orange-Yellow on the Front-Left-Up corner).
+
+    Face colors:
+        Front=Blue, Right=Red, Up=Yellow, Left=Orange, Down=White, Back=Green
+    """
+    return CubeColorScheme({
+        FaceName.F: Color.PURPLE,
+        FaceName.R: Color.PINK,
+        FaceName.U: Color.YELLOW,
+        FaceName.L: Color.ORANGE,
+        FaceName.D: Color.WHITE,
+        FaceName.B: Color.GREEN,
+    }, read_only=True)
 
 
 def random_scheme() -> CubeColorScheme:

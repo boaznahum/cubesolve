@@ -1,5 +1,7 @@
+
 from cube.application.markers import MarkerCreator
 from cube.domain.model import Face, CenterSlice, Color
+from cube.domain.model.Color import color2rgb_float
 
 # Visual marker key for rendering tracker dots on center slices.
 # This is ONLY for on-screen display (marker_manager) — NOT used for solver logic.
@@ -7,18 +9,6 @@ from cube.domain.model import Face, CenterSlice, Color
 _TRACKER_VISUAL_MARKER = "tracker_ct"
 
 _cached_visual_face_marker: dict[Color, MarkerCreator] = {}
-
-# Map Color enum to RGB float tuples for marker rendering.
-# These match the standard Rubik's cube color scheme.
-_COLOR_TO_RGB: dict[Color, tuple[float, float, float]] = {
-    Color.WHITE:  (1.0, 1.0, 1.0),
-    Color.YELLOW: (1.0, 0.84, 0.0),
-    Color.GREEN:  (0.0, 0.61, 0.28),
-    Color.BLUE:   (0.0, 0.27, 0.68),
-    Color.RED:    (0.72, 0.07, 0.20),
-    Color.ORANGE: (1.0, 0.35, 0.0),
-}
-
 
 
 def tracer_visual_key(tracer_key: str) -> str:
@@ -68,7 +58,8 @@ def find_and_track_slice(face: Face, key: str, color: Color) -> None:
 
                 mf = cube.sp.marker_factory
                 ti = cube.config.tracker_indicator
-                face_rgb: tuple[float, float, float] = _COLOR_TO_RGB.get(color, (1.0, 0.0, 1.0))  # fallback magenta
+                face_rgb: tuple[float, float, float] | None= color2rgb_float(color)  # fallback magenta
+                assert face_rgb is not None
 
                 marker = mf.create_outlined_circle(
                     fill_color=face_rgb,

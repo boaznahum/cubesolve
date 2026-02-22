@@ -136,9 +136,8 @@ class _CubeLayout(CubeLayout):
     # Delegated to CubeColorScheme
     # ------------------------------------------------------------------
 
-    def __getitem__(self, face: FaceName) -> Color:
-        """Get the color for a specific face."""
-        return self._color_scheme[face]
+    def colors_schema(self) -> CubeColorScheme:
+        return self._color_scheme
 
     def colors(self) -> Collection[Color]:
         """Get all colors in this layout."""

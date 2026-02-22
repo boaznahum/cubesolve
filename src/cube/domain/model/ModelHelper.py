@@ -1,6 +1,6 @@
 from typing import Iterable
 
-from cube.domain.model.Color import Color, color2long
+from cube.domain.model.Color import Color
 
 
 class ModelHelper:
@@ -16,7 +16,7 @@ class ModelHelper:
         s_colors = ""
 
         for e in color_id:
-            s_colors += str(color2long(e).value) + "/"
+            s_colors += str(e.long.value) + "/"
 
         # remove last /
         s_colors = s_colors[0:-1]

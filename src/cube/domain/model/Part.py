@@ -12,7 +12,7 @@ from cube.domain.model._elements import (
     _Face,
 )
 from cube.domain.model.PartSlice import PartSlice
-from cube.domain.model.Color import Color, color2long
+from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.PartEdge import PartEdge
 
@@ -478,7 +478,7 @@ class Part(ABC, CubeElement):
 
         for e in self._3x3_representative_edges:
             s1 += str(e.face.name.value)
-            s2 += str(color2long(e.color).value) + "/"
+            s2 += str(e.color.long.value) + "/"
 
         s2 = s2[0:-1]
 
@@ -494,7 +494,7 @@ class Part(ABC, CubeElement):
         s_colors = ""
 
         for e in self._3x3_representative_edges:
-            s_colors += str(color2long(e.color).value) + "/"
+            s_colors += str(e.color.long.value) + "/"
 
         s_colors = s_colors[0:-1]
 

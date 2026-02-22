@@ -366,7 +366,11 @@ class Cube(CubeSupplier):
         from cube.domain.geometric.cube_layout import CubeLayout as CL
         from cube.domain.geometric._SizedCubeLayout import _SizedCubeLayout
 
-        self._original_scheme = scheme if scheme is not None else cube_color_schemes.random_scheme()
+        if scheme is not None:
+            self._original_scheme = scheme
+        else:
+            # self._original_scheme = cube_color_schemes.random_scheme()
+            self._original_scheme = cube_color_schemes.purple_pink()
         self._layout: CubeLayout = CL.create_layout(self._original_scheme.faces, self._sp)
         self._sized_layout: SizedCubeLayout = _SizedCubeLayout(self)
         self._reset()
@@ -388,40 +392,41 @@ class Cube(CubeSupplier):
 
         self._color_2_face = {}
 
-        boy = self._layout
+        layout = self.layout
+        cs = layout.colors_schema()
 
-        f: Face = Face(self, FaceName.F, boy[FaceName.F])
-        l: Face = Face(self, FaceName.L, boy[FaceName.L])  # noqa: E741 TODO: fix
-        u: Face = Face(self, FaceName.U, boy[FaceName.U])
-        r: Face = Face(self, FaceName.R, boy[FaceName.R])
-        d: Face = Face(self, FaceName.D, boy[FaceName.D])
-        b: Face = Face(self, FaceName.B, boy[FaceName.B])
+        front: Face = Face(self, FaceName.F, cs[FaceName.F])
+        left: Face = Face(self, FaceName.L, cs[FaceName.L])
+        up: Face = Face(self, FaceName.U, cs[FaceName.U])
+        right: Face = Face(self, FaceName.R, cs[FaceName.R])
+        down: Face = Face(self, FaceName.D, cs[FaceName.D])
+        back: Face = Face(self, FaceName.B, cs[FaceName.B])
 
         self._faces = {
-            FaceName.F: f,
-            FaceName.L: l,
-            FaceName.U: u,
-            FaceName.R: r,
-            FaceName.D: d,
-            FaceName.B: b
+            FaceName.F: front,
+            FaceName.L: left,
+            FaceName.U: up,
+            FaceName.R: right,
+            FaceName.D: down,
+            FaceName.B: back
         }
 
         # Set opposite face relationships using layout.opposite()
         # Only set once per pair to avoid duplicate calls
         set_pairs: set[frozenset[FaceName]] = set()
         for fn, face in self._faces.items():
-            opposite_fn = boy.opposite(fn)
+            opposite_fn = layout.opposite(fn)
             pair = frozenset([fn, opposite_fn])
             if pair not in set_pairs:
                 face.set_opposite(self._faces[opposite_fn])
                 set_pairs.add(pair)
 
-        self._front = f
-        self._left = l
-        self._up = u
-        self._right = r
-        self._down = d
-        self._back = b
+        self._front = front
+        self._left = left
+        self._up = up
+        self._right = right
+        self._down = down
+        self._back = back
 
         edges: list[Edge] = []
 
@@ -431,24 +436,24 @@ class Cube(CubeSupplier):
         # The same facts are duplicated in SchematicCube._EDGE_WIRING
         # (cube/domain/geometric/schematic_cube.py) as abstract FaceName data.
         # If you change wiring here, update _EDGE_WIRING there too.
-        f._edge_top = u._edge_bottom = _create_edge(edges, f, u, True)
-        f._edge_left = l._edge_right = _create_edge(edges, f, l, True)
-        f._edge_right = r._edge_left = _create_edge(edges, f, r, True)
-        f._edge_bottom = d._edge_top = _create_edge(edges, f, d, True)
+        front._edge_top = up._edge_bottom = _create_edge(edges, front, up, True)
+        front._edge_left = left._edge_right = _create_edge(edges, front, left, True)
+        front._edge_right = right._edge_left = _create_edge(edges, front, right, True)
+        front._edge_bottom = down._edge_top = _create_edge(edges, front, down, True)
 
         # Note: u must be f1 for consistency with u._edge_top (U-B edge) - see Issue #53
-        l._edge_top = u._edge_left = _create_edge(edges, u, l, False)
-        l._edge_bottom = d._edge_left = _create_edge(edges, l, d, True)
+        left._edge_top = up._edge_left = _create_edge(edges, up, left, False)
+        left._edge_bottom = down._edge_left = _create_edge(edges, left, down, True)
 
-        d._edge_right = r._edge_bottom = _create_edge(edges, d, r, False)
-        d._edge_bottom = b._edge_bottom = _create_edge(edges, d, b, False)
+        down._edge_right = right._edge_bottom = _create_edge(edges, down, right, False)
+        down._edge_bottom = back._edge_bottom = _create_edge(edges, down, back, False)
 
-        r._edge_right = b._edge_left = _create_edge(edges, r, b, True)
+        right._edge_right = back._edge_left = _create_edge(edges, right, back, True)
 
-        l._edge_left = b._edge_right = _create_edge(edges, l, b, True)
+        left._edge_left = back._edge_right = _create_edge(edges, left, back, True)
 
-        u._edge_top = b._edge_top = _create_edge(edges, u, b, False)
-        u._edge_right = r._edge_top = _create_edge(edges, u, r, True)
+        up._edge_top = back._edge_top = _create_edge(edges, up, back, False)
+        up._edge_right = right._edge_top = _create_edge(edges, up, right, True)
 
         self._edges = edges
 
@@ -461,15 +466,15 @@ class Cube(CubeSupplier):
         # If you change wiring here, the corner derivation there should still hold,
         # but verify.
 
-        f._corner_top_left = l._corner_top_right = u._corner_bottom_left = _create_corner(corners, f, l, u)
-        f._corner_top_right = r._corner_top_left = u._corner_bottom_right = _create_corner(corners, f, r, u)
-        f._corner_bottom_left = l._corner_bottom_right = d._corner_top_left = _create_corner(corners, f, l, d)
-        f._corner_bottom_right = r._corner_bottom_left = d._corner_top_right = _create_corner(corners, f, r, d)
+        front._corner_top_left = left._corner_top_right = up._corner_bottom_left = _create_corner(corners, front, left, up)
+        front._corner_top_right = right._corner_top_left = up._corner_bottom_right = _create_corner(corners, front, right, up)
+        front._corner_bottom_left = left._corner_bottom_right = down._corner_top_left = _create_corner(corners, front, left, down)
+        front._corner_bottom_right = right._corner_bottom_left = down._corner_top_right = _create_corner(corners, front, right, down)
 
-        b._corner_top_left = r._corner_top_right = u._corner_top_right = _create_corner(corners, b, r, u)
-        b._corner_top_right = l._corner_top_left = u._corner_top_left = _create_corner(corners, b, l, u)
-        b._corner_bottom_left = r._corner_bottom_right = d._corner_bottom_right = _create_corner(corners, b, r, d)
-        b._corner_bottom_right = l._corner_bottom_left = d._corner_bottom_left = _create_corner(corners, b, l, d)
+        back._corner_top_left = right._corner_top_right = up._corner_top_right = _create_corner(corners, back, right, up)
+        back._corner_top_right = left._corner_top_left = up._corner_top_left = _create_corner(corners, back, left, up)
+        back._corner_bottom_left = right._corner_bottom_right = down._corner_bottom_right = _create_corner(corners, back, right, down)
+        back._corner_bottom_right = left._corner_bottom_left = down._corner_bottom_left = _create_corner(corners, back, left, down)
 
         self._corners = corners
 
@@ -479,24 +484,24 @@ class Cube(CubeSupplier):
         self._centers = [_f.center for _f in self._faces.values()]
 
         slice_s: Slice = Slice(self, SliceName.S,  # Middle over F
-                               l.edge_top, u.center, r.edge_top,
-                               r.center,
-                               r.edge_bottom, d.center, l.edge_bottom,
-                               l.center
+                               left.edge_top, up.center, right.edge_top,
+                               right.center,
+                               right.edge_bottom, down.center, left.edge_bottom,
+                               left.center
                                )
 
         slice_m: Slice = Slice(self, SliceName.M,  # Middle over L
-                               f.edge_top, u.center, b.edge_top,
-                               b.center,
-                               b.edge_bottom, d.center, f.edge_bottom,
-                               f.center
+                               front.edge_top, up.center, back.edge_top,
+                               back.center,
+                               back.edge_bottom, down.center, front.edge_bottom,
+                               front.center
                                )
 
         slice_e: Slice = Slice(self, SliceName.E,  # Middle over D
-                               f.edge_left, f.center, f.edge_right,
-                               r.center,
-                               b.edge_left, b.center, b.edge_right,
-                               l.center
+                               front.edge_left, front.center, front.edge_right,
+                               right.center,
+                               back.edge_left, back.center, back.edge_right,
+                               left.center
                                )
 
         self._slices = {SliceName.S: slice_s, SliceName.M: slice_m, SliceName.E: slice_e}

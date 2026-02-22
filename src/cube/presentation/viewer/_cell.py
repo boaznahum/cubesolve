@@ -19,7 +19,7 @@ from cube.domain.model import (
     PartSlice,
     PartSliceHashID,
 )
-from cube.domain.model.Color import Color
+from cube.domain.model.Color import Color, color2rgb_int
 from cube.domain.model.Face import Face
 from cube.application.markers import MarkerToolkit, get_markers_from_part_edge
 from cube.domain.geometric import geometry_utils as geometry
@@ -34,10 +34,6 @@ _VColor = Tuple[int, int, int]
 
 if TYPE_CHECKING:
     from ._faceboard import _FaceBoard
-
-_inited = False
-
-_colors: dict[Color, _VColor] = {}
 
 # Complementary color map (0.0-1.0 float values for MarkerToolkit protocol)
 # Keyed by 0-255 face color (matching _colors dict) for legacy renderer lookup.
@@ -88,9 +84,7 @@ class LegacyCellToolkit(MarkerToolkit):
             face_color_255[1] / 255.0,
             face_color_255[2] / 255.0,
         )
-        self._complementary_float = _COMPLEMENTARY_MAP_FLOAT.get(
-            face_color_255, (1.0, 0.0, 1.0)
-        )
+        self._complementary_float = _COMPLEMENTARY_MAP_FLOAT[face_color_255]
         self._max_marker_radius = max_marker_radius
 
         # Calculate cell size and base radius
@@ -192,23 +186,7 @@ class LegacyCellToolkit(MarkerToolkit):
 
 
 def _color_2_v_color(c: Color) -> _VColor:
-    global _inited
-    global _colors
-
-    if not _inited:
-        #  https://www.rapidtables.com/web/color/blue-color.html
-
-        _colors[Color.BLUE] = (0, 0, 255)
-        _colors[Color.ORANGE] = (255, 69, 0)  # (255,127,80) # (255, 165, 0)
-        _colors[Color.YELLOW] = (255, 255, 0)
-        _colors[Color.GREEN] = (0, 255, 0)
-        _colors[Color.RED] = (255, 0, 0)
-        _colors[Color.WHITE] = (255, 255, 255)
-
-        _inited = True
-
-    #    return str(c.value)[0]
-    return _colors[c]
+    return color2rgb_int(c)
 
 
 class _RectGeometry:

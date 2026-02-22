@@ -8,7 +8,6 @@ from cube.domain import algs
 from cube.domain.algs import Algs, SeqAlg
 from cube.domain.exceptions import InternalSWError
 from cube.domain.geometric.block import Block
-from cube.domain.model.Color import color2long
 from cube.domain.geometric.cube_layout import CubeLayout
 from cube.domain.geometric.geometry_types import Point
 from cube.domain.model import CenterSlice, Color, FaceName
@@ -388,7 +387,7 @@ class NxNCenters(SolverHelper):
 
         self.debug( f"Working on face {face}", level=1)
 
-        with self.ann.annotate(h2=f"{color2long(face_loc.color).value} face"):
+        with self.ann.annotate(h2=f"{face_loc.color.long.value} face"):
             cube = self.cube
 
             # we loop bringing all adjusted faces up

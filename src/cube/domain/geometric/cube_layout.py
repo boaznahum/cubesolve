@@ -98,6 +98,9 @@ class CubeLayout(Protocol):
         CubeLayout._layout_cache[key] = layout
         return layout
 
+
+
+
     @staticmethod
     def sanity_cost_assert_matches_scheme(
             cube: "Cube",
@@ -132,20 +135,6 @@ class CubeLayout(Protocol):
         """Get the cache manager for this layout."""
         ...
 
-    @abstractmethod
-    def __getitem__(self, face: FaceName) -> Color:
-        """Get the color for a specific face.
-
-        Args:
-            face: The face to get the color for.
-
-        Returns:
-            The color assigned to that face.
-
-        Example:
-            color = layout[FaceName.F]  # Get front face color
-        """
-        ...
 
     @abstractmethod
     def get_slice(self, slice_name: SliceName) -> SliceLayout:
@@ -159,12 +148,19 @@ class CubeLayout(Protocol):
         """
         ...
 
+
     @abstractmethod
     def colors(self) -> Collection[Color]:
         """Get all colors in this layout.
 
         Returns:
             Collection of all 6 face colors.
+        """
+        ...
+
+    @abstractmethod
+    def colors_schema(self) -> CubeColorScheme:
+        """claude: documnet it
         """
         ...
 

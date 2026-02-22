@@ -74,14 +74,25 @@ class CubeColorScheme:
     # Lookup
     # ------------------------------------------------------------------
 
+    def __getitem__(self, face: FaceName) -> Color:
+        """Get the color for a specific face.
+
+        Args:
+            face: The face to get the color for.
+
+        Returns:
+            The color assigned to that face.
+
+        Example:
+            color = layout[FaceName.F]  # Get front face color
+        """
+        return self._faces[face]
+
     @property
     def faces(self) -> Mapping[FaceName, Color]:
         """Read-only view of the face→color mapping."""
         return self._faces
 
-    def __getitem__(self, face: FaceName) -> Color:
-        """Get the color assigned to *face*."""
-        return self._faces[face]
 
     def colors(self) -> Collection[Color]:
         """All six colors in this scheme."""
