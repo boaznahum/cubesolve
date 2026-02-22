@@ -1,6 +1,6 @@
 """Color Scheme Bank — factory functions for standard cube color schemes.
 
-Each function returns a **new read-only** ``CubeColorScheme``.
+Each function returns a **new** ``CubeColorScheme``.
 No global singletons — callers own the instance.
 
 Usage:
@@ -29,7 +29,7 @@ def boy_scheme() -> CubeColorScheme:
         FaceName.L: Color.ORANGE,
         FaceName.D: Color.WHITE,
         FaceName.B: Color.GREEN,
-    }, read_only=True)
+    })
 
 def purple_pink() -> CubeColorScheme:
     """Standard Western BOY (Blue-Orange-Yellow on the Front-Left-Up corner).
@@ -44,12 +44,12 @@ def purple_pink() -> CubeColorScheme:
         FaceName.L: Color.ORANGE,
         FaceName.D: Color.WHITE,
         FaceName.B: Color.GREEN,
-    }, read_only=True)
+    })
 
 
 def random_scheme() -> CubeColorScheme:
     """Random color scheme — pick 6 random colors from Color enum onto 6 faces."""
     colors = _random.sample(list(Color), k=len(FaceName))
     faces = dict(zip(list(FaceName), colors))
-    return CubeColorScheme(faces, read_only=True)
+    return CubeColorScheme(faces)
 

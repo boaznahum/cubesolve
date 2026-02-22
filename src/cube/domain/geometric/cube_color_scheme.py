@@ -10,14 +10,14 @@ When are two schemes the same?
 ==============================
 
 Two color schemes are considered *the same* if one can be rotated (whole-cube
-rotation) to match the other.  The comparison (``same()``) checks:
+rotation) to match the other.  The comparison (``same()``) works without
+any cloning or mutation:
 
-1. **Color set** — both schemes must use the same 6 colors.
-2. **Opposite-color pairs** — if Blue↔Green in one, then Blue↔Green in the other.
-3. **Orientation** — after aligning Front and Up colors, the Left color must match.
-
-This means the *physical arrangement* of stickers is identical; only the
-observer's point of view differs.
+1. Pick any color from scheme A, find its face in scheme B.
+2. The opposite face must hold the same color in both — this fixes the axis.
+3. The CW neighbor colors of that face must be a cyclic rotation of each
+   other — this fixes orientation (the only remaining freedom is rotation
+   around the axis, which is exactly a cyclic shift of the neighbors).
 
 Standard BOY (Blue-Orange-Yellow) color scheme::
 
@@ -50,6 +50,19 @@ from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
 
 
+def _is_cyclic_rotation(a: tuple[Color, ...], b: tuple[Color, ...]) -> bool:
+    """True if *b* is a cyclic rotation of *a* (both length 4).
+
+    Example::
+
+        a = (Yellow, Red, White, Orange)
+        b = (White, Orange, Yellow, Red)   → shift by 2 → True
+        c = (Orange, White, Red, Yellow)   → reversed  → False (mirror)
+    """
+    n: int = len(a)
+    return n == len(b) and any(a[i:] + a[:i] == b for i in range(n))
+
+
 class CubeColorScheme:
     """A face-to-color mapping for a Rubik's cube.
 
@@ -58,17 +71,17 @@ class CubeColorScheme:
     - Color-to-face reverse lookup
     - Edge color enumeration (all valid two-color pairs)
     - Scheme comparison accounting for whole-cube rotations
-    - Cloning for in-place mutation
     """
 
-    __slots__ = ("_faces", "_read_only", "_scheme", "_edge_colors")
+    __slots__ = ("_faces", "_scheme", "_edge_colors",
+                 "_neighbor_colors_cache", "_color_to_face")
 
-    def __init__(self, faces: Mapping[FaceName, Color], *,
-                 read_only: bool = False) -> None:
+    def __init__(self, faces: Mapping[FaceName, Color]) -> None:
         self._faces: dict[FaceName, Color] = dict(faces)
-        self._read_only = read_only
         self._scheme: SchematicCube = SchematicCube.inst()
         self._edge_colors: Collection[frozenset[Color]] | None = None
+        self._neighbor_colors_cache: dict[FaceName, tuple[Color, ...]] = {}
+        self._color_to_face: dict[Color, FaceName] | None = None
 
     # ------------------------------------------------------------------
     # Lookup
@@ -121,12 +134,15 @@ class CubeColorScheme:
     # Color ↔ face reverse lookup
     # ------------------------------------------------------------------
 
+    def _ensure_color_to_face(self) -> dict[Color, FaceName]:
+        """Build reverse mapping on first use, then return cached dict."""
+        if self._color_to_face is None:
+            self._color_to_face = {c: f for f, c in self._faces.items()}
+        return self._color_to_face
+
     def _is_face(self, color: Color) -> FaceName | None:
         """Face holding *color*, or ``None`` if absent."""
-        for f, c in self._faces.items():
-            if c == color:
-                return f
-        return None
+        return self._ensure_color_to_face().get(color)
 
     def _find_face(self, color: Color) -> FaceName:
         """Face holding *color*; raises if not found."""
@@ -142,124 +158,73 @@ class CubeColorScheme:
     def same(self, other: CubeColorScheme) -> bool:
         """Check if two schemes are identical up to whole-cube rotation.
 
+        No cloning, no mutation — pure comparison.
+
         Algorithm:
-        1. Verify all colors in *other* exist in *self*.
-        2. Verify opposite-color pairs match.
-        3. Rotate a clone of *self* so Front and Up match *other*.
-        4. Check that Left also matches (fully determines orientation).
+
+        1. Pick self's Front color as a reference.  Find which face holds
+           that color in *other*.  If absent → different color sets → False.
+
+        2. The opposite face must hold the same color in both schemes.
+           This verifies the axis is consistent.
+
+        3. The four CW-neighbor colors around the reference face must be
+           a *cyclic rotation* of each other.  The only remaining degree
+           of freedom (after fixing the axis) is rotation around it, which
+           is exactly a cyclic shift of the neighbor ring.
+
+        Example — BOY (self) vs the same cube viewed from the right::
+
+            self (BOY):      F=Blue  B=Green  U=Yellow D=White  L=Orange R=Red
+            other (rotated): F=Red   B=Orange U=Yellow D=White  L=Blue   R=Green
+
+            Step 1: ref_color = Blue (self's Front)
+                    other_face = L   (Blue is on Left in other)
+
+            Step 2: self  opposite(F) = B → Green
+                    other opposite(L) = R → Green  ✓  axis OK
+
+            Step 3: CW neighbors of F = [U, R, D, L]
+                    CW neighbors of L = [U, F, D, B]
+
+                    self  neighbors(F) → [Yellow, Red,  White, Orange]
+                    other neighbors(L) → [Yellow, Red,  White, Orange]
+                                          identical (shift=0) → ✓ same!
+
+        The neighbor cycle comparison catches both orientation and chirality
+        (a mirror image would reverse the cycle, not shift it).
+
+        Neighbor-color tuples are cached per face, so repeated calls are
+        cheap after the first.
         """
-        # All colors in other must exist in self
-        for c in other.colors():
-            if not self._is_face(c):
-                return False
+        # 1. Pick self's Front color, find it in other
+        ref_color: Color = self._faces[FaceName.F]
+        other_face: FaceName | None = other._is_face(ref_color)
+        if other_face is None:
+            return False  # different color sets
 
-        this = self.clone()
-        _scheme = self._scheme
+        # 2. Opposite colors must match (same axis)
+        self_opp: Color = self._faces[self._scheme.opposite(FaceName.F)]
+        other_opp: Color = other._faces[self._scheme.opposite(other_face)]
+        if self_opp != other_opp:
+            return False
 
-        # Check opposite-color pairs
-        for f1 in (FaceName.F, FaceName.U, FaceName.L):
-            f2 = _scheme.opposite(f1)
-            c1 = other[f1]
-            c2 = other[f2]
+        # 3. CW neighbor colors must be a cyclic rotation
+        self_cycle: tuple[Color, ...] = self._neighbor_colors(FaceName.F)
+        other_cycle: tuple[Color, ...] = other._neighbor_colors(other_face)
+        return _is_cyclic_rotation(self_cycle, other_cycle)
 
-            this_c1_face: FaceName = this._find_face(c1)
-            this_c2_face = _scheme.opposite(this_c1_face)
-            this_c2 = this._faces[this_c2_face]
-            if c2 != this_c2:
-                return False
-
-        # Bring other's front color to front on clone
-        other_f_color: Color = other[FaceName.F]
-        this._bring_face_to_front(this._find_face(other_f_color))
-        assert this._faces[FaceName.F] == other_f_color
-
-        # Bring other's up color to up, preserving front
-        other_u_color = other[FaceName.U]
-        this_u_match = this._find_face(other_u_color)
-        if this_u_match == FaceName.B:
-            return False  # on this it is on Back, can't match
-        this._bring_face_up_preserve_front(this_u_match)
-        assert this._faces[FaceName.U] == other_u_color
-
-        return this._faces[FaceName.L] == other[FaceName.L]
-
-    # ------------------------------------------------------------------
-    # Clone
-    # ------------------------------------------------------------------
-
-    def clone(self) -> CubeColorScheme:
-        """Mutable copy of this scheme (always read_only=False)."""
-        return CubeColorScheme(self._faces, read_only=False)
-
-    # ------------------------------------------------------------------
-    # Rotation helpers — derived from SchematicCube
-    # ------------------------------------------------------------------
-    #
-    # Each whole-cube rotation permutes the four faces around an axis.
-    # The permutation cycle is the *reversed* CW-neighbor list of the
-    # axis face (from SchematicCube.get_face_neighbors_cw_names).
-    #
-    # A single ``_rotate(axis_face, n)`` replaces the old
-    # ``_rotate_x / _rotate_y / _rotate_z`` triple.
-
-    def _rotate(self, axis_face: FaceName, n: int) -> None:
-        """Apply *n* quarter-turns around *axis_face*.
-
-        Positive *n* = clockwise when viewed from *axis_face*.
-        """
-        assert not self._read_only
-        cycle = list(reversed(
-            self._scheme.get_face_neighbors_cw_names(axis_face)
-        ))
-        faces = self._faces
-        for _ in range(n % 4):
-            saved = faces[cycle[0]]
-            for i in range(len(cycle) - 1):
-                faces[cycle[i]] = faces[cycle[i + 1]]
-            faces[cycle[-1]] = saved
-
-    def _cycle_distance(
-        self, axis_face: FaceName, source: FaceName, target: FaceName,
-    ) -> int:
-        """Quarter-turns around *axis_face* to move *source* to *target*."""
-        cycle = list(reversed(
-            self._scheme.get_face_neighbors_cw_names(axis_face)
-        ))
-        return (cycle.index(source) - cycle.index(target)) % 4
-
-    def _bring_face_to_front(self, f: FaceName) -> None:
-        """Rotate so that face *f* becomes Front.
-
-        Tries X-axis (R) first, then Y-axis (U).
-        """
-        if f == FaceName.F:
-            return
-
-        for axis_face in (FaceName.R, FaceName.U):
-            cycle = list(reversed(
-                self._scheme.get_face_neighbors_cw_names(axis_face)
-            ))
-            if f in cycle:
-                n = self._cycle_distance(axis_face, f, FaceName.F)
-                self._rotate(axis_face, n)
-                return
-
-        raise InternalSWError(f"Cannot bring {f} to front")
-
-    def _bring_face_up_preserve_front(self, face: FaceName) -> None:
-        """Rotate so *face* becomes Up while keeping Front fixed.
-
-        Uses Z-axis (rotation around F) so Front is unaffected.
-        Only works for faces adjacent to Front (not Back).
-        """
-        if face == FaceName.U:
-            return
-
-        if face == FaceName.B:
-            raise InternalSWError(f"{face} is not supported")
-
-        n = self._cycle_distance(FaceName.F, face, FaceName.U)
-        self._rotate(FaceName.F, n)
+    def _neighbor_colors(self, face: FaceName) -> tuple[Color, ...]:
+        """CW neighbor colors for *face* (cached)."""
+        cached: tuple[Color, ...] | None = self._neighbor_colors_cache.get(face)
+        if cached is not None:
+            return cached
+        result: tuple[Color, ...] = tuple(
+            self._faces[f]
+            for f in self._scheme.get_face_neighbors_cw_names(face)
+        )
+        self._neighbor_colors_cache[face] = result
+        return result
 
     # ------------------------------------------------------------------
     # Display

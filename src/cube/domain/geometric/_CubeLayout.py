@@ -76,7 +76,7 @@ class _CubeLayout(CubeLayout):
             faces: Mapping of each face to its color.
             sp: Service provider for configuration access.
         """
-        self._color_scheme = CubeColorScheme(faces, read_only=True)
+        self._color_scheme = CubeColorScheme(faces)
         self._sp = sp
         self._cache_manager = CacheManager.create(sp.config)
         self._scheme: SchematicCube = SchematicCube.inst()
