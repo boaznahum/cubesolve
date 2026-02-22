@@ -17,8 +17,6 @@ from __future__ import annotations
 
 from enum import Enum, auto
 
-from cube.domain.model.Color import Color
-from cube.domain.model.Color import color2rgb_float
 from cube.domain.model.FaceName import FaceName
 
 # =============================================================================
@@ -65,28 +63,6 @@ SHADOW_OFFSETS: dict[FaceName, tuple[float, float, float]] = {
     FaceName.B: (0, 0, SHADOW_OFFSET_B * FACE_SIZE),
 }
 
-
-# Reverse mapping for texture grouping
-RGB_TO_COLOR: dict[tuple[float, float, float], Color] = {
-    color2rgb_float(color): color for color in Color
-}
-
-# =============================================================================
-# Color to Home Face Mapping (for textures)
-# =============================================================================
-# Each color belongs to a "home" face. When textures are enabled,
-# cells are grouped by their COLOR (not current face) so the texture
-# "sticks" to the piece as it moves around the cube.
-
-#claude: need to get rid of ir, use cube original schema
-COLOR_TO_HOME_FACE: dict[Color, FaceName] = {
-    Color.GREEN:  FaceName.F,   # Green = Front
-    Color.BLUE:   FaceName.B,   # Blue = Back
-    Color.RED:    FaceName.R,   # Red = Right
-    Color.ORANGE: FaceName.L,   # Orange = Left
-    Color.WHITE:  FaceName.U,   # White = Up
-    Color.YELLOW: FaceName.D,   # Yellow = Down
-}
 
 # =============================================================================
 # Cell Texture System (per-cell textures stored in PartEdge.moveable_attributes)

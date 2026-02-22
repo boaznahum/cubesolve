@@ -39,7 +39,6 @@ from typing import TYPE_CHECKING
 import numpy as np
 from numpy import ndarray
 
-from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
 
 from ._modern_gl_arrow import Arrow3D, create_arrows_from_markers
@@ -234,63 +233,6 @@ class ModernGLBoard:
             np.array(animated_marker_verts, dtype=np.float32) if animated_marker_verts else None,
         )
 
-    def generate_textured_geometry(
-        self,
-        animated_parts: "set[PartSlice] | None" = None,
-    ) -> tuple[
-        dict[Color, np.ndarray],  # static triangles per color
-        np.ndarray,  # static line data
-        dict[Color, np.ndarray],  # animated triangles per color
-        np.ndarray | None,  # animated line data
-        np.ndarray | None,  # static marker triangles
-        np.ndarray | None,  # animated marker triangles
-    ]:
-        """Generate vertex data grouped by color for textured rendering.
-
-        Groups cells by their COLOR (not face) so textures "stick" to
-        pieces as they move around the cube.
-
-        Args:
-            animated_parts: Set of PartSlices being animated, or None
-
-        Returns:
-            Tuple of (color_triangles, lines, animated_color_triangles, animated_lines,
-                      marker_triangles, animated_marker_triangles)
-        """
-        verts_per_color: dict[Color, list[float]] = {c: [] for c in Color}
-        animated_verts_per_color: dict[Color, list[float]] = {c: [] for c in Color}
-        line_verts: list[float] = []
-        animated_line_verts: list[float] = []
-        marker_verts: list[float] = []
-        animated_marker_verts: list[float] = []
-
-        # Main faces
-        for gl_face in self._faces.values():
-            self._generate_textured_face_verts(
-                gl_face, animated_parts,
-                verts_per_color, line_verts,
-                animated_verts_per_color, animated_line_verts,
-                marker_verts, animated_marker_verts,
-            )
-
-        # Shadow faces
-        for gl_face in self._shadow_faces.values():
-            self._generate_textured_face_verts(
-                gl_face, None,
-                verts_per_color, line_verts,
-                {}, [],
-                marker_verts, [],  # Markers only on static for shadow
-            )
-
-        return (
-            {c: np.array(v, dtype=np.float32) for c, v in verts_per_color.items() if v},
-            np.array(line_verts, dtype=np.float32),
-            {c: np.array(v, dtype=np.float32) for c, v in animated_verts_per_color.items() if v},
-            np.array(animated_line_verts, dtype=np.float32) if animated_line_verts else None,
-            np.array(marker_verts, dtype=np.float32) if marker_verts else None,
-            np.array(animated_marker_verts, dtype=np.float32) if animated_marker_verts else None,
-        )
-
     def _generate_face_verts(
         self,
         gl_face: ModernGLFace,
@@ -329,48 +271,6 @@ class ModernGLBoard:
                     cell.generate_marker_vertices(marker_verts, line_verts)
                 else:
                     # Still need line-based markers even without marker verts
-                    cell.generate_marker_vertices([], line_verts)
-
-    def _generate_textured_face_verts(
-        self,
-        gl_face: ModernGLFace,
-        animated_parts: "set[PartSlice] | None",
-        verts_per_color: dict[Color, list[float]],
-        line_verts: list[float],
-        animated_verts_per_color: dict[Color, list[float]],
-        animated_line_verts: list[float],
-        marker_verts: list[float] | None = None,
-        animated_marker_verts: list[float] | None = None,
-    ) -> None:
-        """Generate textured vertices for one face, grouped by color."""
-        size = self._size
-
-        for cell in gl_face.cells:
-            color = cell.color_enum
-
-            # Check if this cell is animated
-            is_animated = (
-                animated_parts is not None
-                and cell.part_slice is not None
-                and cell.part_slice in animated_parts
-            )
-
-
-            if is_animated:
-                if color in animated_verts_per_color:
-                    cell.generate_textured_vertices(animated_verts_per_color[color], size)
-                cell.generate_line_vertices(animated_line_verts)
-                if animated_marker_verts is not None:
-                    cell.generate_marker_vertices(animated_marker_verts, animated_line_verts)
-                else:
-                    cell.generate_marker_vertices([], animated_line_verts)
-            else:
-                if color in verts_per_color:
-                    cell.generate_textured_vertices(verts_per_color[color], size)
-                cell.generate_line_vertices(line_verts)
-                if marker_verts is not None:
-                    cell.generate_marker_vertices(marker_verts, line_verts)
-                else:
                     cell.generate_marker_vertices([], line_verts)
 
     def generate_per_cell_textured_geometry(

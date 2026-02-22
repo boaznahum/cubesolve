@@ -45,17 +45,6 @@ FACE_CONFIG: dict[str, FaceRenderConfig] = {
 }
 
 
-# Rich color mappings
-_RICH_COLORS: dict[Color, str] = {
-    Color.WHITE: "white",
-    Color.YELLOW: "yellow",
-    Color.GREEN: "green",
-    Color.BLUE: "blue",
-    Color.RED: "red",
-    Color.ORANGE: "bright_magenta",  # Rich has no orange, use magenta
-}
-
-
 def _color_to_letter(color: Color) -> str:
     """Convert color to single letter."""
     return color.value[0].upper()

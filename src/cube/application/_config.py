@@ -49,7 +49,7 @@ SHORT_PART_NAME = False
 DONT_OPTIMIZED_PART_ID = False
 PRINT_CUBE_AS_TEXT_DURING_SOLVE = False
 
-CHECK_CUBE_SANITY = False
+CHECK_CUBE_SANITY = True
 
 
 ######### Solvers  Solvers Solvers Solvers########

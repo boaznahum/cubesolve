@@ -33,7 +33,6 @@ from numpy import ndarray
 
 from cube.application.markers import MarkerToolkit, get_markers_from_part_edge
 from cube.application.markers._marker_creator_protocol import MarkerCreator
-from cube.domain.model.Color import Color
 
 if TYPE_CHECKING:
     from cube.domain.model.PartSlice import PartSlice
@@ -804,14 +803,6 @@ class ModernGLCell:
         for p1, p2 in [(lb, rb), (rb, rt), (rt, lt), (lt, lb)]:
             dest.extend([p1[0], p1[1], p1[2], lr, lg, lb_color])
             dest.extend([p2[0], p2[1], p2[2], lr, lg, lb_color])
-
-    @property
-    def color_enum(self) -> Color:
-        """Get the Color enum for this cell (for texture grouping)."""
-        # Reverse lookup from RGB to Color enum
-        # This is used for grouping cells by color for texture rendering
-        from ._modern_gl_constants import RGB_TO_COLOR
-        return RGB_TO_COLOR.get(self._color, Color.WHITE)
 
     @property
     def cell_texture(self) -> int | None:

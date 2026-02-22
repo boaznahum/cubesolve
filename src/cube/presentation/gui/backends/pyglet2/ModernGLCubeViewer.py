@@ -53,7 +53,6 @@ from numpy import ndarray
 
 from cube.application.protocols import AnimatableViewer
 from cube.domain.model.PartSlice import PartSlice
-from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.CubeListener import CubeListener
 
@@ -63,7 +62,6 @@ from ._modern_gl_constants import (
     BORDER_LINE_WIDTH,
     CELL_DEBUG_KEY,
     CELL_TEXTURE_KEY,
-    COLOR_TO_HOME_FACE,
     FACE_TRANSFORMS,
     HALF_CUBE_SIZE,
 )
@@ -110,16 +108,12 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
         self._face_triangles: np.ndarray | None = None
         self._line_data: np.ndarray | None = None
 
-        # Per-color geometry for textured rendering
-        self._triangles_per_color: dict[Color, np.ndarray] = {}
-
         # Animation state
         self._animated_face_triangles: np.ndarray | None = None
         self._animated_line_data: np.ndarray | None = None
         self._animated_parts: set[PartSlice] | None = None
         self._animation_face_center: ndarray | None = None
         self._animation_opposite_center: ndarray | None = None
-        self._animated_triangles_per_color: dict[Color, np.ndarray] = {}
 
         # Marker geometry (solver annotations like "swap these edges")
         self._marker_triangles: np.ndarray | None = None
@@ -134,8 +128,6 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
         self._current_animation_transform: ndarray | None = None  # Transform for animated source
 
         # Texture mode state
-        self._texture_mode: bool = False
-        self._face_textures: dict[FaceName, int] = {}
         self._textures_enabled: bool = True  # Master switch for all texture rendering
 
         # Per-cell texture mode (new system: textures stored in c_attributes)
@@ -252,14 +244,6 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
             for texture_handle, triangles in self._triangles_per_texture.items():
                 if len(triangles) > 0:
                     self._renderer.draw_textured_lit_triangles(triangles, texture_handle)
-        elif self._textures_enabled and self._texture_mode:
-            # Old textured mode: draw each color group with its face texture
-            for color, triangles in self._triangles_per_color.items():
-                if len(triangles) > 0:
-                    home_face = COLOR_TO_HOME_FACE[color]
-                    assert home_face
-                    texture_handle = self._face_textures.get(home_face) if home_face else None
-                    self._renderer.draw_textured_lit_triangles(triangles, texture_handle)
         else:
             # Solid color mode (or textures disabled)
             if self._face_triangles is not None and len(self._face_triangles) > 0:
@@ -287,14 +271,11 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
         """
         # Check for animated geometry (considering texture enabled state)
         use_per_cell = self._textures_enabled and self._use_per_cell_textures
-        use_old_tex = self._textures_enabled and self._texture_mode
         has_animated_geometry = (
             (use_per_cell and len(self._animated_triangles_per_texture) > 0) or
-            (not use_per_cell and not use_old_tex
+            (not use_per_cell
              and self._animated_face_triangles is not None
-             and len(self._animated_face_triangles) > 0) or
-            (not use_per_cell and use_old_tex
-             and len(self._animated_triangles_per_color) > 0)
+             and len(self._animated_face_triangles) > 0)
         )
         if not has_animated_geometry:
             return
@@ -306,13 +287,6 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
             # Per-cell texture mode
             for texture_handle, triangles in self._animated_triangles_per_texture.items():
                 if len(triangles) > 0:
-                    self._renderer.draw_textured_lit_triangles(triangles, texture_handle)
-        elif use_old_tex:
-            # Old textured mode
-            for color, triangles in self._animated_triangles_per_color.items():
-                if len(triangles) > 0:
-                    home_face = COLOR_TO_HOME_FACE[color]
-                    texture_handle = self._face_textures.get(home_face) if home_face else None
                     self._renderer.draw_textured_lit_triangles(triangles, texture_handle)
         else:
             # Solid color mode (or textures disabled)
@@ -355,7 +329,6 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
         # Generate geometry (board separates static/animated)
         # Consider _textures_enabled master switch when deciding which geometry to build
         use_per_cell = self._textures_enabled and self._use_per_cell_textures
-        use_old_tex = self._textures_enabled and self._texture_mode
 
         if use_per_cell:
             # Per-cell texture mode: group by texture handle from c_attributes
@@ -369,24 +342,9 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
             ) = self._board.generate_per_cell_textured_geometry(self._animated_parts)
             self._face_triangles = None
             self._animated_face_triangles = None
-            self._triangles_per_color.clear()
-            self._animated_triangles_per_color.clear()
 
             # Debug texture handles used in geometry
             self._debug_texture_lazy(lambda: self._format_geometry_debug())
-        elif use_old_tex:
-            (
-                self._triangles_per_color,
-                self._line_data,
-                self._animated_triangles_per_color,
-                self._animated_line_data,
-                self._marker_triangles,
-                self._animated_marker_triangles,
-            ) = self._board.generate_textured_geometry(self._animated_parts)
-            self._face_triangles = None
-            self._animated_face_triangles = None
-            self._triangles_per_texture.clear()
-            self._animated_triangles_per_texture.clear()
         else:
             # Solid color mode (or textures disabled)
             (
@@ -397,8 +355,6 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
                 self._marker_triangles,
                 self._animated_marker_triangles,
             ) = self._board.generate_geometry(self._animated_parts)
-            self._triangles_per_color.clear()
-            self._animated_triangles_per_color.clear()
             self._triangles_per_texture.clear()
             self._animated_triangles_per_texture.clear()
 
@@ -547,8 +503,7 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
         self._animated_face_triangles = None
         self._animated_line_data = None
         self._animated_marker_triangles = None  # Clear animated markers
-        self._animated_triangles_per_color.clear()
-        self._animated_triangles_per_texture.clear()  # BUG FIX: was missing for per-cell textures!
+        self._animated_triangles_per_texture.clear()
         self._current_animation_transform = None  # Clear arrow transform
         self._dirty = True
 
@@ -713,20 +668,9 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
     # =========================================================================
 
     @property
-    def texture_mode(self) -> bool:
-        """Check if texture mode is enabled."""
-        return self._texture_mode
-
-    @property
     def textures_enabled(self) -> bool:
         """Check if texture rendering is enabled (master switch)."""
         return self._textures_enabled
-
-    def set_texture_mode(self, enabled: bool) -> None:
-        """Enable or disable texture mode."""
-        if self._texture_mode != enabled:
-            self._texture_mode = enabled
-            self._dirty = True
 
     def set_textures_enabled(self, enabled: bool) -> None:
         """Enable or disable all texture rendering (master switch)."""
@@ -738,52 +682,6 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
         """Toggle texture rendering on/off. Returns new state."""
         self.set_textures_enabled(not self._textures_enabled)
         return self._textures_enabled
-
-    def load_face_texture(self, face_name: FaceName, file_path: str) -> bool:
-        """Load a texture for a specific face."""
-        if face_name in self._face_textures:
-            self._renderer.delete_texture(self._face_textures[face_name])
-            del self._face_textures[face_name]
-
-        handle = self._renderer.load_texture(file_path)
-        if handle is not None:
-            self._face_textures[face_name] = handle
-            self._dirty = True
-            return True
-        return False
-
-    def get_face_texture(self, face_name: FaceName) -> int | None:
-        """Get texture handle for a face."""
-        return self._face_textures.get(face_name)
-
-    def clear_face_textures(self) -> None:
-        """Remove all face textures."""
-        for handle in self._face_textures.values():
-            self._renderer.delete_texture(handle)
-        self._face_textures.clear()
-        self._dirty = True
-
-    def load_texture_set(self, directory: str) -> int:
-        """Load all face textures from a directory (OLD method - per-face textures).
-
-        Expects files named F.png, B.png, R.png, L.png, U.png, D.png
-
-        Note: This uses the old per-face texture system.
-        For per-cell textures (that follow stickers), use load_texture_set_per_cell().
-        """
-        from pathlib import Path
-        dir_path = Path(directory)
-        loaded = 0
-
-        for face_name in FaceName:
-            for ext in ['.png', '.jpg', '.jpeg', '.bmp']:
-                file_path = dir_path / f"{face_name.name}{ext}"
-                if file_path.exists():
-                    if self.load_face_texture(face_name, str(file_path)):
-                        loaded += 1
-                    break
-
-        return loaded
 
     def load_texture_set_per_cell(self, directory: str) -> int:
         """Load face textures and slice into per-cell textures.
@@ -823,7 +721,6 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
 
         if loaded > 0:
             self._use_per_cell_textures = True
-            self._texture_mode = False  # Disable old texture mode
             self._texture_directory = directory  # Store for reload on reset/resize
             self._dirty = True
             # Signal cube that textures are loaded (enables texture direction updates)

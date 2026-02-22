@@ -8,19 +8,13 @@ from enum import Enum, unique
 
 @unique
 class Color(Enum):
-    """"
-    When you add color, need also to add in:
-    cube.domain.model.Color.ColorLong
-    cube.presentation.gui.backends.console.ConsoleViewer._color_2_str # not all available !!!
-    In this file  COLOR_TO_RGB , notbelong to model
+    """Cube face/sticker colors.
 
-    #claude why COLOR_TO_HOME_FACE is never used, or a tleas doesnt fails , no such color
-    src/cube/presentation/gui/backends/pyglet2/_modern_gl_constants.py:95 COLOR_TO_HOME_FACENEED TOGET RID, USE CUBE SCHEMA
-
-
-    cube.presentation.viewer._cell._color_2_v_color # claude: what is this, why it never fails ?
-    src/cube/presentation/viewer/_cell.py:44 _COMPLEMENTARY_MAP_FLOAT WHAT THE FUCK IS IT ? why it never fails
-    src/cube/utils/text_cube_viewer.py:49  _RICH_COLORS WHY WE NEED THIS
+    When adding a new color, update:
+    1. ``ColorLong`` enum below (display name for solver annotations)
+    2. ``_COLOR_TO_RGB_INT`` (rendering color)
+    3. ``TEXT_RICH_COLORS`` (Rich console output)
+    4. ``ConsoleViewer._color_2_str`` (console backend)
     """
     BLUE = "Bl"
     ORANGE = "Or"
@@ -59,7 +53,6 @@ class ColorLong(Enum):
     PURPLE = "Purple"
     PINK = "Pink"
 
-#claude: why we need this enum ?
 _COLOR_2_LONG: dict[Color, ColorLong] = {
     Color.BLUE: ColorLong.BLUE,
     Color.ORANGE: ColorLong.ORANGE,
@@ -72,7 +65,6 @@ _COLOR_2_LONG: dict[Color, ColorLong] = {
 }
 
 
-#Claude: not belong to model !!!
 # =============================================================================
 # Color Mapping
 # =============================================================================
@@ -104,6 +96,31 @@ def color2rgb_int(col: Color) -> tuple[int, int, int]:
 
 def color2rgb_float(col: Color) -> tuple[float, float, float]:
     return _COLOR_TO_RGB_FLOAT[col]
+
+
+def complementary_color(r: float, g: float, b: float) -> tuple[float, float, float]:
+    """Compute the complementary (inverted) color.
+
+    Args:
+        r, g, b: RGB values in 0.0-1.0 range.
+
+    Returns:
+        (1-r, 1-g, 1-b) — the RGB complement.
+    """
+    return (1.0 - r, 1.0 - g, 1.0 - b)
+
+
+def color2complementary_float(col: Color) -> tuple[float, float, float]:
+    """Get the complementary color for a Color enum member.
+
+    Args:
+        col: A Color enum value.
+
+    Returns:
+        RGB complement as floats in 0.0-1.0 range.
+    """
+    r, g, b = _COLOR_TO_RGB_FLOAT[col]
+    return complementary_color(r, g, b)
 
 
 # Rich color mappings for text viewer

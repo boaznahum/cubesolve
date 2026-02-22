@@ -19,7 +19,7 @@ from cube.domain.model import (
     PartSlice,
     PartSliceHashID,
 )
-from cube.domain.model.Color import Color, color2rgb_int
+from cube.domain.model.Color import Color, color2rgb_int, complementary_color
 from cube.domain.model.Face import Face
 from cube.application.markers import MarkerToolkit, get_markers_from_part_edge
 from cube.domain.geometric import geometry_utils as geometry
@@ -35,16 +35,9 @@ _VColor = Tuple[int, int, int]
 if TYPE_CHECKING:
     from ._faceboard import _FaceBoard
 
-# Complementary color map (0.0-1.0 float values for MarkerToolkit protocol)
-# Keyed by 0-255 face color (matching _colors dict) for legacy renderer lookup.
-_COMPLEMENTARY_MAP_FLOAT: dict[_VColor, tuple[float, float, float]] = {
-    (255, 0, 0): (0.0, 1.0, 1.0),
-    (0, 255, 0): (1.0, 0.0, 1.0),
-    (0, 0, 255): (1.0, 1.0, 0.0),
-    (255, 255, 0): (0.4, 0.2, 1.0),
-    (255, 128, 0): (0.0, 1.0, 1.0),
-    (255, 255, 255): (0.6, 0.0, 0.6),
-}
+def _complementary_from_vcolor(c: _VColor) -> tuple[float, float, float]:
+    """Compute complementary color from 0-255 int RGB."""
+    return complementary_color(c[0] / 255.0, c[1] / 255.0, c[2] / 255.0)
 
 
 def _color_float_to_vcolor(color: tuple[float, float, float]) -> _VColor:
@@ -84,7 +77,7 @@ class LegacyCellToolkit(MarkerToolkit):
             face_color_255[1] / 255.0,
             face_color_255[2] / 255.0,
         )
-        self._complementary_float = _COMPLEMENTARY_MAP_FLOAT[face_color_255]
+        self._complementary_float = _complementary_from_vcolor(face_color_255)
         self._max_marker_radius = max_marker_radius
 
         # Calculate cell size and base radius

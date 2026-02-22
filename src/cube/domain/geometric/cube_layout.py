@@ -160,7 +160,11 @@ class CubeLayout(Protocol):
 
     @abstractmethod
     def colors_schema(self) -> CubeColorScheme:
-        """claude: documnet it
+        """Get the color scheme of this layout.
+
+        Returns:
+            CubeColorScheme representing the face→color mapping,
+            used for comparing layouts and validating solver state.
         """
         ...
 
