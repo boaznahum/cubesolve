@@ -272,15 +272,16 @@ class Cube3x3Colors:
 
         # Create empty edge colors for all 12 edges
         edges: dict[EdgeName, EdgeColors] = {}
-        for edge_name, (f1, f2) in edge_faces_map.items():
-            edges[edge_name] = EdgeColors({f1: Color.WHITE, f2: Color.WHITE})
+        for edge_name, edge in edge_faces_map.items():
+            edges[edge_name] = EdgeColors({edge.f1: Color.WHITE, edge.f2: Color.WHITE})
 
         # Get corner-to-faces mapping from geometry (the authoritative source)
         corner_faces_map = scheme.corner_faces()
 
         # Create empty corner colors for all 8 corners
         corners: dict[CornerName, CornerColors] = {}
-        for corner_name, (f1, f2, f3) in corner_faces_map.items():
+        for corner_name, corner in corner_faces_map.items():
+            f1, f2, f3 = corner.face_names
             corners[corner_name] = CornerColors({f1: Color.WHITE, f2: Color.WHITE, f3: Color.WHITE})
 
         # Create empty centers (WHITE placeholder)

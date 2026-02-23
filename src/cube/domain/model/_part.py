@@ -1,8 +1,9 @@
 from collections.abc import Iterable
-from enum import Enum, unique
 from typing import TYPE_CHECKING, TypeAlias
 
 from cube.domain.model.FaceName import FaceName
+from cube.domain.model.part_names import EdgeName as EdgeName  # re-export
+from cube.domain.model.part_names import CornerName as CornerName  # re-export
 
 if TYPE_CHECKING:
     from .Cube import Cube
@@ -10,24 +11,6 @@ if TYPE_CHECKING:
 
 _Face: TypeAlias = "Face"
 _Cube: TypeAlias = "Cube"  # type: ignore
-
-
-class EdgeName(Enum):
-    FL = "FL"
-    FU = "FU"
-    FR = "FR"
-    FD = "FD"
-    BL = "BL"
-    BU = "BU"
-    BR = "BR"
-    BD = "BD"
-    UR = "UR"
-    RD = "RD"
-    DL = "DL"
-    LU = "LU"
-
-    def __str__(self) -> str:
-        return str(self.value)
 
 
 _faces_to_edges: dict[frozenset[FaceName], EdgeName] = {}
@@ -56,20 +39,6 @@ def _faces_2_edge_name(faces: Iterable[FaceName]) -> EdgeName:
 
     return _faces_to_edges[frozenset(faces)]
 
-
-@unique
-class CornerName(Enum):
-    FLU = "FLU"
-    FRU = "FRU"
-    FRD = "FRD"
-    FLD = "FLD"
-    BLU = "BLU"
-    BRU = "BRU"
-    BRD = "BRD"
-    BLD = "BLD"
-
-    def __str__(self) -> str:
-        return str(self.value)
 
 
 _faces_to_corners: dict[frozenset[FaceName], CornerName] = {}

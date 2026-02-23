@@ -26,3 +26,23 @@ Discovered while working on Issue #55 (geometry cleanup).
 
 ---
 
+### A2: Remove duplicate face→name mappings in _part.py
+
+**Category:** Architecture / Refactoring
+**Priority:** Low
+**Status:** New
+
+**Summary:**
+`_part.py` has `_faces_2_edge_name()` and `_faces_2_corner_name()` with lazy-init dicts mapping `frozenset[FaceName]` → `EdgeName`/`CornerName`. `schematic_cube.py` has `_derive_edge_name()` and `_derive_corner_name()` doing the same thing. Consolidate into one place.
+
+**Callers of `_part.py` functions:**
+- `Cube.py`, `Corner.py`, `Edge.py` use `_faces_2_edge_name` / `_faces_2_corner_name`
+
+**Approach:**
+Either make `_part.py` functions delegate to `schematic_cube.py`, or move the canonical lookup into `part_names.py` and have both use it.
+
+**Context:**
+Discovered while creating `part_names.py` to centralize `EdgeName`, `CornerName`, `EdgePosition`, `CornerPosition`.
+
+---
+

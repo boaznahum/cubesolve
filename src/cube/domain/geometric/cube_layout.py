@@ -25,6 +25,7 @@ from cube.domain.model._elements import AxisName, EdgePosition
 
 if TYPE_CHECKING:
     from cube.domain.algs.WholeCubeAlg import WholeCubeAlg
+    from cube.domain.geometric.schematic_cube import SchematicEdge, SchematicCorner
     from cube.domain.model.Cube import Cube
     from cube.domain.model.Face import Face
     from cube.domain.model.Edge import Edge
@@ -181,28 +182,30 @@ class CubeLayout(Protocol):
         ...
 
     @abstractmethod
-    def edge_faces(self) -> dict["EdgeName", tuple[FaceName, FaceName]]:
-        """Get mapping from EdgeName to the two faces it connects.
+    def edge_faces(self) -> dict["EdgeName", "SchematicEdge"]:
+        """Get mapping from EdgeName to SchematicEdge with full wiring info.
 
         Returns:
-            Dictionary mapping each EdgeName to a tuple of (face1, face2).
-            The two faces are adjacent (share an edge) and non-opposite.
+            Dictionary mapping each EdgeName to a SchematicEdge containing
+            the two faces, their edge positions, and the direction flag.
 
         Example:
-            edge_faces()[EdgeName.FU] = (FaceName.F, FaceName.U)
+            edge = edge_faces()[EdgeName.FU]
+            edge.f1, edge.f2  # FaceName.F, FaceName.U
         """
         ...
 
     @abstractmethod
-    def corner_faces(self) -> dict["CornerName", tuple[FaceName, FaceName, FaceName]]:
-        """Get mapping from CornerName to the three faces it connects.
+    def corner_faces(self) -> dict["CornerName", "SchematicCorner"]:
+        """Get mapping from CornerName to SchematicCorner with full wiring info.
 
         Returns:
-            Dictionary mapping each CornerName to a tuple of (face1, face2, face3).
-            The three faces meet at a corner (all mutually adjacent).
+            Dictionary mapping each CornerName to a SchematicCorner containing
+            the three faces and their corner positions.
 
         Example:
-            corner_faces()[CornerName.FRU] = (FaceName.F, FaceName.R, FaceName.U)
+            corner = corner_faces()[CornerName.FRU]
+            corner.face_names  # (FaceName.F, FaceName.R, FaceName.U)
         """
         ...
 

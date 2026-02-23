@@ -22,7 +22,7 @@ from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model._elements import AxisName, EdgePosition
 
-from cube.domain.geometric.schematic_cube import SchematicCube
+from cube.domain.geometric.schematic_cube import SchematicCube, SchematicEdge, SchematicCorner
 
 # Slice rotation faces: which face each slice rotates like
 _SLICE_ROTATION_FACE: dict[SliceName, FaceName] = {
@@ -163,12 +163,12 @@ class _CubeLayout(CubeLayout):
     def get_slice(self, slice_name: SliceName) -> SliceLayout:
         return self._slices[slice_name]
 
-    def edge_faces(self) -> dict["EdgeName", tuple[FaceName, FaceName]]:
-        """Get mapping from EdgeName to the two faces it connects."""
+    def edge_faces(self) -> dict["EdgeName", SchematicEdge]:
+        """Get mapping from EdgeName to SchematicEdge with full wiring info."""
         return self._scheme.edge_faces()
 
-    def corner_faces(self) -> dict["CornerName", tuple[FaceName, FaceName, FaceName]]:
-        """Get mapping from CornerName to the three faces it connects."""
+    def corner_faces(self) -> dict["CornerName", SchematicCorner]:
+        """Get mapping from CornerName to SchematicCorner with full wiring info."""
         return self._scheme.corner_faces()
 
     def opposite(self, fn: FaceName) -> FaceName:
