@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Tuple, TypeAlias
 from cube.domain.exceptions import InternalSWError
 
 from ._elements import SliceIndex
-from ._part import CornerName, _faces_2_corner_name
+from .part_names import CornerName, faces_to_corner_name
 from .PartSlice import CornerSlice, PartSlice
 from cube.domain.model.Color import Color
 from .Part import Part
@@ -97,7 +97,7 @@ class Corner(Part):
 
     @property
     def name(self) -> CornerName:
-        return _faces_2_corner_name((e.face.name for e in self._slice.edges))
+        return faces_to_corner_name((e.face.name for e in self._slice.edges))
 
     @property
     def part_name(self) -> str:

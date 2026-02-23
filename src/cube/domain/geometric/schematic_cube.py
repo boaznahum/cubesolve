@@ -27,10 +27,15 @@ Derived from the corners:
 
 from __future__ import annotations
 
-from itertools import permutations
-
 from cube.domain.model.FaceName import FaceName
-from cube.domain.model.part_names import CornerName, CornerPosition, EdgeName, EdgePosition
+from cube.domain.model.part_names import (
+    CornerName,
+    CornerPosition,
+    EdgeName,
+    EdgePosition,
+    faces_to_corner_name,
+    faces_to_edge_name,
+)
 
 F, L, U, R, D, B = FaceName.F, FaceName.L, FaceName.U, FaceName.R, FaceName.D, FaceName.B
 TOP, RIGHT, BOTTOM, LEFT = EdgePosition.TOP, EdgePosition.RIGHT, EdgePosition.BOTTOM, EdgePosition.LEFT
@@ -129,32 +134,11 @@ _REV_OPPOSITE: dict[FaceName, FaceName] = {v: k for k, v in _OPPOSITE.items()}
 _ALL_OPPOSITE: dict[FaceName, FaceName] = {**_OPPOSITE, **_REV_OPPOSITE}
 
 
-def _derive_edge_name(f1: FaceName, f2: FaceName) -> EdgeName:
-    """Derive the EdgeName from two face names."""
-    for name_str in (f1.value + f2.value, f2.value + f1.value):
-        try:
-            return EdgeName(name_str)
-        except ValueError:
-            continue
-    raise ValueError(f"No EdgeName for faces {f1}, {f2}")
-
-
-def _derive_corner_name(faces: tuple[FaceName, ...]) -> CornerName:
-    """Derive the CornerName from three face names."""
-    for perm in permutations(faces):
-        name_str = "".join(fn.value for fn in perm)
-        try:
-            return CornerName(name_str)
-        except ValueError:
-            continue
-    raise ValueError(f"No CornerName for faces {faces}")
-
-
 def _corner(fp1: tuple[FaceName, CornerPosition],
             fp2: tuple[FaceName, CornerPosition],
             fp3: tuple[FaceName, CornerPosition]) -> SchematicCorner:
     """Create a SchematicCorner, deriving the CornerName from the three faces."""
-    name = _derive_corner_name((fp1[0], fp2[0], fp3[0]))
+    name = faces_to_corner_name((fp1[0], fp2[0], fp3[0]))
     return SchematicCorner(name, {fp1[0]: fp1[1], fp2[0]: fp2[1], fp3[0]: fp3[1]})
 
 
@@ -300,7 +284,7 @@ def _derive_edges_from_corners() -> dict[EdgeName, SchematicEdge]:
         start_corner_pos_on_fb: CornerPosition = corners[0][fb] if corners[0][fa] == start_on_fa else corners[1][fb]
         same_dir = (start_corner_pos_on_fb == start_on_fb)
 
-        name = _derive_edge_name(fa, fb)
+        name = faces_to_edge_name([fa, fb])
         edges[name] = SchematicEdge(name, fa, pos_on_fa, fb, pos_on_fb, same_dir)
 
     return edges

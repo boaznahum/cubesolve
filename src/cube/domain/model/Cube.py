@@ -1952,11 +1952,11 @@ class Cube(CubeSupplier):
             Cube3x3Colors containing the colors of all edges, corners, and centers.
             Each edge/corner has colors keyed by face name.
         """
-        from ._part import (
+        from .part_names import (
             CornerName,
             EdgeName,
-            _faces_2_corner_name,
-            _faces_2_edge_name,
+            faces_to_corner_name,
+            faces_to_edge_name,
         )
         from .Cube3x3Colors import CornerColors, Cube3x3Colors, EdgeColors
 
@@ -1967,7 +1967,7 @@ class Cube(CubeSupplier):
                 edge.e1.face.name: edge.e1.color,
                 edge.e2.face.name: edge.e2.color,
             }
-            edge_name = _faces_2_edge_name(edge_colors.keys())
+            edge_name = faces_to_edge_name(edge_colors.keys())
             edges_dict[edge_name] = EdgeColors(edge_colors)
 
         corners_dict: dict[CornerName, CornerColors] = {}
@@ -1978,7 +1978,7 @@ class Cube(CubeSupplier):
                 pe[1].face.name: pe[1].color,
                 pe[2].face.name: pe[2].color,
             }
-            corner_name = _faces_2_corner_name(corner_colors.keys())
+            corner_name = faces_to_corner_name(corner_colors.keys())
             corners_dict[corner_name] = CornerColors(corner_colors)
 
         centers_dict: dict[FaceName, Color] = {}
@@ -2001,14 +2001,14 @@ class Cube(CubeSupplier):
         Raises:
             AssertionError: If the resulting cube state is invalid.
         """
-        from ._part import _faces_2_corner_name, _faces_2_edge_name
+        from .part_names import faces_to_corner_name, faces_to_edge_name
 
         # Set edge colors - match by edge name derived from faces
         for edge in self.edges:
             # Get the face names from this edge's PartEdges
             f1_name = edge.e1.face.name
             f2_name = edge.e2.face.name
-            edge_name = _faces_2_edge_name([f1_name, f2_name])
+            edge_name = faces_to_edge_name([f1_name, f2_name])
             ec = colors.edges[edge_name]
             edge.e1._color = ec.colors[f1_name]
             edge.e2._color = ec.colors[f2_name]
@@ -2017,7 +2017,7 @@ class Cube(CubeSupplier):
         for corner in self.corners:
             pe = corner.slice.edges
             f_names = [pe[0].face.name, pe[1].face.name, pe[2].face.name]
-            corner_name = _faces_2_corner_name(f_names)
+            corner_name = faces_to_corner_name(f_names)
             cc = colors.corners[corner_name]
             pe[0]._color = cc.colors[f_names[0]]
             pe[1]._color = cc.colors[f_names[1]]

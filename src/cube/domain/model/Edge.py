@@ -9,7 +9,7 @@ from cube.domain.model.PartEdge import PartEdge
 from cube.domain.geometric import geometry_utils as geometry
 
 from ._elements import EdgeSliceIndex
-from ._part import EdgeName, _faces_2_edge_name
+from .part_names import EdgeName, faces_to_edge_name
 
 if TYPE_CHECKING:
     from .Cube import Cube
@@ -532,7 +532,7 @@ class Edge(Part):
 
     @property
     def name(self) -> EdgeName:
-        return _faces_2_edge_name((self.e1.face.name, self.e2.face.name))
+        return faces_to_edge_name((self.e1.face.name, self.e2.face.name))
 
     @property
     def required_position(self) -> "Edge":
