@@ -145,7 +145,6 @@ from .Center import Center
 from .Corner import Corner
 from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
-from cube.domain.geometric.schematic_cube import _SCHEMATIC_CORNERS, _SCHEMATIC_EDGES
 from cube.domain.geometric.sized_cube_layout import SizedCubeLayout
 from ._part import EdgeName
 from .cube_slice import Slice, SliceName
@@ -397,6 +396,8 @@ class Cube(CubeSupplier):
         self._last_sanity_counter = 0
 
         self._color_2_face = {}
+
+        from cube.domain.geometric.schematic_cube import _SCHEMATIC_CORNERS, _SCHEMATIC_EDGES
 
         layout = self.layout
         cs = layout.colors_schema()
