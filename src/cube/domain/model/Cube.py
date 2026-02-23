@@ -145,6 +145,7 @@ from .Center import Center
 from .Corner import Corner
 from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
+from cube.domain.geometric.schematic_cube import _SCHEMATIC_CORNERS, _SCHEMATIC_EDGES
 from cube.domain.geometric.sized_cube_layout import SizedCubeLayout
 from ._part import EdgeName
 from .cube_slice import Slice, SliceName
@@ -153,6 +154,11 @@ from .Face import Face
 from .Part import Part
 from .PartEdge import PartEdge
 from ..geometric import cube_color_schemes
+
+_FACE_ATTR: dict[FaceName, str] = {
+    FaceName.F: "_front", FaceName.L: "_left", FaceName.U: "_up",
+    FaceName.R: "_right", FaceName.D: "_down", FaceName.B: "_back",
+}
 
 if TYPE_CHECKING:
     from cube.domain.geometric.cube_color_scheme import CubeColorScheme
@@ -395,21 +401,11 @@ class Cube(CubeSupplier):
         layout = self.layout
         cs = layout.colors_schema()
 
-        front: Face = Face(self, FaceName.F, cs[FaceName.F])
-        left: Face = Face(self, FaceName.L, cs[FaceName.L])
-        up: Face = Face(self, FaceName.U, cs[FaceName.U])
-        right: Face = Face(self, FaceName.R, cs[FaceName.R])
-        down: Face = Face(self, FaceName.D, cs[FaceName.D])
-        back: Face = Face(self, FaceName.B, cs[FaceName.B])
-
-        self._faces = {
-            FaceName.F: front,
-            FaceName.L: left,
-            FaceName.U: up,
-            FaceName.R: right,
-            FaceName.D: down,
-            FaceName.B: back
-        }
+        self._faces: dict[FaceName, Face] = {}
+        for fn in FaceName:
+            face = Face(self, fn, cs[fn])
+            self._faces[fn] = face
+            setattr(self, _FACE_ATTR[fn], face)
 
         # Set opposite face relationships using layout.opposite()
         # Only set once per pair to avoid duplicate calls
@@ -421,60 +417,28 @@ class Cube(CubeSupplier):
                 face.set_opposite(self._faces[opposite_fn])
                 set_pairs.add(pair)
 
-        self._front = front
-        self._left = left
-        self._up = up
-        self._right = right
-        self._down = down
-        self._back = back
-
         edges: list[Edge] = []
 
-        # see document right-top-left-coordinates.jpg
-        # 12 edges
-        # DUPLICATION: These edge assignments encode face-neighbor topology.
-        # The same facts are duplicated in SchematicCube._EDGE_WIRING
-        # (cube/domain/geometric/schematic_cube.py) as abstract FaceName data.
-        # If you change wiring here, update _EDGE_WIRING there too.
-        front._edge_top = up._edge_bottom = _create_edge(edges, front, up, True)
-        front._edge_left = left._edge_right = _create_edge(edges, front, left, True)
-        front._edge_right = right._edge_left = _create_edge(edges, front, right, True)
-        front._edge_bottom = down._edge_top = _create_edge(edges, front, down, True)
-
-        # Note: u must be f1 for consistency with u._edge_top (U-B edge) - see Issue #53
-        left._edge_top = up._edge_left = _create_edge(edges, up, left, False)
-        left._edge_bottom = down._edge_left = _create_edge(edges, left, down, True)
-
-        down._edge_right = right._edge_bottom = _create_edge(edges, down, right, False)
-        down._edge_bottom = back._edge_bottom = _create_edge(edges, down, back, False)
-
-        right._edge_right = back._edge_left = _create_edge(edges, right, back, True)
-
-        left._edge_left = back._edge_right = _create_edge(edges, left, back, True)
-
-        up._edge_top = back._edge_top = _create_edge(edges, up, back, False)
-        up._edge_right = right._edge_top = _create_edge(edges, up, right, True)
+        # Wire 12 edges from schematic data (see right-top-left-coordinates.jpg)
+        for se in _SCHEMATIC_EDGES.values():
+            face1 = self._faces[se.f1]
+            face2 = self._faces[se.f2]
+            edge = _create_edge(edges, face1, face2, se.right_top_left_same_direction)
+            face1.set_edge(se.pos_on_f1, edge)
+            face2.set_edge(se.pos_on_f2, edge)
 
         self._edges = edges
 
         self._edges_map = { e.name: e for e in edges }
 
         corners: list[Corner] = []
-        # DUPLICATION: These corner assignments encode which 3 faces meet at each corner.
-        # The same facts are derived in SchematicCube._derive_corner_faces()
-        # (cube/domain/geometric/schematic_cube.py) from the edge wiring.
-        # If you change wiring here, the corner derivation there should still hold,
-        # but verify.
 
-        front._corner_top_left = left._corner_top_right = up._corner_bottom_left = _create_corner(corners, front, left, up)
-        front._corner_top_right = right._corner_top_left = up._corner_bottom_right = _create_corner(corners, front, right, up)
-        front._corner_bottom_left = left._corner_bottom_right = down._corner_top_left = _create_corner(corners, front, left, down)
-        front._corner_bottom_right = right._corner_bottom_left = down._corner_top_right = _create_corner(corners, front, right, down)
-
-        back._corner_top_left = right._corner_top_right = up._corner_top_right = _create_corner(corners, back, right, up)
-        back._corner_top_right = left._corner_top_left = up._corner_top_left = _create_corner(corners, back, left, up)
-        back._corner_bottom_left = right._corner_bottom_right = down._corner_bottom_right = _create_corner(corners, back, right, down)
-        back._corner_bottom_right = left._corner_bottom_left = down._corner_bottom_left = _create_corner(corners, back, left, down)
+        # Wire 8 corners from schematic data
+        for sc in _SCHEMATIC_CORNERS.values():
+            face_objs = [self._faces[fn] for fn in sc.face_names]
+            corner = _create_corner(corners, *face_objs)
+            for fn, cp in sc.positions.items():
+                self._faces[fn].set_corner(cp, corner)
 
         self._corners = corners
 
@@ -482,6 +446,13 @@ class Cube(CubeSupplier):
             _f.finish_init()
 
         self._centers = [_f.center for _f in self._faces.values()]
+
+        front = self._faces[FaceName.F]
+        left = self._faces[FaceName.L]
+        up = self._faces[FaceName.U]
+        right = self._faces[FaceName.R]
+        down = self._faces[FaceName.D]
+        back = self._faces[FaceName.B]
 
         slice_s: Slice = Slice(self, SliceName.S,  # Middle over F
                                left.edge_top, up.center, right.edge_top,

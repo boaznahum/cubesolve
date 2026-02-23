@@ -21,7 +21,6 @@ Fundamental facts (everything else is derived):
      plus f1/f2 ordering and right_top_left_same_direction flag.
   3. The 8 corner wiring assignments — which face's corner_top_left/etc.
      connects to which other faces' corners.
-     (Duplicated from Cube._reset, see comment there.)
 """
 
 from __future__ import annotations
@@ -164,13 +163,9 @@ def _corner(fp1: tuple[FaceName, CornerPosition],
     return SchematicCorner(name, {fp1[0]: fp1[1], fp2[0]: fp2[1], fp3[0]: fp3[1]})
 
 
-# The 12 edge wiring assignments from Cube._reset.
-# f1 is the first face passed to _create_edge() in Cube._reset.
+# The 12 edge wiring assignments — the single source of truth.
+# f1 is the first face passed to _create_edge() in Cube._reset().
 # The ordering and direction flag matter for slice index mapping.
-#
-# DUPLICATION NOTE: This is the same truth expressed in Cube._reset as:
-#   f._edge_top = u._edge_bottom = _create_edge(edges, f, u, True)
-# See Cube._reset for the authoritative source.
 _SCHEMATIC_EDGES: dict[EdgeName, SchematicEdge] = {e.name: e for e in [
     _edge(F, TOP,    U, BOTTOM, True),   # front._edge_top = up._edge_bottom
     _edge(F, LEFT,   L, RIGHT,  True),   # front._edge_left = left._edge_right
@@ -186,11 +181,8 @@ _SCHEMATIC_EDGES: dict[EdgeName, SchematicEdge] = {e.name: e for e in [
     _edge(U, RIGHT,  R, TOP,    True),   # up._edge_right = right._edge_top
 ]}
 
-# The 8 corner wiring assignments from Cube._reset.
+# The 8 corner wiring assignments — the single source of truth.
 # Face order matches the CornerName letter order (e.g., FLU → F first, L second, U third).
-#
-# DUPLICATION NOTE: This is the same truth expressed in Cube._reset as:
-#   front._corner_top_left = left._corner_top_right = up._corner_bottom_left = _create_corner(...)
 _SCHEMATIC_CORNERS: dict[CornerName, SchematicCorner] = {c.name: c for c in [
     _corner((F, TL), (L, TR), (U, BL)),   # FLU
     _corner((F, TR), (R, TL), (U, BR)),   # FRU

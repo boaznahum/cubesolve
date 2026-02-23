@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Tuple, TypeAlias, Union
 from cube.utils.config_protocol import ConfigProtocol
 
 from cube.domain.model.Color import Color
+from cube.domain.model.part_names import EdgePosition as EdgePosition  # re-export
 
 
 @unique
@@ -23,9 +24,6 @@ class AxisName(Enum):
     X = "X"  # Over R , against M
     Y = "Y"  # over U , against E
     Z = "Z"  # Over F,  With S
-
-
-from cube.domain.model.part_names import EdgePosition as EdgePosition  # re-export
 
 
 _Face: TypeAlias = "Face"  # type: ignore  # noqa: F821

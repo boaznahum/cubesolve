@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from .FacesColorsProvider import FacesColorsProvider
 
 from ._elements import CenterSliceIndex, Direction, EdgePosition, PartColorsID
+from .part_names import CornerPosition
 from .PartSlice import CenterSlice, PartSlice
 from .Center import Center
 from .Corner import Corner
@@ -43,6 +44,7 @@ class Face(SuperElement, Hashable):
                  "_opposite",
                  "_cache_manager",  # CacheManager for rotation cycle caching
                  "_color_provider",  # FacesColorsProvider | None - overrides color property on even cubes
+                 "_init_finished",  # True after finish_init() — guards set_edge/set_corner
                  ]
 
     _center: Center
@@ -76,6 +78,7 @@ class Face(SuperElement, Hashable):
         self._direction = Direction.D0
         self._parts: Tuple[Part]
         self._color_provider: FacesColorsProvider | None = None
+        self._init_finished: bool = False
 
         # Cache manager for rotation cycles (respects config.enable_cube_cache)
         self._cache_manager = CacheManager.create(cube.config)
@@ -101,6 +104,15 @@ class Face(SuperElement, Hashable):
         return isinstance(__o, Face) and __o._name == self._name
 
     def finish_init(self):
+        # Validate all edges and corners were set during construction
+        for attr in ("_edge_top", "_edge_right", "_edge_bottom", "_edge_left"):
+            assert hasattr(self, attr) and getattr(self, attr) is not None, \
+                f"Face {self._name}: {attr} not set"
+        for attr in ("_corner_top_left", "_corner_top_right",
+                      "_corner_bottom_right", "_corner_bottom_left"):
+            assert hasattr(self, attr) and getattr(self, attr) is not None, \
+                f"Face {self._name}: {attr} not set"
+
         self._edges = (self._edge_top, self._edge_left, self._edge_right, self._edge_bottom)
 
         self._edge_by_position = {
@@ -110,14 +122,12 @@ class Face(SuperElement, Hashable):
             EdgePosition.BOTTOM: self._edge_bottom,
         }
 
-        self._edge_to_position  = {
+        self._edge_to_position = {
             self._edge_top.name: EdgePosition.TOP,
             self._edge_left.name: EdgePosition.LEFT,
             self._edge_right.name: EdgePosition.RIGHT,
             self._edge_bottom.name: EdgePosition.BOTTOM,
         }
-
-
 
         self._corners = [self._corner_top_left,
                          self._corner_top_right,
@@ -136,6 +146,7 @@ class Face(SuperElement, Hashable):
 
         self.set_parts(self._center, *self._edges, *self._corners)
         super().finish_init()
+        self._init_finished = True
 
         markers_cfg = self.config.markers_config
         draw_markers = markers_cfg.GUI_DRAW_MARKERS
@@ -764,6 +775,44 @@ class Face(SuperElement, Hashable):
         """
         self._opposite = o
         o._opposite = self
+
+    def set_edge(self, position: EdgePosition, edge: Edge) -> None:
+        """Wire an edge at the given position during Cube construction.
+
+        Private to Cube._reset() — must not be called after finish_init().
+        """
+        assert not self._init_finished, \
+            f"Face {self._name}: set_edge() called after finish_init()"
+        match position:
+            case EdgePosition.TOP:
+                self._edge_top = edge
+            case EdgePosition.RIGHT:
+                self._edge_right = edge
+            case EdgePosition.BOTTOM:
+                self._edge_bottom = edge
+            case EdgePosition.LEFT:
+                self._edge_left = edge
+            case _:
+                assert False, f"Invalid edge position: {position}"
+
+    def set_corner(self, position: CornerPosition, corner: Corner) -> None:
+        """Wire a corner at the given position during Cube construction.
+
+        Private to Cube._reset() — must not be called after finish_init().
+        """
+        assert not self._init_finished, \
+            f"Face {self._name}: set_corner() called after finish_init()"
+        match position:
+            case CornerPosition.TOP_LEFT:
+                self._corner_top_left = corner
+            case CornerPosition.TOP_RIGHT:
+                self._corner_top_right = corner
+            case CornerPosition.BOTTOM_RIGHT:
+                self._corner_bottom_right = corner
+            case CornerPosition.BOTTOM_LEFT:
+                self._corner_bottom_left = corner
+            case _:
+                assert False, f"Invalid corner position: {position}"
 
     @property
     def is_front(self):

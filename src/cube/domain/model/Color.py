@@ -124,7 +124,7 @@ def _n2c(n: str) -> tuple[float, float, float]:
     _n = n.lower().replace("_", " ")
     mapping = mplcolors.get_named_colors_mapping()
 
-    if not _n in mapping:
+    if _n not in mapping:
         _n = "xkcd:" + _n
 
     return mplcolors.to_rgb(mapping[_n])
