@@ -387,7 +387,7 @@ class NxNCenters(SolverHelper):
 
         self.debug( f"Working on face {face}", level=1)
 
-        with self.ann.annotate(h2=f"{face_loc.color.long.value} face"):
+        with self.ann.annotate(h2=f"{face_loc.color.long} face"):
             cube = self.cube
 
             # we loop bringing all adjusted faces up

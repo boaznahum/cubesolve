@@ -478,7 +478,7 @@ class Part(ABC, CubeElement):
 
         for e in self._3x3_representative_edges:
             s1 += str(e.face.name.value)
-            s2 += str(e.color.long.value) + "/"
+            s2 += str(e.color.long) + "/"
 
         s2 = s2[0:-1]
 
@@ -494,7 +494,7 @@ class Part(ABC, CubeElement):
         s_colors = ""
 
         for e in self._3x3_representative_edges:
-            s_colors += str(e.color.long.value) + "/"
+            s_colors += str(e.color.long) + "/"
 
         s_colors = s_colors[0:-1]
 

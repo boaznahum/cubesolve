@@ -43,7 +43,10 @@ class CommonOp(SolverHelper):
         super().__init__(provider, "CommonOp", _is_common_op=True)
 
         # Get first face color from config (default: WHITE)
-        self._start_color = provider.op.app_state.config.first_face_color
+        l1_color = provider.op.app_state.config.first_face_color
+        if l1_color not in self.cube.original_scheme.colors():
+            l1_color = next(iter(self.cube.original_scheme.colors()))
+        self._start_color = l1_color
 
     @property
     def slv(self) -> SolverElementsProvider:

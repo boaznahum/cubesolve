@@ -16,7 +16,7 @@ class ModelHelper:
         s_colors = ""
 
         for e in color_id:
-            s_colors += str(e.long.value) + "/"
+            s_colors += str(e.long) + "/"
 
         # remove last /
         s_colors = s_colors[0:-1]

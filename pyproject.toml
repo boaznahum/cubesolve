@@ -40,6 +40,7 @@ dependencies = [
     "keyboard",
     "aiohttp>=3.9.0",  # Web backend (WebSocket server)
     "kociemba",  # Near-optimal Rubik's cube solver (18-22 moves)
+    "matplotlib>=3.10.8",
 ]
 
 # Dev dependencies — install with: uv sync --group dev

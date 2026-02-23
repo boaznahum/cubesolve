@@ -360,7 +360,7 @@ class LayerByLayerNxNSolver(BaseSolver):
 
     def _get_layer1_tracker(self, th: FacesTrackerHolder) -> FaceTracker:
         """Get the Layer 1 tracker (determined by FIRST_FACE_COLOR config)."""
-        return th.get_tracker_by_color(self.config.first_face_color)
+        return th.get_tracker_by_color(self.cmn.white)
 
     # =========================================================================
     # Layer 1 - State Inspection
@@ -552,7 +552,7 @@ class LayerByLayerNxNSolver(BaseSolver):
         # Early-exit optimization: Check if requested step is already done on shadow.
         # This avoids creating DualOperator and solver when not needed.
         # Cost: O(4) to check edges, O(4) to check corners - trivial vs full solve.
-        shadow_l1_face = shadow_cube.color_2_face(self.config.first_face_color)
+        shadow_l1_face = shadow_cube.color_2_face(self.cmn.white)
         edges_solved = all(e.match_faces for e in shadow_l1_face.edges)
         corners_solved = all(c.match_faces for c in shadow_l1_face.corners)
 
@@ -578,7 +578,7 @@ class LayerByLayerNxNSolver(BaseSolver):
         assert shadow_cube.is_sanity(force_check=True), "Shadow cube invalid after solving"
 
         # Verify Layer 1 is actually solved on shadow cube
-        shadow_l1 = shadow_cube.color_2_face(self.config.first_face_color)
+        shadow_l1 = shadow_cube.color_2_face(self.cmn.white)
         if what == SolveStep.L1x:
             assert all(e.match_faces for e in shadow_l1.edges), "Shadow cube L1 cross not solved after solve_3x3"
         elif what == SolveStep.L1:

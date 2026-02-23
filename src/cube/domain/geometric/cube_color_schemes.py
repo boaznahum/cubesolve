@@ -42,7 +42,7 @@ def purple_pink() -> CubeColorScheme:
         FaceName.R: Color.PINK,
         FaceName.U: Color.YELLOW,
         FaceName.L: Color.ORANGE,
-        FaceName.D: Color.WHITE,
+        FaceName.D: Color.RED,
         FaceName.B: Color.GREEN,
     })
 

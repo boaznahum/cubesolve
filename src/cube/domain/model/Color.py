@@ -4,6 +4,28 @@ from __future__ import annotations
 
 from enum import Enum, unique
 
+import matplotlib.colors as mplcolors
+
+
+# https://matplotlib.org/stable/gallery/color/named_colors.html#
+# import matplotlibmpl
+
+# list(mpl.colors.BASE_COLORS) -> ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
+# list(mpl.colors.CSS4_COLORS) -> 'aliceblue', 'antiquewhite', 'aqua', 'aquamarine', 'azure', 'beige', 'bisque', 'black', 'blanchedalmond' ...
+# list(mpl.colors.TABLEAU_COLORS)
+# list(mpl.colors.XKCD_COLORS) --> 949 colors
+# all colors
+#  mpl.get_named_colors_mapping()
+
+# https://matplotlib.org/stable/users/explain/colors/colors.html
+# API https://matplotlib.org/stable/api/colors_api.html#
+#
+# Getting color - see above:
+# mpl.colors.CSS4_COLORS["blue"] -> '#0000FF'
+# mpl.colors.to_rgb(mpl.colors.CSS4_COLORS["blue"])
+
+# RGB - float
+# mpl.colors.to_rgb(mpl.colors.get_named_colors_mapping()["white"]) -> (1.0, 1.0, 1.0)
 
 
 @unique
@@ -11,10 +33,11 @@ class Color(Enum):
     """Cube face/sticker colors.
 
     When adding a new color, update:
-    1. ``ColorLong`` enum below (display name for solver annotations)
-    2. ``_COLOR_TO_RGB_INT`` (rendering color)
     3. ``TEXT_RICH_COLORS`` (Rich console output)
     4. ``ConsoleViewer._color_2_str`` (console backend)
+
+    https://matplotlib.org/stable/gallery/color/named_colors.html#
+    list((mplcolors.get_named_colors_mapping())
     """
     BLUE = "Bl"
     ORANGE = "Or"
@@ -24,6 +47,10 @@ class Color(Enum):
     WHITE = "Wh"
     PURPLE = "Pur"
     PINK = "Pnk"
+    PALE_LILAC = "lilac"
+    LIGHT_SEAFOAM_GREEN = "lsgrn"
+    LIGHTISH_PURPLE = "LPnk"
+    ELECTRIC_PINK = "EPnk"
 
     def __str__(self) -> str:
         return self.name ## see below
@@ -39,30 +66,30 @@ class Color(Enum):
         return self.name
 
     @property
-    def long(self) -> ColorLong:
+    def long(self) -> str:
         """The long-form name of this color (e.g. Color.BLUE → ColorLong.BLUE)."""
-        return _COLOR_2_LONG[self]
+        return self.name.capitalize()
 
-class ColorLong(Enum):
-    BLUE = "Blue"
-    ORANGE = "Orange"
-    YELLOW = "Yellow"
-    GREEN = "Green"
-    RED = "Red"
-    WHITE = "White"
-    PURPLE = "Purple"
-    PINK = "Pink"
+# class ColorLong(Enum):
+#     BLUE = "Blue"
+#     ORANGE = "Orange"
+#     YELLOW = "Yellow"
+#     GREEN = "Green"
+#     RED = "Red"
+#     WHITE = "White"
+#     PURPLE = "Purple"
+#     PINK = "Pink"
 
-_COLOR_2_LONG: dict[Color, ColorLong] = {
-    Color.BLUE: ColorLong.BLUE,
-    Color.ORANGE: ColorLong.ORANGE,
-    Color.YELLOW: ColorLong.YELLOW,
-    Color.GREEN: ColorLong.GREEN,
-    Color.RED: ColorLong.RED,
-    Color.WHITE: ColorLong.WHITE,
-    Color.PURPLE: ColorLong.PURPLE,
-    Color.PINK: ColorLong.PINK,
-}
+# _COLOR_2_LONG: dict[Color, ColorLong] = {
+#     Color.BLUE: ColorLong.BLUE,
+#     Color.ORANGE: ColorLong.ORANGE,
+#     Color.YELLOW: ColorLong.YELLOW,
+#     Color.GREEN: ColorLong.GREEN,
+#     Color.RED: ColorLong.RED,
+#     Color.WHITE: ColorLong.WHITE,
+#     Color.PURPLE: ColorLong.PURPLE,
+#     Color.PINK: ColorLong.PINK,
+# }
 
 
 # =============================================================================
@@ -74,22 +101,42 @@ _COLOR_2_LONG: dict[Color, ColorLong] = {
 def _i2f(r, g, b):
     return r / 255, g /255, b / 255
 
+def _f2i(rgb: tuple[float, float, float]) -> tuple[int, int, int]:
+    return int(rgb[0] * 255), int(rgb[1] * 255), int(rgb[2] *255)
 
-_COLOR_TO_RGB_INT: dict[Color, tuple[int, int, int]] = {
-    Color.BLUE: (0, 0, 255),
-    Color.ORANGE: (255, 69, 0),  # (255,127,80) # (255, 165, 0)
-    Color.YELLOW: (255, 255, 0),
-    Color.GREEN: (0, 255, 0),
-    Color.RED: (255, 0, 0),
-    Color.WHITE: (255, 255, 255),
-    Color.PINK: (255, 105, 180),
+def _n2c(n: str) -> tuple[float, float, float]:
+    """
+    name to color
+    :param n:
+    :return:
+    """
+    _n = n.lower().replace("_", " ")
+    mapping = mplcolors.get_named_colors_mapping()
 
-    # https://www.rapidtables.com/web/color/purple-color.html
-    Color.PURPLE: (138, 43, 226),
+    if not _n in mapping:
+        _n = "xkcd:" + _n
 
-}
+    return mplcolors.to_rgb(mapping[_n])
 
-_COLOR_TO_RGB_FLOAT: dict[Color, tuple[float, float, float]] = { c : _i2f(*_COLOR_TO_RGB_INT[c]) for c in Color }
+_COLOR_TO_RGB_FLOAT: dict[Color, tuple[float, float, float]] = { c : _n2c(c.name) for c in Color }
+
+ #_COLOR_TO_RGB_FLOAT: dict[Color, tuple[float, float, float]] = {
+#     Color.BLUE: _n2c("blue"),
+#     Color.ORANGE: _n2c("orange"),
+#     Color.YELLOW: _n2c("yellow"),
+#     Color.GREEN: _n2c("green"),
+#     Color.RED: _n2c("red"),
+#     Color.WHITE: _n2c("white"),
+#     Color.PINK: _n2c("pink"),
+#
+#     # https://www.rapidtables.com/web/color/purple-color.html
+#     Color.PURPLE: _n2c("purple"),
+#
+# }
+
+_COLOR_TO_RGB_INT: dict[Color, tuple[int, int, int]] = { c : _f2i(_COLOR_TO_RGB_FLOAT[c]) for c in Color }
+
+__COLOR_TO_RGB_FLOAT: dict[Color, tuple[float, float, float]] = { c : _i2f(*_COLOR_TO_RGB_INT[c]) for c in Color }
 
 def color2rgb_int(col: Color) -> tuple[int, int, int]:
     return _COLOR_TO_RGB_INT[col]
