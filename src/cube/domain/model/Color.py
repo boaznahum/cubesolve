@@ -32,12 +32,18 @@ import matplotlib.colors as mplcolors
 class Color(Enum):
     """Cube face/sticker colors.
 
-    When adding a new color, update:
-    3. ``TEXT_RICH_COLORS`` (Rich console output)
-    4. ``ConsoleViewer._color_2_str`` (console backend)
+    Color names are resolved to RGB via matplotlib (see ``_n2c``).
+    Browse available names: https://matplotlib.org/stable/gallery/color/named_colors.html
 
-    https://matplotlib.org/stable/gallery/color/named_colors.html#
-    list((mplcolors.get_named_colors_mapping())
+    **Lighting wash-out:** Pastel/light colors (where ALL RGB channels are high,
+    roughly > 0.6) will wash out to white under Phong lighting when a face
+    directly faces the light source, because ambient + diffuse pushes every
+    channel past 1.0 simultaneously. Prefer saturated colors (at least one
+    channel near 0) for distinguishable cube faces.
+
+    When adding a new color, update:
+    - ``TEXT_RICH_COLORS`` (Rich console output)
+    - ``ConsoleViewer._color_2_str`` (console backend)
     """
     BLUE = "Bl"
     ORANGE = "Or"
@@ -105,10 +111,15 @@ def _f2i(rgb: tuple[float, float, float]) -> tuple[int, int, int]:
     return int(rgb[0] * 255), int(rgb[1] * 255), int(rgb[2] *255)
 
 def _n2c(n: str) -> tuple[float, float, float]:
-    """
-    name to color
-    :param n:
-    :return:
+    """Map a color name to an RGB float tuple via matplotlib.
+
+    Lookup order: CSS4 named colors → XKCD survey colors (prefixed "xkcd:").
+
+    NOTE: matplotlib color names may differ from intuitive expectations.
+    For example, "pink" maps to pastel CSS #FFC0CB (1.0, 0.75, 0.80),
+    NOT hot-pink #FF69B4 (1.0, 0.41, 0.71). Light/pastel colors can
+    wash out to white under Phong lighting at direct angles because
+    ambient + diffuse exceeds 1.0 on all channels.
     """
     _n = n.lower().replace("_", " ")
     mapping = mplcolors.get_named_colors_mapping()
