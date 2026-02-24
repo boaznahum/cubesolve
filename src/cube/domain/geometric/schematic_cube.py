@@ -161,6 +161,14 @@ _SCHEMATIC_CORNERS: dict[CornerName, SchematicCorner] = {c.name: c for c in [
 # Edge derivation from corners
 # ============================================================================
 #
+# Each edge is shared by two faces. Each face traverses the edge in its own
+# LTR direction. If both faces start from the same physical corner, the
+# slice indices align (same_direction = True). If they start from different
+# corners, one face's index 0 maps to the other's index N-1 (opposite
+# direction). The code doesn't need to pick which face is "reversed" —
+# it always converts between face-LTR and edge-index via the same_direction
+# flag. See sections [A]–[E] below for the full derivation.
+
 # [A] THE LTR COORDINATE SYSTEM
 #
 #   Every face has the same layout (looking from outside the cube):
