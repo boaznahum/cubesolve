@@ -92,13 +92,29 @@ class WebAppWindow(AppWindow):
 
     def _on_draw(self) -> None:
         """Handle draw event."""
+        import math
+
         self._renderer.begin_frame()
         self._renderer.clear((217, 217, 217, 255))  # Light gray background
 
         # Set up view
+        vs = self._app.vs
         self._renderer.view.set_projection(self._width, self._height)
         self._renderer.view.load_identity()
-        self._renderer.view.translate(0, 0, -400)
+
+        # Camera distance
+        offset = vs.offset
+        self._renderer.view.translate(float(offset[0]), float(offset[1]), float(offset[2]))
+
+        # Base orientation
+        self._renderer.view.rotate(math.degrees(vs.alpha_x_0), 1, 0, 0)
+        self._renderer.view.rotate(math.degrees(vs.alpha_y_0), 0, 1, 0)
+        self._renderer.view.rotate(math.degrees(vs.alpha_z_0), 0, 0, 1)
+
+        # User-controlled rotation (X/Y/Z keys)
+        self._renderer.view.rotate(math.degrees(vs.alpha_x), 1, 0, 0)
+        self._renderer.view.rotate(math.degrees(vs.alpha_y), 0, 1, 0)
+        self._renderer.view.rotate(math.degrees(vs.alpha_z), 0, 0, 1)
 
         # Draw cube
         self._viewer.draw()

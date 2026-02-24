@@ -310,7 +310,7 @@ class WebViewStateManager(ViewStateManager):
         height: int,
         fov_y: float = 50.0,
         near: float = 0.1,
-        far: float = 100.0,
+        far: float = 1000.0,
     ) -> None:
         """Set projection parameters."""
         self._width = width
