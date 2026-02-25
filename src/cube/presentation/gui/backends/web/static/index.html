@@ -85,6 +85,25 @@
             background: rgb(120, 120, 120);
         }
 
+        /* Solver dropdown */
+        #solver-select {
+            background: #333;
+            color: #ddd;
+            border: 1px solid #555;
+            border-radius: 3px;
+            padding: 2px 4px;
+            font-size: 11px;
+            font-family: monospace;
+            cursor: pointer;
+            outline: none;
+        }
+        #solver-select:hover {
+            border-color: #777;
+        }
+        #solver-select:focus {
+            border-color: rgb(70, 130, 180);
+        }
+
         /* Speed slider — compact inline */
         .tb-speed {
             display: flex;
@@ -208,6 +227,12 @@
             <div class="tb-group">
                 <button class="tb-btn tb-on" id="btn-debug" data-cmd="toggle_debug">Dbg:ON</button>
                 <button class="tb-btn tb-on" id="btn-anim" data-cmd="toggle_animation">Anim:ON</button>
+            </div>
+            <div class="tb-sep"></div>
+            <!-- Solver selector -->
+            <div class="tb-group">
+                <span class="tb-label">Solver</span>
+                <select id="solver-select" title="Solver (keyboard: \ to cycle)"></select>
             </div>
             <div class="tb-sep"></div>
             <!-- Size control -->

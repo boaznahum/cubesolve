@@ -53,8 +53,15 @@ class WebEventLoop(EventLoop):
         # Size change handler (set by WebAppWindow)
         self._size_handler: Callable[[int], None] | None = None
 
+        # Solver change handler (set by WebAppWindow)
+        self._solver_handler: Callable[[str], None] | None = None
+
         # Client connected callback (for initial draw)
         self._on_client_connected: Callable[[], None] | None = None
+
+        # Mouse handlers (set by WebAppWindow)
+        self._mouse_rotate_handler: Callable[[float, float], None] | None = None
+        self._mouse_pan_handler: Callable[[float, float], None] | None = None
 
     @staticmethod
     def _find_free_port() -> int:
@@ -82,9 +89,21 @@ class WebEventLoop(EventLoop):
         """Set handler for cube size changes from browser slider."""
         self._size_handler = handler
 
+    def set_solver_handler(self, handler: Callable[[str], None] | None) -> None:
+        """Set handler for solver changes from browser dropdown."""
+        self._solver_handler = handler
+
     def set_client_connected_handler(self, handler: Callable[[], None] | None) -> None:
         """Set handler for client connection (for initial draw)."""
         self._on_client_connected = handler
+
+    def set_mouse_rotate_handler(self, handler: Callable[[float, float], None] | None) -> None:
+        """Set handler for mouse orbit rotation (dx, dy in pixels)."""
+        self._mouse_rotate_handler = handler
+
+    def set_mouse_pan_handler(self, handler: Callable[[float, float], None] | None) -> None:
+        """Set handler for mouse pan (dx, dy in pixels)."""
+        self._mouse_pan_handler = handler
 
     @property
     def gui_test_mode(self) -> bool:
@@ -237,14 +256,24 @@ class WebEventLoop(EventLoop):
                 size_value = data.get("value", 3)
                 if self._size_handler:
                     self._size_handler(size_value)
+            elif msg_type == "set_solver":
+                solver_name = data.get("name", "")
+                if self._solver_handler and solver_name:
+                    self._solver_handler(solver_name)
             elif msg_type == "command":
                 cmd_name = data.get("name", "")
                 if self._command_handler:
                     self._command_handler(cmd_name)
-            elif msg_type == "mouse_press":
-                print(f"Mouse press: {data}", flush=True)
-            elif msg_type == "mouse_drag":
-                pass  # Don't log drag events (too noisy)
+            elif msg_type == "mouse_rotate_view":
+                dx = data.get("dx", 0.0)
+                dy = data.get("dy", 0.0)
+                if self._mouse_rotate_handler:
+                    self._mouse_rotate_handler(dx, dy)
+            elif msg_type == "mouse_pan":
+                dx = data.get("dx", 0.0)
+                dy = data.get("dy", 0.0)
+                if self._mouse_pan_handler:
+                    self._mouse_pan_handler(dx, dy)
             elif msg_type == "resize":
                 print(f"Resize: {data}", flush=True)
 

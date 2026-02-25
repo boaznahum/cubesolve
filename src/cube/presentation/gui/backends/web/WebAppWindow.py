@@ -73,8 +73,15 @@ class WebAppWindow(AppWindow):
         # Wire size handler to event loop (receives size from browser slider)
         self._event_loop.set_size_handler(self._handle_browser_size)
 
+        # Wire solver handler to event loop (receives solver from browser dropdown)
+        self._event_loop.set_solver_handler(self._handle_browser_solver)
+
         # Wire client connected callback for initial draw
         self._event_loop.set_client_connected_handler(self._on_client_connected)
+
+        # Wire mouse handlers
+        self._event_loop.set_mouse_rotate_handler(self._handle_mouse_rotate)
+        self._event_loop.set_mouse_pan_handler(self._handle_mouse_pan)
 
         # Create viewer
         from cube.presentation.viewer.GCubeViewer import GCubeViewer
@@ -181,9 +188,52 @@ class WebAppWindow(AppWindow):
             self._app.cube.reset(clamped)
             self._app.op.reset()
             self.update_gui_elements()
+            self._broadcast_cube_info()
+
+    def _handle_mouse_rotate(self, dx: float, dy: float) -> None:
+        """Handle mouse orbit rotation from browser.
+
+        Converts pixel deltas to radians, matching pyglet2 sensitivity.
+        Browser dy is positive-downward, so radians(dy) gives the correct
+        sign inversion compared to pyglet2's radians(-dy) with positive-up dy.
+        """
+        import math
+        vs = self._app.vs
+        vs.alpha_x += math.radians(dy)
+        vs.alpha_y += math.radians(dx)
+        self._on_draw()
+
+    def _handle_mouse_pan(self, dx: float, dy: float) -> None:
+        """Handle mouse pan from browser.
+
+        Browser dy is positive-downward but 3D y is positive-upward,
+        so we negate dy for the offset.
+        """
+        vs = self._app.vs
+        vs.change_offset(dx, -dy, 0)
+        self._on_draw()
+
+    def _handle_browser_solver(self, name: str) -> None:
+        """Handle solver change from browser dropdown."""
+        from cube.domain.solver.SolverName import SolverName
+
+        try:
+            solver_name = SolverName.lookup(name)
+        except ValueError:
+            print(f"Unknown solver: {name}", flush=True)
+            return
+
+        # Skip if already on this solver
+        if self._app.slv.get_code is solver_name:
+            return
+
+        self._app.switch_to_solver(solver_name)
+        self._app.op.reset()
+        self.update_gui_elements()
+        self._broadcast_toolbar_state()
 
     def _handle_browser_command(self, command_name: str) -> None:
-        """Handle command from browser toolbar button."""
+        """Handle command from browser toolbar button or mouse interaction."""
         from cube.presentation.gui.commands import Commands
 
         # "solve" uses two-phase approach: compute solution, then replay with animation.
@@ -193,12 +243,36 @@ class WebAppWindow(AppWindow):
             return
 
         command_map: dict[str, Command] = {
+            # Toolbar buttons
             "solve_instant": Commands.SOLVE_ALL_NO_ANIMATION,
             "scramble": Commands.SCRAMBLE_1,
             "reset": Commands.RESET_CUBE,
             "stop": Commands.STOP_ANIMATION,
             "toggle_debug": Commands.TOGGLE_DEBUG,
             "toggle_animation": Commands.TOGGLE_ANIMATION,
+            # Face rotations (from mouse click/drag)
+            "ROTATE_R": Commands.ROTATE_R,
+            "ROTATE_R_PRIME": Commands.ROTATE_R_PRIME,
+            "ROTATE_L": Commands.ROTATE_L,
+            "ROTATE_L_PRIME": Commands.ROTATE_L_PRIME,
+            "ROTATE_U": Commands.ROTATE_U,
+            "ROTATE_U_PRIME": Commands.ROTATE_U_PRIME,
+            "ROTATE_D": Commands.ROTATE_D,
+            "ROTATE_D_PRIME": Commands.ROTATE_D_PRIME,
+            "ROTATE_F": Commands.ROTATE_F,
+            "ROTATE_F_PRIME": Commands.ROTATE_F_PRIME,
+            "ROTATE_B": Commands.ROTATE_B,
+            "ROTATE_B_PRIME": Commands.ROTATE_B_PRIME,
+            # Slice moves (from drag-to-turn on middle layers)
+            "SLICE_M": Commands.SLICE_M,
+            "SLICE_M_PRIME": Commands.SLICE_M_PRIME,
+            "SLICE_E": Commands.SLICE_E,
+            "SLICE_E_PRIME": Commands.SLICE_E_PRIME,
+            "SLICE_S": Commands.SLICE_S,
+            "SLICE_S_PRIME": Commands.SLICE_S_PRIME,
+            # Zoom (from scroll wheel)
+            "ZOOM_IN": Commands.ZOOM_IN,
+            "ZOOM_OUT": Commands.ZOOM_OUT,
         }
 
         command = command_map.get(command_name)
@@ -281,12 +355,17 @@ class WebAppWindow(AppWindow):
         self._event_loop.broadcast(msg)
 
     def _broadcast_toolbar_state(self) -> None:
-        """Send current toggle states to browser for button labels."""
+        """Send current toggle states and solver info to browser."""
+        from cube.domain.solver.SolverName import SolverName
+
         app = self._app
+        solver_list = [s.display_name for s in SolverName.implemented()]
         msg = json.dumps({
             "type": "toolbar_state",
             "debug": app.config.solver_debug,
             "animation": app.op.animation_enabled,
+            "solver_name": app.slv.name,
+            "solver_list": solver_list,
         })
         self._event_loop.broadcast(msg)
 
@@ -296,12 +375,41 @@ class WebAppWindow(AppWindow):
         msg = json.dumps({"type": "size_update", "value": size})
         self._event_loop.broadcast(msg)
 
+    def _broadcast_cube_info(self) -> None:
+        """Send cube geometry info to browser for mouse interaction.
+
+        The face transforms define each face's position and orientation in
+        object space. JS uses these to:
+        - Compute row/col from raycast hit points (for drag-to-turn)
+        - Project face axes to screen space (for drag direction analysis)
+        """
+        cell_size: int = self._app.vs.config.cell_size
+        face_size: float = 3.0 * cell_size  # Always 3 regions per axis
+        half: float = face_size / 2.0
+        cube_size: int = self._app.vs.cube_size
+
+        msg = json.dumps({
+            "type": "cube_info",
+            "size": cube_size,
+            "faceSize": face_size,
+            "faces": {
+                "F": {"center": [half, half, face_size], "right": [1, 0, 0], "up": [0, 1, 0]},
+                "B": {"center": [half, half, 0], "right": [-1, 0, 0], "up": [0, 1, 0]},
+                "R": {"center": [face_size, half, half], "right": [0, 0, -1], "up": [0, 1, 0]},
+                "L": {"center": [0, half, half], "right": [0, 0, 1], "up": [0, 1, 0]},
+                "U": {"center": [half, face_size, half], "right": [1, 0, 0], "up": [0, 0, -1]},
+                "D": {"center": [half, 0, half], "right": [1, 0, 0], "up": [0, 0, 1]},
+            }
+        })
+        self._event_loop.broadcast(msg)
+
     def _on_client_connected(self) -> None:
         """Handle browser client connection - trigger initial draw."""
         print("Client connected - sending initial frame", flush=True)
         self._broadcast_speed()
         self._broadcast_size()
         self._broadcast_toolbar_state()
+        self._broadcast_cube_info()
         self._on_draw()
 
     def _on_close(self) -> bool:

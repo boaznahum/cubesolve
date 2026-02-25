@@ -13,6 +13,7 @@ class CubeClient {
         this.speedValue = document.getElementById('speed-value');
         this.sizeSlider = document.getElementById('size-slider');
         this.sizeValue = document.getElementById('size-value');
+        this.solverSelect = document.getElementById('solver-select');
         this.animOverlay = document.getElementById('anim-overlay');
         this.statusOverlay = document.getElementById('status-overlay');
         this.ws = null;
@@ -62,9 +63,10 @@ class CubeClient {
         this.frameQueue = [];
         this._startRenderLoop();
 
-        // Wire sliders and toolbar buttons
+        // Wire sliders, dropdown, and toolbar buttons
         this._setupSpeedSlider();
         this._setupSizeSlider();
+        this._setupSolverSelect();
         this._setupToolbarButtons();
 
         this.connect();
@@ -413,6 +415,40 @@ class CubeClient {
         }
     }
 
+    _setupSolverSelect() {
+        if (!this.solverSelect) return;
+
+        this.solverSelect.addEventListener('change', () => {
+            this.send({ type: 'set_solver', name: this.solverSelect.value });
+        });
+    }
+
+    updateSolverSelect(solverName, solverList) {
+        if (!this.solverSelect) return;
+
+        // Rebuild options if solver list is provided and differs
+        if (solverList && solverList.length > 0) {
+            const currentOptions = Array.from(this.solverSelect.options).map(o => o.value);
+            const listsMatch = currentOptions.length === solverList.length &&
+                currentOptions.every((v, i) => v === solverList[i]);
+
+            if (!listsMatch) {
+                this.solverSelect.innerHTML = '';
+                for (const name of solverList) {
+                    const opt = document.createElement('option');
+                    opt.value = name;
+                    opt.textContent = name;
+                    this.solverSelect.appendChild(opt);
+                }
+            }
+        }
+
+        // Sync selected value
+        if (solverName) {
+            this.solverSelect.value = solverName;
+        }
+    }
+
     _setupSpeedSlider() {
         if (!this.speedSlider) return;
 
@@ -442,6 +478,10 @@ class CubeClient {
         if (btnAnim) {
             btnAnim.textContent = data.animation ? 'Anim:ON' : 'Anim:OFF';
             btnAnim.className = 'tb-btn ' + (data.animation ? 'tb-on' : 'tb-off');
+        }
+        // Sync solver dropdown
+        if (data.solver_name !== undefined) {
+            this.updateSolverSelect(data.solver_name, data.solver_list);
         }
     }
 
