@@ -121,7 +121,7 @@ class WebAppWindow(AppWindow):
 
         # Set up view
         vs = self._app.vs
-        self._renderer.view.set_projection(self._width, self._height)
+        self._renderer.view.set_projection(self._width, self._height, fov_y=float(vs.fov_y))
         self._renderer.view.load_identity()
 
         # Camera distance
@@ -279,6 +279,10 @@ class WebAppWindow(AppWindow):
         if command:
             self.inject_command(command)
             self._broadcast_toolbar_state()
+            # Zoom commands return no_gui_update=True (projection-only change),
+            # but the web backend needs an explicit redraw to send the new frame.
+            if command_name in ("ZOOM_IN", "ZOOM_OUT"):
+                self.update_gui_elements()
 
     def _two_phase_solve(self) -> None:
         """Solve using two-phase approach: compute solution, then replay.

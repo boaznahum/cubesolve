@@ -217,3 +217,24 @@ class ShapeRenderer(Protocol):
             color: RGB color
         """
         ...
+
+    def set_sticker_context(self, face: str, row: int, col: int) -> None:
+        """Set metadata context for the next quad commands.
+
+        When set, quad/quad_with_border commands include face/row/col
+        metadata so the frontend can identify which sticker was drawn.
+        Default implementation is a no-op (only web backend uses this).
+
+        Args:
+            face: Face name (e.g., "R", "U", "F")
+            row: Row index within the face grid
+            col: Column index within the face grid
+        """
+        ...
+
+    def clear_sticker_context(self) -> None:
+        """Clear the sticker metadata context.
+
+        Default implementation is a no-op.
+        """
+        ...

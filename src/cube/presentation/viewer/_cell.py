@@ -223,6 +223,9 @@ class _Cell:
         self._right_top_v3: ndarray | None = None
         self._left_bottom_v3: ndarray | None = None
         self._face_board = face_board
+        # Grid position within the face (set by _FaceBoard.prepare_gui_geometry)
+        self._grid_row: int = -1
+        self._grid_col: int = -1
 
         # Store config reference to avoid repeated lookups
         self._config: ConfigProtocol = face_board._config
@@ -519,6 +522,10 @@ class _Cell:
         cubie_facet_texture: TextureData | None = self._cubie_texture
         renderer = self._renderer
 
+        # Set sticker metadata for web backend raycasting
+        face_name: str = fb.cube_face.name.name  # FaceName enum → string (e.g., "R")
+        renderer.shapes.set_sticker_context(face_name, self._grid_row, self._grid_col)
+
         def draw_facet(part_edge: PartEdge, _vx):
 
             # vertex = [left_bottom, right_bottom, right_top, left_top]
@@ -629,6 +636,8 @@ class _Cell:
                                 renderer.shapes.cross(points, cross_width_x, cross_color_x)
                             if attributes.get("on_y", False):
                                 renderer.shapes.cross(points, cross_width_y, cross_color_y)
+
+        renderer.shapes.clear_sticker_context()
 
     def gui_movable_gui_objects(self) -> Iterable[int]:
         return [ll for ls in self.gl_lists_movable.values() for ll in ls]

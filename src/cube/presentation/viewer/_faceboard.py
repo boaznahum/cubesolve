@@ -85,13 +85,10 @@ class _FaceBoard:
             # why it is needed
             l_box = [x.reshape((3,)) for x in box]
 
-            # # convert to gl,
-            # # but this is waste of time, when calculating center and rotate axis, we again convert to ndarray
-            # for i in range(len(l_box)):
-            #     l_box[i] = [c_float(l_box[i][0]), c_float(l_box[i][1]), c_float(l_box[i][2])]
-
-
-            self._cells[part.fixed_id].prepare_geometry(part, l_box)
+            cell = self._cells[part.fixed_id]
+            cell._grid_row = cy
+            cell._grid_col = cx
+            cell.prepare_geometry(part, l_box)
 
         _create_cell(2, 0, f.corner_top_left)
         _create_cell(2, 1, f.edge_top)

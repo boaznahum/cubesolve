@@ -138,6 +138,14 @@ class HeadlessShapeRenderer(ShapeRenderer):
         """No-op full_cylinder rendering."""
         pass
 
+    def set_sticker_context(self, face: str, row: int, col: int) -> None:
+        """No-op for headless mode."""
+        pass
+
+    def clear_sticker_context(self) -> None:
+        """No-op for headless mode."""
+        pass
+
 
 class HeadlessDisplayListManager(DisplayListManager):
     """In-memory display list manager for headless mode.

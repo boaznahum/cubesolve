@@ -125,3 +125,11 @@ class AbstractShapeRenderer(ShapeRenderer):
     ) -> None:
         """Render a hollow cylinder with capped ends. No-op default."""
         pass
+
+    def set_sticker_context(self, face: str, row: int, col: int) -> None:
+        """Set sticker metadata context. No-op default."""
+        pass
+
+    def clear_sticker_context(self) -> None:
+        """Clear sticker metadata context. No-op default."""
+        pass

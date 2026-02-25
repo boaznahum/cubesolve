@@ -127,8 +127,14 @@ The critical innovation for the web backend:
 - Must set `PYTHONIOENCODING=utf-8` on Windows to prevent Unicode crash from logger box-drawing chars
 
 ## Next Steps
-- [ ] Test two-phase solve thoroughly on 3x3 and larger cubes
-- [ ] Implement mouse drag-to-rotate (Critical)
-- [ ] Implement click face to turn (Critical)
+- [ ] **Add full mouse controls** — detailed plan in `web1-mouse-controls.md`
+  - [ ] Step 1: Sticker metadata in Python quad commands
+  - [ ] Step 2: Tag Three.js meshes with userData
+  - [ ] Step 3: Right-click drag orbit rotation
+  - [ ] Step 4: Scroll wheel zoom
+  - [ ] Step 5: ALT+left-drag pan
+  - [ ] Step 6: Shift/Ctrl click-to-turn face
+  - [ ] Step 7: Store cube_info geometry in JS
+  - [ ] Step 8: Drag-to-turn face
 - [ ] Add solver selector UI
 - [ ] Consider cache-busting for static files

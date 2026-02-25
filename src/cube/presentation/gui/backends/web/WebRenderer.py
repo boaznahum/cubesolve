@@ -39,10 +39,33 @@ class WebShapeRenderer(ShapeRenderer):
     def __init__(self, command_queue: list[dict]):
         self._commands = command_queue
         self._display_list_manager: "WebDisplayListManager | None" = None
+        # Sticker metadata context (set before drawing a sticker quad)
+        self._sticker_face: str | None = None
+        self._sticker_row: int = -1
+        self._sticker_col: int = -1
 
     def set_display_list_manager(self, dlm: "WebDisplayListManager") -> None:
         """Set display list manager for compile-time redirection."""
         self._display_list_manager = dlm
+
+    def set_sticker_context(self, face: str, row: int, col: int) -> None:
+        """Set metadata context for the next quad commands."""
+        self._sticker_face = face
+        self._sticker_row = row
+        self._sticker_col = col
+
+    def clear_sticker_context(self) -> None:
+        """Clear the sticker metadata context."""
+        self._sticker_face = None
+        self._sticker_row = -1
+        self._sticker_col = -1
+
+    def _inject_sticker_meta(self, cmd: dict) -> None:
+        """Add sticker metadata to command if context is set."""
+        if self._sticker_face is not None:
+            cmd["face"] = self._sticker_face
+            cmd["row"] = self._sticker_row
+            cmd["col"] = self._sticker_col
 
     def _add_command(self, cmd: dict) -> None:
         """Add command to appropriate queue (main or compile buffer)."""
@@ -53,11 +76,13 @@ class WebShapeRenderer(ShapeRenderer):
 
     def quad(self, vertices: Sequence[Point3D], color: Color3) -> None:
         """Queue quad command."""
-        self._add_command({
+        cmd = {
             "cmd": "quad",
             "vertices": [v.tolist() for v in vertices],
             "color": list(color)
-        })
+        }
+        self._inject_sticker_meta(cmd)
+        self._add_command(cmd)
 
     def quad_with_border(
         self,
@@ -67,13 +92,15 @@ class WebShapeRenderer(ShapeRenderer):
         line_color: Color3,
     ) -> None:
         """Queue quad with border command."""
-        self._add_command({
+        cmd = {
             "cmd": "quad_border",
             "vertices": [v.tolist() for v in vertices],
             "face_color": list(face_color),
             "line_width": line_width,
             "line_color": list(line_color)
-        })
+        }
+        self._inject_sticker_meta(cmd)
+        self._add_command(cmd)
 
     def triangle(self, vertices: Sequence[Point3D], color: Color3) -> None:
         """Queue triangle command."""
