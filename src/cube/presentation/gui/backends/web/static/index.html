@@ -22,11 +22,15 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            width: 100%;
+            max-width: 724px;
+            padding: 0 4px;
         }
 
         /* ── Toolbar ─────────────────────────────────── */
         #toolbar {
-            width: 724px;  /* 720 canvas + 4px border */
+            width: 100%;
+            max-width: 724px;  /* 720 canvas + 4px border */
             background: rgba(40, 40, 40, 0.95);
             border: 2px solid #444;
             border-bottom: none;
@@ -157,10 +161,13 @@
         /* ── Canvas wrapper (for overlays) ───────────── */
         #canvas-wrapper {
             position: relative;
-            width: 724px;
+            width: 100%;
+            max-width: 724px;
         }
         #canvas {
             display: block;
+            width: 100%;
+            height: auto;
             border-left: 2px solid #444;
             border-right: 2px solid #444;
             border-top: none;
@@ -199,6 +206,39 @@
             border-radius: 3px;
         }
 
+
+        /* ── Mobile responsive ──────────────────────── */
+        @media (max-width: 500px) {
+            body {
+                align-items: flex-start;
+            }
+            #container {
+                padding: 0 2px;
+            }
+            #toolbar {
+                padding: 4px 6px;
+                gap: 4px;
+                justify-content: center;
+            }
+            .tb-sep {
+                display: none;
+            }
+            .tb-btn {
+                padding: 6px 8px;
+                font-size: 12px;
+            }
+            #solver-select {
+                font-size: 12px;
+                padding: 4px 6px;
+            }
+            .tb-label {
+                font-size: 10px;
+                padding: 0 1px;
+            }
+            #speed-slider, #size-slider {
+                width: 60px;
+            }
+        }
 
         /* ── Connection status ───────────────────────── */
         #status {

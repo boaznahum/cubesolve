@@ -50,6 +50,9 @@ class CubeClient {
         // Sticker inset factor (gap between stickers, exposing dark body)
         this.insetFactor = 0.08;
 
+        // Cube geometry info from server (face centers, normals, right/up vectors)
+        this.cubeInfo = null;
+
         // Matrix stack (OpenGL-style modelview)
         this.matrixStack = [new THREE.Matrix4()];
 
@@ -63,11 +66,12 @@ class CubeClient {
         this.frameQueue = [];
         this._startRenderLoop();
 
-        // Wire sliders, dropdown, and toolbar buttons
+        // Wire sliders, dropdown, toolbar buttons, and mouse handlers
         this._setupSpeedSlider();
         this._setupSizeSlider();
         this._setupSolverSelect();
         this._setupToolbarButtons();
+        this._setupMouseHandlers();
 
         this.connect();
     }
@@ -170,11 +174,12 @@ class CubeClient {
         mesh.matrix.copy(this.currentMatrix());
         this.scene.add(mesh);
         this.disposables.push(geo, mat);
+        return mesh;
     }
 
     // ── Shape builders ───────────────────────────────────────────────
 
-    addQuad(vertices, color, borderColor) {
+    addQuad(vertices, color, stickerInfo) {
         // Dark body quad at original vertices (pushed back via polygon offset)
         this._addQuadMesh(vertices, [30, 30, 30], {
             polygonOffset: true,
@@ -186,12 +191,22 @@ class CubeClient {
 
         // Colored sticker at inset vertices (gaps expose dark body behind)
         const inset = this._insetVertices(vertices, this.insetFactor);
-        this._addQuadMesh(inset, color, {});
+        const mesh = this._addQuadMesh(inset, color, {});
+
+        // Tag sticker mesh with face/row/col for raycasting
+        if (stickerInfo) {
+            mesh.userData = {
+                isSticker: true,
+                face: stickerInfo.face,
+                row: stickerInfo.row,
+                col: stickerInfo.col,
+            };
+        }
     }
 
-    addQuadBorder(vertices, faceColor, lineWidth, lineColor) {
+    addQuadBorder(vertices, faceColor, lineWidth, lineColor, stickerInfo) {
         // Face fill with inset + dark body
-        this.addQuad(vertices, faceColor);
+        this.addQuad(vertices, faceColor, stickerInfo);
 
         // Border lines at inset vertices
         const inset = this._insetVertices(vertices, this.insetFactor);
@@ -345,12 +360,16 @@ class CubeClient {
                 break;
 
             // Shapes
-            case 'quad':
-                this.addQuad(cmd.vertices, cmd.color);
+            case 'quad': {
+                const si = cmd.face !== undefined ? cmd : null;
+                this.addQuad(cmd.vertices, cmd.color, si);
                 break;
-            case 'quad_border':
-                this.addQuadBorder(cmd.vertices, cmd.face_color, cmd.line_width, cmd.line_color);
+            }
+            case 'quad_border': {
+                const si = cmd.face !== undefined ? cmd : null;
+                this.addQuadBorder(cmd.vertices, cmd.face_color, cmd.line_width, cmd.line_color, si);
                 break;
+            }
             case 'triangle':
                 this.addTriangle(cmd.vertices, cmd.color);
                 break;
@@ -496,8 +515,292 @@ class CubeClient {
 
     // ── WebSocket ────────────────────────────────────────────────────
 
+    // ── Mouse interaction ──────────────────────────────────────────────
+
+    _setupMouseHandlers() {
+        const canvas = this.canvas;
+        this._raycaster = new THREE.Raycaster();
+
+        // State tracking
+        this._mouseDown = false;
+        this._mouseButton = -1;  // 0=left, 2=right
+        this._mouseAlt = false;
+        this._mouseShift = false;
+        this._mouseCtrl = false;
+        this._lastMouseX = 0;
+        this._lastMouseY = 0;
+        this._mouseStartX = 0;
+        this._mouseStartY = 0;
+        this._dragActive = false;    // true once drag threshold exceeded
+        this._hitSticker = null;     // sticker hit on mousedown for drag-to-turn
+        this._dragTurnSent = false;  // true once a drag-turn command was sent
+
+        // Prevent right-click context menu on canvas
+        canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+        canvas.addEventListener('mousedown', e => {
+            if (e.target !== canvas) return;
+            this._mouseDown = true;
+            this._mouseButton = e.button;
+            this._mouseAlt = e.altKey;
+            this._mouseShift = e.shiftKey;
+            this._mouseCtrl = e.ctrlKey;
+            this._lastMouseX = e.clientX;
+            this._lastMouseY = e.clientY;
+            this._mouseStartX = e.clientX;
+            this._mouseStartY = e.clientY;
+            this._dragActive = false;
+            this._hitSticker = null;
+
+            // Left-click on sticker: record hit for potential drag or click-to-turn
+            if (e.button === 0 && !e.altKey) {
+                this._hitSticker = this._raycastSticker(e);
+            }
+        });
+
+        window.addEventListener('mousemove', e => {
+            if (!this._mouseDown) return;
+            const dx = e.clientX - this._lastMouseX;
+            const dy = e.clientY - this._lastMouseY;
+            this._lastMouseX = e.clientX;
+            this._lastMouseY = e.clientY;
+
+            if (dx === 0 && dy === 0) return;
+
+            // Check drag threshold (5px)
+            if (!this._dragActive) {
+                const totalDx = e.clientX - this._mouseStartX;
+                const totalDy = e.clientY - this._mouseStartY;
+                if (Math.abs(totalDx) + Math.abs(totalDy) < 5) return;
+                this._dragActive = true;
+            }
+
+            if (this._mouseButton === 2) {
+                // Right-drag → orbit rotation
+                this.send({ type: 'mouse_rotate_view', dx, dy });
+            } else if (this._mouseButton === 0 && this._mouseAlt) {
+                // ALT + left-drag → pan
+                this.send({ type: 'mouse_pan', dx, dy });
+            } else if (this._mouseButton === 0 && this._hitSticker && !this._mouseShift && !this._mouseCtrl) {
+                // Left-drag on sticker → face/slice turn (handled on first drag activation)
+                this._handleDragTurn(e);
+            }
+        });
+
+        window.addEventListener('mouseup', e => {
+            // Shift/Ctrl click-to-turn (only if no drag occurred)
+            if (this._mouseButton === 0 && !this._dragActive && this._hitSticker) {
+                if (this._mouseShift || this._mouseCtrl) {
+                    const face = this._hitSticker.face;
+                    const prime = this._mouseCtrl;
+                    const cmd = 'ROTATE_' + face + (prime ? '_PRIME' : '');
+                    this.send({ type: 'command', name: cmd });
+                }
+            }
+            this._mouseDown = false;
+            this._mouseButton = -1;
+            this._hitSticker = null;
+            this._dragActive = false;
+            this._dragTurnSent = false;
+        });
+
+        // Scroll wheel → zoom
+        canvas.addEventListener('wheel', e => {
+            e.preventDefault();
+            const cmd = e.deltaY < 0 ? 'ZOOM_IN' : 'ZOOM_OUT';
+            this.send({ type: 'command', name: cmd });
+        }, { passive: false });
+    }
+
+    /**
+     * Raycast from mouse position to find the first sticker mesh.
+     * Returns { face, row, col } or null.
+     */
+    _raycastSticker(event) {
+        const rect = this.canvas.getBoundingClientRect();
+        const mouse = new THREE.Vector2(
+            ((event.clientX - rect.left) / rect.width) * 2 - 1,
+            -((event.clientY - rect.top) / rect.height) * 2 + 1
+        );
+        this._raycaster.setFromCamera(mouse, this.camera);
+        const intersects = this._raycaster.intersectObjects(this.scene.children, false);
+        for (const hit of intersects) {
+            if (hit.object.userData && hit.object.userData.isSticker) {
+                return hit.object.userData;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Handle drag-to-turn: determine which face/slice to turn based on
+     * drag direction relative to the hit face's axes.
+     */
+    _handleDragTurn(event) {
+        if (this._dragTurnSent) return;  // Only send one turn per drag
+        if (!this.cubeInfo || !this._hitSticker) return;
+
+        const faceInfo = this.cubeInfo.faces[this._hitSticker.face];
+        if (!faceInfo) return;
+
+        const size = this.cubeInfo.size;
+        const row = this._hitSticker.row;
+        const col = this._hitSticker.col;
+
+        // Compute screen-space drag vector
+        const dragX = event.clientX - this._mouseStartX;
+        const dragY = event.clientY - this._mouseStartY;
+
+        // Project face's right and up vectors to screen space to determine drag alignment
+        const right3 = new THREE.Vector3(...faceInfo.right);
+        const up3 = new THREE.Vector3(...faceInfo.up);
+
+        // Transform face vectors through the current model-view to get screen directions
+        // We project the face center and face center+right to screen, then take the difference
+        const center3 = new THREE.Vector3(...faceInfo.center);
+        const centerScreen = center3.clone().project(this.camera);
+        const rightScreen = center3.clone().add(right3.clone().multiplyScalar(10)).project(this.camera);
+        const upScreen = center3.clone().add(up3.clone().multiplyScalar(10)).project(this.camera);
+
+        const screenRight = new THREE.Vector2(
+            rightScreen.x - centerScreen.x,
+            -(rightScreen.y - centerScreen.y)  // flip Y (screen Y is downward)
+        ).normalize();
+        const screenUp = new THREE.Vector2(
+            upScreen.x - centerScreen.x,
+            -(upScreen.y - centerScreen.y)
+        ).normalize();
+
+        // Project drag onto face axes
+        const dragVec = new THREE.Vector2(dragX, dragY);
+        const dotRight = dragVec.dot(screenRight);
+        const dotUp = dragVec.dot(screenUp);
+
+        // Determine if drag is more horizontal (along right) or vertical (along up)
+        const cmd = this._dragToCommand(
+            this._hitSticker.face, row, col, size,
+            Math.abs(dotRight) > Math.abs(dotUp),  // isHorizontal
+            Math.abs(dotRight) > Math.abs(dotUp) ? dotRight > 0 : dotUp > 0  // isPositive
+        );
+
+        if (cmd) {
+            this.send({ type: 'command', name: cmd });
+            this._dragTurnSent = true;
+        }
+    }
+
+    /**
+     * Map face + row/col + drag direction to a command name.
+     *
+     * For a 3×3 cube, the _FaceBoard grid uses cy,cx coordinates:
+     *   row 0 = bottom, row 1 = middle, row 2 = top
+     *   col 0 = left,   col 1 = middle, col 2 = right
+     *
+     * Horizontal drag (along face's right axis) turns a row:
+     *   row 2 (top)    → U or U'
+     *   row 1 (middle) → E' or E  (E follows D convention)
+     *   row 0 (bottom) → D' or D
+     *
+     * Vertical drag (along face's up axis) turns a column:
+     *   col 0 (left)   → L' or L
+     *   col 1 (middle) → M' or M  (M follows L convention)
+     *   col 2 (right)  → R or R'
+     */
+    _dragToCommand(face, row, col, size, isHorizontal, isPositive) {
+        // Face-relative drag direction tables
+        // Each face has its own mapping because the face axes differ
+        // For simplicity, we define the mapping for F face and derive others
+
+        // The mapping depends on which face was hit
+        // For each face: horizontal drag turns a row, vertical drag turns a column
+        // The "positive" direction depends on the face orientation
+
+        if (isHorizontal) {
+            // Turning a row (horizontal drag)
+            return this._rowTurnCommand(face, row, size, isPositive);
+        } else {
+            // Turning a column (vertical drag)
+            return this._colTurnCommand(face, col, size, isPositive);
+        }
+    }
+
+    _rowTurnCommand(face, row, size, positive) {
+        // Row turns: which layer to turn depends on the face and row position
+        // For faces F, R, B, L: row 2=top→U, row 0=bottom→D, row 1=middle→E
+        // For faces U, D: row maps to F/B axis differently
+
+        // Determine the layer and direction based on face orientation
+        const top = size - 1 + (size > 3 ? 1 : 0);  // grid coord for top row = 2
+        const bot = 0;
+        const mid = 1;
+
+        // Face-specific horizontal drag → layer mapping
+        // Positive = drag in face's right direction
+        switch (face) {
+            case 'F':
+                if (row === 2) return positive ? 'ROTATE_U' : 'ROTATE_U_PRIME';
+                if (row === 0) return positive ? 'ROTATE_D_PRIME' : 'ROTATE_D';
+                return positive ? 'SLICE_E_PRIME' : 'SLICE_E';
+            case 'B':
+                if (row === 2) return positive ? 'ROTATE_U_PRIME' : 'ROTATE_U';
+                if (row === 0) return positive ? 'ROTATE_D' : 'ROTATE_D_PRIME';
+                return positive ? 'SLICE_E' : 'SLICE_E_PRIME';
+            case 'R':
+                if (row === 2) return positive ? 'ROTATE_U' : 'ROTATE_U_PRIME';
+                if (row === 0) return positive ? 'ROTATE_D_PRIME' : 'ROTATE_D';
+                return positive ? 'SLICE_E_PRIME' : 'SLICE_E';
+            case 'L':
+                if (row === 2) return positive ? 'ROTATE_U_PRIME' : 'ROTATE_U';
+                if (row === 0) return positive ? 'ROTATE_D' : 'ROTATE_D_PRIME';
+                return positive ? 'SLICE_E' : 'SLICE_E_PRIME';
+            case 'U':
+                if (col === 0) return positive ? 'ROTATE_B' : 'ROTATE_B_PRIME';
+                if (col === 2) return positive ? 'ROTATE_F_PRIME' : 'ROTATE_F';
+                return positive ? 'SLICE_S_PRIME' : 'SLICE_S';
+            case 'D':
+                if (col === 0) return positive ? 'ROTATE_B_PRIME' : 'ROTATE_B';
+                if (col === 2) return positive ? 'ROTATE_F' : 'ROTATE_F_PRIME';
+                return positive ? 'SLICE_S' : 'SLICE_S_PRIME';
+            default:
+                return null;
+        }
+    }
+
+    _colTurnCommand(face, col, size, positive) {
+        // Column turns: which layer to turn depends on the face and col position
+        switch (face) {
+            case 'F':
+                if (col === 2) return positive ? 'ROTATE_R' : 'ROTATE_R_PRIME';
+                if (col === 0) return positive ? 'ROTATE_L_PRIME' : 'ROTATE_L';
+                return positive ? 'SLICE_M_PRIME' : 'SLICE_M';
+            case 'B':
+                if (col === 2) return positive ? 'ROTATE_R_PRIME' : 'ROTATE_R';
+                if (col === 0) return positive ? 'ROTATE_L' : 'ROTATE_L_PRIME';
+                return positive ? 'SLICE_M' : 'SLICE_M_PRIME';
+            case 'R':
+                if (col === 2) return positive ? 'ROTATE_B' : 'ROTATE_B_PRIME';
+                if (col === 0) return positive ? 'ROTATE_F_PRIME' : 'ROTATE_F';
+                return positive ? 'SLICE_S_PRIME' : 'SLICE_S';
+            case 'L':
+                if (col === 2) return positive ? 'ROTATE_F' : 'ROTATE_F_PRIME';
+                if (col === 0) return positive ? 'ROTATE_B_PRIME' : 'ROTATE_B';
+                return positive ? 'SLICE_S' : 'SLICE_S_PRIME';
+            case 'U':
+                if (col === 2) return positive ? 'ROTATE_R' : 'ROTATE_R_PRIME';
+                if (col === 0) return positive ? 'ROTATE_L_PRIME' : 'ROTATE_L';
+                return positive ? 'SLICE_M_PRIME' : 'SLICE_M';
+            case 'D':
+                if (col === 2) return positive ? 'ROTATE_R_PRIME' : 'ROTATE_R';
+                if (col === 0) return positive ? 'ROTATE_L' : 'ROTATE_L_PRIME';
+                return positive ? 'SLICE_M' : 'SLICE_M_PRIME';
+            default:
+                return null;
+        }
+    }
+
     connect() {
-        const wsUrl = `ws://${window.location.host}/ws`;
+        const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProto}//${window.location.host}/ws`;
         this.setStatus('Connecting...', '');
 
         try {
@@ -581,6 +884,9 @@ class CubeClient {
                     break;
                 case 'size_update':
                     this.updateSizeSlider(message.value);
+                    break;
+                case 'cube_info':
+                    this.cubeInfo = message;
                     break;
                 default:
                     break;
