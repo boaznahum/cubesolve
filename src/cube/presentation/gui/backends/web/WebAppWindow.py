@@ -159,13 +159,6 @@ class WebAppWindow(AppWindow):
 
     def _handle_browser_key(self, symbol: int, modifiers: int) -> None:
         """Handle key event from browser via WebSocket."""
-        from cube.presentation.gui.Keys import Keys
-
-        # Escape during animation: discard remaining queued moves
-        if symbol == Keys.ESCAPE and self.animation_running:
-            self._animation_manager.cancel_animation()
-            return
-
         from cube.presentation.gui.key_bindings import lookup_command
 
         command = lookup_command(symbol, modifiers, self.animation_running)
@@ -203,6 +196,7 @@ class WebAppWindow(AppWindow):
             "solve_instant": Commands.SOLVE_ALL_NO_ANIMATION,
             "scramble": Commands.SCRAMBLE_1,
             "reset": Commands.RESET_CUBE,
+            "stop": Commands.STOP_ANIMATION,
             "toggle_debug": Commands.TOGGLE_DEBUG,
             "toggle_animation": Commands.TOGGLE_ANIMATION,
         }
@@ -383,6 +377,11 @@ class WebAppWindow(AppWindow):
         # Intercept solve commands — use two-phase approach for web backend
         if command is Commands.SOLVE_ALL:
             self._two_phase_solve()
+            return
+
+        # Stop animation — cancel queue and discard remaining moves
+        if command is Commands.STOP_ANIMATION:
+            self._animation_manager.cancel_animation()
             return
 
         try:
