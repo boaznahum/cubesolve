@@ -59,9 +59,11 @@ class WebEventLoop(EventLoop):
         # Client connected callback (for initial draw)
         self._on_client_connected: Callable[[], None] | None = None
 
-        # Mouse handlers (set by WebAppWindow)
+            # Mouse handlers (set by WebAppWindow)
         self._mouse_rotate_handler: Callable[[float, float], None] | None = None
         self._mouse_pan_handler: Callable[[float, float], None] | None = None
+        # face_turn_handler(face, row, col, si, sx, sy, on_left_to_right, on_left_to_top)
+        self._face_turn_handler: Callable[[str, int, int, int, int, int, float, float], None] | None = None
 
     @staticmethod
     def _find_free_port() -> int:
@@ -104,6 +106,10 @@ class WebEventLoop(EventLoop):
     def set_mouse_pan_handler(self, handler: Callable[[float, float], None] | None) -> None:
         """Set handler for mouse pan (dx, dy in pixels)."""
         self._mouse_pan_handler = handler
+
+    def set_face_turn_handler(self, handler: Callable[[str, int, int, int, int, int, float, float], None] | None) -> None:
+        """Set handler for mouse face turn (face, row, col, si, sx, sy, on_left_to_right, on_left_to_top)."""
+        self._face_turn_handler = handler
 
     @property
     def gui_test_mode(self) -> bool:
@@ -285,6 +291,17 @@ class WebEventLoop(EventLoop):
                 dy = data.get("dy", 0.0)
                 if self._mouse_pan_handler:
                     self._mouse_pan_handler(dx, dy)
+            elif msg_type == "mouse_face_turn":
+                face = data.get("face", "")
+                row = data.get("row", 0)
+                col = data.get("col", 0)
+                si = data.get("si", -1)   # edge slice LTR index
+                sx = data.get("sx", -1)   # center sub-x
+                sy = data.get("sy", -1)   # center sub-y
+                on_ltr = data.get("on_left_to_right", 0.0)
+                on_ltt = data.get("on_left_to_top", 0.0)
+                if self._face_turn_handler:
+                    self._face_turn_handler(face, row, col, si, sx, sy, on_ltr, on_ltt)
             elif msg_type == "resize":
                 print(f"Resize: {data}", flush=True)
 

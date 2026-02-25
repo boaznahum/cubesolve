@@ -43,22 +43,33 @@ class WebShapeRenderer(ShapeRenderer):
         self._sticker_face: str | None = None
         self._sticker_row: int = -1
         self._sticker_col: int = -1
+        self._sticker_slice_index: int = -1  # Edge LTR index within part
+        self._sticker_sx: int = -1  # Center sub-x
+        self._sticker_sy: int = -1  # Center sub-y
 
     def set_display_list_manager(self, dlm: "WebDisplayListManager") -> None:
         """Set display list manager for compile-time redirection."""
         self._display_list_manager = dlm
 
-    def set_sticker_context(self, face: str, row: int, col: int) -> None:
+    def set_sticker_context(self, face: str, row: int, col: int,
+                            slice_index: int = -1,
+                            sx: int = -1, sy: int = -1) -> None:
         """Set metadata context for the next quad commands."""
         self._sticker_face = face
         self._sticker_row = row
         self._sticker_col = col
+        self._sticker_slice_index = slice_index
+        self._sticker_sx = sx
+        self._sticker_sy = sy
 
     def clear_sticker_context(self) -> None:
         """Clear the sticker metadata context."""
         self._sticker_face = None
         self._sticker_row = -1
         self._sticker_col = -1
+        self._sticker_slice_index = -1
+        self._sticker_sx = -1
+        self._sticker_sy = -1
 
     def _inject_sticker_meta(self, cmd: dict) -> None:
         """Add sticker metadata to command if context is set."""
@@ -66,6 +77,11 @@ class WebShapeRenderer(ShapeRenderer):
             cmd["face"] = self._sticker_face
             cmd["row"] = self._sticker_row
             cmd["col"] = self._sticker_col
+            if self._sticker_slice_index >= 0:
+                cmd["si"] = self._sticker_slice_index
+            if self._sticker_sx >= 0:
+                cmd["sx"] = self._sticker_sx
+                cmd["sy"] = self._sticker_sy
 
     def _add_command(self, cmd: dict) -> None:
         """Add command to appropriate queue (main or compile buffer)."""

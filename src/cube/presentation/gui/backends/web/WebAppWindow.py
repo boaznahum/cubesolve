@@ -20,6 +20,9 @@ from cube.presentation.gui.protocols.AppWindow import AppWindow
 
 if TYPE_CHECKING:
     from cube.application.AbstractApp import AbstractApp
+    from cube.domain.algs.Alg import Alg
+    from cube.domain.model import Edge, Part
+    from cube.domain.model.Face import Face
     from cube.presentation.gui.commands import CommandSequence
     from cube.presentation.gui.GUIBackendFactory import GUIBackendFactory
     from cube.presentation.viewer.GCubeViewer import GCubeViewer
@@ -82,6 +85,7 @@ class WebAppWindow(AppWindow):
         # Wire mouse handlers
         self._event_loop.set_mouse_rotate_handler(self._handle_mouse_rotate)
         self._event_loop.set_mouse_pan_handler(self._handle_mouse_pan)
+        self._event_loop.set_face_turn_handler(self._handle_mouse_face_turn)
 
         # Create viewer
         from cube.presentation.viewer.GCubeViewer import GCubeViewer
@@ -212,6 +216,205 @@ class WebAppWindow(AppWindow):
         vs = self._app.vs
         vs.change_offset(dx, -dy, 0)
         self._on_draw()
+
+    def _handle_mouse_face_turn(self, face_name: str, row: int, col: int,
+                                si: int, sx: int, sy: int,
+                                on_left_to_right: float, on_left_to_top: float) -> None:
+        """Handle mouse drag face turn from browser.
+
+        Computes the correct algorithm using the cube model, same approach
+        as pyglet2's _handle_face_slice_rotate_by_drag. No hardcoded tables —
+        the face geometry and Part positions determine the turn.
+
+        Args:
+            face_name: Face name string (e.g., "F", "R", "U")
+            row: Grid row (0=bottom, 1=middle, 2=top)
+            col: Grid col (0=left, 1=middle, 2=right)
+            si: Edge slice LTR index (-1 for corners/centers)
+            sx: Center sub-x index (-1 for corners/edges)
+            sy: Center sub-y index (-1 for corners/edges)
+            on_left_to_right: Drag projection onto face's right axis
+            on_left_to_top: Drag projection onto face's up axis
+        """
+        from cube.domain.algs.Algs import Algs
+        from cube.domain.model import Corner, Edge, Center
+        from cube.domain.model.FaceName import FaceName
+
+        cube = self._app.cube
+        try:
+            fn = FaceName[face_name]
+        except KeyError:
+            print(f"Unknown face: {face_name}", flush=True)
+            return
+
+        face: Face = cube.face(fn)
+
+        it_left_to_right = abs(on_left_to_right) > abs(on_left_to_top)
+
+        # Determine which Part is at (row, col) in the 3×3 grid
+        part = self._grid_to_part(face, row, col)
+        if part is None:
+            return
+
+        alg: Alg | None = None
+        inv = False
+
+        if isinstance(part, Corner):
+            # Corner drag → rotate the face itself.
+            # Direction depends on which corner and drag direction.
+            # Matches pyglet2's _handle_slice_on_corner_same_face exactly.
+            alg = Algs.of_face(face.name)
+            if part is face.corner_top_right:
+                inv = on_left_to_right < 0 if it_left_to_right else on_left_to_top > 0
+            elif part is face.corner_top_left:
+                inv = on_left_to_right < 0 if it_left_to_right else on_left_to_top < 0
+            elif part is face.corner_bottom_left:
+                inv = on_left_to_right > 0 if it_left_to_right else on_left_to_top < 0
+            else:  # corner_bottom_right
+                inv = on_left_to_right > 0 if it_left_to_right else on_left_to_top > 0
+
+        elif isinstance(part, Edge):
+            # Edge drag: perpendicular → slice turn, parallel → face turn.
+            # Matches pyglet2's _handle_slice_on_edge exactly.
+            if part is face.edge_right:
+                if it_left_to_right:
+                    # Slicing: perpendicular to edge → specific slice turn
+                    alg = self._slice_on_edge_alg(part, face, si)
+                    inv = on_left_to_right < 0
+                else:
+                    alg = Algs.of_face(face.name)
+                    inv = on_left_to_top > 0
+            elif part is face.edge_left:
+                if it_left_to_right:
+                    alg = self._slice_on_edge_alg(part, face, si)
+                    inv = on_left_to_right < 0
+                else:
+                    alg = Algs.of_face(face.name)
+                    inv = on_left_to_top < 0
+            elif part is face.edge_top:
+                if not it_left_to_right:
+                    alg = self._slice_on_edge_alg(part, face, si)
+                    inv = on_left_to_top < 0
+                else:
+                    alg = Algs.of_face(face.name)
+                    inv = on_left_to_right < 0
+            elif part is face.edge_bottom:
+                if not it_left_to_right:
+                    alg = self._slice_on_edge_alg(part, face, si)
+                    inv = on_left_to_top < 0
+                else:
+                    alg = Algs.of_face(face.name)
+                    inv = on_left_to_right > 0
+
+        elif isinstance(part, Center):
+            # Center drag → slice turn along the drag axis.
+            # Uses center sub-indices (sx, sy) for specific slice.
+            # Matches pyglet2's center handling exactly.
+            if it_left_to_right:
+                # Horizontal drag → slice using row index (sy)
+                alg = self._slice_on_edge_alg(
+                    face.edge_right, face, sy, on_center=True)
+                inv = on_left_to_right < 0
+            else:
+                # Vertical drag → slice using column index (sx)
+                alg = self._slice_on_edge_alg(
+                    face.edge_top, face, sx, on_center=True)
+                inv = on_left_to_top < 0
+
+        if alg:
+            if inv:
+                alg = alg.inv()
+            op = self._app.op
+            op.play(alg, animation=True)
+            if not op.animation_enabled:
+                self.update_gui_elements()
+
+    @staticmethod
+    def _grid_to_part(face: "Face", row: int, col: int) -> "Part | None":
+        """Map grid (row, col) to the Part on that face.
+
+        The _FaceBoard grid: row 0=bottom, 2=top; col 0=left, 2=right.
+        """
+        grid_map: dict[tuple[int, int], Part] = {
+            (2, 0): face.corner_top_left,
+            (2, 1): face.edge_top,
+            (2, 2): face.corner_top_right,
+            (1, 0): face.edge_left,
+            (1, 1): face.center,
+            (1, 2): face.edge_right,
+            (0, 0): face.corner_bottom_left,
+            (0, 1): face.edge_bottom,
+            (0, 2): face.corner_bottom_right,
+        }
+        return grid_map.get((row, col))
+
+    @staticmethod
+    def _slice_on_edge_alg(part: "Edge", face: "Face", index: int,
+                           on_center: bool = False) -> "Alg":
+        """Compute the slice algorithm for an edge/center drag.
+
+        Ported from pyglet2's _slice_on_edge_alg. Determines which axis
+        (M, E, or S) and slice index based on the face and edge position.
+        Uses actual slice indices for individual slice turns on big cubes.
+
+        Args:
+            part: The Edge part being dragged (or edge_right/edge_top for centers)
+            face: The face containing the sticker
+            index: LTR slice index (from sticker metadata). For edges, this is
+                   the face's LTR index. For centers with on_center=True, this
+                   is the center sub-index (already in LTR coordinates).
+            on_center: True when called from center drag (skip LTR translation)
+        """
+        from cube.domain.algs.Algs import Algs
+        from cube.domain.model.FaceName import FaceName
+
+        face_name: FaceName = face.name
+
+        slice_alg_base: Alg
+        neg_slice_index: bool
+        inv: bool = False
+
+        if face_name in (FaceName.F, FaceName.B):
+            if face.is_bottom_or_top(part):
+                slice_alg_base = Algs.M
+                neg_slice_index = face_name == FaceName.B
+                inv = face_name == FaceName.F
+            else:
+                slice_alg_base = Algs.E
+                neg_slice_index = False
+        elif face_name in (FaceName.R, FaceName.L):
+            if face.is_bottom_or_top(part):
+                slice_alg_base = Algs.S
+                neg_slice_index = face_name == FaceName.L
+                inv = face_name == FaceName.R
+            else:
+                slice_alg_base = Algs.E
+                neg_slice_index = False
+        elif face_name in (FaceName.U, FaceName.D):
+            if face.is_bottom_or_top(part):
+                slice_alg_base = Algs.M
+                neg_slice_index = False
+            else:
+                slice_alg_base = Algs.S
+                neg_slice_index = face_name == FaceName.D
+                inv = face_name == FaceName.D
+        else:
+            return Algs.M  # fallback
+
+        # Convert edge slice index to face's LTR coordinate system.
+        # For centers, the index is already in LTR (no translation needed).
+        if not on_center:
+            index = part.get_face_ltr_index_from_edge_slice_index(face, index)
+
+        if neg_slice_index:
+            index = face.inv(index)
+
+        # Access the specific slice (index+1 because slice indexing starts at 1)
+        slice_alg = slice_alg_base[index + 1]
+
+        if inv:
+            return slice_alg.prime
+        return slice_alg
 
     def _handle_browser_solver(self, name: str) -> None:
         """Handle solver change from browser dropdown."""

@@ -218,7 +218,9 @@ class ShapeRenderer(Protocol):
         """
         ...
 
-    def set_sticker_context(self, face: str, row: int, col: int) -> None:
+    def set_sticker_context(self, face: str, row: int, col: int,
+                            slice_index: int = -1,
+                            sx: int = -1, sy: int = -1) -> None:
         """Set metadata context for the next quad commands.
 
         When set, quad/quad_with_border commands include face/row/col
@@ -227,8 +229,14 @@ class ShapeRenderer(Protocol):
 
         Args:
             face: Face name (e.g., "R", "U", "F")
-            row: Row index within the face grid
-            col: Column index within the face grid
+            row: Row index within the face grid (Part level: 0-2)
+            col: Column index within the face grid (Part level: 0-2)
+            slice_index: For edge stickers, the LTR index within the edge (0..n-1).
+                         -1 means not applicable (corner/center).
+            sx: For center stickers, the x sub-index within the center grid.
+                -1 means not applicable.
+            sy: For center stickers, the y sub-index within the center grid.
+                -1 means not applicable.
         """
         ...
 

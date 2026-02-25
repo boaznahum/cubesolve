@@ -200,7 +200,17 @@ class CubeClient {
                 face: stickerInfo.face,
                 row: stickerInfo.row,
                 col: stickerInfo.col,
+                si: stickerInfo.si !== undefined ? stickerInfo.si : -1,  // edge slice index
+                sx: stickerInfo.sx !== undefined ? stickerInfo.sx : -1,  // center sub-x
+                sy: stickerInfo.sy !== undefined ? stickerInfo.sy : -1,  // center sub-y
             };
+            // Capture the model-view matrix at sticker draw time.
+            // This is the transform from object space (where cube_info
+            // vectors live) to world space (where raycasting happens).
+            // We store it once — it's the same for all stickers in a frame.
+            if (!this._stickerModelView) {
+                this._stickerModelView = this.currentMatrix().clone();
+            }
         }
     }
 
@@ -308,8 +318,9 @@ class CubeClient {
         // 1. Dispose previous frame
         this.disposeScene();
 
-        // 2. Reset matrix stack
+        // 2. Reset matrix stack and sticker model-view capture
         this.matrixStack = [new THREE.Matrix4()];
+        this._stickerModelView = null;
 
         // 3. Execute all commands
         for (const cmd of commands) {
@@ -633,8 +644,9 @@ class CubeClient {
     }
 
     /**
-     * Handle drag-to-turn: determine which face/slice to turn based on
-     * drag direction relative to the hit face's axes.
+     * Handle drag-to-turn: compute drag direction relative to face axes,
+     * then send raw drag info to Python. The server computes the correct
+     * algorithm using the cube model (same approach as pyglet2 backend).
      */
     _handleDragTurn(event) {
         if (this._dragTurnSent) return;  // Only send one turn per drag
@@ -643,24 +655,29 @@ class CubeClient {
         const faceInfo = this.cubeInfo.faces[this._hitSticker.face];
         if (!faceInfo) return;
 
-        const size = this.cubeInfo.size;
-        const row = this._hitSticker.row;
-        const col = this._hitSticker.col;
-
         // Compute screen-space drag vector
         const dragX = event.clientX - this._mouseStartX;
         const dragY = event.clientY - this._mouseStartY;
 
-        // Project face's right and up vectors to screen space to determine drag alignment
+        // Project face's right and up vectors to screen space to determine drag alignment.
+        // cube_info vectors are in object space; we must transform them through the
+        // model-view matrix captured at sticker draw time to get world-space positions,
+        // then project through the camera to get screen-space directions.
+        const mv = this._stickerModelView;
+        if (!mv) return;
+
         const right3 = new THREE.Vector3(...faceInfo.right);
         const up3 = new THREE.Vector3(...faceInfo.up);
-
-        // Transform face vectors through the current model-view to get screen directions
-        // We project the face center and face center+right to screen, then take the difference
         const center3 = new THREE.Vector3(...faceInfo.center);
-        const centerScreen = center3.clone().project(this.camera);
-        const rightScreen = center3.clone().add(right3.clone().multiplyScalar(10)).project(this.camera);
-        const upScreen = center3.clone().add(up3.clone().multiplyScalar(10)).project(this.camera);
+
+        // Transform object-space points to world space via model-view matrix
+        const centerWorld = center3.clone().applyMatrix4(mv);
+        const rightWorld = center3.clone().add(right3.clone().multiplyScalar(10)).applyMatrix4(mv);
+        const upWorld = center3.clone().add(up3.clone().multiplyScalar(10)).applyMatrix4(mv);
+
+        const centerScreen = centerWorld.clone().project(this.camera);
+        const rightScreen = rightWorld.clone().project(this.camera);
+        const upScreen = upWorld.clone().project(this.camera);
 
         const screenRight = new THREE.Vector2(
             rightScreen.x - centerScreen.x,
@@ -676,126 +693,22 @@ class CubeClient {
         const dotRight = dragVec.dot(screenRight);
         const dotUp = dragVec.dot(screenUp);
 
-        // Determine if drag is more horizontal (along right) or vertical (along up)
-        const cmd = this._dragToCommand(
-            this._hitSticker.face, row, col, size,
-            Math.abs(dotRight) > Math.abs(dotUp),  // isHorizontal
-            Math.abs(dotRight) > Math.abs(dotUp) ? dotRight > 0 : dotUp > 0  // isPositive
-        );
+        const isHorizontal = Math.abs(dotRight) > Math.abs(dotUp);
 
-        if (cmd) {
-            this.send({ type: 'command', name: cmd });
-            this._dragTurnSent = true;
-        }
-    }
-
-    /**
-     * Map face + row/col + drag direction to a command name.
-     *
-     * For a 3×3 cube, the _FaceBoard grid uses cy,cx coordinates:
-     *   row 0 = bottom, row 1 = middle, row 2 = top
-     *   col 0 = left,   col 1 = middle, col 2 = right
-     *
-     * Horizontal drag (along face's right axis) turns a row:
-     *   row 2 (top)    → U or U'
-     *   row 1 (middle) → E' or E  (E follows D convention)
-     *   row 0 (bottom) → D' or D
-     *
-     * Vertical drag (along face's up axis) turns a column:
-     *   col 0 (left)   → L' or L
-     *   col 1 (middle) → M' or M  (M follows L convention)
-     *   col 2 (right)  → R or R'
-     */
-    _dragToCommand(face, row, col, size, isHorizontal, isPositive) {
-        // Face-relative drag direction tables
-        // Each face has its own mapping because the face axes differ
-        // For simplicity, we define the mapping for F face and derive others
-
-        // The mapping depends on which face was hit
-        // For each face: horizontal drag turns a row, vertical drag turns a column
-        // The "positive" direction depends on the face orientation
-
-        if (isHorizontal) {
-            // Turning a row (horizontal drag)
-            return this._rowTurnCommand(face, row, size, isPositive);
-        } else {
-            // Turning a column (vertical drag)
-            return this._colTurnCommand(face, col, size, isPositive);
-        }
-    }
-
-    _rowTurnCommand(face, row, size, positive) {
-        // Row turns: which layer to turn depends on the face and row position
-        // For faces F, R, B, L: row 2=top→U, row 0=bottom→D, row 1=middle→E
-        // For faces U, D: row maps to F/B axis differently
-
-        // Determine the layer and direction based on face orientation
-        const top = size - 1 + (size > 3 ? 1 : 0);  // grid coord for top row = 2
-        const bot = 0;
-        const mid = 1;
-
-        // Face-specific horizontal drag → layer mapping
-        // Positive = drag in face's right direction
-        switch (face) {
-            case 'F':
-                if (row === 2) return positive ? 'ROTATE_U' : 'ROTATE_U_PRIME';
-                if (row === 0) return positive ? 'ROTATE_D_PRIME' : 'ROTATE_D';
-                return positive ? 'SLICE_E_PRIME' : 'SLICE_E';
-            case 'B':
-                if (row === 2) return positive ? 'ROTATE_U_PRIME' : 'ROTATE_U';
-                if (row === 0) return positive ? 'ROTATE_D' : 'ROTATE_D_PRIME';
-                return positive ? 'SLICE_E' : 'SLICE_E_PRIME';
-            case 'R':
-                if (row === 2) return positive ? 'ROTATE_U' : 'ROTATE_U_PRIME';
-                if (row === 0) return positive ? 'ROTATE_D_PRIME' : 'ROTATE_D';
-                return positive ? 'SLICE_E_PRIME' : 'SLICE_E';
-            case 'L':
-                if (row === 2) return positive ? 'ROTATE_U_PRIME' : 'ROTATE_U';
-                if (row === 0) return positive ? 'ROTATE_D' : 'ROTATE_D_PRIME';
-                return positive ? 'SLICE_E' : 'SLICE_E_PRIME';
-            case 'U':
-                if (col === 0) return positive ? 'ROTATE_B' : 'ROTATE_B_PRIME';
-                if (col === 2) return positive ? 'ROTATE_F_PRIME' : 'ROTATE_F';
-                return positive ? 'SLICE_S_PRIME' : 'SLICE_S';
-            case 'D':
-                if (col === 0) return positive ? 'ROTATE_B_PRIME' : 'ROTATE_B';
-                if (col === 2) return positive ? 'ROTATE_F' : 'ROTATE_F_PRIME';
-                return positive ? 'SLICE_S' : 'SLICE_S_PRIME';
-            default:
-                return null;
-        }
-    }
-
-    _colTurnCommand(face, col, size, positive) {
-        // Column turns: which layer to turn depends on the face and col position
-        switch (face) {
-            case 'F':
-                if (col === 2) return positive ? 'ROTATE_R' : 'ROTATE_R_PRIME';
-                if (col === 0) return positive ? 'ROTATE_L_PRIME' : 'ROTATE_L';
-                return positive ? 'SLICE_M_PRIME' : 'SLICE_M';
-            case 'B':
-                if (col === 2) return positive ? 'ROTATE_R_PRIME' : 'ROTATE_R';
-                if (col === 0) return positive ? 'ROTATE_L' : 'ROTATE_L_PRIME';
-                return positive ? 'SLICE_M' : 'SLICE_M_PRIME';
-            case 'R':
-                if (col === 2) return positive ? 'ROTATE_B' : 'ROTATE_B_PRIME';
-                if (col === 0) return positive ? 'ROTATE_F_PRIME' : 'ROTATE_F';
-                return positive ? 'SLICE_S_PRIME' : 'SLICE_S';
-            case 'L':
-                if (col === 2) return positive ? 'ROTATE_F' : 'ROTATE_F_PRIME';
-                if (col === 0) return positive ? 'ROTATE_B_PRIME' : 'ROTATE_B';
-                return positive ? 'SLICE_S' : 'SLICE_S_PRIME';
-            case 'U':
-                if (col === 2) return positive ? 'ROTATE_R' : 'ROTATE_R_PRIME';
-                if (col === 0) return positive ? 'ROTATE_L_PRIME' : 'ROTATE_L';
-                return positive ? 'SLICE_M_PRIME' : 'SLICE_M';
-            case 'D':
-                if (col === 2) return positive ? 'ROTATE_R_PRIME' : 'ROTATE_R';
-                if (col === 0) return positive ? 'ROTATE_L' : 'ROTATE_L_PRIME';
-                return positive ? 'SLICE_M' : 'SLICE_M_PRIME';
-            default:
-                return null;
-        }
+        // Send raw drag info to Python — the server computes the algorithm
+        // using the cube model, just like the pyglet2 backend does.
+        this.send({
+            type: 'mouse_face_turn',
+            face: this._hitSticker.face,
+            row: this._hitSticker.row,
+            col: this._hitSticker.col,
+            si: this._hitSticker.si,    // edge slice LTR index
+            sx: this._hitSticker.sx,    // center sub-x
+            sy: this._hitSticker.sy,    // center sub-y
+            on_left_to_right: dotRight,
+            on_left_to_top: dotUp,
+        });
+        this._dragTurnSent = true;
     }
 
     connect() {

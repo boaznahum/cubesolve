@@ -519,7 +519,9 @@ class TkinterShapeRenderer(ShapeRenderer):
         # Delegates to cylinder which handles compile mode
         self.cylinder(p1, p2, outer_radius, outer_radius, color)
 
-    def set_sticker_context(self, face: str, row: int, col: int) -> None:
+    def set_sticker_context(self, face: str, row: int, col: int,
+                            slice_index: int = -1,
+                            sx: int = -1, sy: int = -1) -> None:
         """No-op for tkinter mode."""
         pass
 

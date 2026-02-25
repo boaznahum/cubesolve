@@ -522,7 +522,9 @@ class _Cell:
         cubie_facet_texture: TextureData | None = self._cubie_texture
         renderer = self._renderer
 
-        # Set sticker metadata for web backend raycasting
+        # Sticker metadata for web backend raycasting.
+        # Set once here for corners (single sticker per Part).
+        # For edges/centers, updated per sticker inside the loops below.
         face_name: str = fb.cube_face.name.name  # FaceName enum → string (e.g., "R")
         renderer.shapes.set_sticker_context(face_name, self._grid_row, self._grid_col)
 
@@ -592,6 +594,10 @@ class _Cell:
                 edge = self._get_slice_edge(_slice)
                 vx = self.facets[edge].two_d_draw_rect
 
+                # Per-sticker context with LTR slice index for individual slice turns
+                renderer.shapes.set_sticker_context(
+                    face_name, self._grid_row, self._grid_col, slice_index=ix)
+
                 with self._gen_list_for_slice(_slice, g_list_dest):
                     draw_facet(edge, vx)
 
@@ -622,6 +628,10 @@ class _Cell:
                     edge = center_slice.get_face_edge(cube_face)
 
                     vx = self.facets[edge].two_d_draw_rect
+
+                    # Per-sticker context with center sub-indices
+                    renderer.shapes.set_sticker_context(
+                        face_name, self._grid_row, self._grid_col, sx=ix, sy=iy)
 
                     with self._gen_list_for_slice(center_slice, g_list_dest):
 
