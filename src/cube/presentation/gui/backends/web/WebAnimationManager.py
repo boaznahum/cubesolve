@@ -120,7 +120,10 @@ class WebAnimationManager(AnimationManager):
             # ── Non-animatable moves: apply and continue loop ──
 
             if isinstance(alg, algs.AnnotationAlg):
-                move.op(alg, False)
+                # Must use _apply_model_change (which disables animation) to
+                # prevent re-entry: operator.play(annotation) with animation
+                # enabled would call run_animation() again → infinite loop.
+                self._apply_model_change(move)
                 if self._web_window:
                     self._web_window.update_gui_elements()
                 continue
@@ -193,9 +196,18 @@ class WebAnimationManager(AnimationManager):
         except Exception as e:
             import traceback
             traceback.print_exc()
-            print(f"Animation error: {e}", flush=True)
+            print(f"Animation loop error: {e}", flush=True)
         finally:
-            self._on_animation_done()
+            try:
+                self._on_animation_done()
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                print(f"Animation done error: {e}", flush=True)
+                # Emergency reset — ensure queue never gets permanently stuck
+                self._set_animation(None)
+                self._current_move = None
+                self._is_processing = False
 
     def _on_animation_done(self) -> None:
         """Handle animation completion.
