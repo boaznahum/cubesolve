@@ -159,6 +159,13 @@ class WebAppWindow(AppWindow):
 
     def _handle_browser_key(self, symbol: int, modifiers: int) -> None:
         """Handle key event from browser via WebSocket."""
+        from cube.presentation.gui.Keys import Keys
+
+        # Escape during animation: discard remaining queued moves
+        if symbol == Keys.ESCAPE and self.animation_running:
+            self._animation_manager.cancel_animation()
+            return
+
         from cube.presentation.gui.key_bindings import lookup_command
 
         command = lookup_command(symbol, modifiers, self.animation_running)

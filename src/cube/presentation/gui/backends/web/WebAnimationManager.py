@@ -73,6 +73,28 @@ class WebAnimationManager(AnimationManager):
         """Set the web window reference for triggering redraws."""
         self._web_window = window
 
+    def cancel_animation(self) -> None:
+        """Cancel the current animation and discard all queued moves.
+
+        The cube stays wherever the model is — moves already animated and
+        applied are kept, remaining queued moves are thrown away.
+        """
+        # Clear the queue (discard remaining moves)
+        self._move_queue.clear()
+
+        # Stop current animation if running
+        animation = self._current_animation
+        if animation:
+            animation.done = True  # signal the async loop to stop
+            animation.cleanup()
+        self._set_animation(None)
+        self._current_move = None
+        self._is_processing = False
+
+        # Rebuild display lists to reflect current model state
+        if self._web_window:
+            self._web_window.update_gui_elements()
+
     def run_animation(self, cube: "Cube", op: "OpProtocol", alg: "SimpleAlg") -> None:
         """Queue a move for animated playback (non-blocking).
 
