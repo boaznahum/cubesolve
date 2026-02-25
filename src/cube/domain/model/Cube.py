@@ -375,7 +375,8 @@ class Cube(CubeSupplier):
             self._original_scheme = scheme
         else:
             #self._original_scheme = cube_color_schemes.random_scheme()
-            self._original_scheme = cube_color_schemes.purple_pink()
+            #self._original_scheme = cube_color_schemes.purple_pink()
+            self._original_scheme = cube_color_schemes.boy_scheme()
         self._layout: CubeLayout = CL.create_layout(self._original_scheme.faces, self._sp)
         self._sized_layout: SizedCubeLayout = _SizedCubeLayout(self)
         self._reset()

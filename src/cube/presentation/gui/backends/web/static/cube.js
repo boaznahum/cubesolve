@@ -11,6 +11,8 @@ class CubeClient {
         this.status = document.getElementById('status');
         this.speedSlider = document.getElementById('speed-slider');
         this.speedValue = document.getElementById('speed-value');
+        this.sizeSlider = document.getElementById('size-slider');
+        this.sizeValue = document.getElementById('size-value');
         this.animOverlay = document.getElementById('anim-overlay');
         this.statusOverlay = document.getElementById('status-overlay');
         this.ws = null;
@@ -60,8 +62,9 @@ class CubeClient {
         this.frameQueue = [];
         this._startRenderLoop();
 
-        // Wire speed slider and toolbar buttons
+        // Wire sliders and toolbar buttons
         this._setupSpeedSlider();
+        this._setupSizeSlider();
         this._setupToolbarButtons();
 
         this.connect();
@@ -285,23 +288,6 @@ class CubeClient {
     }
 
     renderFrame(commands) {
-        // Update debug bar if this is an animation frame
-        const matrices = commands.filter(c => c.cmd === 'multiply_matrix');
-        const debugFill = document.getElementById('debug-fill');
-        const debugText = document.getElementById('debug-text');
-        if (matrices.length > 0 && debugFill && debugText) {
-            const m = matrices[0].matrix;
-            const cosA = m[1][1];
-            const angle = Math.acos(Math.max(-1, Math.min(1, cosA))) * 180 / Math.PI;
-            const pct = (angle / 90) * 100;
-            debugFill.style.width = pct + '%';
-            debugFill.style.background = `hsl(${120 - pct * 1.2}, 100%, 50%)`;
-            debugText.textContent = `Angle: ${angle.toFixed(1)}° | Frame ${commands.length} cmds | Queue: ${this.frameQueue.length}`;
-        } else if (debugFill && debugText) {
-            debugFill.style.width = '0%';
-            debugText.textContent = 'Static frame';
-        }
-
         // 1. Dispose previous frame
         this.disposeScene();
 
@@ -407,6 +393,25 @@ class CubeClient {
     }
 
     // ── Speed slider ──────────────────────────────────────────────────
+
+    _setupSizeSlider() {
+        if (!this.sizeSlider) return;
+
+        this.sizeSlider.addEventListener('input', () => {
+            const value = parseInt(this.sizeSlider.value, 10);
+            this.sizeValue.textContent = value;
+            this.send({ type: 'set_size', value: value });
+        });
+    }
+
+    updateSizeSlider(value) {
+        if (this.sizeSlider) {
+            this.sizeSlider.value = value;
+        }
+        if (this.sizeValue) {
+            this.sizeValue.textContent = value;
+        }
+    }
 
     _setupSpeedSlider() {
         if (!this.speedSlider) return;
@@ -533,6 +538,9 @@ class CubeClient {
                     break;
                 case 'toolbar_state':
                     this.updateToolbarState(message);
+                    break;
+                case 'size_update':
+                    this.updateSizeSlider(message.value);
                     break;
                 default:
                     break;

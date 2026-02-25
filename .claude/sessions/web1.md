@@ -10,28 +10,52 @@
 - `33e81fe1` — Add web frontend design plan document
 - `806e4eb3` — Rewrite web frontend to Three.js WebGL 3D rendering
 - `9c77c2c7` — Fix web animation: prevent stale display list IDs during face rotation
+- `f2b34590` — Add web toolbar with speed slider, buttons, and text overlays
 
-## Current Status (session 5) — Speed Slider Added
+## Current Status (session 6) — Two-Phase Solve + Size Slider + Bug Fixes
 
 ### What Works
 - 3D cube renders correctly in Chrome via Three.js
 - Keyboard controls work (R, L, U, D, F, B, scramble, solve, etc.)
 - WebSocket communication is solid
-- **Smooth face rotation animation** — 22 frames over ~2s, 127 cmds per frame
+- **Smooth face rotation animation** — async coroutine with real sleeps
 - rAF render loop with FIFO queue renders frames smoothly
-- Debug animation progress bar shows angle and queue status
-- **Speed slider** — drag to change speed 0-7, syncs with +/- keys
+- **Toolbar** — Scramble, Solve, Reset buttons + Debug/Animation toggles
+- **Speed slider** — drag to change speed 0-7, syncs with +/- keys bidirectionally
+- **Size slider** — drag to change cube size 2-7, syncs with keyboard
+- **Text overlays** — animation text (top-left) + solver status (bottom-left)
+- **Two-phase solve** — `slv.solution()` computes instantly, `op.play()` replays with animation
+- **Correct keyboard mapping** — `-`/`=` control size, numpad `+`/`-` control speed
 
-### Speed Slider Implementation (uncommitted)
-- `index.html` — slider HTML + CSS (blue gradient track, white thumb, dark container)
-- `cube.js` — `_setupSpeedSlider()`, `updateSpeedSlider()`, `speed_update` message
-- `WebEventLoop.py` — `set_speed` message handler + `_speed_handler` callback
-- `WebAppWindow.py` — `_handle_browser_speed()`, `_broadcast_speed()`, speed sync in `inject_command()`
+### Two-Phase Solve Architecture
+The critical innovation for the web backend. Solves the fundamental problem that
+the solver runs synchronously (blocking asyncio) and would see stale state with
+non-blocking animation.
 
-### Bidirectional Speed Sync
-- Slider → server: `{type: 'set_speed', value: N}` via WebSocket
-- Server → slider: `{type: 'speed_update', value: N}` when +/- keys change speed
-- On client connect: server broadcasts initial speed to sync slider
+**Flow:**
+1. `slv.solution()` — computes full solution with animation OFF, undoes all moves, returns `Alg`
+2. `op.play(solution_alg)` — replays solution with animation ON
+3. `WebAnimationManager` queues all moves, plays them one at a time
+4. Each move: animate → cleanup → apply model change → rebuild display lists → next
+
+**Key insight:** No solver runs during animation. Model changes are deferred to
+`_on_animation_done()`, matching the base class `_op_and_play_animation()` flow.
+`AbstractSolver.solution()` already existed — we just needed to use it.
+
+### Files Modified This Session
+- `WebAnimationManager.py` — Rewrote to defer model changes (two-phase compatible)
+- `WebAppWindow.py` — Added `_two_phase_solve()`, size slider handler, size broadcast sync
+- `WebEventLoop.py` — Fixed `-`/`=` key mapping (size not speed), added size handler
+- `cube.js` — Added size slider setup, removed debug bar per-frame DOM queries
+- `index.html` — Added size slider, removed debug bar HTML/CSS, rounded canvas bottom
+
+### Bug Fixes This Session
+1. **Keyboard `-`/`=` controlling speed instead of size** — JS keycodes 189/187 were mapped
+   to `Keys.NUM_SUBTRACT`/`Keys.NUM_ADD` (speed). Fixed to `Keys.MINUS`/`Keys.EQUAL` (size).
+2. **Size slider not updating on keyboard size change** — `inject_command()` tracked speed
+   changes but not size. Added `size_before`/`_broadcast_size()` check.
+3. **Animation model-change timing** — Solver saw stale state because `run_animation()`
+   returned immediately but model change was deferred. Fixed via two-phase solve approach.
 
 ---
 
@@ -45,145 +69,70 @@
 | Feature | Pyglet2 | Web | Notes |
 |---------|---------|-----|-------|
 | 3D cube rendering | ✅ OpenGL | ✅ Three.js | Both work well |
-| Face rotation animation | ✅ Blocking | ✅ Async | Web uses rAF queue |
+| Face rotation animation | ✅ Blocking | ✅ Async 2-phase | Web uses rAF queue + deferred model |
 | Sticker gaps (dark body) | ✅ | ✅ | Inset factor 0.08 |
 | Lighting/shading | ✅ | ✅ | Three.js ambient+directional |
 | Clear color (background) | ✅ | ✅ | Light gray default |
 
-### 2. Toolbar — Row 1: Size & Scramble
+### 2. Toolbar Controls
 
-| Feature | Pyglet2 | Web | Priority |
-|---------|---------|-----|----------|
-| Size label + display | ✅ Toolbar | ❌ | Medium |
-| Size -/+ buttons | ✅ Toolbar | 🔑 Q/W | Medium |
-| Scramble F button | ✅ Toolbar | 🔑 F | High |
-| Scramble 0-9 buttons | ✅ Toolbar | 🔑 0-9 | High |
-| Reset button | ✅ Toolbar | 🔑 Ctrl+R | High |
+| Feature | Pyglet2 | Web | Notes |
+|---------|---------|-----|-------|
+| Size slider (2-7) | ✅ Buttons | ✅ Slider | Web slider + keyboard sync |
+| Size -/+ keyboard | ✅ | ✅ | `-`/`=` keys mapped correctly |
+| Scramble button | ✅ Toolbar | ✅ Toolbar | Button + keyboard |
+| Solve button | ✅ Toolbar | ✅ Toolbar | Two-phase solve |
+| Reset button | ✅ Toolbar | ✅ Toolbar | Button + keyboard |
+| Speed slider (0-7) | ✅ Buttons | ✅ Slider | Bidirectional sync |
+| Debug toggle | ✅ Toolbar | ✅ Toolbar | Dbg:ON/OFF button |
+| Animation toggle | ✅ Toolbar | ✅ Toolbar | Anim:ON/OFF button |
 
-### 3. Toolbar — Row 2: Texture, Solver, Mode
+### 3. Status Displays
 
-| Feature | Pyglet2 | Web | Priority |
-|---------|---------|-----|----------|
-| Texture <, >, ON/OFF | ✅ Toolbar | ❌ N/A | Low |
-| Shadow toggle | ✅ Toolbar | ❌ | Low |
-| Solver selector | ✅ Toolbar | 🔑 V | Medium |
-| Full mode toggle | ✅ Toolbar | ❌ | Low |
-| Quit button | ✅ Toolbar | 🔑 Q | Low |
-
-### 4. Toolbar — Row 3: Solver Steps
-
-| Feature | Pyglet2 | Web | Priority |
-|---------|---------|-----|----------|
-| Diag button | ✅ Toolbar | ❌ | Low |
-| Help button | ✅ Toolbar | 🔑 H | Medium |
-| Solve button | ✅ Toolbar | 🔑 ? | High |
-| Solver step buttons (L1,L2...) | ✅ Dynamic | ❌ | Medium |
-
-### 5. Toolbar — Row 4: Animation & Debug
-
-| Feature | Pyglet2 | Web | Priority |
-|---------|---------|-----|----------|
-| Animation ON/OFF toggle | ✅ Toolbar | 🔑 A | Medium |
-| Speed -/+ buttons | ✅ Toolbar | ✅ Slider | Done (better!) |
-| Speed label | ✅ Toolbar | ✅ Slider value | Done |
-| Debug toggle | ✅ Toolbar | 🔑 D | Low |
-| Single-step toggle | ✅ Toolbar | 🔑 | Low |
-| Next/Stop buttons | ✅ Toolbar | 🔑 Space/Esc | Low |
-| File algorithm F1-F5 | ✅ Toolbar | ❌ | Low |
-
-### 6. Status Displays
-
-| Feature | Pyglet2 | Web | Priority |
-|---------|---------|-----|----------|
-| Solver status text | ✅ Bottom bar | ❌ | High |
-| Move history + count | ✅ Bottom bar | ❌ | Medium |
-| Animation move display (R, U2') | ✅ Top-right overlay | ❌ | **Critical** |
-| Keyboard help legend | ✅ Bottom bar | ❌ | Medium |
+| Feature | Pyglet2 | Web | Notes |
+|---------|---------|-----|-------|
+| Animation text (solver phase) | ✅ Overlay | ✅ Overlay | Top-left on canvas |
+| Solver status text | ✅ Bottom bar | ✅ Overlay | Bottom-left on canvas |
 | Connection status | ❌ N/A | ✅ | Web-only |
-| Animation debug bar | ❌ N/A | ✅ | Web-only |
-| Speed slider | ❌ N/A | ✅ | Web-only (better!) |
 
-### 7. Mouse Interaction
+### 4. Missing Features (Future)
 
 | Feature | Pyglet2 | Web | Priority |
 |---------|---------|-----|----------|
 | Drag to rotate cube | ✅ | ❌ | **Critical** |
 | Click face to turn | ✅ Ray picking | ❌ | **Critical** |
 | Scroll wheel zoom | ✅ | ❌ | Medium |
-| Toolbar button hover | ✅ | ❌ | Low |
-
-### 8. Visual Controls
-
-| Feature | Pyglet2 | Web | Priority |
-|---------|---------|-----|----------|
-| Brightness [/] keys | ✅ | ❌ | Medium |
-| Background {/} keys | ✅ | ❌ | Low |
-| Texture cycling | ✅ | ❌ | Low |
-| Face shadows | ✅ | ❌ | Low |
-
-### 9. Dialogs & Popups
-
-| Feature | Pyglet2 | Web | Priority |
-|---------|---------|-----|----------|
-| Help popup (keyboard legend) | ✅ Modal | ❌ | Medium |
-| Text popup system | ✅ | ❌ | Medium |
-
-### 10. Advanced
-
-| Feature | Pyglet2 | Web | Priority |
-|---------|---------|-----|----------|
+| Solver selector | ✅ Toolbar | 🔑 V | Medium |
+| Solver step buttons | ✅ Dynamic | ❌ | Medium |
+| Help popup | ✅ Modal | 🔑 H | Medium |
+| Move history + count | ✅ Bottom bar | ❌ | Medium |
+| Brightness/background | ✅ | ❌ | Low |
+| Texture support | ✅ | ❌ | Low |
 | Celebration effects | ✅ Confetti | ❌ | Low |
-| Recording playback | ✅ | ❌ | Low |
-| Diagnostics display | ✅ | ❌ | Low |
-| Sanity check toggle | ✅ | ❌ | Low |
-
----
-
-## Proposed Implementation Phases
-
-### Phase W1: Essential Controls (MVP) — HIGH
-1. Toolbar with core buttons: Scramble, Solve, Reset, Size +/-
-2. Move notation overlay during animation ("R", "U2'", "Rw")
-3. Solver status text display
-4. Help popup (keyboard legend)
-
-### Phase W2: Mouse Interaction — CRITICAL
-1. Drag to rotate cube (mouse down + move)
-2. Click on face to turn (ray picking → face identification)
-3. Scroll wheel zoom
-
-### Phase W3: Rich Status & Controls — MEDIUM
-1. Solver selector button
-2. Solver step buttons (dynamic based on solver)
-3. Move history display
-4. Animation toggle, debug toggle
-5. Single-step mode controls
-
-### Phase W4: Visual Polish — LOW
-1. Brightness/background controls
-2. Texture support (if applicable in WebGL)
-3. Celebration effects
-4. Recording playback
-5. Full mode toggle
+| Single-step mode | ✅ | ❌ | Low |
 
 ---
 
 ## Key Architecture Decisions
 
+### Two-Phase Solve (Critical)
+- **Problem:** Pyglet2 `run_animation()` blocks until animation completes. Web can't block (asyncio).
+  If solver runs during non-blocking animation, it sees stale cube state → assertion failures.
+- **Solution:** `slv.solution()` computes solution instantly (animation OFF), then `op.play()`
+  replays with animation. No solver runs during animation playback.
+- **Future benefit:** Enables teaching mode — solution is an `Alg` that can be stepped through.
+
 ### Web-Specific Advantages
-- **Speed slider** is better than discrete +/- buttons (continuous control)
+- **Sliders** are better than discrete +/- buttons (continuous control)
 - **rAF render loop** with frame queue is smoother than pyglet's timer-driven rendering
-- **Async animation** (non-blocking) is architecturally cleaner than pyglet's blocking approach
 - **Cross-platform** — works in any browser, no native dependencies
 
 ### Web-Specific Challenges
 - **Mouse interaction** requires ray casting in JS (not trivial with the matrix stack approach)
-- **Toolbar** needs HTML/CSS overlay rather than OpenGL-rendered shapes
-- **Move notation** needs HTML overlay positioned relative to the canvas
-- **No display lists** in WebGL — each frame rebuilds geometry (already working)
+- **Solver blocks event loop** during `solution()` computation (brief freeze for complex cubes)
 
 ## Next Steps
-- [ ] Review and commit speed slider changes
-- [ ] Decide on Phase W1 vs W2 priority
-- [ ] Design toolbar HTML/CSS layout
-- [ ] Implement mouse drag-to-rotate
+- [ ] Test two-phase solve on 3x3 and larger cubes
+- [ ] Implement mouse drag-to-rotate (Critical)
+- [ ] Implement click face to turn (Critical)
+- [ ] Add solver selector

@@ -70,6 +70,9 @@ class WebAppWindow(AppWindow):
         # Wire command handler to event loop (receives toolbar button clicks)
         self._event_loop.set_command_handler(self._handle_browser_command)
 
+        # Wire size handler to event loop (receives size from browser slider)
+        self._event_loop.set_size_handler(self._handle_browser_size)
+
         # Wire client connected callback for initial draw
         self._event_loop.set_client_connected_handler(self._on_client_connected)
 
@@ -169,12 +172,27 @@ class WebAppWindow(AppWindow):
         self._app.vs._speed = clamped
         # No need to broadcast back — the slider already shows the value
 
+    def _handle_browser_size(self, size: int) -> None:
+        """Handle cube size change from browser slider."""
+        clamped = max(2, min(7, size))
+        vs = self._app.vs
+        if clamped != vs.cube_size:
+            vs.cube_size = clamped
+            self._app.cube.reset(clamped)
+            self._app.op.reset()
+            self.update_gui_elements()
+
     def _handle_browser_command(self, command_name: str) -> None:
         """Handle command from browser toolbar button."""
         from cube.presentation.gui.commands import Commands
 
+        # "solve" uses two-phase approach: compute solution, then replay with animation.
+        # This avoids blocking the asyncio event loop during solver computation.
+        if command_name == "solve":
+            self._two_phase_solve()
+            return
+
         command_map: dict[str, Command] = {
-            "solve": Commands.SOLVE_ALL,
             "solve_instant": Commands.SOLVE_ALL_NO_ANIMATION,
             "scramble": Commands.SCRAMBLE_1,
             "reset": Commands.RESET_CUBE,
@@ -186,6 +204,35 @@ class WebAppWindow(AppWindow):
         if command:
             self.inject_command(command)
             self._broadcast_toolbar_state()
+
+    def _two_phase_solve(self) -> None:
+        """Solve using two-phase approach: compute solution, then replay.
+
+        Phase 1: slv.solution() computes the full solution with animation OFF.
+                 The cube is left unchanged (solver undoes its moves internally).
+        Phase 2: op.play(solution_alg) replays the solution with animation ON.
+                 Each move is queued in WebAnimationManager and played visually
+                 one at a time, with model changes applied after each animation.
+        """
+        try:
+            app = self._app
+            slv = app.slv
+
+            # Phase 1: Compute solution (instant, no animation, cube unchanged)
+            solution_alg = slv.solution()
+
+            if solution_alg.count() == 0:
+                return  # Already solved
+
+            # Phase 2: Replay solution with animation
+            app.op.play(solution_alg)
+
+            self._broadcast_toolbar_state()
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            self._app.set_error(f"Solve error: {e}")
+            self.update_gui_elements()
 
     def _broadcast_speed(self) -> None:
         """Send current speed index to browser to sync the slider."""
@@ -237,10 +284,17 @@ class WebAppWindow(AppWindow):
         })
         self._event_loop.broadcast(msg)
 
+    def _broadcast_size(self) -> None:
+        """Send current cube size to browser to sync the slider."""
+        size = self._app.vs.cube_size
+        msg = json.dumps({"type": "size_update", "value": size})
+        self._event_loop.broadcast(msg)
+
     def _on_client_connected(self) -> None:
         """Handle browser client connection - trigger initial draw."""
         print("Client connected - sending initial frame", flush=True)
         self._broadcast_speed()
+        self._broadcast_size()
         self._broadcast_toolbar_state()
         self._on_draw()
 
@@ -317,13 +371,23 @@ class WebAppWindow(AppWindow):
 
     def inject_command(self, command: Command) -> None:
         """Inject a command directly."""
+        from cube.presentation.gui.commands import Commands
+
+        # Intercept solve commands — use two-phase approach for web backend
+        if command is Commands.SOLVE_ALL:
+            self._two_phase_solve()
+            return
+
         try:
             speed_before = self._app.vs.get_speed_index
+            size_before = self._app.vs.cube_size
             ctx = CommandContext.from_window(self)  # type: ignore[arg-type]
             result = command.execute(ctx)
             # Sync browser controls after command
             if self._app.vs.get_speed_index != speed_before:
                 self._broadcast_speed()
+            if self._app.vs.cube_size != size_before:
+                self._broadcast_size()
             self._broadcast_toolbar_state()
             if not result.no_gui_update and not self.animation_running:
                 # Skip GUI update when animation just started — the async

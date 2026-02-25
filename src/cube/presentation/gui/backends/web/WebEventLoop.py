@@ -50,6 +50,9 @@ class WebEventLoop(EventLoop):
         # Command handler for toolbar buttons (set by WebAppWindow)
         self._command_handler: Callable[[str], None] | None = None
 
+        # Size change handler (set by WebAppWindow)
+        self._size_handler: Callable[[int], None] | None = None
+
         # Client connected callback (for initial draw)
         self._on_client_connected: Callable[[], None] | None = None
 
@@ -74,6 +77,10 @@ class WebEventLoop(EventLoop):
     def set_command_handler(self, handler: Callable[[str], None] | None) -> None:
         """Set handler for toolbar command buttons from browser."""
         self._command_handler = handler
+
+    def set_size_handler(self, handler: Callable[[int], None] | None) -> None:
+        """Set handler for cube size changes from browser slider."""
+        self._size_handler = handler
 
     def set_client_connected_handler(self, handler: Callable[[], None] | None) -> None:
         """Set handler for client connection (for initial draw)."""
@@ -226,6 +233,10 @@ class WebEventLoop(EventLoop):
                 speed_value = data.get("value", 0)
                 if self._speed_handler:
                     self._speed_handler(speed_value)
+            elif msg_type == "set_size":
+                size_value = data.get("value", 3)
+                if self._size_handler:
+                    self._size_handler(size_value)
             elif msg_type == "command":
                 cmd_name = data.get("name", "")
                 if self._command_handler:
@@ -372,12 +383,12 @@ class WebEventLoop(EventLoop):
             112: Keys.F1, 113: Keys.F2, 114: Keys.F3, 115: Keys.F4,
             116: Keys.F5, 117: Keys.F6, 118: Keys.F7, 119: Keys.F8,
             120: Keys.F9, 121: Keys.F10, 122: Keys.F11, 123: Keys.F12,
-            # Punctuation — map regular +/- to numpad equivalents so speed
-            # control works (SPEED_UP/DOWN are bound to NUM_ADD/NUM_SUBTRACT)
+            # Punctuation — regular -/= control CUBE SIZE (Keys.MINUS/EQUAL),
+            # while numpad +/- control SPEED (Keys.NUM_ADD/NUM_SUBTRACT)
             191: Keys.SLASH,      # /
             222: Keys.APOSTROPHE, # '
-            189: Keys.NUM_SUBTRACT,  # - → numpad minus (for speed control)
-            187: Keys.NUM_ADD,       # = (also +) → numpad plus (for speed control)
+            189: Keys.MINUS,      # - → size decrease
+            187: Keys.EQUAL,      # = (also +) → size increase
             188: Keys.COMMA,      # ,
             190: Keys.PERIOD,     # .
             220: Keys.BACKSLASH,  # \
