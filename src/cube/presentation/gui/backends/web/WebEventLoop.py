@@ -208,10 +208,21 @@ class WebEventLoop(EventLoop):
         # Start server
         runner = web.AppRunner(app)
         await runner.setup()
-        site = web.TCPSite(runner, 'localhost', port, reuse_address=True)
+        host = 'localhost' if self._gui_test_mode else '0.0.0.0'
+        site = web.TCPSite(runner, host, port, reuse_address=True)
         await site.start()
 
         print(f"Web backend running at http://localhost:{port}", flush=True)
+        if not self._gui_test_mode:
+            import socket
+            try:
+                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                s.connect(("8.8.8.8", 80))
+                local_ip = s.getsockname()[0]
+                s.close()
+                print(f"LAN access: http://{local_ip}:{port}", flush=True)
+            except Exception:
+                pass
         print("Press Ctrl+C to stop", flush=True)
 
         # Open browser (skip in test mode)
