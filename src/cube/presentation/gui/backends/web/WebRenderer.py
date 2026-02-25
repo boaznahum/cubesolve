@@ -437,7 +437,12 @@ class WebRenderer(Renderer):
         self._commands.clear()
 
     def end_frame(self) -> None:
-        """End frame - send commands to browser."""
+        """End frame - send commands to browser.
+
+        Sends every frame to the browser without throttling. The browser
+        queues frames and renders one per requestAnimationFrame cycle,
+        guaranteeing each frame is composited to screen.
+        """
         if self._event_loop is not None and self._commands:
             message = json.dumps({
                 "type": "frame",

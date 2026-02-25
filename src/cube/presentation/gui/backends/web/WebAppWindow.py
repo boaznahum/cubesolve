@@ -83,6 +83,11 @@ class WebAppWindow(AppWindow):
         am.set_web_window(self)
         self._animation_manager: WebAnimationManager = am
 
+        # Override animation speed for web — default speed 7 (3 steps, 10ms)
+        # completes in ~30ms which is invisible in the browser. Use speed 0
+        # (20 steps, 100ms = 2s for 90°) for clearly visible animation.
+        app.vs._speed = min(app.vs._speed, 0)
+
         # Set up event handlers
         self._setup_handlers()
 
@@ -231,7 +236,13 @@ class WebAppWindow(AppWindow):
         try:
             ctx = CommandContext.from_window(self)  # type: ignore[arg-type]
             result = command.execute(ctx)
-            if not result.no_gui_update:
+            if not result.no_gui_update and not self.animation_running:
+                # Skip GUI update when animation just started — the async
+                # animation loop handles its own frames via _on_draw(), and
+                # rebuilding display lists here would invalidate the IDs
+                # captured by the animation's _draw() closure.
+                # (In the blocking pyglet backend this isn't an issue because
+                # run_animation() blocks until animation completes.)
                 self.update_gui_elements()
         except AppExit:
             # For web backend, always close on AppExit (Q key)

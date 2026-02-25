@@ -149,39 +149,49 @@ class WebAnimationManager(AnimationManager):
         animation: Animation = viewer.create_animation(alg, self._vs)
         self._set_animation(animation)
 
-        # Schedule animation tick
-        event_loop.schedule_interval(self._tick, animation.delay)
+        # Run animation as async coroutine with real sleeps between frames.
+        # This guarantees WebSocket frames are sent with actual time gaps,
+        # unlike schedule_interval where multiple ticks can fire in the same
+        # event loop iteration and bunch up frame sends.
+        import asyncio
+        loop = asyncio.get_event_loop()
+        loop.create_task(self._animate_async(animation))
 
     def _apply_move_directly(self, move: _QueuedMove) -> None:
         """Apply a move without animation (suppresses re-entry into animation)."""
         with self._operator.with_animation(animation=False):
             move.op(move.alg, False)
 
-    def _tick(self, dt: float) -> None:
-        """Animation tick — advance angle and trigger redraw."""
-        animation = self._current_animation
-        if animation is None:
-            return
+    async def _animate_async(self, animation: Animation) -> None:
+        """Run animation as async coroutine with real sleeps between frames.
 
-        # Advance animation angle
-        animation.update_gui_elements()
+        Each iteration: advance angle → draw frame → await sleep.
+        The await guarantees the WebSocket send completes and the frame
+        reaches the browser before the next frame is prepared.
+        """
+        import asyncio
 
-        # Send frame to browser
-        if self._web_window:
-            self._web_window._on_draw()
+        delay = animation.delay
 
-        # Check if animation completed
-        if animation.done:
-            self._on_animation_done()
+        while not animation.done:
+            # Advance animation angle
+            animation.update_gui_elements()
+
+            # Send frame to browser
+            if self._web_window:
+                self._web_window._on_draw()
+
+            if animation.done:
+                break
+
+            # Real async sleep — yields to event loop, ensuring the
+            # WebSocket frame is sent before preparing the next one.
+            await asyncio.sleep(delay)
+
+        self._on_animation_done()
 
     def _on_animation_done(self) -> None:
         """Handle animation completion — cleanup, apply model, process next."""
-        event_loop = self._event_loop
-        assert event_loop is not None
-
-        # Stop the tick
-        event_loop.unschedule(self._tick)
-
         # Cleanup animation (unhides parts in viewer)
         animation = self._current_animation
         if animation:

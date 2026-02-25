@@ -38,11 +38,37 @@
         #status.error {
             color: #a44;
         }
+        #debug-bar {
+            width: 720px;
+            height: 20px;
+            background: #333;
+            margin-top: 5px;
+            position: relative;
+        }
+        #debug-fill {
+            height: 100%;
+            width: 0%;
+            background: #0f0;
+            transition: none;
+        }
+        #debug-text {
+            position: absolute;
+            top: 0;
+            left: 5px;
+            color: #fff;
+            font-size: 12px;
+            line-height: 20px;
+            font-family: monospace;
+        }
     </style>
 </head>
 <body>
     <div id="container">
         <canvas id="canvas" width="720" height="720"></canvas>
+        <div id="debug-bar">
+            <div id="debug-fill"></div>
+            <div id="debug-text">No animation</div>
+        </div>
         <div id="status">Connecting...</div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"

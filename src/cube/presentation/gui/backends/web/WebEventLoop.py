@@ -312,11 +312,11 @@ class WebEventLoop(EventLoop):
         if self._clients and self._loop:
             for client in self._clients.copy():
                 try:
-                    # Use create_task since we're in the same event loop
-                    asyncio.run_coroutine_threadsafe(
-                        client.send_str(message),
-                        self._loop
-                    )
+                    # create_task is correct here — broadcast is called from
+                    # synchronous callbacks within the running event loop.
+                    # run_coroutine_threadsafe is for cross-thread use and adds
+                    # unnecessary overhead (self-pipe wakeup) when already in-loop.
+                    self._loop.create_task(client.send_str(message))
                 except Exception as e:
                     print(f"Broadcast error: {e}", flush=True)
 
@@ -350,11 +350,12 @@ class WebEventLoop(EventLoop):
             112: Keys.F1, 113: Keys.F2, 114: Keys.F3, 115: Keys.F4,
             116: Keys.F5, 117: Keys.F6, 118: Keys.F7, 119: Keys.F8,
             120: Keys.F9, 121: Keys.F10, 122: Keys.F11, 123: Keys.F12,
-            # Punctuation
+            # Punctuation — map regular +/- to numpad equivalents so speed
+            # control works (SPEED_UP/DOWN are bound to NUM_ADD/NUM_SUBTRACT)
             191: Keys.SLASH,      # /
             222: Keys.APOSTROPHE, # '
-            189: Keys.MINUS,      # -
-            187: Keys.EQUAL,      # = (also +)
+            189: Keys.NUM_SUBTRACT,  # - → numpad minus (for speed control)
+            187: Keys.NUM_ADD,       # = (also +) → numpad plus (for speed control)
             188: Keys.COMMA,      # ,
             190: Keys.PERIOD,     # .
             220: Keys.BACKSLASH,  # \

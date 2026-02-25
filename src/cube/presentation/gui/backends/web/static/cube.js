@@ -49,6 +49,13 @@ class CubeClient {
         // Track disposables for cleanup each frame
         this.disposables = [];
 
+        // Render loop: rAF-driven, decoupled from WebSocket arrival.
+        // WebSocket messages deposit frames into a queue; the rAF loop
+        // pulls one frame per vsync and renders it — guaranteeing the
+        // browser composites each frame to screen.
+        this.frameQueue = [];
+        this._startRenderLoop();
+
         this.connect();
     }
 
@@ -258,7 +265,35 @@ class CubeClient {
         this.scene.add(this.ambientLight, this.directionalLight);
     }
 
+    _startRenderLoop() {
+        const loop = () => {
+            if (this.frameQueue.length > 0) {
+                const commands = this.frameQueue.shift();
+                this.renderFrame(commands);
+            }
+            requestAnimationFrame(loop);
+        };
+        requestAnimationFrame(loop);
+    }
+
     renderFrame(commands) {
+        // Update debug bar if this is an animation frame
+        const matrices = commands.filter(c => c.cmd === 'multiply_matrix');
+        const debugFill = document.getElementById('debug-fill');
+        const debugText = document.getElementById('debug-text');
+        if (matrices.length > 0 && debugFill && debugText) {
+            const m = matrices[0].matrix;
+            const cosA = m[1][1];
+            const angle = Math.acos(Math.max(-1, Math.min(1, cosA))) * 180 / Math.PI;
+            const pct = (angle / 90) * 100;
+            debugFill.style.width = pct + '%';
+            debugFill.style.background = `hsl(${120 - pct * 1.2}, 100%, 50%)`;
+            debugText.textContent = `Angle: ${angle.toFixed(1)}° | Frame ${commands.length} cmds | Queue: ${this.frameQueue.length}`;
+        } else if (debugFill && debugText) {
+            debugFill.style.width = '0%';
+            debugText.textContent = 'Static frame';
+        }
+
         // 1. Dispose previous frame
         this.disposeScene();
 
@@ -270,7 +305,7 @@ class CubeClient {
             this.executeCommand(cmd);
         }
 
-        // 4. Render
+        // 4. Render to canvas buffer
         this.renderer.render(this.scene, this.camera);
     }
 
@@ -407,7 +442,7 @@ class CubeClient {
 
             switch (message.type) {
                 case 'frame':
-                    this.renderFrame(message.commands);
+                    this.frameQueue.push(message.commands);
                     break;
                 default:
                     break;
