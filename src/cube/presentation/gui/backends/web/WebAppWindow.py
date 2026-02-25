@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 
 from cube.application.exceptions.ExceptionAppExit import AppExit
 from cube.presentation.gui.backends.web.WebEventLoop import WebEventLoop
+from cube.version import get_version
 from cube.presentation.gui.backends.web.WebRenderer import WebRenderer
 from cube.presentation.gui.backends.web.WebWindow import WebWindow
 from cube.presentation.gui.commands import Command, CommandContext
@@ -613,11 +614,20 @@ class WebAppWindow(AppWindow):
     def _on_client_connected(self) -> None:
         """Handle browser client connection - trigger initial draw."""
         print("Client connected - sending initial frame", flush=True)
+        self._broadcast_version()
         self._broadcast_speed()
         self._broadcast_size()
         self._broadcast_toolbar_state()
         self._broadcast_cube_info()
         self._on_draw()
+
+    def _broadcast_version(self) -> None:
+        """Send application version to browser."""
+        msg = json.dumps({
+            "type": "version",
+            "version": get_version(),
+        })
+        self._event_loop.broadcast(msg)
 
     def _on_close(self) -> bool:
         """Handle close event."""
