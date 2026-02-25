@@ -44,6 +44,12 @@ class WebEventLoop(EventLoop):
         # Key event handler (set by WebAppWindow)
         self._key_handler: Callable[[int, int], None] | None = None
 
+        # Speed change handler (set by WebAppWindow)
+        self._speed_handler: Callable[[int], None] | None = None
+
+        # Command handler for toolbar buttons (set by WebAppWindow)
+        self._command_handler: Callable[[str], None] | None = None
+
         # Client connected callback (for initial draw)
         self._on_client_connected: Callable[[], None] | None = None
 
@@ -60,6 +66,14 @@ class WebEventLoop(EventLoop):
     def set_key_handler(self, handler: Callable[[int, int], None] | None) -> None:
         """Set handler for key events (symbol, modifiers)."""
         self._key_handler = handler
+
+    def set_speed_handler(self, handler: Callable[[int], None] | None) -> None:
+        """Set handler for speed changes from browser slider."""
+        self._speed_handler = handler
+
+    def set_command_handler(self, handler: Callable[[str], None] | None) -> None:
+        """Set handler for toolbar command buttons from browser."""
+        self._command_handler = handler
 
     def set_client_connected_handler(self, handler: Callable[[], None] | None) -> None:
         """Set handler for client connection (for initial draw)."""
@@ -208,6 +222,14 @@ class WebEventLoop(EventLoop):
                     self._key_handler(symbol, modifiers)
                 else:
                     print("  Warning: No key handler set!", flush=True)
+            elif msg_type == "set_speed":
+                speed_value = data.get("value", 0)
+                if self._speed_handler:
+                    self._speed_handler(speed_value)
+            elif msg_type == "command":
+                cmd_name = data.get("name", "")
+                if self._command_handler:
+                    self._command_handler(cmd_name)
             elif msg_type == "mouse_press":
                 print(f"Mouse press: {data}", flush=True)
             elif msg_type == "mouse_drag":

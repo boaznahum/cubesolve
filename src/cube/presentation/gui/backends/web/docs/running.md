@@ -16,6 +16,10 @@ python -m cube.main_web --quiet           # minimal output
 python -m cube.main_web --cube-size 5     # 5×5 cube
 ```
 
+```powershell
+$env:PYTHONIOENCODING="utf-8"; python -m cube.main_web
+```
+
 ## Keyboard Controls (in browser)
 
 | Key | Action |

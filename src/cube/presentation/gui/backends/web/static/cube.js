@@ -9,6 +9,10 @@ class CubeClient {
     constructor() {
         this.canvas = document.getElementById('canvas');
         this.status = document.getElementById('status');
+        this.speedSlider = document.getElementById('speed-slider');
+        this.speedValue = document.getElementById('speed-value');
+        this.animOverlay = document.getElementById('anim-overlay');
+        this.statusOverlay = document.getElementById('status-overlay');
         this.ws = null;
         this.connected = false;
 
@@ -55,6 +59,10 @@ class CubeClient {
         // browser composites each frame to screen.
         this.frameQueue = [];
         this._startRenderLoop();
+
+        // Wire speed slider and toolbar buttons
+        this._setupSpeedSlider();
+        this._setupToolbarButtons();
 
         this.connect();
     }
@@ -368,6 +376,79 @@ class CubeClient {
         }
     }
 
+    // ── Text overlays ─────────────────────────────────────────────────
+
+    updateTextOverlays(data) {
+        // Animation text (top-left overlay on canvas)
+        if (this.animOverlay) {
+            if (data.animation && data.animation.length > 0) {
+                this.animOverlay.innerHTML = data.animation.map(line => {
+                    const weight = line.bold ? 'bold' : 'normal';
+                    return `<div class="anim-line" style="font-size:${line.size}px;color:${line.color};font-weight:${weight}">${this._escapeHtml(line.text)}</div>`;
+                }).join('');
+            } else {
+                this.animOverlay.innerHTML = '';
+            }
+        }
+
+        // Status text (bottom-left overlay on canvas)
+        if (this.statusOverlay) {
+            const parts = [];
+            if (data.solver) parts.push(data.solver);
+            if (data.status) parts.push(data.status);
+            this.statusOverlay.textContent = parts.join(' | ');
+        }
+    }
+
+    _escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // ── Speed slider ──────────────────────────────────────────────────
+
+    _setupSpeedSlider() {
+        if (!this.speedSlider) return;
+
+        this.speedSlider.addEventListener('input', () => {
+            const value = parseInt(this.speedSlider.value, 10);
+            this.speedValue.textContent = value;
+            this.send({ type: 'set_speed', value: value });
+        });
+    }
+
+    _setupToolbarButtons() {
+        document.querySelectorAll('.tb-btn[data-cmd]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const cmd = btn.getAttribute('data-cmd');
+                this.send({ type: 'command', name: cmd });
+            });
+        });
+    }
+
+    updateToolbarState(data) {
+        const btnDebug = document.getElementById('btn-debug');
+        if (btnDebug) {
+            btnDebug.textContent = data.debug ? 'Dbg:ON' : 'Dbg:OFF';
+            btnDebug.className = 'tb-btn ' + (data.debug ? 'tb-on' : 'tb-off');
+        }
+        const btnAnim = document.getElementById('btn-anim');
+        if (btnAnim) {
+            btnAnim.textContent = data.animation ? 'Anim:ON' : 'Anim:OFF';
+            btnAnim.className = 'tb-btn ' + (data.animation ? 'tb-on' : 'tb-off');
+        }
+    }
+
+    updateSpeedSlider(value) {
+        if (this.speedSlider) {
+            this.speedSlider.value = value;
+        }
+        if (this.speedValue) {
+            this.speedValue.textContent = value;
+        }
+    }
+
     // ── WebSocket ────────────────────────────────────────────────────
 
     connect() {
@@ -443,6 +524,15 @@ class CubeClient {
             switch (message.type) {
                 case 'frame':
                     this.frameQueue.push(message.commands);
+                    break;
+                case 'speed_update':
+                    this.updateSpeedSlider(message.value);
+                    break;
+                case 'text_update':
+                    this.updateTextOverlays(message);
+                    break;
+                case 'toolbar_state':
+                    this.updateToolbarState(message);
                     break;
                 default:
                     break;

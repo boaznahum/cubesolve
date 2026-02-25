@@ -6,6 +6,7 @@ High-level window combining GUI and application logic.
 
 from __future__ import annotations
 
+import json
 import traceback
 from collections.abc import Callable
 from typing import TYPE_CHECKING
@@ -63,6 +64,12 @@ class WebAppWindow(AppWindow):
         # Wire key handler to event loop (receives keys from browser)
         self._event_loop.set_key_handler(self._handle_browser_key)
 
+        # Wire speed handler to event loop (receives speed from browser slider)
+        self._event_loop.set_speed_handler(self._handle_browser_speed)
+
+        # Wire command handler to event loop (receives toolbar button clicks)
+        self._event_loop.set_command_handler(self._handle_browser_command)
+
         # Wire client connected callback for initial draw
         self._event_loop.set_client_connected_handler(self._on_client_connected)
 
@@ -83,10 +90,7 @@ class WebAppWindow(AppWindow):
         am.set_web_window(self)
         self._animation_manager: WebAnimationManager = am
 
-        # Override animation speed for web — default speed 7 (3 steps, 10ms)
-        # completes in ~30ms which is invisible in the browser. Use speed 0
-        # (20 steps, 100ms = 2s for 90°) for clearly visible animation.
-        app.vs._speed = min(app.vs._speed, 0)
+        # Use speed from config (user can adjust via slider)
 
         # Set up event handlers
         self._setup_handlers()
@@ -133,6 +137,9 @@ class WebAppWindow(AppWindow):
 
         self._renderer.end_frame()
 
+        # Send text overlays to browser
+        self._broadcast_text()
+
     def _on_resize(self, width: int, height: int) -> None:
         """Handle resize event."""
         self._width = width
@@ -155,9 +162,86 @@ class WebAppWindow(AppWindow):
         if command:
             self.inject_command(command)
 
+    def _handle_browser_speed(self, speed_index: int) -> None:
+        """Handle speed change from browser slider."""
+        from cube.application.state import speeds
+        clamped = max(0, min(len(speeds) - 1, speed_index))
+        self._app.vs._speed = clamped
+        # No need to broadcast back — the slider already shows the value
+
+    def _handle_browser_command(self, command_name: str) -> None:
+        """Handle command from browser toolbar button."""
+        from cube.presentation.gui.commands import Commands
+
+        command_map: dict[str, Command] = {
+            "solve": Commands.SOLVE_ALL,
+            "solve_instant": Commands.SOLVE_ALL_NO_ANIMATION,
+            "scramble": Commands.SCRAMBLE_1,
+            "reset": Commands.RESET_CUBE,
+            "toggle_debug": Commands.TOGGLE_DEBUG,
+            "toggle_animation": Commands.TOGGLE_ANIMATION,
+        }
+
+        command = command_map.get(command_name)
+        if command:
+            self.inject_command(command)
+            self._broadcast_toolbar_state()
+
+    def _broadcast_speed(self) -> None:
+        """Send current speed index to browser to sync the slider."""
+        speed_index = self._app.vs.get_speed_index
+        msg = json.dumps({"type": "speed_update", "value": speed_index})
+        self._event_loop.broadcast(msg)
+
+    def _broadcast_text(self) -> None:
+        """Send animation text and status info to browser."""
+        vs = self._app.vs
+        app = self._app
+        at = vs.animation_text
+
+        # Animation text (3 lines: solver phase, step detail, current move)
+        anim_lines: list[dict[str, object]] = []
+        animation_text_props = app.config.animation_text
+        for i in range(3):
+            line = at.get_line(i)
+            if line:
+                prop = animation_text_props[i]
+                color: tuple[int, int, int, int] = prop[3]
+                anim_lines.append({
+                    "text": line,
+                    "size": prop[2],
+                    "color": f"rgba({color[0]},{color[1]},{color[2]},{color[3] / 255:.2f})",
+                    "bold": prop[4],
+                })
+
+        # Status line (compact)
+        slv = app.slv
+        status = slv.status
+        solver_name = slv.name
+
+        msg = json.dumps({
+            "type": "text_update",
+            "animation": anim_lines,
+            "status": status,
+            "solver": solver_name,
+        })
+        self._event_loop.broadcast(msg)
+
+    def _broadcast_toolbar_state(self) -> None:
+        """Send current toggle states to browser for button labels."""
+        app = self._app
+        msg = json.dumps({
+            "type": "toolbar_state",
+            "debug": app.config.solver_debug,
+            "animation": app.op.animation_enabled,
+        })
+        self._event_loop.broadcast(msg)
+
     def _on_client_connected(self) -> None:
         """Handle browser client connection - trigger initial draw."""
         print("Client connected - sending initial frame", flush=True)
+        self._broadcast_speed()
+        self._broadcast_toolbar_state()
         self._on_draw()
 
     def _on_close(self) -> bool:
@@ -234,8 +318,13 @@ class WebAppWindow(AppWindow):
     def inject_command(self, command: Command) -> None:
         """Inject a command directly."""
         try:
+            speed_before = self._app.vs.get_speed_index
             ctx = CommandContext.from_window(self)  # type: ignore[arg-type]
             result = command.execute(ctx)
+            # Sync browser controls after command
+            if self._app.vs.get_speed_index != speed_before:
+                self._broadcast_speed()
+            self._broadcast_toolbar_state()
             if not result.no_gui_update and not self.animation_running:
                 # Skip GUI update when animation just started — the async
                 # animation loop handles its own frames via _on_draw(), and

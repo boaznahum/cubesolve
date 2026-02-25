@@ -23,14 +23,192 @@
             flex-direction: column;
             align-items: center;
         }
-        #canvas {
+
+        /* ── Toolbar ─────────────────────────────────── */
+        #toolbar {
+            width: 724px;  /* 720 canvas + 4px border */
+            background: rgba(40, 40, 40, 0.95);
             border: 2px solid #444;
+            border-bottom: none;
+            border-radius: 6px 6px 0 0;
+            padding: 6px 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .tb-group {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+        .tb-sep {
+            width: 1px;
+            height: 22px;
+            background: #555;
+            margin: 0 4px;
+        }
+        .tb-label {
+            color: #aaa;
+            font-size: 11px;
+            font-family: monospace;
+            padding: 0 3px;
+            white-space: nowrap;
+        }
+        .tb-btn {
+            background: rgb(70, 130, 180);
+            color: #fff;
+            border: none;
+            border-radius: 3px;
+            padding: 3px 8px;
+            font-size: 11px;
+            font-family: Arial, sans-serif;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .tb-btn:hover {
+            background: rgb(100, 160, 210);
+        }
+        .tb-btn:active {
+            background: rgb(50, 100, 150);
+        }
+        .tb-btn.tb-on {
+            background: rgb(60, 160, 60);
+        }
+        .tb-btn.tb-on:hover {
+            background: rgb(80, 180, 80);
+        }
+        .tb-btn.tb-off {
+            background: rgb(100, 100, 100);
+        }
+        .tb-btn.tb-off:hover {
+            background: rgb(120, 120, 120);
+        }
+
+        /* Speed slider — compact inline */
+        .tb-speed {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        #speed-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 80px;
+            height: 4px;
+            border-radius: 2px;
+            background: linear-gradient(to right, #4a7ab5, #8ab4e0);
+            outline: none;
+            cursor: pointer;
+        }
+        #speed-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #ddd;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+            cursor: pointer;
+        }
+        #speed-slider::-webkit-slider-thumb:hover {
+            background: #fff;
+        }
+        #speed-slider::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #ddd;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+            cursor: pointer;
+            border: none;
+        }
+        #speed-slider::-moz-range-track {
+            height: 4px;
+            border-radius: 2px;
+            background: linear-gradient(to right, #4a7ab5, #8ab4e0);
+        }
+        #speed-value {
+            color: #aaa;
+            font-size: 11px;
+            font-family: monospace;
+            min-width: 12px;
+        }
+
+        /* ── Canvas wrapper (for overlays) ───────────── */
+        #canvas-wrapper {
+            position: relative;
+            width: 724px;
+        }
+        #canvas {
+            display: block;
+            border-left: 2px solid #444;
+            border-right: 2px solid #444;
+            border-top: none;
+            border-bottom: none;
             background: #d9d9d9;
         }
-        #status {
-            margin-top: 10px;
+
+        /* ── Animation text overlay (top-left on canvas) */
+        #anim-overlay {
+            position: absolute;
+            top: 8px;
+            left: 12px;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .anim-line {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.7);
+            line-height: 1.3;
+            white-space: nowrap;
+        }
+
+        /* ── Status overlay (bottom-left on canvas) ──── */
+        #status-overlay {
+            position: absolute;
+            bottom: 6px;
+            left: 12px;
+            pointer-events: none;
+            z-index: 10;
+            font-family: monospace;
+            font-size: 11px;
+            color: rgba(80, 200, 80, 0.85);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+
+        /* ── Debug bar ───────────────────────────────── */
+        #debug-bar {
+            width: 724px;
+            height: 18px;
+            background: #2a2a2a;
+            border: 2px solid #444;
+            border-top: none;
+            position: relative;
+            border-radius: 0 0 4px 4px;
+        }
+        #debug-fill {
+            height: 100%;
+            width: 0%;
+            background: #0f0;
+            transition: none;
+            border-radius: 0 0 0 4px;
+        }
+        #debug-text {
+            position: absolute;
+            top: 0;
+            left: 5px;
             color: #888;
-            font-size: 14px;
+            font-size: 11px;
+            line-height: 18px;
+            font-family: monospace;
+        }
+
+        /* ── Connection status ───────────────────────── */
+        #status {
+            margin-top: 8px;
+            color: #888;
+            font-size: 12px;
         }
         #status.connected {
             color: #4a4;
@@ -38,33 +216,36 @@
         #status.error {
             color: #a44;
         }
-        #debug-bar {
-            width: 720px;
-            height: 20px;
-            background: #333;
-            margin-top: 5px;
-            position: relative;
-        }
-        #debug-fill {
-            height: 100%;
-            width: 0%;
-            background: #0f0;
-            transition: none;
-        }
-        #debug-text {
-            position: absolute;
-            top: 0;
-            left: 5px;
-            color: #fff;
-            font-size: 12px;
-            line-height: 20px;
-            font-family: monospace;
-        }
     </style>
 </head>
 <body>
     <div id="container">
-        <canvas id="canvas" width="720" height="720"></canvas>
+        <div id="toolbar">
+            <!-- Scramble / Solve / Reset -->
+            <div class="tb-group">
+                <button class="tb-btn" data-cmd="scramble">Scramble</button>
+                <button class="tb-btn" data-cmd="solve">Solve</button>
+                <button class="tb-btn" data-cmd="reset">Reset</button>
+            </div>
+            <div class="tb-sep"></div>
+            <!-- Toggles -->
+            <div class="tb-group">
+                <button class="tb-btn tb-on" id="btn-debug" data-cmd="toggle_debug">Dbg:ON</button>
+                <button class="tb-btn tb-on" id="btn-anim" data-cmd="toggle_animation">Anim:ON</button>
+            </div>
+            <div class="tb-sep"></div>
+            <!-- Speed control -->
+            <div class="tb-group tb-speed">
+                <span class="tb-label">Spd</span>
+                <input type="range" id="speed-slider" min="0" max="7" value="0" step="1">
+                <span id="speed-value" class="tb-label">0</span>
+            </div>
+        </div>
+        <div id="canvas-wrapper">
+            <canvas id="canvas" width="720" height="720"></canvas>
+            <div id="anim-overlay"></div>
+            <div id="status-overlay"></div>
+        </div>
         <div id="debug-bar">
             <div id="debug-fill"></div>
             <div id="debug-text">No animation</div>
