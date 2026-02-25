@@ -418,7 +418,7 @@ Future: Add pytest tests using playwright or similar for browser automation.
 
 ## References
 
-- Main design doc: `docs/design/web_backend_plan.md`
+- Main design doc: `web_backend_plan.md`
 - GUI abstraction: `docs/design/gui_abstraction.md`
 - Backend protocols: `src/cube/presentation/gui/protocols/`
 - Other backends for reference: `src/cube/presentation/gui/backends/pyglet/`

@@ -34,6 +34,15 @@ class CubeClient {
         );
         // Camera stays at origin; the server pushes the cube back via translate(0,0,-400)
 
+        // Lighting (persistent — not disposed each frame)
+        this.ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        this.directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        this.directionalLight.position.set(1, 1, 1);
+        this.scene.add(this.ambientLight, this.directionalLight);
+
+        // Sticker inset factor (gap between stickers, exposing dark body)
+        this.insetFactor = 0.08;
+
         // Matrix stack (OpenGL-style modelview)
         this.matrixStack = [new THREE.Matrix4()];
 
@@ -99,10 +108,22 @@ class CubeClient {
         return new THREE.Color(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255);
     }
 
-    // ── Shape builders ───────────────────────────────────────────────
+    // ── Shape helpers ────────────────────────────────────────────────
 
-    addQuad(vertices, color, borderColor) {
-        // 4 vertices → 2 triangles (0-1-2, 0-2-3)
+    _insetVertices(vertices, factor) {
+        // Shrink vertices toward centroid by factor (0 = no change, 1 = collapse to center)
+        let cx = 0, cy = 0, cz = 0;
+        for (const v of vertices) { cx += v[0]; cy += v[1]; cz += v[2]; }
+        cx /= vertices.length; cy /= vertices.length; cz /= vertices.length;
+        return vertices.map(v => [
+            v[0] + (cx - v[0]) * factor,
+            v[1] + (cy - v[1]) * factor,
+            v[2] + (cz - v[2]) * factor,
+        ]);
+    }
+
+    _addQuadMesh(vertices, color, matOptions) {
+        // Build a 2-triangle mesh from 4 vertices
         const positions = new Float32Array(18); // 6 verts × 3 coords
         const idx = [0, 1, 2, 0, 2, 3];
         for (let i = 0; i < 6; i++) {
@@ -116,9 +137,12 @@ class CubeClient {
         geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
         geo.computeVertexNormals();
 
-        const mat = new THREE.MeshBasicMaterial({
+        const mat = new THREE.MeshStandardMaterial({
             color: this.toColor(color),
             side: THREE.DoubleSide,
+            roughness: 0.4,
+            metalness: 0.05,
+            ...matOptions,
         });
 
         const mesh = new THREE.Mesh(geo, mat);
@@ -126,36 +150,35 @@ class CubeClient {
         mesh.matrix.copy(this.currentMatrix());
         this.scene.add(mesh);
         this.disposables.push(geo, mat);
+    }
 
-        // Always draw border lines (server sends quad without borders)
-        const bc = borderColor || [0, 0, 0];
-        const borderPositions = new Float32Array(24);
-        const order = [0, 1, 1, 2, 2, 3, 3, 0];
-        for (let i = 0; i < 8; i++) {
-            const v = vertices[order[i]];
-            borderPositions[i * 3]     = v[0];
-            borderPositions[i * 3 + 1] = v[1];
-            borderPositions[i * 3 + 2] = v[2];
-        }
-        const bGeo = new THREE.BufferGeometry();
-        bGeo.setAttribute('position', new THREE.BufferAttribute(borderPositions, 3));
-        const bMat = new THREE.LineBasicMaterial({ color: this.toColor(bc) });
-        const lines = new THREE.LineSegments(bGeo, bMat);
-        lines.matrixAutoUpdate = false;
-        lines.matrix.copy(this.currentMatrix());
-        this.scene.add(lines);
-        this.disposables.push(bGeo, bMat);
+    // ── Shape builders ───────────────────────────────────────────────
+
+    addQuad(vertices, color, borderColor) {
+        // Dark body quad at original vertices (pushed back via polygon offset)
+        this._addQuadMesh(vertices, [30, 30, 30], {
+            polygonOffset: true,
+            polygonOffsetFactor: 1,
+            polygonOffsetUnits: 1,
+            roughness: 0.8,
+            metalness: 0.0,
+        });
+
+        // Colored sticker at inset vertices (gaps expose dark body behind)
+        const inset = this._insetVertices(vertices, this.insetFactor);
+        this._addQuadMesh(inset, color, {});
     }
 
     addQuadBorder(vertices, faceColor, lineWidth, lineColor) {
-        // Face fill
+        // Face fill with inset + dark body
         this.addQuad(vertices, faceColor);
 
-        // Border lines (loop: 0→1→2→3→0)
-        const positions = new Float32Array(24); // 8 verts × 3 (4 segments, each 2 points)
+        // Border lines at inset vertices
+        const inset = this._insetVertices(vertices, this.insetFactor);
+        const positions = new Float32Array(24);
         const order = [0, 1, 1, 2, 2, 3, 3, 0];
         for (let i = 0; i < 8; i++) {
-            const v = vertices[order[i]];
+            const v = inset[order[i]];
             positions[i * 3]     = v[0];
             positions[i * 3 + 1] = v[1];
             positions[i * 3 + 2] = v[2];
@@ -166,7 +189,7 @@ class CubeClient {
 
         const mat = new THREE.LineBasicMaterial({
             color: this.toColor(lineColor),
-            linewidth: lineWidth, // note: most WebGL ignores width > 1
+            linewidth: lineWidth,
         });
 
         const lines = new THREE.LineSegments(geo, mat);
@@ -188,9 +211,11 @@ class CubeClient {
         geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
         geo.computeVertexNormals();
 
-        const mat = new THREE.MeshBasicMaterial({
+        const mat = new THREE.MeshStandardMaterial({
             color: this.toColor(color),
             side: THREE.DoubleSide,
+            roughness: 0.4,
+            metalness: 0.05,
         });
 
         const mesh = new THREE.Mesh(geo, mat);
@@ -229,6 +254,8 @@ class CubeClient {
         }
         this.disposables.length = 0;
         this.scene.clear();
+        // Re-add persistent lights (scene.clear() removes everything)
+        this.scene.add(this.ambientLight, this.directionalLight);
     }
 
     renderFrame(commands) {

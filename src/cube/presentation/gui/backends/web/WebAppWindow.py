@@ -70,15 +70,18 @@ class WebAppWindow(AppWindow):
         from cube.presentation.viewer.GCubeViewer import GCubeViewer
         self._viewer = GCubeViewer(app.cube, app.vs, self._renderer)
 
-        # Wire animation manager to this window
-        self._animation_manager = app.am
-        if self._animation_manager:
-            self._animation_manager.set_window(self)  # type: ignore[arg-type]
+        # Create non-blocking animation manager for web backend.
+        # The standard AnimationManager blocks in a while loop, which would
+        # freeze the asyncio event loop. WebAnimationManager queues moves
+        # and processes them via scheduled callbacks.
+        from .WebAnimationManager import WebAnimationManager
 
-        # Disable animation for web backend - async event loop doesn't support
-        # the blocking animation loop used by AnimationManager.run_animation()
-        # TODO [#13]: Implement async animation support for web backend
-        app.op.toggle_animation_on(False)
+        am = WebAnimationManager(app.vs, app.op)
+        app.enable_animation(am)
+        am.set_event_loop(self._event_loop)
+        am.set_window(self)  # type: ignore[arg-type]
+        am.set_web_window(self)
+        self._animation_manager: WebAnimationManager = am
 
         # Set up event handlers
         self._setup_handlers()
@@ -116,8 +119,12 @@ class WebAppWindow(AppWindow):
         self._renderer.view.rotate(math.degrees(vs.alpha_y), 0, 1, 0)
         self._renderer.view.rotate(math.degrees(vs.alpha_z), 0, 0, 1)
 
-        # Draw cube
+        # Draw cube (static parts; animated parts are hidden during animation)
         self._viewer.draw()
+
+        # Draw animation overlay (rotating parts during face rotation)
+        if self._animation_manager:
+            self._animation_manager.draw()
 
         self._renderer.end_frame()
 

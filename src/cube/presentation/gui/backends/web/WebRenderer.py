@@ -439,7 +439,6 @@ class WebRenderer(Renderer):
     def end_frame(self) -> None:
         """End frame - send commands to browser."""
         if self._event_loop is not None and self._commands:
-            print(f"Sending frame with {len(self._commands)} commands", flush=True)
             message = json.dumps({
                 "type": "frame",
                 "commands": self._commands

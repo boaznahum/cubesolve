@@ -18,10 +18,13 @@
       "Skill",
       "TodoWrite",
       "mcp__ide__getDiagnostics",
-      "mcp__plugin_github_github__*"
+      "mcp__plugin_github_github__*",
+      "mcp__pycharm2__",
+      "mcp__pycharm__"
     ]
   },
-  "env": {
-    "CLAUDE_CODE_TMPDIR": ".claude/tmpdir"
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true,
+    "frontend-design@claude-code-plugins": true
   }
 }
