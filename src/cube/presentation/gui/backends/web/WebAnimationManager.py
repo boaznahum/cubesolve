@@ -59,15 +59,18 @@ class WebAnimationManager(AnimationManager):
         "_web_window",
         "_operator",
         "_current_move",
+        "_animation_task",
     ]
 
     def __init__(self, vs: "ApplicationAndViewState", operator: "Operator") -> None:
+        import asyncio
         super().__init__(vs)
         self._move_queue: deque[_QueuedMove] = deque()
         self._is_processing: bool = False
         self._web_window: WebAppWindow | None = None
         self._operator: Operator = operator
         self._current_move: _QueuedMove | None = None
+        self._animation_task: asyncio.Task[None] | None = None
 
     def set_web_window(self, window: "WebAppWindow") -> None:
         """Set the web window reference for triggering redraws."""
@@ -78,6 +81,7 @@ class WebAnimationManager(AnimationManager):
 
         The cube stays wherever the model is — moves already animated and
         applied are kept, remaining queued moves are thrown away.
+        Cancels the async task to interrupt any in-progress sleep immediately.
         """
         # Clear the queue (discard remaining moves)
         self._move_queue.clear()
@@ -90,6 +94,11 @@ class WebAnimationManager(AnimationManager):
         self._set_animation(None)
         self._current_move = None
         self._is_processing = False
+
+        # Cancel the async task to interrupt sleep immediately
+        if self._animation_task and not self._animation_task.done():
+            self._animation_task.cancel()
+        self._animation_task = None
 
         # Rebuild display lists to reflect current model state
         if self._web_window:
@@ -175,7 +184,7 @@ class WebAnimationManager(AnimationManager):
 
             import asyncio
             loop = asyncio.get_event_loop()
-            loop.create_task(self._animate_async(animation))
+            self._animation_task = loop.create_task(self._animate_async(animation))
             return  # async task will call _on_animation_done → _process_next
 
         # Queue empty
@@ -195,6 +204,8 @@ class WebAnimationManager(AnimationManager):
 
         Wrapped in try/finally to ensure _on_animation_done() always runs,
         preventing _is_processing from getting stuck on True after a crash.
+        CancelledError is caught separately — cancel_animation() already
+        handles cleanup, so we just exit silently.
         """
         import asyncio
 
@@ -214,12 +225,17 @@ class WebAnimationManager(AnimationManager):
 
                 # Real async sleep — yields to event loop, ensuring the
                 # WebSocket frame is sent before preparing the next one.
+                # Task.cancel() interrupts this sleep immediately.
                 await asyncio.sleep(delay)
+        except asyncio.CancelledError:
+            # cancel_animation() already cleaned up — just exit
+            return
         except Exception as e:
             import traceback
             traceback.print_exc()
             print(f"Animation loop error: {e}", flush=True)
         finally:
+            self._animation_task = None
             try:
                 self._on_animation_done()
             except Exception as e:
