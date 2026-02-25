@@ -167,27 +167,35 @@ class WebAnimationManager(AnimationManager):
         Each iteration: advance angle -> draw frame -> await sleep.
         The await guarantees the WebSocket send completes and the frame
         reaches the browser before the next frame is prepared.
+
+        Wrapped in try/finally to ensure _on_animation_done() always runs,
+        preventing _is_processing from getting stuck on True after a crash.
         """
         import asyncio
 
         delay = animation.delay
 
-        while not animation.done:
-            # Advance animation angle
-            animation.update_gui_elements()
+        try:
+            while not animation.done:
+                # Advance animation angle
+                animation.update_gui_elements()
 
-            # Send frame to browser
-            if self._web_window:
-                self._web_window._on_draw()
+                # Send frame to browser
+                if self._web_window:
+                    self._web_window._on_draw()
 
-            if animation.done:
-                break
+                if animation.done:
+                    break
 
-            # Real async sleep — yields to event loop, ensuring the
-            # WebSocket frame is sent before preparing the next one.
-            await asyncio.sleep(delay)
-
-        self._on_animation_done()
+                # Real async sleep — yields to event loop, ensuring the
+                # WebSocket frame is sent before preparing the next one.
+                await asyncio.sleep(delay)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            print(f"Animation error: {e}", flush=True)
+        finally:
+            self._on_animation_done()
 
     def _on_animation_done(self) -> None:
         """Handle animation completion.
