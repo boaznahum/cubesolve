@@ -174,7 +174,7 @@ class WebAppWindow(AppWindow):
 
     def _handle_browser_size(self, size: int) -> None:
         """Handle cube size change from browser slider."""
-        clamped = max(2, min(7, size))
+        clamped = max(3, min(7, size))
         vs = self._app.vs
         if clamped != vs.cube_size:
             vs.cube_size = clamped
@@ -225,9 +225,14 @@ class WebAppWindow(AppWindow):
             if solution_alg.count() == 0:
                 return  # Already solved
 
-            # Phase 2: Replay solution with animation
+            # Phase 2: Replay solution with animation (if enabled)
             app.op.play(solution_alg)
 
+            # When animation is off, moves execute instantly but the browser
+            # doesn't get a new frame — update_gui_elements sends it.
+            # When animation is on, WebAnimationManager handles frame updates,
+            # but an extra update here is harmless.
+            self.update_gui_elements()
             self._broadcast_toolbar_state()
         except Exception as e:
             import traceback
