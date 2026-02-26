@@ -8,6 +8,9 @@ primary_region = 'cdg'
 
 [build]
 
+[deploy]
+  release_command = "sh -c 'echo \"=============================================\" && echo \"  Deploying CubeSolve v$(cat src/cube/resources/version.txt)\" && echo \"=============================================\" '"
+
 [http_service]
   internal_port = 8765
   force_https = true

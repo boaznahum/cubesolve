@@ -18,11 +18,6 @@ COPY src/ src/
 RUN python -m pip install --no-cache-dir -U pip && \
     pip install --no-cache-dir -e .
 
-# Display version during deploy
-RUN echo "=============================================" && \
-    echo "  Deploying CubeSolve v$(cat src/cube/resources/version.txt)" && \
-    echo "============================================="
-
 # Web backend port
 EXPOSE 8765
 
