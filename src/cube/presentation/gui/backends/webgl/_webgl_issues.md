@@ -11,12 +11,12 @@
    10. E ✅
    11. M ✅
    12. S ✅
-   13. X right durection no animation
-   14. Y the smae as X
-   15. Z same as X, Y
+   13. X ✅
+   14. Y ✅
+   15. Z ✅
 16. Slices are not animated.
-17. The orange is yellow
+17. The orange is yellow ✅
 18. Changing cube size, increase it view instead of fit it to current view ✅
 19. code: e.keyCode, is deprected
 20. Stop stop animation in the middle leaving face in undefined place, see pygelt2 how it handled correctly
-21. it ws playing you didnt capture it !!!
+no

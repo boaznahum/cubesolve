@@ -155,6 +155,19 @@ class ClientSession:
             "solver_list": solver_list,
         }))
 
+    def send_color_map(self) -> None:
+        """Send color name → RGB mapping to client (once at connection).
+
+        The client uses this to build a PBR-optimized color palette keyed
+        by color name, so it doesn't depend on exact server RGB values.
+        """
+        from cube.domain.model.Color import Color, color2rgb_int
+        colors: dict[str, list[int]] = {}
+        for color in Color:
+            rgb = color2rgb_int(color)
+            colors[color.name.lower()] = list(rgb)
+        self._send(json.dumps({"type": "color_map", "colors": colors}))
+
     def send_cube_state(self) -> None:
         """Send current cube face colors to the client."""
         state = extract_cube_state(self._app.cube)
@@ -251,6 +264,7 @@ class ClientSession:
         """Send initial state to newly connected client."""
         print(f"Session {self.client_info.session_id[:8]} - sending initial state", flush=True)
         self.send_session_id()
+        self.send_color_map()
         self.send_version()
         self.send_speed()
         self.send_size()

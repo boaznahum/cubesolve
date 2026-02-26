@@ -22,6 +22,13 @@ const STICKER_GAP = 0.10;        // fraction of cell size for gap
 const CORNER_RADIUS = 0.10;      // fraction of cell size for rounded corners
 const STICKER_DEPTH = 0.02;      // extrude depth relative to cell size
 
+// PBR color palette — keyed by color name from server's color_map message.
+// Overrides server RGB values that wash out under MeshStandardMaterial lighting.
+// Only colors listed here are adjusted; unlisted colors use server values as-is.
+const PBR_COLOR_OVERRIDES = {
+    'orange': [255, 100, 0],   // server sends (255,165,0) which looks too yellow under PBR
+};
+
 // Face definitions: normal direction, right/up axes for sticker placement
 const FACE_DEFS = {
     U: { axis: 'y', sign: +1, right: [1, 0, 0], up: [0, 0, -1] },
@@ -62,6 +69,8 @@ class CubeModel {
         this.scene = scene;
         this.cubeGroup = new THREE.Group();
         this.scene.add(this.cubeGroup);
+        // Color corrections: "r,g,b" → [r,g,b] built from server color_map + PBR_COLOR_OVERRIDES
+        this.colorCorrections = {};
 
         this.size = 3;
         this.cellSize = 1.0;
@@ -176,6 +185,20 @@ class CubeModel {
     }
 
     /**
+     * Build color correction map from server's color_map message.
+     * For each color name that has a PBR override, maps "r,g,b" → [r,g,b].
+     */
+    buildColorCorrections(colorMap) {
+        this.colorCorrections = {};
+        for (const [name, rgb] of Object.entries(colorMap)) {
+            if (PBR_COLOR_OVERRIDES[name]) {
+                const key = `${rgb[0]},${rgb[1]},${rgb[2]}`;
+                this.colorCorrections[key] = PBR_COLOR_OVERRIDES[name];
+            }
+        }
+    }
+
+    /**
      * Update sticker colors from server state.
      * colors: flat array of [r,g,b] in row-major order (row 0 = bottom)
      */
@@ -184,10 +207,13 @@ class CubeModel {
         if (!meshes) return;
 
         for (let i = 0; i < meshes.length && i < colors.length; i++) {
-            const [r, g, b] = colors[i];
+            let [r, g, b] = colors[i];
+            // Apply PBR color corrections (built from server color_map)
+            const key = `${r},${g},${b}`;
+            if (this.colorCorrections[key]) [r, g, b] = this.colorCorrections[key];
             // Material is either a single material or [faceMat, sideMat] array
             const mat = Array.isArray(meshes[i].material) ? meshes[i].material[0] : meshes[i].material;
-            mat.color.setRGB(r / 255, g / 255, b / 255);
+            mat.color.setRGB(r / 255, g / 255, b / 255, THREE.SRGBColorSpace);
         }
     }
 
@@ -808,6 +834,10 @@ class CubeClient {
                 document.getElementById('size-slider').value = msg.value;
                 document.getElementById('size-value').textContent = msg.value;
                 this.controls.setForCubeSize(msg.value);
+                break;
+
+            case 'color_map':
+                this.cubeModel.buildColorCorrections(msg.colors);
                 break;
 
             case 'toolbar_state':
