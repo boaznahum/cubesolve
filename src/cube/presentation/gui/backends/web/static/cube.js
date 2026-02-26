@@ -18,6 +18,7 @@ class CubeClient {
         this.statusOverlay = document.getElementById('status-overlay');
         this.ws = null;
         this.connected = false;
+        this.serverVersion = null;
 
         // Reconnect tracking
         this.reconnectAttempts = 0;
@@ -722,7 +723,8 @@ class CubeClient {
             this.ws.onopen = () => {
                 this.connected = true;
                 this.reconnectAttempts = 0;
-                this.setStatus('Connected', 'connected');
+                const versionSuffix = this.serverVersion ? ` v${this.serverVersion}` : '';
+                this.setStatus(`Connected${versionSuffix}`, 'connected');
 
                 this.send({ type: 'connected' });
                 this.send({
@@ -800,6 +802,12 @@ class CubeClient {
                     break;
                 case 'cube_info':
                     this.cubeInfo = message;
+                    break;
+                case 'version':
+                    this.serverVersion = message.version;
+                    if (this.connected) {
+                        this.setStatus(`Connected v${this.serverVersion}`, 'connected');
+                    }
                     break;
                 default:
                     break;

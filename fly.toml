@@ -16,5 +16,7 @@ primary_region = 'waw'
   min_machines_running = 0
 
 [[vm]]
-  memory = '1024mb'
+  memory = '1gb'
+ # cpu_kind = 'shared'
   cpus = 1
+  memory_mb = 512
