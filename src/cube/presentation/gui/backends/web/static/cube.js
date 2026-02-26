@@ -307,9 +307,23 @@ class CubeClient {
 
     _startRenderLoop() {
         const loop = () => {
-            if (this.frameQueue.length > 0) {
-                const commands = this.frameQueue.shift();
-                this.renderFrame(commands);
+            // Process queued messages: text updates and frames arrive in order.
+            // Consume text updates immediately, then render the next frame.
+            // This keeps status text synchronized with the 3D cube visual.
+            while (this.frameQueue.length > 0) {
+                const entry = this.frameQueue[0];
+                if (entry.type === 'text') {
+                    this.frameQueue.shift();
+                    this.updateTextOverlays(entry.data);
+                } else {
+                    // It's a frame — render it, then consume any trailing texts
+                    this.frameQueue.shift();
+                    this.renderFrame(entry.commands);
+                    while (this.frameQueue.length > 0 && this.frameQueue[0].type === 'text') {
+                        this.updateTextOverlays(this.frameQueue.shift().data);
+                    }
+                    break; // one frame per vsync
+                }
             }
             requestAnimationFrame(loop);
         };
@@ -790,13 +804,17 @@ class CubeClient {
 
             switch (message.type) {
                 case 'frame':
-                    this.frameQueue.push(message.commands);
+                    this.frameQueue.push({type: 'frame', commands: message.commands});
                     break;
                 case 'speed_update':
                     this.updateSpeedSlider(message.value);
                     break;
                 case 'text_update':
-                    this.updateTextOverlays(message);
+                    // Queue text updates so they stay synchronized with frames.
+                    // The server sends frame + text_update pairs; if text_update
+                    // were applied immediately it would race ahead of the frame
+                    // queue (which renders one frame per vsync).
+                    this.frameQueue.push({type: 'text', data: message});
                     break;
                 case 'toolbar_state':
                     this.updateToolbarState(message);
@@ -812,6 +830,9 @@ class CubeClient {
                     if (this.connected) {
                         this.setStatus(`Connected v${this.serverVersion}`, 'connected');
                     }
+                    break;
+                case 'flush_queue':
+                    this.frameQueue.length = 0;
                     break;
                 case 'session_id':
                     this.sessionId = message.session_id;

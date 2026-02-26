@@ -268,6 +268,14 @@ class ClientSession:
             "moves": app.op.count,
         }))
 
+    def send_flush_queue(self) -> None:
+        """Tell the client to discard all queued frames.
+
+        Called when animation is cancelled so the client immediately
+        shows the current state instead of draining stale frames.
+        """
+        self._send(json.dumps({"type": "flush_queue"}))
+
     def send_session_id(self) -> None:
         """Send session ID to the client."""
         self._send(json.dumps({
@@ -650,6 +658,7 @@ class ClientSession:
             return
 
         if command is Commands.STOP_ANIMATION:
+            self.send_flush_queue()
             self._animation_manager.cancel_animation()
             return
 

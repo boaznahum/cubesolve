@@ -49,9 +49,20 @@ its URL (`<app-name>.fly.dev`), so pick any name you want:
 fly apps create <app-name>
 
 # Examples:
-fly apps create cubesolve-boaz        # → cubesolve-boaz.fly.dev
-fly apps create cubesolve-boaz-dev    # → cubesolve-boaz-dev.fly.dev
 fly apps create cubesolve             # → cubesolve.fly.dev
+fly apps create cubesolve-dev         # → cubesolve-dev.fly.dev
+```
+
+**Important — scale to 1 machine after first deploy:**
+
+Fly.io defaults to 2 machines for redundancy. This app uses WebSocket
+connections which are pinned to a single machine, so multiple machines
+cause wrong session counts and lost state on reconnect. After the first
+`fly deploy`, scale down once (this persists across future deploys):
+
+```bash
+fly scale count 1 --app cubesolve
+fly scale count 1 --app cubesolve-dev
 ```
 
 List your existing apps:
@@ -69,8 +80,8 @@ fly apps destroy <app-name>
 Use `--app` to choose which app to deploy to:
 
 ```bash
-fly deploy --app cubesolve-boaz        # deploy to stable
-fly deploy --app cubesolve-boaz-dev    # deploy to dev
+fly deploy --app cubesolve        # deploy to stable
+fly deploy --app cubesolve-dev    # deploy to dev
 ```
 
 **Note:** `fly deploy` without `--app` uses the `app` name from `fly.toml`.
@@ -84,22 +95,22 @@ All commands use `--app` to target a specific app (see [known bug](#known-bug---
 
 ```bash
 # Check status
-fly status --app cubesolve-boaz-dev
+fly status --app cubesolve-dev
 
 # View logs
-fly logs --app cubesolve-boaz-dev
+fly logs --app cubesolve-dev
 
 # Open in browser
-fly open --app cubesolve-boaz-dev
+fly open --app cubesolve-dev
 
 # SSH into the running machine
-fly ssh console --app cubesolve-boaz-dev
+fly ssh console --app cubesolve-dev
 
 # Stop an app (save free tier hours)
-fly scale count 0 --app cubesolve-boaz
+fly scale count 0 --app cubesolve
 
 # Restart an app
-fly scale count 1 --app cubesolve-boaz
+fly scale count 1 --app cubesolve
 ```
 
 ### Known Bug: `--app` ignored when `fly.toml` is present
@@ -109,7 +120,7 @@ they use the `app` name from the file instead. If this happens, just `cd` to a
 different directory first:
 
 ```bash
-cd ~ && fly open --app cubesolve-boaz-dev && cd -
+cd ~ && fly open --app cubesolve-dev && cd -
 ```
 
 ### Configuration
@@ -117,7 +128,7 @@ cd ~ && fly open --app cubesolve-boaz-dev && cd -
 - `fly.toml` — Shared config (region, ports, auto-stop). Use `--app` to target any app.
 - `Dockerfile` — Container build instructions
 - The apps auto-stop after inactivity and auto-start on request (~2-5s cold start)
-- Region is set to `arn` (Stockholm)
+- Region is set to `cdg` (Paris) — change `primary_region` in `fly.toml` if needed
 
 ### Costs
 - Free tier: 3 shared-cpu-1x VMs with 256MB RAM
