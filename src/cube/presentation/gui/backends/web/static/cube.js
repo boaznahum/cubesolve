@@ -1,31 +1,738 @@
 /**
- * Cube Solver Web Client
+ * Cube Solver Web Client — Three.js 3D renderer
  *
- * Connects to Python WebSocket server and renders commands on canvas.
- * Phase 1: Simple canvas with clear color support.
+ * Connects to Python WebSocket server, receives per-frame rendering commands,
+ * and draws a 3D Rubik's cube using Three.js WebGL.
  */
 
 class CubeClient {
     constructor() {
         this.canvas = document.getElementById('canvas');
-        this.ctx = this.canvas.getContext('2d');
         this.status = document.getElementById('status');
+        this.speedSlider = document.getElementById('speed-slider');
+        this.speedValue = document.getElementById('speed-value');
+        this.sizeSlider = document.getElementById('size-slider');
+        this.sizeValue = document.getElementById('size-value');
+        this.solverSelect = document.getElementById('solver-select');
+        this.animOverlay = document.getElementById('anim-overlay');
+        this.statusOverlay = document.getElementById('status-overlay');
         this.ws = null;
         this.connected = false;
-
-        // WebSocket port (Python server runs on 8765)
-        this.wsPort = 8765;
+        this.serverVersion = null;
+        this.sessionId = null;
 
         // Reconnect tracking
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 3;
 
+        // Three.js core
+        this.renderer = new THREE.WebGLRenderer({
+            canvas: this.canvas,
+            antialias: true,
+        });
+        this.renderer.setSize(this.canvas.width, this.canvas.height, false);
+        this.renderer.setClearColor(0xd9d9d9);
+
+        this.scene = new THREE.Scene();
+
+        this.camera = new THREE.PerspectiveCamera(
+            50,
+            this.canvas.width / this.canvas.height,
+            0.1,
+            1000
+        );
+        // Camera stays at origin; the server pushes the cube back via translate(0,0,-400)
+
+        // Lighting (persistent — not disposed each frame)
+        this.ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        this.directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        this.directionalLight.position.set(1, 1, 1);
+        this.scene.add(this.ambientLight, this.directionalLight);
+
+        // Sticker inset factor (gap between stickers, exposing dark body)
+        this.insetFactor = 0.08;
+
+        // Cube geometry info from server (face centers, normals, right/up vectors)
+        this.cubeInfo = null;
+
+        // Matrix stack (OpenGL-style modelview)
+        this.matrixStack = [new THREE.Matrix4()];
+
+        // Track disposables for cleanup each frame
+        this.disposables = [];
+
+        // Render loop: rAF-driven, decoupled from WebSocket arrival.
+        // WebSocket messages deposit frames into a queue; the rAF loop
+        // pulls one frame per vsync and renders it — guaranteeing the
+        // browser composites each frame to screen.
+        this.frameQueue = [];
+        this._startRenderLoop();
+
+        // Wire sliders, dropdown, toolbar buttons, and mouse handlers
+        this._setupSpeedSlider();
+        this._setupSizeSlider();
+        this._setupSolverSelect();
+        this._setupToolbarButtons();
+        this._setupMouseHandlers();
+
         this.connect();
     }
 
+    // ── Matrix stack helpers ─────────────────────────────────────────
+
+    currentMatrix() {
+        return this.matrixStack[this.matrixStack.length - 1];
+    }
+
+    pushMatrix() {
+        this.matrixStack.push(this.currentMatrix().clone());
+    }
+
+    popMatrix() {
+        if (this.matrixStack.length > 1) {
+            this.matrixStack.pop();
+        }
+    }
+
+    loadIdentity() {
+        this.currentMatrix().identity();
+    }
+
+    applyTranslate(x, y, z) {
+        const m = new THREE.Matrix4().makeTranslation(x, y, z);
+        this.currentMatrix().multiply(m);
+    }
+
+    applyRotate(angleDeg, ax, ay, az) {
+        const rad = THREE.MathUtils.degToRad(angleDeg);
+        const axis = new THREE.Vector3(ax, ay, az).normalize();
+        const m = new THREE.Matrix4().makeRotationAxis(axis, rad);
+        this.currentMatrix().multiply(m);
+    }
+
+    applyScale(x, y, z) {
+        const m = new THREE.Matrix4().makeScale(x, y, z);
+        this.currentMatrix().multiply(m);
+    }
+
+    applyMultiplyMatrix(rawMatrix) {
+        // rawMatrix is a 4×4 row-major array from Python (numpy .tolist())
+        // THREE.Matrix4.set() takes row-major arguments
+        const e = rawMatrix;
+        const m = new THREE.Matrix4().set(
+            e[0][0], e[0][1], e[0][2], e[0][3],
+            e[1][0], e[1][1], e[1][2], e[1][3],
+            e[2][0], e[2][1], e[2][2], e[2][3],
+            e[3][0], e[3][1], e[3][2], e[3][3]
+        );
+        this.currentMatrix().multiply(m);
+    }
+
+    // ── Color helpers ────────────────────────────────────────────────
+
+    toColor(rgb) {
+        return new THREE.Color(rgb[0] / 255, rgb[1] / 255, rgb[2] / 255);
+    }
+
+    // ── Shape helpers ────────────────────────────────────────────────
+
+    _insetVertices(vertices, factor) {
+        // Shrink vertices toward centroid by factor (0 = no change, 1 = collapse to center)
+        let cx = 0, cy = 0, cz = 0;
+        for (const v of vertices) { cx += v[0]; cy += v[1]; cz += v[2]; }
+        cx /= vertices.length; cy /= vertices.length; cz /= vertices.length;
+        return vertices.map(v => [
+            v[0] + (cx - v[0]) * factor,
+            v[1] + (cy - v[1]) * factor,
+            v[2] + (cz - v[2]) * factor,
+        ]);
+    }
+
+    _addQuadMesh(vertices, color, matOptions) {
+        // Build a 2-triangle mesh from 4 vertices
+        const positions = new Float32Array(18); // 6 verts × 3 coords
+        const idx = [0, 1, 2, 0, 2, 3];
+        for (let i = 0; i < 6; i++) {
+            const v = vertices[idx[i]];
+            positions[i * 3]     = v[0];
+            positions[i * 3 + 1] = v[1];
+            positions[i * 3 + 2] = v[2];
+        }
+
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geo.computeVertexNormals();
+
+        const mat = new THREE.MeshStandardMaterial({
+            color: this.toColor(color),
+            side: THREE.DoubleSide,
+            roughness: 0.4,
+            metalness: 0.05,
+            ...matOptions,
+        });
+
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.matrixAutoUpdate = false;
+        mesh.matrix.copy(this.currentMatrix());
+        this.scene.add(mesh);
+        this.disposables.push(geo, mat);
+        return mesh;
+    }
+
+    // ── Shape builders ───────────────────────────────────────────────
+
+    addQuad(vertices, color, stickerInfo) {
+        // Dark body quad at original vertices (pushed back via polygon offset)
+        this._addQuadMesh(vertices, [30, 30, 30], {
+            polygonOffset: true,
+            polygonOffsetFactor: 1,
+            polygonOffsetUnits: 1,
+            roughness: 0.8,
+            metalness: 0.0,
+        });
+
+        // Colored sticker at inset vertices (gaps expose dark body behind)
+        const inset = this._insetVertices(vertices, this.insetFactor);
+        const mesh = this._addQuadMesh(inset, color, {});
+
+        // Tag sticker mesh with face/row/col for raycasting
+        if (stickerInfo) {
+            mesh.userData = {
+                isSticker: true,
+                face: stickerInfo.face,
+                row: stickerInfo.row,
+                col: stickerInfo.col,
+                si: stickerInfo.si !== undefined ? stickerInfo.si : -1,  // edge slice index
+                sx: stickerInfo.sx !== undefined ? stickerInfo.sx : -1,  // center sub-x
+                sy: stickerInfo.sy !== undefined ? stickerInfo.sy : -1,  // center sub-y
+            };
+            // Capture the model-view matrix at sticker draw time.
+            // This is the transform from object space (where cube_info
+            // vectors live) to world space (where raycasting happens).
+            // We store it once — it's the same for all stickers in a frame.
+            if (!this._stickerModelView) {
+                this._stickerModelView = this.currentMatrix().clone();
+            }
+        }
+    }
+
+    addQuadBorder(vertices, faceColor, lineWidth, lineColor, stickerInfo) {
+        // Face fill with inset + dark body
+        this.addQuad(vertices, faceColor, stickerInfo);
+
+        // Border lines at inset vertices
+        const inset = this._insetVertices(vertices, this.insetFactor);
+        const positions = new Float32Array(24);
+        const order = [0, 1, 1, 2, 2, 3, 3, 0];
+        for (let i = 0; i < 8; i++) {
+            const v = inset[order[i]];
+            positions[i * 3]     = v[0];
+            positions[i * 3 + 1] = v[1];
+            positions[i * 3 + 2] = v[2];
+        }
+
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+        const mat = new THREE.LineBasicMaterial({
+            color: this.toColor(lineColor),
+            linewidth: lineWidth,
+        });
+
+        const lines = new THREE.LineSegments(geo, mat);
+        lines.matrixAutoUpdate = false;
+        lines.matrix.copy(this.currentMatrix());
+        this.scene.add(lines);
+        this.disposables.push(geo, mat);
+    }
+
+    addTriangle(vertices, color) {
+        const positions = new Float32Array(9);
+        for (let i = 0; i < 3; i++) {
+            positions[i * 3]     = vertices[i][0];
+            positions[i * 3 + 1] = vertices[i][1];
+            positions[i * 3 + 2] = vertices[i][2];
+        }
+
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geo.computeVertexNormals();
+
+        const mat = new THREE.MeshStandardMaterial({
+            color: this.toColor(color),
+            side: THREE.DoubleSide,
+            roughness: 0.4,
+            metalness: 0.05,
+        });
+
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.matrixAutoUpdate = false;
+        mesh.matrix.copy(this.currentMatrix());
+        this.scene.add(mesh);
+        this.disposables.push(geo, mat);
+    }
+
+    addLine(p1, p2, width, color) {
+        const positions = new Float32Array([
+            p1[0], p1[1], p1[2],
+            p2[0], p2[1], p2[2],
+        ]);
+
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+        const mat = new THREE.LineBasicMaterial({
+            color: this.toColor(color),
+            linewidth: width,
+        });
+
+        const line = new THREE.Line(geo, mat);
+        line.matrixAutoUpdate = false;
+        line.matrix.copy(this.currentMatrix());
+        this.scene.add(line);
+        this.disposables.push(geo, mat);
+    }
+
+    // ── Frame lifecycle ──────────────────────────────────────────────
+
+    disposeScene() {
+        for (const d of this.disposables) {
+            d.dispose();
+        }
+        this.disposables.length = 0;
+        this.scene.clear();
+        // Re-add persistent lights (scene.clear() removes everything)
+        this.scene.add(this.ambientLight, this.directionalLight);
+    }
+
+    _startRenderLoop() {
+        const loop = () => {
+            // Process queued messages: text updates and frames arrive in order.
+            // Consume text updates immediately, then render the next frame.
+            // This keeps status text synchronized with the 3D cube visual.
+            while (this.frameQueue.length > 0) {
+                const entry = this.frameQueue[0];
+                if (entry.type === 'text') {
+                    this.frameQueue.shift();
+                    this.updateTextOverlays(entry.data);
+                } else {
+                    // It's a frame — render it, then consume any trailing texts
+                    this.frameQueue.shift();
+                    this.renderFrame(entry.commands);
+                    while (this.frameQueue.length > 0 && this.frameQueue[0].type === 'text') {
+                        this.updateTextOverlays(this.frameQueue.shift().data);
+                    }
+                    break; // one frame per vsync
+                }
+            }
+            requestAnimationFrame(loop);
+        };
+        requestAnimationFrame(loop);
+    }
+
+    renderFrame(commands) {
+        // 1. Dispose previous frame
+        this.disposeScene();
+
+        // 2. Reset matrix stack and sticker model-view capture
+        this.matrixStack = [new THREE.Matrix4()];
+        this._stickerModelView = null;
+
+        // 3. Execute all commands
+        for (const cmd of commands) {
+            this.executeCommand(cmd);
+        }
+
+        // 4. Render to canvas buffer
+        this.renderer.render(this.scene, this.camera);
+    }
+
+    executeCommand(cmd) {
+        switch (cmd.cmd) {
+            // Matrix stack
+            case 'push_matrix':
+                this.pushMatrix();
+                break;
+            case 'pop_matrix':
+                this.popMatrix();
+                break;
+            case 'load_identity':
+                this.loadIdentity();
+                break;
+            case 'translate':
+                this.applyTranslate(cmd.x, cmd.y, cmd.z);
+                break;
+            case 'rotate':
+                this.applyRotate(cmd.angle, cmd.x, cmd.y, cmd.z);
+                break;
+            case 'scale':
+                this.applyScale(cmd.x, cmd.y, cmd.z);
+                break;
+            case 'multiply_matrix':
+                this.applyMultiplyMatrix(cmd.matrix);
+                break;
+
+            // View
+            case 'clear': {
+                const [r, g, b] = cmd.color;
+                this.renderer.setClearColor(new THREE.Color(r / 255, g / 255, b / 255));
+                break;
+            }
+            case 'projection':
+                this.camera.fov = cmd.fov_y;
+                this.camera.aspect = cmd.width / cmd.height;
+                this.camera.near = cmd.near;
+                this.camera.far = Math.max(cmd.far, 1000);
+                this.camera.updateProjectionMatrix();
+                break;
+
+            // Shapes
+            case 'quad': {
+                const si = cmd.face !== undefined ? cmd : null;
+                this.addQuad(cmd.vertices, cmd.color, si);
+                break;
+            }
+            case 'quad_border': {
+                const si = cmd.face !== undefined ? cmd : null;
+                this.addQuadBorder(cmd.vertices, cmd.face_color, cmd.line_width, cmd.line_color, si);
+                break;
+            }
+            case 'triangle':
+                this.addTriangle(cmd.vertices, cmd.color);
+                break;
+            case 'line':
+                this.addLine(cmd.p1, cmd.p2, cmd.width, cmd.color);
+                break;
+
+            // Silently ignore unimplemented commands
+            default:
+                break;
+        }
+    }
+
+    // ── Text overlays ─────────────────────────────────────────────────
+
+    updateTextOverlays(data) {
+        // Animation text (top-left overlay on canvas)
+        if (this.animOverlay) {
+            if (data.animation && data.animation.length > 0) {
+                this.animOverlay.innerHTML = data.animation.map(line => {
+                    const weight = line.bold ? 'bold' : 'normal';
+                    return `<div class="anim-line" style="font-size:${line.size}px;color:${line.color};font-weight:${weight}">${this._escapeHtml(line.text)}</div>`;
+                }).join('');
+            } else {
+                this.animOverlay.innerHTML = '';
+            }
+        }
+
+        // Status text (bottom-left overlay on canvas — pill segments)
+        if (this.statusOverlay) {
+            const seg = (cls, label, value) =>
+                `<span class="seg ${cls}"><span class="seg-label">${label}</span> <span class="seg-value">${this._escapeHtml(value)}</span></span>`;
+            const segments = [];
+            if (data.solver) segments.push(seg('seg-solver', 'Solver', data.solver));
+            if (data.status) segments.push(seg('seg-status', 'Stage', data.status));
+            if (data.moves) segments.push(seg('seg-moves', 'Moves', String(data.moves)));
+            this.statusOverlay.innerHTML = segments.join('');
+        }
+    }
+
+    _escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // ── Speed slider ──────────────────────────────────────────────────
+
+    _setupSizeSlider() {
+        if (!this.sizeSlider) return;
+
+        this.sizeSlider.addEventListener('input', () => {
+            const value = parseInt(this.sizeSlider.value, 10);
+            this.sizeValue.textContent = value;
+            this.send({ type: 'set_size', value: value });
+        });
+    }
+
+    updateSizeSlider(value) {
+        if (this.sizeSlider) {
+            this.sizeSlider.value = value;
+        }
+        if (this.sizeValue) {
+            this.sizeValue.textContent = value;
+        }
+    }
+
+    _setupSolverSelect() {
+        if (!this.solverSelect) return;
+
+        this.solverSelect.addEventListener('change', () => {
+            this.send({ type: 'set_solver', name: this.solverSelect.value });
+        });
+    }
+
+    updateSolverSelect(solverName, solverList) {
+        if (!this.solverSelect) return;
+
+        // Rebuild options if solver list is provided and differs
+        if (solverList && solverList.length > 0) {
+            const currentOptions = Array.from(this.solverSelect.options).map(o => o.value);
+            const listsMatch = currentOptions.length === solverList.length &&
+                currentOptions.every((v, i) => v === solverList[i]);
+
+            if (!listsMatch) {
+                this.solverSelect.innerHTML = '';
+                for (const name of solverList) {
+                    const opt = document.createElement('option');
+                    opt.value = name;
+                    opt.textContent = name;
+                    this.solverSelect.appendChild(opt);
+                }
+            }
+        }
+
+        // Sync selected value
+        if (solverName) {
+            this.solverSelect.value = solverName;
+        }
+    }
+
+    _setupSpeedSlider() {
+        if (!this.speedSlider) return;
+
+        this.speedSlider.addEventListener('input', () => {
+            const value = parseInt(this.speedSlider.value, 10);
+            this.speedValue.textContent = value;
+            this.send({ type: 'set_speed', value: value });
+        });
+    }
+
+    _setupToolbarButtons() {
+        document.querySelectorAll('.tb-btn[data-cmd]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const cmd = btn.getAttribute('data-cmd');
+                this.send({ type: 'command', name: cmd });
+            });
+        });
+    }
+
+    updateToolbarState(data) {
+        const btnDebug = document.getElementById('btn-debug');
+        if (btnDebug) {
+            btnDebug.textContent = data.debug ? 'Dbg:ON' : 'Dbg:OFF';
+            btnDebug.className = 'tb-btn ' + (data.debug ? 'tb-on' : 'tb-off');
+        }
+        const btnAnim = document.getElementById('btn-anim');
+        if (btnAnim) {
+            btnAnim.textContent = data.animation ? 'Anim:ON' : 'Anim:OFF';
+            btnAnim.className = 'tb-btn ' + (data.animation ? 'tb-on' : 'tb-off');
+        }
+        // Sync solver dropdown
+        if (data.solver_name !== undefined) {
+            this.updateSolverSelect(data.solver_name, data.solver_list);
+        }
+    }
+
+    updateSpeedSlider(value) {
+        if (this.speedSlider) {
+            this.speedSlider.value = value;
+        }
+        if (this.speedValue) {
+            this.speedValue.textContent = value;
+        }
+    }
+
+    // ── WebSocket ────────────────────────────────────────────────────
+
+    // ── Mouse interaction ──────────────────────────────────────────────
+
+    _setupMouseHandlers() {
+        const canvas = this.canvas;
+        this._raycaster = new THREE.Raycaster();
+
+        // State tracking
+        this._mouseDown = false;
+        this._mouseButton = -1;  // 0=left, 2=right
+        this._mouseAlt = false;
+        this._mouseShift = false;
+        this._mouseCtrl = false;
+        this._lastMouseX = 0;
+        this._lastMouseY = 0;
+        this._mouseStartX = 0;
+        this._mouseStartY = 0;
+        this._dragActive = false;    // true once drag threshold exceeded
+        this._hitSticker = null;     // sticker hit on mousedown for drag-to-turn
+        this._dragTurnSent = false;  // true once a drag-turn command was sent
+
+        // Prevent right-click context menu on canvas
+        canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+        canvas.addEventListener('mousedown', e => {
+            if (e.target !== canvas) return;
+            this._mouseDown = true;
+            this._mouseButton = e.button;
+            this._mouseAlt = e.altKey;
+            this._mouseShift = e.shiftKey;
+            this._mouseCtrl = e.ctrlKey;
+            this._lastMouseX = e.clientX;
+            this._lastMouseY = e.clientY;
+            this._mouseStartX = e.clientX;
+            this._mouseStartY = e.clientY;
+            this._dragActive = false;
+            this._hitSticker = null;
+
+            // Left-click on sticker: record hit for potential drag or click-to-turn
+            if (e.button === 0 && !e.altKey) {
+                this._hitSticker = this._raycastSticker(e);
+            }
+        });
+
+        window.addEventListener('mousemove', e => {
+            if (!this._mouseDown) return;
+            const dx = e.clientX - this._lastMouseX;
+            const dy = e.clientY - this._lastMouseY;
+            this._lastMouseX = e.clientX;
+            this._lastMouseY = e.clientY;
+
+            if (dx === 0 && dy === 0) return;
+
+            // Check drag threshold (5px)
+            if (!this._dragActive) {
+                const totalDx = e.clientX - this._mouseStartX;
+                const totalDy = e.clientY - this._mouseStartY;
+                if (Math.abs(totalDx) + Math.abs(totalDy) < 5) return;
+                this._dragActive = true;
+            }
+
+            if (this._mouseButton === 2) {
+                // Right-drag → orbit rotation
+                this.send({ type: 'mouse_rotate_view', dx, dy });
+            } else if (this._mouseButton === 0 && this._mouseAlt) {
+                // ALT + left-drag → pan
+                this.send({ type: 'mouse_pan', dx, dy });
+            } else if (this._mouseButton === 0 && this._hitSticker && !this._mouseShift && !this._mouseCtrl) {
+                // Left-drag on sticker → face/slice turn (handled on first drag activation)
+                this._handleDragTurn(e);
+            }
+        });
+
+        window.addEventListener('mouseup', e => {
+            // Shift/Ctrl click-to-turn (only if no drag occurred)
+            if (this._mouseButton === 0 && !this._dragActive && this._hitSticker) {
+                if (this._mouseShift || this._mouseCtrl) {
+                    const face = this._hitSticker.face;
+                    const prime = this._mouseCtrl;
+                    const cmd = 'ROTATE_' + face + (prime ? '_PRIME' : '');
+                    this.send({ type: 'command', name: cmd });
+                }
+            }
+            this._mouseDown = false;
+            this._mouseButton = -1;
+            this._hitSticker = null;
+            this._dragActive = false;
+            this._dragTurnSent = false;
+        });
+
+        // Scroll wheel → zoom
+        canvas.addEventListener('wheel', e => {
+            e.preventDefault();
+            const cmd = e.deltaY < 0 ? 'ZOOM_IN' : 'ZOOM_OUT';
+            this.send({ type: 'command', name: cmd });
+        }, { passive: false });
+    }
+
+    /**
+     * Raycast from mouse position to find the first sticker mesh.
+     * Returns { face, row, col } or null.
+     */
+    _raycastSticker(event) {
+        const rect = this.canvas.getBoundingClientRect();
+        const mouse = new THREE.Vector2(
+            ((event.clientX - rect.left) / rect.width) * 2 - 1,
+            -((event.clientY - rect.top) / rect.height) * 2 + 1
+        );
+        this._raycaster.setFromCamera(mouse, this.camera);
+        const intersects = this._raycaster.intersectObjects(this.scene.children, false);
+        for (const hit of intersects) {
+            if (hit.object.userData && hit.object.userData.isSticker) {
+                return hit.object.userData;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Handle drag-to-turn: compute drag direction relative to face axes,
+     * then send raw drag info to Python. The server computes the correct
+     * algorithm using the cube model (same approach as pyglet2 backend).
+     */
+    _handleDragTurn(event) {
+        if (this._dragTurnSent) return;  // Only send one turn per drag
+        if (!this.cubeInfo || !this._hitSticker) return;
+
+        const faceInfo = this.cubeInfo.faces[this._hitSticker.face];
+        if (!faceInfo) return;
+
+        // Compute screen-space drag vector
+        const dragX = event.clientX - this._mouseStartX;
+        const dragY = event.clientY - this._mouseStartY;
+
+        // Project face's right and up vectors to screen space to determine drag alignment.
+        // cube_info vectors are in object space; we must transform them through the
+        // model-view matrix captured at sticker draw time to get world-space positions,
+        // then project through the camera to get screen-space directions.
+        const mv = this._stickerModelView;
+        if (!mv) return;
+
+        const right3 = new THREE.Vector3(...faceInfo.right);
+        const up3 = new THREE.Vector3(...faceInfo.up);
+        const center3 = new THREE.Vector3(...faceInfo.center);
+
+        // Transform object-space points to world space via model-view matrix
+        const centerWorld = center3.clone().applyMatrix4(mv);
+        const rightWorld = center3.clone().add(right3.clone().multiplyScalar(10)).applyMatrix4(mv);
+        const upWorld = center3.clone().add(up3.clone().multiplyScalar(10)).applyMatrix4(mv);
+
+        const centerScreen = centerWorld.clone().project(this.camera);
+        const rightScreen = rightWorld.clone().project(this.camera);
+        const upScreen = upWorld.clone().project(this.camera);
+
+        const screenRight = new THREE.Vector2(
+            rightScreen.x - centerScreen.x,
+            -(rightScreen.y - centerScreen.y)  // flip Y (screen Y is downward)
+        ).normalize();
+        const screenUp = new THREE.Vector2(
+            upScreen.x - centerScreen.x,
+            -(upScreen.y - centerScreen.y)
+        ).normalize();
+
+        // Project drag onto face axes
+        const dragVec = new THREE.Vector2(dragX, dragY);
+        const dotRight = dragVec.dot(screenRight);
+        const dotUp = dragVec.dot(screenUp);
+
+        const isHorizontal = Math.abs(dotRight) > Math.abs(dotUp);
+
+        // Send raw drag info to Python — the server computes the algorithm
+        // using the cube model, just like the pyglet2 backend does.
+        this.send({
+            type: 'mouse_face_turn',
+            face: this._hitSticker.face,
+            row: this._hitSticker.row,
+            col: this._hitSticker.col,
+            si: this._hitSticker.si,    // edge slice LTR index
+            sx: this._hitSticker.sx,    // center sub-x
+            sy: this._hitSticker.sy,    // center sub-y
+            on_left_to_right: dotRight,
+            on_left_to_top: dotUp,
+        });
+        this._dragTurnSent = true;
+    }
+
     connect() {
-        // Connect to /ws endpoint on same host
-        const wsUrl = `ws://${window.location.host}/ws`;
+        const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProto}//${window.location.host}/ws`;
         this.setStatus('Connecting...', '');
 
         try {
@@ -33,17 +740,15 @@ class CubeClient {
 
             this.ws.onopen = () => {
                 this.connected = true;
-                this.reconnectAttempts = 0;  // Reset on successful connection
-                this.setStatus('Connected', 'connected');
+                this.reconnectAttempts = 0;
+                const versionSuffix = this.serverVersion ? ` v${this.serverVersion}` : '';
+                this.setStatus(`Connected${versionSuffix}`, 'connected');
 
-                // Send connected message
                 this.send({ type: 'connected' });
-
-                // Send initial resize
                 this.send({
                     type: 'resize',
                     width: this.canvas.width,
-                    height: this.canvas.height
+                    height: this.canvas.height,
                 });
             };
 
@@ -60,14 +765,16 @@ class CubeClient {
                     return;
                 }
 
-                this.setStatus(`Disconnected - Reconnecting (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`, 'error');
+                this.setStatus(
+                    `Disconnected - Reconnecting (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`,
+                    'error'
+                );
                 setTimeout(() => this.connect(), 2000);
             };
 
             this.ws.onerror = (error) => {
                 console.error('WebSocket error:', error);
             };
-
         } catch (error) {
             console.error('Failed to create WebSocket:', error);
             this.reconnectAttempts++;
@@ -77,7 +784,10 @@ class CubeClient {
                 return;
             }
 
-            this.setStatus(`Failed to connect (${this.reconnectAttempts}/${this.maxReconnectAttempts})`, 'error');
+            this.setStatus(
+                `Failed to connect (${this.reconnectAttempts}/${this.maxReconnectAttempts})`,
+                'error'
+            );
             setTimeout(() => this.connect(), 2000);
         }
     }
@@ -94,152 +804,46 @@ class CubeClient {
 
             switch (message.type) {
                 case 'frame':
-                    this.renderFrame(message.commands);
+                    this.frameQueue.push({type: 'frame', commands: message.commands});
                     break;
-                case 'clear':
-                    this.clear(message.color);
+                case 'speed_update':
+                    this.updateSpeedSlider(message.value);
+                    break;
+                case 'text_update':
+                    // Queue text updates so they stay synchronized with frames.
+                    // The server sends frame + text_update pairs; if text_update
+                    // were applied immediately it would race ahead of the frame
+                    // queue (which renders one frame per vsync).
+                    this.frameQueue.push({type: 'text', data: message});
+                    break;
+                case 'toolbar_state':
+                    this.updateToolbarState(message);
+                    break;
+                case 'size_update':
+                    this.updateSizeSlider(message.value);
+                    break;
+                case 'cube_info':
+                    this.cubeInfo = message;
+                    break;
+                case 'version':
+                    this.serverVersion = message.version;
+                    if (this.connected) {
+                        this.setStatus(`Connected v${this.serverVersion}`, 'connected');
+                    }
+                    break;
+                case 'flush_queue':
+                    this.frameQueue.length = 0;
+                    break;
+                case 'session_id':
+                    this.sessionId = message.session_id;
+                    console.log(`Session ID: ${this.sessionId}`);
                     break;
                 default:
-                    console.log('Unknown message type:', message.type);
+                    break;
             }
         } catch (error) {
             console.error('Failed to parse message:', error);
         }
-    }
-
-    renderFrame(commands) {
-        // Process each command in the frame
-        for (const cmd of commands) {
-            this.executeCommand(cmd);
-        }
-    }
-
-    executeCommand(cmd) {
-        switch (cmd.cmd) {
-            case 'clear':
-                this.clear(cmd.color);
-                break;
-            case 'quad':
-                this.drawQuad(cmd.vertices, cmd.color);
-                break;
-            case 'quad_border':
-                this.drawQuadWithBorder(cmd.vertices, cmd.face_color, cmd.line_width, cmd.line_color);
-                break;
-            case 'triangle':
-                this.drawTriangle(cmd.vertices, cmd.color);
-                break;
-            case 'line':
-                this.drawLine(cmd.p1, cmd.p2, cmd.width, cmd.color);
-                break;
-            case 'projection':
-                // Store projection params for future use
-                this.projection = cmd;
-                break;
-            case 'translate':
-            case 'rotate':
-            case 'scale':
-            case 'push_matrix':
-            case 'pop_matrix':
-            case 'load_identity':
-            case 'look_at':
-                // Transform commands - will be implemented in Phase 3
-                break;
-            default:
-                // Silently ignore unknown commands for now
-                break;
-        }
-    }
-
-    clear(color) {
-        const [r, g, b, a] = color;
-        this.ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${a / 255})`;
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    }
-
-    // Phase 2: Basic shape rendering (placeholder implementations)
-
-    drawQuad(vertices, color) {
-        // Simple 2D projection for testing
-        const projected = vertices.map(v => this.project(v));
-
-        this.ctx.beginPath();
-        this.ctx.moveTo(projected[0][0], projected[0][1]);
-        for (let i = 1; i < projected.length; i++) {
-            this.ctx.lineTo(projected[i][0], projected[i][1]);
-        }
-        this.ctx.closePath();
-
-        const [r, g, b] = color;
-        this.ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
-        this.ctx.fill();
-    }
-
-    drawQuadWithBorder(vertices, faceColor, lineWidth, lineColor) {
-        this.drawQuad(vertices, faceColor);
-
-        const projected = vertices.map(v => this.project(v));
-
-        this.ctx.beginPath();
-        this.ctx.moveTo(projected[0][0], projected[0][1]);
-        for (let i = 1; i < projected.length; i++) {
-            this.ctx.lineTo(projected[i][0], projected[i][1]);
-        }
-        this.ctx.closePath();
-
-        const [r, g, b] = lineColor;
-        this.ctx.strokeStyle = `rgb(${r}, ${g}, ${b})`;
-        this.ctx.lineWidth = lineWidth;
-        this.ctx.stroke();
-    }
-
-    drawTriangle(vertices, color) {
-        const projected = vertices.map(v => this.project(v));
-
-        this.ctx.beginPath();
-        this.ctx.moveTo(projected[0][0], projected[0][1]);
-        this.ctx.lineTo(projected[1][0], projected[1][1]);
-        this.ctx.lineTo(projected[2][0], projected[2][1]);
-        this.ctx.closePath();
-
-        const [r, g, b] = color;
-        this.ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
-        this.ctx.fill();
-    }
-
-    drawLine(p1, p2, width, color) {
-        const [x1, y1] = this.project(p1);
-        const [x2, y2] = this.project(p2);
-
-        const [r, g, b] = color;
-        this.ctx.strokeStyle = `rgb(${r}, ${g}, ${b})`;
-        this.ctx.lineWidth = width;
-
-        this.ctx.beginPath();
-        this.ctx.moveTo(x1, y1);
-        this.ctx.lineTo(x2, y2);
-        this.ctx.stroke();
-    }
-
-    // Simple isometric projection (same as Tkinter backend)
-    project(point3d) {
-        const [x, y, z] = point3d;
-
-        // Center the cube (geometry spans 0-90)
-        const cubeCenter = 45.0;
-        const cx = x - cubeCenter;
-        const cy = y - cubeCenter;
-        const cz = z - cubeCenter;
-
-        // Scale and offset
-        const scale = this.canvas.width * 0.4 / 90;
-        const offsetX = this.canvas.width / 2;
-        const offsetY = this.canvas.height / 2;
-
-        // Isometric projection
-        const x2d = (cx - cz) * 0.866 * scale + offsetX;
-        const y2d = offsetY - (cy * scale - (cx + cz) * 0.5 * scale);
-
-        return [x2d, y2d];
     }
 
     setStatus(text, className) {
@@ -255,7 +859,10 @@ document.addEventListener('keydown', (event) => {
             type: 'key',
             key: event.key,
             code: event.keyCode,
-            modifiers: (event.shiftKey ? 1 : 0) | (event.ctrlKey ? 2 : 0) | (event.altKey ? 4 : 0)
+            modifiers:
+                (event.shiftKey ? 1 : 0) |
+                (event.ctrlKey ? 2 : 0) |
+                (event.altKey ? 4 : 0),
         });
     }
 });

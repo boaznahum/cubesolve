@@ -223,6 +223,9 @@ class _Cell:
         self._right_top_v3: ndarray | None = None
         self._left_bottom_v3: ndarray | None = None
         self._face_board = face_board
+        # Grid position within the face (set by _FaceBoard.prepare_gui_geometry)
+        self._grid_row: int = -1
+        self._grid_col: int = -1
 
         # Store config reference to avoid repeated lookups
         self._config: ConfigProtocol = face_board._config
@@ -519,6 +522,12 @@ class _Cell:
         cubie_facet_texture: TextureData | None = self._cubie_texture
         renderer = self._renderer
 
+        # Sticker metadata for web backend raycasting.
+        # Set once here for corners (single sticker per Part).
+        # For edges/centers, updated per sticker inside the loops below.
+        face_name: str = fb.cube_face.name.name  # FaceName enum → string (e.g., "R")
+        renderer.shapes.set_sticker_context(face_name, self._grid_row, self._grid_col)
+
         def draw_facet(part_edge: PartEdge, _vx):
 
             # vertex = [left_bottom, right_bottom, right_top, left_top]
@@ -585,6 +594,10 @@ class _Cell:
                 edge = self._get_slice_edge(_slice)
                 vx = self.facets[edge].two_d_draw_rect
 
+                # Per-sticker context with LTR slice index for individual slice turns
+                renderer.shapes.set_sticker_context(
+                    face_name, self._grid_row, self._grid_col, slice_index=ix)
+
                 with self._gen_list_for_slice(_slice, g_list_dest):
                     draw_facet(edge, vx)
 
@@ -616,6 +629,10 @@ class _Cell:
 
                     vx = self.facets[edge].two_d_draw_rect
 
+                    # Per-sticker context with center sub-indices
+                    renderer.shapes.set_sticker_context(
+                        face_name, self._grid_row, self._grid_col, sx=ix, sy=iy)
+
                     with self._gen_list_for_slice(center_slice, g_list_dest):
 
                         draw_facet(edge, vx)
@@ -629,6 +646,8 @@ class _Cell:
                                 renderer.shapes.cross(points, cross_width_x, cross_color_x)
                             if attributes.get("on_y", False):
                                 renderer.shapes.cross(points, cross_width_y, cross_color_y)
+
+        renderer.shapes.clear_sticker_context()
 
     def gui_movable_gui_objects(self) -> Iterable[int]:
         return [ll for ls in self.gl_lists_movable.values() for ll in ls]

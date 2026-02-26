@@ -403,6 +403,16 @@ class PygletShapeRenderer(ShapeRenderer):
         glu.gluDeleteQuadric(quadric)
         gl.glPopMatrix()
 
+    def set_sticker_context(self, face: str, row: int, col: int,
+                            slice_index: int = -1,
+                            sx: int = -1, sy: int = -1) -> None:
+        """No-op for pyglet mode."""
+        pass
+
+    def clear_sticker_context(self) -> None:
+        """No-op for pyglet mode."""
+        pass
+
 
 class PygletDisplayListManager(DisplayListManager):
     """OpenGL display list manager implementing DisplayListManager protocol."""

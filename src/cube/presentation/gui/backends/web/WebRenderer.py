@@ -39,10 +39,49 @@ class WebShapeRenderer(ShapeRenderer):
     def __init__(self, command_queue: list[dict]):
         self._commands = command_queue
         self._display_list_manager: "WebDisplayListManager | None" = None
+        # Sticker metadata context (set before drawing a sticker quad)
+        self._sticker_face: str | None = None
+        self._sticker_row: int = -1
+        self._sticker_col: int = -1
+        self._sticker_slice_index: int = -1  # Edge LTR index within part
+        self._sticker_sx: int = -1  # Center sub-x
+        self._sticker_sy: int = -1  # Center sub-y
 
     def set_display_list_manager(self, dlm: "WebDisplayListManager") -> None:
         """Set display list manager for compile-time redirection."""
         self._display_list_manager = dlm
+
+    def set_sticker_context(self, face: str, row: int, col: int,
+                            slice_index: int = -1,
+                            sx: int = -1, sy: int = -1) -> None:
+        """Set metadata context for the next quad commands."""
+        self._sticker_face = face
+        self._sticker_row = row
+        self._sticker_col = col
+        self._sticker_slice_index = slice_index
+        self._sticker_sx = sx
+        self._sticker_sy = sy
+
+    def clear_sticker_context(self) -> None:
+        """Clear the sticker metadata context."""
+        self._sticker_face = None
+        self._sticker_row = -1
+        self._sticker_col = -1
+        self._sticker_slice_index = -1
+        self._sticker_sx = -1
+        self._sticker_sy = -1
+
+    def _inject_sticker_meta(self, cmd: dict) -> None:
+        """Add sticker metadata to command if context is set."""
+        if self._sticker_face is not None:
+            cmd["face"] = self._sticker_face
+            cmd["row"] = self._sticker_row
+            cmd["col"] = self._sticker_col
+            if self._sticker_slice_index >= 0:
+                cmd["si"] = self._sticker_slice_index
+            if self._sticker_sx >= 0:
+                cmd["sx"] = self._sticker_sx
+                cmd["sy"] = self._sticker_sy
 
     def _add_command(self, cmd: dict) -> None:
         """Add command to appropriate queue (main or compile buffer)."""
@@ -53,11 +92,13 @@ class WebShapeRenderer(ShapeRenderer):
 
     def quad(self, vertices: Sequence[Point3D], color: Color3) -> None:
         """Queue quad command."""
-        self._add_command({
+        cmd = {
             "cmd": "quad",
             "vertices": [v.tolist() for v in vertices],
             "color": list(color)
-        })
+        }
+        self._inject_sticker_meta(cmd)
+        self._add_command(cmd)
 
     def quad_with_border(
         self,
@@ -67,13 +108,15 @@ class WebShapeRenderer(ShapeRenderer):
         line_color: Color3,
     ) -> None:
         """Queue quad with border command."""
-        self._add_command({
+        cmd = {
             "cmd": "quad_border",
             "vertices": [v.tolist() for v in vertices],
             "face_color": list(face_color),
             "line_width": line_width,
             "line_color": list(line_color)
-        })
+        }
+        self._inject_sticker_meta(cmd)
+        self._add_command(cmd)
 
     def triangle(self, vertices: Sequence[Point3D], color: Color3) -> None:
         """Queue triangle command."""
@@ -310,7 +353,7 @@ class WebViewStateManager(ViewStateManager):
         height: int,
         fov_y: float = 50.0,
         near: float = 0.1,
-        far: float = 100.0,
+        far: float = 1000.0,
     ) -> None:
         """Set projection parameters."""
         self._width = width
@@ -437,9 +480,13 @@ class WebRenderer(Renderer):
         self._commands.clear()
 
     def end_frame(self) -> None:
-        """End frame - send commands to browser."""
+        """End frame - send commands to browser.
+
+        Sends every frame to the browser without throttling. The browser
+        queues frames and renders one per requestAnimationFrame cycle,
+        guaranteeing each frame is composited to screen.
+        """
         if self._event_loop is not None and self._commands:
-            print(f"Sending frame with {len(self._commands)} commands", flush=True)
             message = json.dumps({
                 "type": "frame",
                 "commands": self._commands

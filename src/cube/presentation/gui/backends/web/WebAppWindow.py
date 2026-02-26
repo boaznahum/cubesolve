@@ -1,20 +1,19 @@
 """
 Web application window implementation.
 
-High-level window combining GUI and application logic.
+Thin shell that creates a SessionManager and delegates per-client logic
+to ClientSession instances. Maintains AppWindow protocol compatibility.
 """
 
 from __future__ import annotations
 
-import traceback
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
-from cube.application.exceptions.ExceptionAppExit import AppExit
+from cube.presentation.gui.backends.web.SessionManager import SessionManager
 from cube.presentation.gui.backends.web.WebEventLoop import WebEventLoop
 from cube.presentation.gui.backends.web.WebRenderer import WebRenderer
-from cube.presentation.gui.backends.web.WebWindow import WebWindow
-from cube.presentation.gui.commands import Command, CommandContext
+from cube.presentation.gui.commands import Command
 from cube.presentation.gui.protocols.AppWindow import AppWindow
 
 if TYPE_CHECKING:
@@ -27,8 +26,11 @@ if TYPE_CHECKING:
 class WebAppWindow(AppWindow):
     """Web application window implementing AppWindow protocol.
 
-    Combines WebWindow, WebRenderer, and WebEventLoop with
-    application logic (cube, solver, animation).
+    Acts as a thin shell: creates a SessionManager that manages per-client
+    sessions. Each browser gets its own independent cube via ClientSession.
+
+    Keeps minimal state for AppWindow protocol compatibility (e.g., the
+    ``app`` property used by the backend factory).
     """
 
     def __init__(
@@ -44,243 +46,119 @@ class WebAppWindow(AppWindow):
         self._width = width
         self._height = height
         self._title = title
-
-        # State for edge solve tracking (used by SOLVE_EDGES command)
         self._last_edge_solve_count: int = 0
 
-        # Get components from backend (singletons)
-        self._renderer: WebRenderer = backend.renderer  # type: ignore[assignment]
+        # Get event loop from backend (singleton)
         self._event_loop: WebEventLoop = backend.event_loop  # type: ignore[assignment]
-        self._window: WebWindow = WebWindow(width, height, title)
 
         # Configure event loop with test mode from app config
-        # (Must be done before run() is called so port selection works correctly)
         self._event_loop.gui_test_mode = app.config.gui_test_mode
 
-        # Wire renderer to event loop for WebSocket communication
-        self._renderer.set_event_loop(self._event_loop)
+        # Create session manager and wire to event loop
+        self._session_manager = SessionManager(
+            self._event_loop, gui_test_mode=app.config.gui_test_mode
+        )
+        self._event_loop.set_session_manager(self._session_manager)
 
-        # Wire key handler to event loop (receives keys from browser)
-        self._event_loop.set_key_handler(self._handle_browser_key)
-
-        # Wire client connected callback for initial draw
-        self._event_loop.set_client_connected_handler(self._on_client_connected)
-
-        # Create viewer
-        from cube.presentation.viewer.GCubeViewer import GCubeViewer
-        self._viewer = GCubeViewer(app.cube, app.vs, self._renderer)
-
-        # Wire animation manager to this window
-        self._animation_manager = app.am
-        if self._animation_manager:
-            self._animation_manager.set_window(self)  # type: ignore[arg-type]
-
-        # Disable animation for web backend - async event loop doesn't support
-        # the blocking animation loop used by AnimationManager.run_animation()
-        # TODO [#13]: Implement async animation support for web backend
-        app.op.toggle_animation_on(False)
-
-        # Set up event handlers
-        self._setup_handlers()
-
-    def _setup_handlers(self) -> None:
-        """Set up window event handlers."""
-        self._window.set_draw_handler(self._on_draw)
-        self._window.set_resize_handler(self._on_resize)
-        self._window.set_key_press_handler(self._on_key_press)
-        self._window.set_close_handler(self._on_close)
-
-    def _on_draw(self) -> None:
-        """Handle draw event."""
-        self._renderer.begin_frame()
-        self._renderer.clear((217, 217, 217, 255))  # Light gray background
-
-        # Set up view
-        self._renderer.view.set_projection(self._width, self._height)
-        self._renderer.view.load_identity()
-        self._renderer.view.translate(0, 0, -400)
-
-        # Draw cube
-        self._viewer.draw()
-
-        self._renderer.end_frame()
-
-    def _on_resize(self, width: int, height: int) -> None:
-        """Handle resize event."""
-        self._width = width
-        self._height = height
-        self._renderer.view.set_projection(width, height)
-
-    def _on_key_press(self, event) -> None:
-        """Handle key press event."""
-        from cube.presentation.gui.key_bindings import lookup_command
-
-        command = lookup_command(event.symbol, event.modifiers, self.animation_running)
-        if command:
-            self.inject_command(command)
-
-    def _handle_browser_key(self, symbol: int, modifiers: int) -> None:
-        """Handle key event from browser via WebSocket."""
-        from cube.presentation.gui.key_bindings import lookup_command
-
-        command = lookup_command(symbol, modifiers, self.animation_running)
-        if command:
-            self.inject_command(command)
-
-    def _on_client_connected(self) -> None:
-        """Handle browser client connection - trigger initial draw."""
-        print("Client connected - sending initial frame", flush=True)
-        self._on_draw()
-
-    def _on_close(self) -> bool:
-        """Handle close event."""
-        self._event_loop.stop()
-        return True
+    # ── AppWindow protocol properties ──
 
     @property
     def width(self) -> int:
-        """Window width in pixels."""
         return self._width
 
     @property
     def height(self) -> int:
-        """Window height in pixels."""
         return self._height
 
     @property
     def app(self) -> "AbstractApp":
-        """Access the application instance."""
         return self._app
 
     @property
     def backend(self) -> "GUIBackendFactory":
-        """Access the GUI backend."""
         return self._backend
 
     @property
     def viewer(self) -> "GCubeViewer":
-        """Access the cube viewer."""
-        return self._viewer
+        """Not applicable — each session has its own viewer."""
+        raise RuntimeError("WebAppWindow does not have a single viewer; use ClientSession.viewer")
 
     @property
     def renderer(self) -> WebRenderer:
-        """Access the renderer."""
-        return self._renderer
+        """Singleton renderer from factory (stub — real rendering is per-session)."""
+        return self._backend.renderer  # type: ignore[return-value]
 
     @property
     def animation_running(self) -> bool:
-        """Check if animation is currently running."""
-        return bool(self._animation_manager and self._animation_manager.animation_running())
+        """Check if any session has animation running."""
+        for session in self._session_manager.all_sessions:
+            if session.animation_running:
+                return True
+        return False
+
+    # ── Lifecycle ──
 
     def run(self) -> None:
-        """Run the main event loop."""
-        # Initial draw is triggered by _on_client_connected callback
-        # when browser connects (via set_client_connected_handler)
-
-        # Run event loop (blocking)
+        """Run the main event loop (blocking)."""
         self._event_loop.run()
 
     def close(self) -> None:
-        """Close the window and stop the event loop."""
-        self._viewer.cleanup()
-        self._renderer.cleanup()
+        """Close and stop the event loop."""
         self._event_loop.stop()
-
-    def update_gui_elements(self) -> None:
-        """Update all GUI elements."""
-        # Update viewer to regenerate display lists with new colors
-        if self._viewer:
-            self._viewer.update()
-
-        # Update animation manager
-        if self._animation_manager:
-            self._animation_manager.update_gui_elements()
-
-        # Redraw
-        self._on_draw()
-
-    def inject_key(self, key: int, modifiers: int = 0) -> None:
-        """Inject a key press event."""
-        self._window.simulate_key_press(key, modifiers)
-
-    def inject_command(self, command: Command) -> None:
-        """Inject a command directly."""
-        try:
-            ctx = CommandContext.from_window(self)  # type: ignore[arg-type]
-            result = command.execute(ctx)
-            if not result.no_gui_update:
-                self.update_gui_elements()
-        except AppExit:
-            # For web backend, always close on AppExit (Q key)
-            print("Closing web backend...", flush=True)
-            self.close()
-        except Exception as e:
-            cfg = self._app.config
-            if cfg.gui_test_mode and cfg.quit_on_error_in_test_mode:
-                self.close()
-                raise
-            else:
-                traceback.print_exc()
-                msg = str(e)
-                error_text = "Some error occurred:"
-                if msg:
-                    error_text += msg
-                self._app.set_error(error_text)
-                self.update_gui_elements()
-
-    def set_mouse_visible(self, visible: bool) -> None:
-        """Set mouse visibility."""
-        self._window.set_mouse_visible(visible)
 
     def cleanup(self) -> None:
         """Clean up resources."""
-        if self._viewer:
-            self._viewer.cleanup()
-        self._renderer.cleanup()
+        for session in self._session_manager.all_sessions:
+            session.cleanup()
+
+    # ── Stubs for AppWindow protocol ──
+
+    def update_gui_elements(self) -> None:
+        """Update all sessions' GUI elements."""
+        for session in self._session_manager.all_sessions:
+            session.update_gui_elements()
+
+    def inject_key(self, key: int, modifiers: int = 0) -> None:
+        """Inject key to all sessions (for testing)."""
+        for session in self._session_manager.all_sessions:
+            session.inject_key(key, modifiers)
+
+    def inject_command(self, command: Command) -> None:
+        """Inject command to all sessions (for testing)."""
+        for session in self._session_manager.all_sessions:
+            session.inject_command(command)
+
+    def set_mouse_visible(self, visible: bool) -> None:
+        pass
 
     def get_opengl_info(self) -> str:
-        """Get OpenGL info string (not applicable for web backend)."""
         return "Web Backend (WebGL in browser)"
 
     def adjust_brightness(self, delta: float) -> float | None:
-        """Adjust lighting brightness (not supported in web backend)."""
         return None
 
     def get_brightness(self) -> float | None:
-        """Get current brightness level (not supported in web backend)."""
         return None
 
     def adjust_background(self, delta: float) -> float | None:
-        """Adjust background gray level (not supported in web backend)."""
         return None
 
     def get_background(self) -> float | None:
-        """Get current background gray level (not supported in web backend)."""
         return None
 
     def next_texture_set(self) -> str | None:
-        """Cycle to the next texture set (not supported in web backend)."""
         return None
 
     def prev_texture_set(self) -> str | None:
-        """Cycle to the previous texture set (not supported in web backend)."""
         return None
 
     def toggle_texture(self) -> bool:
-        """Toggle texture mode on/off (not supported in web backend)."""
         return False
 
     def load_texture_set(self, directory: str) -> int:
-        """Load all face textures from a directory (not supported in web backend)."""
         return 0
 
     def schedule_once(self, callback: "Callable[[float], None]", delay: float) -> None:
-        """Schedule a callback to run after a delay (non-blocking).
-
-        Args:
-            callback: Function to call after delay, receives dt (elapsed time)
-            delay: Time in seconds to wait before calling
-        """
         self._event_loop.schedule_once(callback, delay)
 
     def inject_command_sequence(
@@ -288,52 +166,10 @@ class WebAppWindow(AppWindow):
         commands: "CommandSequence | list[Command]",
         on_complete: "Callable[[], None] | None" = None,
     ) -> None:
-        """Inject a sequence of commands, handling delays from SleepCommand.
-
-        Commands are executed in order. If a command returns delay_next_command > 0,
-        the remaining commands are scheduled to run after that delay.
-        The GUI remains responsive during delays.
-
-        Args:
-            commands: Sequence of commands to execute
-            on_complete: Optional callback when all commands complete
-        """
-
-        # Convert list to CommandSequence if needed
-        if isinstance(commands, list):
-            cmd_list = commands
-        else:
-            cmd_list = list(commands)
-
-        if not cmd_list:
-            if on_complete:
-                on_complete()
-            return
-
-        def execute_next(index: int) -> None:
-            if index >= len(cmd_list):
-                if on_complete:
-                    on_complete()
-                return
-
-            cmd = cmd_list[index]
-            result = cmd.execute(CommandContext.from_window(self))  # type: ignore[arg-type]
-
-            if not result.no_gui_update:
-                self.update_gui_elements()
-
-            # If delay requested, schedule next command after delay
-            if result.delay_next_command > 0:
-                def continue_sequence(_dt: float) -> None:
-                    execute_next(index + 1)
-                self.schedule_once(continue_sequence, result.delay_next_command)
-            else:
-                # No delay, execute next command immediately
-                execute_next(index + 1)
-
-        execute_next(0)
+        """Inject command sequence to all sessions (for testing)."""
+        for session in self._session_manager.all_sessions:
+            session.inject_command_sequence(commands, on_complete)
 
     def show_popup(self, title: str, lines: list[str],
                    line_colors: list[tuple[int, int, int, int]] | None = None) -> None:
-        """Show a modal text popup overlay (no-op for web backend)."""
         pass

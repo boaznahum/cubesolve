@@ -117,6 +117,11 @@ class _App(AbstractApp, IServiceProvider):
         self._slv = Solvers.next_solver(self._slv.get_code, self.op)
         return self._slv
 
+    def switch_to_solver(self, name: SolverName) -> Solver:
+        """Switch to a specific solver by name."""
+        self._slv = Solvers.by_name(name, self.op)
+        return self._slv
+
     @property
     def cube(self) -> Cube:
         return self._cube

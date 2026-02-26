@@ -1,0 +1,38 @@
+# flyctl launch added from .gitignore
+.logs
+.temp
+**\__pycache__
+nul
+build
+**\cubesolve.egg-info
+**\.venv312
+**\__todo\__next_session.md
+**\.venv
+# Ignore PyCharm interpreter settings
+**\.idea\misc.xml
+
+# Claude Code temp files
+**\tmpclaude-*-cwd
+**\.claude\tmpdir
+
+# Profiler output
+**\scalene-*.json
+.claude\settings.local.json
+.idea\modules.xml
+
+# flyctl launch added from .idea\.gitignore
+# Default ignored files
+.idea\shelf
+.idea\workspace.xml
+# Editor-based HTTP Client requests
+.idea\httpRequests
+# Datasource local storage ignored files
+.idea\dataSources
+.idea\dataSources.local.xml
+.idea\cube.iml
+.idea\**\*.iml
+
+# flyctl launch added from .mypy_cache\.gitignore
+# Automatically created by mypy
+.mypy_cache\**\*
+fly.toml

@@ -1,7 +1,7 @@
 # Web Backend Implementation Plan
 
 **Created:** 2025-12-01
-**Status Document:** `docs/design/web_backend_state.md`
+**Status Document:** `web_backend_state.md`
 
 ## Overview
 
@@ -493,7 +493,7 @@ src/cube/presentation/gui/backends/web/
 
 ## Protocol Specification
 
-See `docs/design/web_backend_state.md` for complete protocol specification.
+See `web_backend_state.md` for complete protocol specification.
 
 ## Dependencies
 
@@ -535,7 +535,7 @@ python -m cube.main_any_backend --backend web
 
 ## References
 
-- Current state: `docs/design/web_backend_state.md`
+- Current state: `web_backend_state.md`
 - GUI abstraction: `docs/design/gui_abstraction.md`
 - Pyglet backend (reference): `src/cube/presentation/gui/backends/pyglet/`
 - Three.js docs: https://threejs.org/docs/
