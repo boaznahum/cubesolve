@@ -5,11 +5,12 @@
 ## Overview
 New `webgl/` backend where server sends **cube state** (face colors + animation events) and the Three.js client builds and owns the 3D model locally, rendering at 60fps.
 
-## Git Status: NOT COMMITTED
-All changes are uncommitted. No commits have been made on this branch for the webgl work.
-Must run all 5 checks before committing (ruff, mypy, pyright, non-GUI tests, GUI tests).
+## Commits
+- `36ac2e05` — Add WebGL backend with client-side 3D cube rendering (session 1-3)
+- `be8b8809` — Webgl issues file
+- `fab89e2f` — Fix rotation directions, row mapping, animation state ordering (session 4)
 
-## Files Created (all new, untracked)
+## Files Created (all new)
 
 ### Python Backend
 | File | Purpose |
@@ -29,7 +30,7 @@ Must run all 5 checks before committing (ruff, mypy, pyright, non-GUI tests, GUI
 | File | Purpose |
 |------|---------|
 | `src/cube/presentation/gui/backends/webgl/static/index.html` | Toolbar, overlays, dark background |
-| `src/cube/presentation/gui/backends/webgl/static/cube.js` | Full 3D cube (~950 lines) |
+| `src/cube/presentation/gui/backends/webgl/static/cube.js` | Full 3D cube (~960 lines) |
 
 ### Deployment
 | File | Purpose |
@@ -42,7 +43,7 @@ Must run all 5 checks before committing (ruff, mypy, pyright, non-GUI tests, GUI
 |------|--------|
 | `src/cube/presentation/gui/BackendRegistry.py` | Added "webgl" to BACKENDS + get_backend() |
 | `src/cube/main_any_backend.py` | Added "webgl" to argparse choices |
-| `src/cube/resources/version.txt` | 1.2.4 → 1.3.0 |
+| `src/cube/resources/version.txt` | version bumps |
 | `fly-io-deploy.md` | Added webgl deployment docs |
 
 ---
@@ -51,183 +52,117 @@ Must run all 5 checks before committing (ruff, mypy, pyright, non-GUI tests, GUI
 
 ```
 Server sends:
-  cube_state  → {size, faces: {U: [[r,g,b],...], F:..., ...}}  (NxN flat arrays)
-  animation_start → {face, direction, duration_ms}
+  cube_state  → {size, faces: {U: [[r,g,b],...], F:..., ...}}
+  animation_start → {face, direction, slices, duration_ms, alg, state}
   animation_stop  → flush client queue
   text_update, toolbar_state, version, client_count
 
 Client sends:
   connected, key, command, set_speed, set_size, set_solver
-
-Key difference from web/ backend:
-  web/:   Server renders → sends draw commands → Client replays (dumb)
-  webgl/: Server sends state → Client builds 3D model + animates (smart)
 ```
 
 ### CubeStateSerializer Convention
 - `grid[row][col]` where **row 0 = bottom**, row N-1 = top
-- Flattened to `[item for row in grid for item in row]` (row 0 first)
-- So flat index 0 = bottom-left, flat index N*N-1 = top-right
+- Flattened row-major: flat index 0 = bottom-left
 
-### Client Sticker Storage (cube.js)
-- Build loop: `for row 0..N-1, for col 0..N-1`
-- `meshes[]` array: index 0 = row 0, col 0
-- Position: `cy = ((size-1-row) + 0.5) * cellSize - half` → **row 0 placed at TOP**
-- Comment says "row 0 is top (server convention)" — **THIS IS WRONG, server row 0 = bottom**
-- `updateFaceColors(faceName, colors)`: `meshes[i].color = colors[i]`
-- **BUG**: meshes[0] = top-left (client), colors[0] = bottom-left (server) → VERTICALLY FLIPPED
+### Animation Flow
+1. Server: `WebglAnimationManager._process_next()` dequeues move
+2. Server: applies model change FIRST (`_apply_model_change`)
+3. Server: sends `animation_start` with post-move state embedded
+4. Server: sends `cube_state` (same post-move state)
+5. Client: `AnimationQueue.enqueue()` → `_processNext()`
+6. Client: creates temp group, attaches affected stickers, animates rotation
+7. Client: on completion, reparents stickers back, applies state colors, resets positions
 
 ---
 
 ## Bugs Fixed in Sessions 2 & 3
 
-### 1. Body mesh too large (gray cube hiding stickers)
-- **Symptom**: 3D cube was a big gray box, no stickers visible
-- **Cause**: `createRoundedBoxGeometry` used ExtrudeGeometry with bevel extending body ±0.6 beyond sticker positions
-- **Fix**: Replaced with simple `BoxGeometry(totalSize - 0.01)`
-
-### 2. D face stickers placed on U face (white/yellow mix)
-- **Symptom**: White and yellow stickers mixed in middle of U face
-- **Cause**: Normal calculation `crossVectors(right, up)` then `negate()` for negative faces was inverted. For D: cross gave (0,-1,0), negate made (0,1,0) = UP
-- **Fix**: Compute normal directly from axis+sign: `if (def.axis === 'y') normal.set(0, def.sign, 0)`
-
-### 3. Sticker edge overlap
-- **Symptom**: Stickers clipping at cube edges
-- **Cause**: ExtrudeGeometry depth caused overlap between adjacent face stickers
-- **Fix**: Switched to flat `ShapeGeometry`
-
-### 4. Only face surface rotated during animation, not full layer
-- **Symptom**: During solve, only the face's own stickers rotated, adjacent stickers stayed
-- **Cause**: `_getAffectedStickers` only grabbed face stickers, not adjacent layer stickers
-- **Fix**: Position-based filtering includes all stickers in the rotating layer (face + 4 adjacent edges)
-
-### 5. Sticker position drift after animations
-- **Symptom**: After several animations, wrong stickers selected for subsequent moves
-- **Cause**: `attach()` reparenting accumulated position errors
-- **Fix**: Added `resetPositions()` method that resets ALL stickers to canonical positions after each animation
-
-### 6. Rotation pivot at origin (stickers flying off)
-- **Symptom**: Stickers orbiting around wrong point during face rotation
-- **Cause**: Temp group at (0,0,0) but face rotations should pivot around face center (e.g., R on 4x4 at x=2)
-- **Fix**: `pivotMap` positions temp group at face center: `{R: [half,0,0], L: [-half,0,0], ...}`
-
-### 7. Whole-cube and slice moves not animated
-- **Symptom**: x/y/z and M/E/S moves snapped without animation
-- **Cause**: `_getAffectedStickers` returned 0 stickers for these move types
-- **Fix**: Added x/y/z (all stickers) and M/E/S (middle layer) to `_getAffectedStickers` + pivot map
-
-### 8. Camera reset keys (C, Ctrl+C, Alt+C) not working
-- **Symptom**: No way to reset camera to initial view
-- **Cause**: Camera is client-side OrbitControls but keys were only sent to server
-- **Fix**: Added `OrbitControls.reset()` method + intercept Alt+C/Ctrl+C in `_bindKeyboard()` client-side
-
----
+1. Body mesh too large (replaced ExtrudeGeometry with BoxGeometry)
+2. D face stickers placed on U face (fixed normal calculation)
+3. Sticker edge overlap (switched to flat ShapeGeometry)
+4. Only face surface rotated (added position-based layer selection)
+5. Sticker position drift (added resetPositions after each animation)
+6. Rotation pivot at origin (added pivotMap for face centers)
+7. Whole-cube/slice not animated (added x/y/z and M/E/S to affected stickers)
+8. Camera reset keys not working (added client-side Alt+C/Ctrl+C handling)
 
 ## Bugs Fixed in Session 4
 
-### 9. Row mapping inverted (colors vertically flipped per face)
-- **Symptom**: After moves, sticker colors appeared on wrong vertical positions per face. User saw "D rotated after U move", "B rotated after F move"
-- **Root cause**: Server sends row 0 = bottom, but client placed row 0 at top
-- **Where**: `build()` line ~146 and `resetPositions()` line ~231
-- **Fix**: Changed `cy = ((size-1-row) + 0.5) * cellSize - half` to `cy = (row + 0.5) * cellSize - half` in both methods. Updated comment to "row 0 is bottom (server convention)"
+### 9. Row mapping inverted
+- Server row 0 = bottom, client placed row 0 at top
+- Fix: `cy = (row + 0.5) * cellSize - half` (both build and resetPositions)
 
 ### 10. Animation rotation direction wrong for x/z-axis faces
-- **Symptom**: R did R', Shift+R did R, F/B/L all rotated in wrong direction
-- **Root cause**: In `_getRotationAxis()`, the angle sign was wrong for R, L, F, B, M, S, x, z faces. U, D, E, y were correct.
-- **Math**: R CW = -π/2 around x (top→back), but code gave +π/2 (top→front = R'). Similar issue for F CW = -π/2 around z but code gave +π/2.
-- **Fix**: Swapped `angle`/`-angle` for all x-axis and z-axis entries in the face-to-rotation map. Added convention comments.
-- **Verification**: Traced rotation matrices for all 6 faces + 3 slices + 3 whole-cube against standard Rubik's notation.
+- R, L, F, B, M, S, x, z all had inverted angles
+- Fix: Swapped angle/-angle for x-axis and z-axis entries in rotation map
 
-## KNOWN REMAINING BUGS
+### 11. Animation state ordering (stickers snap back after animation)
+- Server sent animation_start BEFORE model change → client had pre-move state
+- Fix: Apply model change FIRST, then embed post-move state in animation_start message
 
-### Bug A: WideFaceAlg/DoubleLayerAlg moves not animated
-- **Status**: Known, low priority
-- **Symptom**: Wide moves (face name "[") snap without animation
-- **Where**: `_getAffectedStickers()` doesn't handle these move types
-- **Fix needed**: Add wide move support (select multiple layers)
+### 12. Browser shortcuts captured (Ctrl+R, F5, F12)
+- Fix: Early return in _bindKeyboard for browser shortcuts
 
-### Bug B: Speed slider change during solve may cause stuck state
-- **Status**: User reported, needs investigation
-- **Symptom**: Changing speed during solve caused "stuck, no rotation"
-- **Where**: Speed change sends `set_speed` to server, server updates animation duration. Client-side animation duration may not update for queued animations.
+### 13. Y-axis rotation direction (U, D, E, y)
+- Swapped y-axis signs: U: angle, D: -angle, E: -angle, y: angle
+- User confirmed U direction now correct
 
-### Bug C: Unknown additional bugs
-- **Status**: User says "there are many other bugs" — needs testing session
-- **Likely areas to investigate**:
-  1. Animation sync issues (client animation queue vs server state)
-  2. Sticker color mapping per face (see Bug A above)
-  3. Edge cases with different cube sizes (2x2, 5x5, etc.)
-  4. Keyboard shortcuts that don't work or behave differently from pyglet2
-  5. UI controls (sliders, buttons) edge cases
+### 14. X/Y/Z face name case mismatch (NO ANIMATION for x/y/z)
+- Server's `str(WholeCubeAlg)` returns uppercase "X"/"Y"/"Z"
+- Client rotation map uses lowercase "x"/"y"/"z"
+- Fix: Added X→x, Y→y, Z→z mapping in `_alg_to_face_name`
+
+### 15. Sliced alg face name extraction ("[2:2]M" → "[" instead of "M")
+- `str(Algs.M[2])` = "[2:2]M", first char is "["
+- Fix: Changed `_alg_to_face_name` to search for face letter in string instead of just first char
 
 ---
 
-## Key Code Sections in cube.js
+## CURRENT STATUS (Session 5)
 
-### FACE_DEFS (line ~26)
-```javascript
-const FACE_DEFS = {
-    U: { axis: 'y', sign: +1, right: [1, 0, 0], up: [0, 0, -1] },
-    D: { axis: 'y', sign: -1, right: [1, 0, 0], up: [0, 0,  1] },
-    F: { axis: 'z', sign: +1, right: [1, 0, 0], up: [0, 1,  0] },
-    B: { axis: 'z', sign: -1, right: [-1, 0, 0], up: [0, 1,  0] },
-    R: { axis: 'x', sign: +1, right: [0, 0, -1], up: [0, 1,  0] },
-    L: { axis: 'x', sign: -1, right: [0, 0,  1], up: [0, 1,  0] },
-};
-```
+### Working ✅
+- R, L, F, B, M, S face rotations (correct direction + animation)
+- U, D, E rotations (correct direction, user confirmed)
+- Cube state correctly updates after all moves
+- Row mapping correct (bottom = row 0)
+- Browser shortcuts (F5, Ctrl+R, F12) work
+- Animation state ordering (post-move state embedded)
 
-### Constants (line ~19)
-```javascript
-const STICKER_GAP = 0.10;
-const CORNER_RADIUS = 0.10;
-const BODY_COLOR = 0x1e1e1e;
-const BG_COLOR = 0x2a2a2a;
-```
+### In Progress / Needs Testing 🔄
+- **x/y/z whole-cube animation** — BOTH server + client-side fix applied, needs browser refresh + testing
+  - Root cause: `str(WholeCubeAlg)` returns uppercase "X"/"Y"/"Z", client map uses lowercase
+  - Server fix: `_alg_to_face_name` maps X→x, Y→y, Z→z (may still be cached in .pyc)
+  - Client fix: `_processNext()` normalizes face name before lookup (belt-and-suspenders)
+- **Sliced slice animation** (M[2], E[2] on 4x4) — BOTH server + client-side fix applied, needs testing
+  - Root cause: `str(Algs.M[2])` = "[2:2]M", first char is "[" not "M"
+  - Server fix: `_alg_to_face_name` scans for face letter instead of first char
+  - Client fix: `_processNext()` scans multi-char face names for known letters
 
-### CubeModel class (~line 68)
-- `build(size)` — creates body mesh + all sticker meshes
-- `updateFaceColors(faceName, colors)` — updates sticker material colors from server
-- `updateFromState(state)` — calls updateFaceColors for each face
-- `resetPositions()` — resets all stickers to canonical positions (undo reparenting drift)
-
-### AnimationQueue class (~line 265)
-- `enqueue(face, direction, durationMs, state)` — add animation to queue
-- `_processNext()` — start next animation (reparent stickers to temp group, animate rotation)
-- `_finishCurrent()` — complete animation (reparent back, apply state, resetPositions)
-- `_getAffectedStickers(face, slices)` — position-based layer selection
-- `flush()` / `skipAll()` — skip remaining animations
-
-### OrbitControls class (~line 525)
-- Custom orbit controls (not THREE.OrbitControls)
-- `spherical` coords: radius=8, phi=π/4, theta=π/6
-- `reset()` — restore default angles and clear pan offset
-- `setForCubeSize(size)` — adjust distance for cube size
-
-### CubeClient class (~line 640)
-- Main app class
-- Manages WebSocket connection, message handling, UI bindings
-- `_bindKeyboard()` — intercepts Alt+C/Ctrl+C for camera reset, sends all keys to server
+### Known Remaining Bugs ❌
+- **Speed slider change → stuck** (bug #2 in issues file)
+- **Orange displays as yellow** (bug #17 — color mapping issue)
+- **Mouse controls** — only orbits, doesn't rotate faces (bug #3)
+- **e.keyCode deprecated** (bug #19 — should use e.code)
+- **WideFaceAlg/DoubleLayerAlg** — may not animate properly
 
 ---
 
-## Server-Side Key Components
+## Key Code Sections
 
-### WebglAnimationManager.py
-- Converts `AnimationAbleAlg` moves to `animation_start` messages
-- `_alg_to_animation_data()` extracts face name + direction from algorithm object
-- Sends `cube_state` after each move completes (model already updated)
-- Handles: FaceAlgBase, WholeCubeAlg, SliceAlgBase (M/E/S), WideFaceAlg, DoubleLayerAlg
+### _getRotationAxis map (cube.js ~line 434)
+```
+R: angle, L: -angle     (x-axis)
+U: angle, D: -angle     (y-axis)
+F: angle, B: -angle     (z-axis)
+M: -angle (follows L), E: -angle (follows D), S: angle (follows F)
+x: angle, y: angle, z: angle
+```
+Where angle = -π/2 for CW (direction=1), +π/2 for CCW (direction=-1)
 
-### ClientSession.py
-- `_alg_to_face_name()` maps alg strings to face names (R/L/U/D/F/B/M/E/S/x/y/z)
-- `send_animation_start(face, direction, duration_ms)` — sends to client
-- `_handle_key(symbol, modifiers)` — uses same `lookup_command()` as pyglet2
-- `_js_keycode_to_symbol()` in WebglEventLoop — converts JS keyCodes to abstract Keys
-
-### CubeStateSerializer.py
-- Row 0 = bottom, row N-1 = top
-- Handles corners, edges, centers for any NxN
-- Returns flat list of [r,g,b] per face in row-major order
+### _alg_to_face_name (ClientSession.py)
+- Searches string for first known face letter (handles "[2:2]M" format)
+- Maps X→x, Y→y, Z→z (uppercase WholeCubeAlg names)
 
 ---
 
@@ -237,13 +172,3 @@ python -m cube.main_webgl          # Start server
 python -m cube.main_webgl --cube-size 3   # Start with 3x3
 ```
 Open http://localhost:8766 in browser.
-
-## Pre-Commit Checklist
-1. Fix all remaining bugs
-2. Run: `python -m ruff check src/cube`
-3. Run: `python -m mypy -p cube`
-4. Run: `python -m pyright src/cube`
-5. Run: `CUBE_QUIET_ALL=1 python -m pytest tests/ -v --ignore=tests/gui -m "not slow"`
-6. Run: `CUBE_QUIET_ALL=1 python -m pytest tests/gui -v --speed-up 5`
-7. Bump version if needed (currently 1.3.0)
-8. Get user approval before committing

@@ -544,16 +544,22 @@ class ClientSession:
 
     @staticmethod
     def _alg_to_face_name(alg: "Alg") -> str:
-        """Extract the face name from an algorithm string for animation."""
+        """Extract the face name from an algorithm string for animation.
+
+        Handles formats like: "R", "R'", "U2", "M", "[2:2]M", "[1:2]R", "X"
+        """
         s = str(alg).strip()
         if not s:
             return ""
-        # Algorithm string is like "R", "R'", "U2", "M", "E", etc.
-        first = s[0]
         face_map = {"R": "R", "L": "L", "U": "U", "D": "D", "F": "F", "B": "B",
                      "M": "M", "E": "E", "S": "S",
-                     "x": "x", "y": "y", "z": "z"}
-        return face_map.get(first, s[0])
+                     "x": "x", "y": "y", "z": "z",
+                     "X": "x", "Y": "y", "Z": "z"}
+        # Search for a known face letter in the string
+        for ch in s:
+            if ch in face_map:
+                return face_map[ch]
+        return ""
 
     # -- Solve --
 

@@ -343,7 +343,18 @@ class AnimationQueue {
         const { event, state } = this.queue.shift();
         this.pendingState = state;
 
-        const face = event.face;
+        // Normalize face name: server may send uppercase X/Y/Z or bracket-prefixed "[2:2]M"
+        let face = event.face;
+        const caseMap = {'X':'x', 'Y':'y', 'Z':'z'};
+        if (caseMap[face]) {
+            face = caseMap[face];
+        } else if (face && face.length > 1) {
+            // Handle sliced alg format like "[2:2]M" — scan for face letter
+            const known = 'RLUDFBMESxyz';
+            for (const ch of face) {
+                if (known.includes(ch)) { face = ch; break; }
+            }
+        }
         const duration = (event.duration_ms || 300) * speedMult;
         const direction = event.direction || 1;
 
@@ -434,17 +445,17 @@ class AnimationQueue {
         const map = {
             'R': { axis: new THREE.Vector3(1, 0, 0), angle: angle },
             'L': { axis: new THREE.Vector3(1, 0, 0), angle: -angle },
-            'U': { axis: new THREE.Vector3(0, 1, 0), angle: -angle },
-            'D': { axis: new THREE.Vector3(0, 1, 0), angle: angle },
+            'U': { axis: new THREE.Vector3(0, 1, 0), angle: angle },
+            'D': { axis: new THREE.Vector3(0, 1, 0), angle: -angle },
             'F': { axis: new THREE.Vector3(0, 0, 1), angle: angle },
             'B': { axis: new THREE.Vector3(0, 0, 1), angle: -angle },
             // Slice moves (M follows L, E follows D, S follows F)
             'M': { axis: new THREE.Vector3(1, 0, 0), angle: -angle },
-            'E': { axis: new THREE.Vector3(0, 1, 0), angle: angle },
+            'E': { axis: new THREE.Vector3(0, 1, 0), angle: -angle },
             'S': { axis: new THREE.Vector3(0, 0, 1), angle: angle },
             // Whole cube rotations (x follows R, y follows U, z follows F)
             'x': { axis: new THREE.Vector3(1, 0, 0), angle: angle },
-            'y': { axis: new THREE.Vector3(0, 1, 0), angle: -angle },
+            'y': { axis: new THREE.Vector3(0, 1, 0), angle: angle },
             'z': { axis: new THREE.Vector3(0, 0, 1), angle: angle },
         };
 
