@@ -741,8 +741,7 @@ class CubeClient {
             this.ws.onopen = () => {
                 this.connected = true;
                 this.reconnectAttempts = 0;
-                const versionSuffix = this.serverVersion ? ` v${this.serverVersion}` : '';
-                this.setStatus(`Connected${versionSuffix}`, 'connected');
+                this._updateStatusText();
 
                 this.send({ type: 'connected' });
                 this.send({
@@ -828,7 +827,13 @@ class CubeClient {
                 case 'version':
                     this.serverVersion = message.version;
                     if (this.connected) {
-                        this.setStatus(`Connected v${this.serverVersion}`, 'connected');
+                        this._updateStatusText();
+                    }
+                    break;
+                case 'client_count':
+                    this.clientCount = message.count;
+                    if (this.connected) {
+                        this._updateStatusText();
                     }
                     break;
                 case 'flush_queue':
@@ -844,6 +849,12 @@ class CubeClient {
         } catch (error) {
             console.error('Failed to parse message:', error);
         }
+    }
+
+    _updateStatusText() {
+        const versionSuffix = this.serverVersion ? ` v${this.serverVersion}` : '';
+        const countSuffix = this.clientCount ? ` #${this.clientCount}` : '';
+        this.setStatus(`Connected${versionSuffix}${countSuffix}`, 'connected');
     }
 
     setStatus(text, className) {

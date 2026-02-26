@@ -199,6 +199,9 @@ class ClientSession:
     def send_version(self) -> None:
         self._send(json.dumps({"type": "version", "version": get_version()}))
 
+    def send_client_count(self, count: int) -> None:
+        self._send(json.dumps({"type": "client_count", "count": count}))
+
     def send_speed(self) -> None:
         speed_index = self._app.vs.get_speed_index
         self._send(json.dumps({"type": "speed_update", "value": speed_index}))

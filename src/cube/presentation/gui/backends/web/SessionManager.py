@@ -63,6 +63,7 @@ class SessionManager:
             flush=True,
         )
         self._log_all_clients()
+        self._broadcast_client_count()
         return session
 
     def remove_session(self, ws: "WebSocketResponse") -> None:
@@ -82,6 +83,7 @@ class SessionManager:
             flush=True,
         )
         self._log_all_clients()
+        self._broadcast_client_count()
 
     def get_session(self, ws: "WebSocketResponse") -> ClientSession | None:
         """Look up session by WebSocket."""
@@ -94,6 +96,12 @@ class SessionManager:
     @property
     def all_sessions(self) -> list[ClientSession]:
         return list(self._sessions.values())
+
+    def _broadcast_client_count(self) -> None:
+        """Broadcast current client count to all connected sessions."""
+        count = self.session_count
+        for session in self.all_sessions:
+            session.send_client_count(count)
 
     def _log_all_clients(self) -> None:
         """Log the full client list to console."""
