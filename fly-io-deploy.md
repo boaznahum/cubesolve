@@ -49,8 +49,9 @@ its URL (`<app-name>.fly.dev`), so pick any name you want:
 fly apps create <app-name>
 
 # Examples:
-fly apps create cubesolve             # → cubesolve.fly.dev
+fly apps create cubesolve             # → cubesolve.fly.dev (web backend)
 fly apps create cubesolve-dev         # → cubesolve-dev.fly.dev
+fly apps create cubesolve-webgl       # → cubesolve-webgl.fly.dev (webgl backend)
 ```
 
 **Important — scale to 1 machine after first deploy:**
@@ -63,6 +64,7 @@ cause wrong session counts and lost state on reconnect. After the first
 ```bash
 fly scale count 1 --app cubesolve
 fly scale count 1 --app cubesolve-dev
+fly scale count 1 --app cubesolve-webgl
 ```
 
 List your existing apps:
@@ -80,11 +82,20 @@ fly apps destroy <app-name>
 Use `--app` to choose which app to deploy to:
 
 ```bash
+# Web backend (server-side rendering, Dockerfile + fly.toml)
 fly deploy --app cubesolve        # deploy to stable
 fly deploy --app cubesolve-dev    # deploy to dev
+
+# WebGL backend (client-side rendering, Dockerfile.webgl + fly-webgl.toml)
+fly deploy --config fly-webgl.toml --app cubesolve-webgl
 ```
 
 **Note:** `fly deploy` without `--app` uses the `app` name from `fly.toml`.
+
+| Backend | Dockerfile | fly config | Default port | App name |
+|---------|-----------|------------|-------------|----------|
+| web | `Dockerfile` | `fly.toml` | 8765 | cubesolve |
+| webgl | `Dockerfile.webgl` | `fly-webgl.toml` | 8766 | cubesolve-webgl |
 
 **Automatic deploys:** Pushing to `web1` on GitHub auto-deploys to the
 **dev** app via GitHub Actions (`.github/workflows/fly-deploy.yml`).
@@ -125,10 +136,12 @@ cd ~ && fly open --app cubesolve-dev && cd -
 
 ### Configuration
 
-- `fly.toml` — Shared config (region, ports, auto-stop). Use `--app` to target any app.
-- `Dockerfile` — Container build instructions
+- `fly.toml` — Web backend config (port 8765, `Dockerfile`)
+- `fly-webgl.toml` — WebGL backend config (port 8766, `Dockerfile.webgl`)
+- `Dockerfile` — Web backend container (runs `cube.main_web`)
+- `Dockerfile.webgl` — WebGL backend container (runs `cube.main_webgl`)
 - The apps auto-stop after inactivity and auto-start on request (~2-5s cold start)
-- Region is set to `cdg` (Paris) — change `primary_region` in `fly.toml` if needed
+- Region is set to `cdg` (Paris) — change `primary_region` in the toml files if needed
 
 ### Costs
 - Free tier: 3 shared-cpu-1x VMs with 256MB RAM
