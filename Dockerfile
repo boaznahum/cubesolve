@@ -2,6 +2,9 @@ FROM python:3.14-slim
 
 WORKDIR /app
 
+# Ensure Python output appears in fly logs (no buffering in containers)
+ENV PYTHONUNBUFFERED=1
+
 # Install system deps for numpy/kociemba build
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc g++ && \

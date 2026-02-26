@@ -4,7 +4,7 @@
 #
 
 app = 'cubesolve'
-primary_region = 'tlv'
+primary_region = 'cdg'
 
 [build]
 

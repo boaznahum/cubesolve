@@ -34,6 +34,11 @@ Always-on deployment with a free tier (3 shared VMs).
 2. Sign up: `fly auth signup` (requires credit card but free tier exists)
 3. Login: `fly auth login`
 
+
+### Regions
+
+fly platform regions
+
 ### Creating Apps on Fly.io
 
 Before deploying, you must create the app on Fly.io. Each app name becomes
