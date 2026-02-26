@@ -123,30 +123,35 @@ Key difference from web/ backend:
 
 ---
 
-## KNOWN REMAINING BUGS (user reported "there are many other bugs")
+## Bugs Fixed in Session 4
 
-### Bug A: Row mapping inverted (colors vertically flipped per face)
-- **Status**: IDENTIFIED BUT NOT FIXED
-- **Symptom**: After solve, cube may show colors in wrong positions per face (flipped vertically)
-- **Root cause**: Server sends row 0 = bottom, but client places row 0 at top
-- **Where**: `cube.js` build loop line ~146: `cy = ((size-1-row) + 0.5) * cellSize - half`
-- **Fix needed**: Change to `cy = (row + 0.5) * cellSize - half` (row 0 = bottom)
-- **Also update**: `resetPositions()` method uses the same formula — must match
-- **Also update**: Comment on line ~144: change "row 0 is top" to "row 0 is bottom"
-- **Note**: For a SOLVED cube this bug is invisible (all same color per face), but for scrambled/mid-solve it shows wrong sticker positions
+### 9. Row mapping inverted (colors vertically flipped per face)
+- **Symptom**: After moves, sticker colors appeared on wrong vertical positions per face. User saw "D rotated after U move", "B rotated after F move"
+- **Root cause**: Server sends row 0 = bottom, but client placed row 0 at top
+- **Where**: `build()` line ~146 and `resetPositions()` line ~231
+- **Fix**: Changed `cy = ((size-1-row) + 0.5) * cellSize - half` to `cy = (row + 0.5) * cellSize - half` in both methods. Updated comment to "row 0 is bottom (server convention)"
 
-### Bug B: WideFaceAlg/DoubleLayerAlg moves not animated
+### 10. Animation rotation direction wrong for x/z-axis faces
+- **Symptom**: R did R', Shift+R did R, F/B/L all rotated in wrong direction
+- **Root cause**: In `_getRotationAxis()`, the angle sign was wrong for R, L, F, B, M, S, x, z faces. U, D, E, y were correct.
+- **Math**: R CW = -π/2 around x (top→back), but code gave +π/2 (top→front = R'). Similar issue for F CW = -π/2 around z but code gave +π/2.
+- **Fix**: Swapped `angle`/`-angle` for all x-axis and z-axis entries in the face-to-rotation map. Added convention comments.
+- **Verification**: Traced rotation matrices for all 6 faces + 3 slices + 3 whole-cube against standard Rubik's notation.
+
+## KNOWN REMAINING BUGS
+
+### Bug A: WideFaceAlg/DoubleLayerAlg moves not animated
 - **Status**: Known, low priority
 - **Symptom**: Wide moves (face name "[") snap without animation
 - **Where**: `_getAffectedStickers()` doesn't handle these move types
 - **Fix needed**: Add wide move support (select multiple layers)
 
-### Bug C: Speed slider change during solve may cause stuck state
+### Bug B: Speed slider change during solve may cause stuck state
 - **Status**: User reported, needs investigation
 - **Symptom**: Changing speed during solve caused "stuck, no rotation"
 - **Where**: Speed change sends `set_speed` to server, server updates animation duration. Client-side animation duration may not update for queued animations.
 
-### Bug D: Unknown additional bugs
+### Bug C: Unknown additional bugs
 - **Status**: User says "there are many other bugs" — needs testing session
 - **Likely areas to investigate**:
   1. Animation sync issues (client animation queue vs server state)

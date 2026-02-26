@@ -141,9 +141,9 @@ class CubeModel {
                     const mesh = new THREE.Mesh(stickerGeo, mat);
 
                     // Position: face surface + offset for row/col
-                    // Grid: row 0 is top (server convention), col 0 is left
+                    // Grid: row 0 is bottom (server convention), col 0 is left
                     const cx = (col + 0.5) * this.cellSize - half;
-                    const cy = ((size - 1 - row) + 0.5) * this.cellSize - half;
+                    const cy = (row + 0.5) * this.cellSize - half;
 
                     // Place on face surface, slightly above body
                     const STICKER_LIFT = 0.005;
@@ -228,7 +228,7 @@ class CubeModel {
                 const col = mesh.userData.col;
 
                 const cx = (col + 0.5) * this.cellSize - half;
-                const cy = ((size - 1 - row) + 0.5) * this.cellSize - half;
+                const cy = (row + 0.5) * this.cellSize - half;
 
                 const pos = new THREE.Vector3();
                 pos.addScaledVector(right, cx);
@@ -427,21 +427,25 @@ class AnimationQueue {
         }
 
         // Map face to rotation axis
+        // Convention: CW when looking at face from outside the cube
+        // x-axis: R CW = -π/2, L CW = +π/2
+        // y-axis: U CW = +π/2, D CW = -π/2
+        // z-axis: F CW = -π/2, B CW = +π/2
         const map = {
-            'R': { axis: new THREE.Vector3(1, 0, 0), angle: -angle },
-            'L': { axis: new THREE.Vector3(1, 0, 0), angle: angle },
+            'R': { axis: new THREE.Vector3(1, 0, 0), angle: angle },
+            'L': { axis: new THREE.Vector3(1, 0, 0), angle: -angle },
             'U': { axis: new THREE.Vector3(0, 1, 0), angle: -angle },
             'D': { axis: new THREE.Vector3(0, 1, 0), angle: angle },
-            'F': { axis: new THREE.Vector3(0, 0, 1), angle: -angle },
-            'B': { axis: new THREE.Vector3(0, 0, 1), angle: angle },
-            // Slice moves
-            'M': { axis: new THREE.Vector3(1, 0, 0), angle: angle },
+            'F': { axis: new THREE.Vector3(0, 0, 1), angle: angle },
+            'B': { axis: new THREE.Vector3(0, 0, 1), angle: -angle },
+            // Slice moves (M follows L, E follows D, S follows F)
+            'M': { axis: new THREE.Vector3(1, 0, 0), angle: -angle },
             'E': { axis: new THREE.Vector3(0, 1, 0), angle: angle },
-            'S': { axis: new THREE.Vector3(0, 0, 1), angle: -angle },
-            // Whole cube rotations
-            'x': { axis: new THREE.Vector3(1, 0, 0), angle: -angle },
+            'S': { axis: new THREE.Vector3(0, 0, 1), angle: angle },
+            // Whole cube rotations (x follows R, y follows U, z follows F)
+            'x': { axis: new THREE.Vector3(1, 0, 0), angle: angle },
             'y': { axis: new THREE.Vector3(0, 1, 0), angle: -angle },
-            'z': { axis: new THREE.Vector3(0, 0, 1), angle: -angle },
+            'z': { axis: new THREE.Vector3(0, 0, 1), angle: angle },
         };
 
         return map[face] || null;
@@ -747,8 +751,11 @@ class CubeClient {
                 break;
 
             case 'animation_start':
-                if (this.latestState) {
-                    this.animQueue.enqueue(msg, this.latestState);
+                // Use embedded post-move state if available, fall back to latestState
+                const animState = msg.state || this.latestState;
+                if (animState) {
+                    this.latestState = animState;
+                    this.animQueue.enqueue(msg, animState);
                 }
                 break;
 
@@ -939,10 +946,12 @@ class CubeClient {
                 key: e.key,
             });
 
-            // Prevent default for most keys (except F5, F12 for dev tools)
-            if (e.keyCode !== 116 && e.keyCode !== 123) {
-                e.preventDefault();
-            }
+            // Allow browser shortcuts: F5 (refresh), F12 (dev tools), Ctrl+R (refresh),
+            // Ctrl+Shift+I (dev tools), Ctrl+Shift+J (console)
+            if (e.keyCode === 116 || e.keyCode === 123) return;  // F5, F12
+            if (e.ctrlKey && (e.key === 'r' || e.key === 'R')) return;  // Ctrl+R
+            if (e.ctrlKey && e.shiftKey && (e.key === 'i' || e.key === 'I' || e.key === 'j' || e.key === 'J')) return;
+            e.preventDefault();
         });
     }
 }

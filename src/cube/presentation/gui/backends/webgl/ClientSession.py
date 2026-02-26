@@ -161,7 +161,12 @@ class ClientSession:
         self._send(json.dumps(state))
 
     def send_animation_start(self, alg: "Alg", duration_ms: int) -> None:
-        """Send animation start event to the client."""
+        """Send animation start event with post-move state embedded.
+
+        The model change has already been applied before this is called,
+        so extract_cube_state returns the post-move state. This ensures the
+        client applies the correct final state when the animation completes.
+        """
         from cube.domain import algs as alg_types
 
         face_name = ""
@@ -178,6 +183,9 @@ class ClientSession:
             elif n % 4 == 2:
                 direction = 2  # 180 degrees
 
+        # Embed post-move state so the client has correct colors at animation end
+        state = extract_cube_state(self._app.cube)
+
         self._send(json.dumps({
             "type": "animation_start",
             "face": face_name,
@@ -185,6 +193,7 @@ class ClientSession:
             "slices": slices,
             "duration_ms": duration_ms,
             "alg": str(alg),
+            "state": state,
         }))
 
     def send_animation_stop(self) -> None:

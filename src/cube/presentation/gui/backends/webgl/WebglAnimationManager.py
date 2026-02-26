@@ -132,16 +132,15 @@ class WebglAnimationManager(AnimationManager):
                     self._web_window.send_cube_state()
                 continue
 
-            # Animatable move: send animation event to client
+            # Animatable move: apply model change FIRST, then send animation
+            # event with post-move state embedded. This ensures the client
+            # has the correct final state when the animation completes.
             duration_ms = self._get_animation_duration_ms()
 
-            if self._web_window:
-                self._web_window.send_animation_start(alg, duration_ms)
-
-            # Apply model change immediately (server doesn't wait for client animation)
             self._apply_model_change(move)
 
             if self._web_window:
+                self._web_window.send_animation_start(alg, duration_ms)
                 self._web_window.send_cube_state()
                 self._web_window.send_text()
 
