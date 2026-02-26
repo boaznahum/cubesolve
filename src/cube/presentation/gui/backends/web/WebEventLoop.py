@@ -218,7 +218,8 @@ class WebEventLoop(EventLoop):
         site = web.TCPSite(runner, host, port, reuse_address=True)
         await site.start()
 
-        print(f"Web backend running at http://localhost:{port}", flush=True)
+        from cube.version import get_version
+        print(f"Web backend v{get_version()} running at http://localhost:{port}", flush=True)
         if not self._gui_test_mode:
             import socket
             try:

@@ -11,8 +11,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY pyproject.toml .
 COPY src/ src/
 
-# Install the package
-RUN pip install --no-cache-dir -e .
+# Upgrade pip, then install the package
+RUN python -m pip install --no-cache-dir -U pip && \
+    pip install --no-cache-dir -e .
 
 # Web backend port
 EXPOSE 8765

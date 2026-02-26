@@ -194,16 +194,52 @@
         /* ── Status overlay (bottom-left on canvas) ──── */
         #status-overlay {
             position: absolute;
-            bottom: 6px;
+            bottom: 8px;
             left: 12px;
             pointer-events: none;
             z-index: 10;
-            font-family: monospace;
-            font-size: 13px;
-            color: rgba(80, 200, 80, 0.95);
-            background: rgba(0, 0, 0, 0.55);
-            padding: 2px 6px;
-            border-radius: 3px;
+            display: flex;
+            gap: 6px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 0.2px;
+        }
+
+        #status-overlay .seg {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 10px;
+            border-radius: 100px;
+            background: rgba(0, 0, 0, 0.72);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            white-space: nowrap;
+        }
+
+        #status-overlay .seg-label {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+        }
+
+        #status-overlay .seg-value {
+            color: rgba(255, 255, 255, 0.95);
+            font-weight: 600;
+        }
+
+        #status-overlay .seg-solver .seg-label {
+            color: rgba(130, 190, 255, 0.6);
+        }
+
+        #status-overlay .seg-status .seg-label {
+            color: rgba(140, 220, 140, 0.6);
+        }
+
+        #status-overlay .seg-moves .seg-label {
+            color: rgba(255, 200, 120, 0.6);
         }
 
 

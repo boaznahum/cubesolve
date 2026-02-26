@@ -410,13 +410,15 @@ class CubeClient {
             }
         }
 
-        // Status text (bottom-left overlay on canvas)
+        // Status text (bottom-left overlay on canvas — pill segments)
         if (this.statusOverlay) {
-            const parts = [];
-            if (data.solver) parts.push(data.solver);
-            if (data.status) parts.push(data.status);
-            if (data.moves != null) parts.push(`#${data.moves}`);
-            this.statusOverlay.textContent = parts.join(' | ');
+            const seg = (cls, label, value) =>
+                `<span class="seg ${cls}"><span class="seg-label">${label}</span> <span class="seg-value">${this._escapeHtml(value)}</span></span>`;
+            const segments = [];
+            if (data.solver) segments.push(seg('seg-solver', 'Solver', data.solver));
+            if (data.status) segments.push(seg('seg-status', 'Stage', data.status));
+            if (data.moves) segments.push(seg('seg-moves', 'Moves', String(data.moves)));
+            this.statusOverlay.innerHTML = segments.join('');
         }
     }
 

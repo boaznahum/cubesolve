@@ -34,57 +34,80 @@ Always-on deployment with a free tier (3 shared VMs).
 2. Sign up: `fly auth signup` (requires credit card but free tier exists)
 3. Login: `fly auth login`
 
-### First-time Deploy
+### Apps
+
+There are two Fly.io apps deployed from the same branch (`web1`):
+
+| | Stable | Dev |
+|---|---|---|
+| **App name** | `cubesolve-boaz` | `cubesolve-boaz-dev` |
+| **URL** | `cubesolve-boaz.fly.dev` | `cubesolve-boaz-dev.fly.dev` |
+| **When to deploy** | Manually, when ready | Anytime (auto on push) |
+
+Both use the same `fly.toml` config. The `--app` flag selects which app to deploy to.
+
+### First-time Setup
+
 ```bash
 # From the project root (where fly.toml and Dockerfile are)
 
-# Create the app on Fly.io
-fly launch --no-deploy
+# Create the stable app
+fly apps create cubesolve-boaz
 
-# Deploy
-fly deploy
+# Create the dev app
+fly apps create cubesolve-boaz-dev
+
+# Deploy both
+fly deploy --app cubesolve-boaz
+fly deploy --app cubesolve-boaz-dev
 ```
 
-Fly.io will build the Docker image and deploy it. You'll get a URL like:
-```
-https://cubesolve.fly.dev
-```
+### Deploying After Code Changes
 
-### Subsequent Deploys
 ```bash
-# After code changes, just:
-fly deploy
+# Deploy to DEV (for testing)
+fly deploy --app cubesolve-boaz-dev
+
+# Deploy to STABLE (when you're happy with dev)
+fly deploy --app cubesolve-boaz
 ```
+
+**Automatic deploys:** Pushing to `web1` on GitHub auto-deploys to the
+**dev** app via GitHub Actions (`.github/workflows/fly-deploy.yml`).
+Stable is always manual.
 
 ### Useful Commands
+
 ```bash
-# Check status
-fly status
+# Check status (add --app to target specific app)
+fly status --app cubesolve-boaz
+fly status --app cubesolve-boaz-dev
 
 # View logs
-fly logs
+fly logs --app cubesolve-boaz-dev
 
 # Open in browser
-fly open
+fly open --app cubesolve-boaz
 
 # SSH into the running machine
-fly ssh console
+fly ssh console --app cubesolve-boaz-dev
 
-# Stop the app (save free tier hours)
-fly scale count 0
+# Stop an app (save free tier hours)
+fly scale count 0 --app cubesolve-boaz
 
-# Restart the app
-fly scale count 1
+# Restart an app
+fly scale count 1 --app cubesolve-boaz
 ```
 
 ### Configuration
 
-- `fly.toml` — Fly.io config (region, ports, auto-stop)
+- `fly.toml` — Shared config (region, ports, auto-stop). The `--app` flag overrides the app name.
 - `Dockerfile` — Container build instructions
-- The app auto-stops after inactivity and auto-starts on request (~2-5s cold start)
-- Region is set to `cdg` (Paris) — change in `fly.toml` if needed
+- The apps auto-stop after inactivity and auto-start on request (~2-5s cold start)
+- Region is set to `waw` (Warsaw)
 
 ### Costs
 - Free tier: 3 shared-cpu-1x VMs with 256MB RAM
-- The app uses `shared` CPU with 512MB RAM
+- Each app uses shared CPU with 1024MB RAM
 - Auto-stop means you only use resources when someone is connected
+- Both apps with auto-stop fit easily in the free tier
