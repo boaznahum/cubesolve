@@ -507,6 +507,9 @@ class WebAppWindow(AppWindow):
             if solution_alg.count() == 0:
                 return  # Already solved
 
+            # Optimize: merge consecutive same-face moves (e.g., R R R → R')
+            solution_alg = solution_alg.simplify()
+
             # Phase 2: Replay solution with animation (if enabled)
             app.op.play(solution_alg)
 
@@ -559,6 +562,7 @@ class WebAppWindow(AppWindow):
             "animation": anim_lines,
             "status": status,
             "solver": solver_name,
+            "moves": app.op.count,
         })
         self._event_loop.broadcast(msg)
 

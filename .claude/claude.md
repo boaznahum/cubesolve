@@ -249,6 +249,20 @@ The script uses Windows Text-to-Speech to say "Hey Friend! Claude needs your att
 
 ---
 
+## Version Management - MANDATORY
+
+**CRITICAL:** On ANY code change, increment the version number before committing.
+
+- **Version file:** `src/cube/resources/version.txt` (single line, e.g. `1.0`)
+- **Version reader:** `src/cube/version.py` → `get_version()`
+- **Displayed in:** Web backend status bar ("Connected v1.0")
+- **Rule:** Bump version in `version.txt` with every commit:
+  - Patch (`1.0` → `1.0.1`) for bugfixes
+  - Minor (`1.0` → `1.1`) for features
+  - Major (`1.0` → `2.0`) for breaking changes
+
+---
+
 ## Git Commit Policy
 
 **IMPORTANT**: Never commit changes without explicit user approval.

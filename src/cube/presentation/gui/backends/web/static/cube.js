@@ -415,6 +415,7 @@ class CubeClient {
             const parts = [];
             if (data.solver) parts.push(data.solver);
             if (data.status) parts.push(data.status);
+            if (data.moves != null) parts.push(`#${data.moves}`);
             this.statusOverlay.textContent = parts.join(' | ');
         }
     }
