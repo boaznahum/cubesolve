@@ -3,8 +3,8 @@
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'cubesolve-boaz'
-primary_region = 'arn'
+app = 'cubesolve'
+primary_region = 'tlv'
 
 [build]
 
@@ -16,7 +16,6 @@ primary_region = 'arn'
   min_machines_running = 0
 
 [[vm]]
-  memory = '1gb'
- # cpu_kind = 'shared'
+  cpu_kind = 'shared'
   cpus = 1
-  memory_mb = 512
+  memory = '512mb'
