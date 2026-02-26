@@ -51,6 +51,34 @@ Discovered while creating `part_names.py` to centralize `EdgeName`, `CornerName`
 
 ---
 
+### A4: NxNCenters — Complete slice swap with all source faces (Phase 2)
+
+**Category:** Solver / Optimization
+**Priority:** Medium
+**Status:** New
+
+**Summary:**
+`NxNCenters._swap_slice()` currently uses `Algs.M[c1:c2]` which is the M-slice axis.
+This only connects UP/FRONT/DOWN/BACK faces. For LEFT/RIGHT source faces, the complete
+slice swap would need S or E slice axes. Currently the code brings L/D/R faces to UP
+via `B[1:n]` rotations before doing slice swaps.
+
+**Phase 1 (done):** Commutator/block path iterates all source faces directly.
+Complete slices still use bring-to-UP but skip empty faces.
+
+**Phase 2 (this TODO):** Use `Face2FaceTranslator` to find the correct slice axis
+per source face, enabling complete slice swaps from any source face without bring-to-UP.
+
+**Files:**
+- `src/cube/domain/solver/common/big_cube/NxNCenters.py` — `_swap_slice()`, `__do_center()`
+- `src/cube/domain/geometric/Face2FaceTranslator.py` — axis mapping
+
+**Context:**
+Part of the centers-alg-align optimization. The bring-to-UP loop for complete slices
+wastes B[1:n] moves when a face has no matching colors (mitigated by skip-empty in Phase 1).
+
+---
+
 ### A3: Cube._reset() wiring now uses schematic loops (DONE)
 
 **Category:** Architecture / Refactoring
