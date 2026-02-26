@@ -46,18 +46,38 @@ There are two Fly.io apps deployed from the same branch (`web1`):
 
 Both use the same `fly.toml` config. The `--app` flag selects which app to deploy to.
 
-### First-time Setup
+### Creating Apps on Fly.io
+
+Before deploying, you must create the app on Fly.io. Each app name becomes
+its URL (`<app-name>.fly.dev`), so pick any name you want:
+
+```bash
+# Create an app (run once per app name)
+fly apps create <app-name>
+
+# Examples:
+fly apps create cubesolve-boaz        # → cubesolve-boaz.fly.dev
+fly apps create cubesolve-boaz-dev    # → cubesolve-boaz-dev.fly.dev
+fly apps create cubesolve             # → cubesolve.fly.dev
+fly apps create my-cube-demo          # → my-cube-demo.fly.dev
+```
+
+You can create as many apps as you want. To list your existing apps:
+```bash
+fly apps list
+```
+
+To delete an app you no longer need:
+```bash
+fly apps destroy <app-name>
+```
+
+### First-time Deploy
 
 ```bash
 # From the project root (where fly.toml and Dockerfile are)
 
-# Create the stable app
-fly apps create cubesolve-boaz
-
-# Create the dev app
-fly apps create cubesolve-boaz-dev
-
-# Deploy both
+# Deploy to a specific app (must be created first!)
 fly deploy --app cubesolve-boaz
 fly deploy --app cubesolve-boaz-dev
 ```
