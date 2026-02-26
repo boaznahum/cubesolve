@@ -323,20 +323,24 @@ class WebEventLoop(EventLoop):
 
     def send_to(self, ws: "WebSocketResponse", message: str) -> None:
         """Send a message to a specific WebSocket client (unicast)."""
-        if self._loop:
-            try:
-                self._loop.create_task(ws.send_str(message))
-            except Exception as e:
-                print(f"Send error: {e}", flush=True)
+        if self._loop and not ws.closed:
+            self._loop.create_task(self._safe_send(ws, message))
 
     def broadcast(self, message: str) -> None:
         """Send message to all connected clients (rare — e.g., server shutdown)."""
         if self._session_manager and self._loop:
             for session in self._session_manager.all_sessions:
-                try:
-                    self._loop.create_task(session._ws.send_str(message))
-                except Exception as e:
-                    print(f"Broadcast error: {e}", flush=True)
+                ws = session._ws
+                if not ws.closed:
+                    self._loop.create_task(self._safe_send(ws, message))
+
+    @staticmethod
+    async def _safe_send(ws: "WebSocketResponse", message: str) -> None:
+        """Send a WebSocket message, silently ignoring disconnected clients."""
+        try:
+            await ws.send_str(message)
+        except (ConnectionResetError, ConnectionError, OSError):
+            pass  # Client disconnected — nothing to do
 
     def _js_keycode_to_symbol(self, keycode: int, key: str) -> int:
         """Convert JavaScript keyCode to our Keys symbol.
