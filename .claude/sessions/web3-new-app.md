@@ -9,6 +9,7 @@ New `webgl/` backend where server sends **cube state** (face colors + animation 
 - `36ac2e05` — Add WebGL backend with client-side 3D cube rendering (session 1-3)
 - `be8b8809` — Webgl issues file
 - `fab89e2f` — Fix rotation directions, row mapping, animation state ordering (session 4)
+- `62d7b6dc` — Fix x/y/z whole-cube and sliced-slice animation (session 5)
 
 ## Files Created (all new)
 
@@ -119,31 +120,42 @@ Client sends:
 
 ---
 
-## CURRENT STATUS (Session 5)
+## CURRENT STATUS (End of Session 5)
 
 ### Working ✅
 - R, L, F, B, M, S face rotations (correct direction + animation)
 - U, D, E rotations (correct direction, user confirmed)
+- x, y, z whole-cube rotations (animation works, user confirmed "all works")
+- Sliced slice animation (M[2], E[2] etc.) — fix applied (client+server normalization)
 - Cube state correctly updates after all moves
 - Row mapping correct (bottom = row 0)
 - Browser shortcuts (F5, Ctrl+R, F12) work
 - Animation state ordering (post-move state embedded)
 
-### In Progress / Needs Testing 🔄
-- **x/y/z whole-cube animation** — BOTH server + client-side fix applied, needs browser refresh + testing
-  - Root cause: `str(WholeCubeAlg)` returns uppercase "X"/"Y"/"Z", client map uses lowercase
-  - Server fix: `_alg_to_face_name` maps X→x, Y→y, Z→z (may still be cached in .pyc)
-  - Client fix: `_processNext()` normalizes face name before lookup (belt-and-suspenders)
-- **Sliced slice animation** (M[2], E[2] on 4x4) — BOTH server + client-side fix applied, needs testing
-  - Root cause: `str(Algs.M[2])` = "[2:2]M", first char is "[" not "M"
-  - Server fix: `_alg_to_face_name` scans for face letter instead of first char
-  - Client fix: `_processNext()` scans multi-char face names for known letters
+### Next Bugs to Fix (Session 6) ❌
 
-### Known Remaining Bugs ❌
-- **Speed slider change → stuck** (bug #2 in issues file)
-- **Orange displays as yellow** (bug #17 — color mapping issue)
-- **Mouse controls** — only orbits, doesn't rotate faces (bug #3)
-- **e.keyCode deprecated** (bug #19 — should use e.code)
+#### 16. Gray stickers during rotation animation (INVESTIGATED, NOT FIXED)
+- **Symptom:** During rotation, some stickers appear gray/transparent — you "see into the cube"
+- **Worse on whole-cube rotations** (x/y/z) because all stickers rotate
+- **Root cause:** Sticker material uses default `side: THREE.FrontSide` (cube.js line ~136-140)
+  - Only front face of mesh is rendered
+  - During rotation, stickers facing away from camera become invisible
+  - Dark cube body shows through → appears gray
+- **Fix:** Add `side: THREE.DoubleSide` to sticker MeshStandardMaterial
+- **Location:** `cube.js` line ~136: `new THREE.MeshStandardMaterial({...})`
+
+#### 17. Speed slider change → stuck (INVESTIGATED, NOT FIXED)
+- **Symptom:** Changing speed slider causes app to stop responding
+- HTML slider: min=0, max=7, sends `set_speed` message to server
+- Server `_handle_speed()` (ClientSession.py:316) clamps to 0..7, sets `vs._speed`
+- `_get_animation_duration_ms()` maps speed index to duration: [500,400,300,200,150,100,70,50]ms
+- Speed only affects NEXT move's timer delay (current timer already scheduled)
+- Need deeper investigation — may be race condition in async event loop or error in speed change path
+
+#### Other Known Bugs
+- **Orange displays as yellow** (color mapping issue)
+- **Mouse controls** — only orbits, doesn't rotate faces
+- **e.keyCode deprecated** — should use e.code
 - **WideFaceAlg/DoubleLayerAlg** — may not animate properly
 
 ---
