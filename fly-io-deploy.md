@@ -34,18 +34,6 @@ Always-on deployment with a free tier (3 shared VMs).
 2. Sign up: `fly auth signup` (requires credit card but free tier exists)
 3. Login: `fly auth login`
 
-### Apps
-
-There are two Fly.io apps deployed from the same branch (`web1`):
-
-| | Stable | Dev |
-|---|---|---|
-| **App name** | `cubesolve-boaz` | `cubesolve-boaz-dev` |
-| **URL** | `cubesolve-boaz.fly.dev` | `cubesolve-boaz-dev.fly.dev` |
-| **When to deploy** | Manually, when ready | Anytime (auto on push) |
-
-Both use the same `fly.toml` config. The `--app` flag selects which app to deploy to.
-
 ### Creating Apps on Fly.io
 
 Before deploying, you must create the app on Fly.io. Each app name becomes
@@ -59,55 +47,45 @@ fly apps create <app-name>
 fly apps create cubesolve-boaz        # → cubesolve-boaz.fly.dev
 fly apps create cubesolve-boaz-dev    # → cubesolve-boaz-dev.fly.dev
 fly apps create cubesolve             # → cubesolve.fly.dev
-fly apps create my-cube-demo          # → my-cube-demo.fly.dev
 ```
 
-You can create as many apps as you want. To list your existing apps:
+List your existing apps:
 ```bash
 fly apps list
 ```
 
-To delete an app you no longer need:
+Delete an app you no longer need:
 ```bash
 fly apps destroy <app-name>
 ```
 
-### First-time Deploy
+### Deploying
+
+Use `--app` to choose which app to deploy to:
 
 ```bash
-# From the project root (where fly.toml and Dockerfile are)
-
-# Deploy to a specific app (must be created first!)
-fly deploy --app cubesolve-boaz
-fly deploy --app cubesolve-boaz-dev
+fly deploy --app cubesolve-boaz        # deploy to stable
+fly deploy --app cubesolve-boaz-dev    # deploy to dev
 ```
 
-### Deploying After Code Changes
-
-```bash
-# Deploy to DEV (for testing)
-fly deploy --app cubesolve-boaz-dev
-
-# Deploy to STABLE (when you're happy with dev)
-fly deploy --app cubesolve-boaz
-```
+**Note:** `fly deploy` without `--app` uses the `app` name from `fly.toml`.
 
 **Automatic deploys:** Pushing to `web1` on GitHub auto-deploys to the
 **dev** app via GitHub Actions (`.github/workflows/fly-deploy.yml`).
-Stable is always manual.
 
 ### Useful Commands
 
+All commands use `--app` to target a specific app (see [known bug](#known-bug---app-ignored-when-flytoml-is-present) below):
+
 ```bash
-# Check status (add --app to target specific app)
-fly status --app cubesolve-boaz
+# Check status
 fly status --app cubesolve-boaz-dev
 
 # View logs
 fly logs --app cubesolve-boaz-dev
 
 # Open in browser
-fly open --app cubesolve-boaz
+fly open --app cubesolve-boaz-dev
 
 # SSH into the running machine
 fly ssh console --app cubesolve-boaz-dev
@@ -119,15 +97,23 @@ fly scale count 0 --app cubesolve-boaz
 fly scale count 1 --app cubesolve-boaz
 ```
 
+### Known Bug: `--app` ignored when `fly.toml` is present
+
+Some `fly` commands ignore `--app` when run from a directory containing `fly.toml` —
+they use the `app` name from the file instead. If this happens, just `cd` to a
+different directory first:
+
+```bash
+cd ~ && fly open --app cubesolve-boaz-dev && cd -
+```
+
 ### Configuration
 
-- `fly.toml` — Shared config (region, ports, auto-stop). The `--app` flag overrides the app name.
+- `fly.toml` — Shared config (region, ports, auto-stop). Use `--app` to target any app.
 - `Dockerfile` — Container build instructions
 - The apps auto-stop after inactivity and auto-start on request (~2-5s cold start)
-- Region is set to `waw` (Warsaw)
+- Region is set to `arn` (Stockholm)
 
 ### Costs
 - Free tier: 3 shared-cpu-1x VMs with 256MB RAM
-- Each app uses shared CPU with 1024MB RAM
 - Auto-stop means you only use resources when someone is connected
-- Both apps with auto-stop fit easily in the free tier

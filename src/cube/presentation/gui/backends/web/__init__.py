@@ -4,11 +4,15 @@ Web backend for GUI abstraction layer.
 This backend renders the cube in a web browser using WebGL2,
 with Python server communicating via WebSocket.
 
+Each browser connection gets its own independent cube session
+via ClientSession, managed by SessionManager.
+
 Benefits:
 - Cross-platform (any modern browser)
 - No local GUI dependencies
 - Remote viewing capability
 - Modern WebGL2 rendering with depth buffer
+- Multi-client: each browser tab has its own cube
 
 Usage:
     from cube.presentation.gui import BackendRegistry
@@ -17,6 +21,8 @@ Usage:
 
 from typing import TYPE_CHECKING
 
+from cube.presentation.gui.backends.web.ClientSession import ClientSession
+from cube.presentation.gui.backends.web.SessionManager import SessionManager
 from cube.presentation.gui.backends.web.WebAppWindow import WebAppWindow
 from cube.presentation.gui.backends.web.WebEventLoop import WebEventLoop
 from cube.presentation.gui.backends.web.WebRenderer import WebRenderer
@@ -25,6 +31,8 @@ if TYPE_CHECKING:
     from cube.presentation.gui.GUIBackendFactory import GUIBackendFactory
 
 __all__ = [
+    "ClientSession",
+    "SessionManager",
     "WebRenderer",
     "WebEventLoop",
     "WebAppWindow",

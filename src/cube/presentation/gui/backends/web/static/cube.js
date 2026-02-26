@@ -19,6 +19,7 @@ class CubeClient {
         this.ws = null;
         this.connected = false;
         this.serverVersion = null;
+        this.sessionId = null;
 
         // Reconnect tracking
         this.reconnectAttempts = 0;
@@ -811,6 +812,10 @@ class CubeClient {
                     if (this.connected) {
                         this.setStatus(`Connected v${this.serverVersion}`, 'connected');
                     }
+                    break;
+                case 'session_id':
+                    this.sessionId = message.session_id;
+                    console.log(`Session ID: ${this.sessionId}`);
                     break;
                 default:
                     break;

@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from cube.application.state import ApplicationAndViewState
     from cube.domain.algs import SimpleAlg
     from cube.domain.model.Cube import Cube
-    from cube.presentation.gui.backends.web.WebAppWindow import WebAppWindow
+    from cube.presentation.gui.backends.web.ClientSession import ClientSession
 
 
 @dataclass
@@ -67,13 +67,13 @@ class WebAnimationManager(AnimationManager):
         super().__init__(vs)
         self._move_queue: deque[_QueuedMove] = deque()
         self._is_processing: bool = False
-        self._web_window: WebAppWindow | None = None
+        self._web_window: ClientSession | None = None
         self._operator: Operator = operator
         self._current_move: _QueuedMove | None = None
         self._animation_task: asyncio.Task[None] | None = None
 
-    def set_web_window(self, window: "WebAppWindow") -> None:
-        """Set the web window reference for triggering redraws."""
+    def set_web_window(self, window: "ClientSession") -> None:
+        """Set the client session reference for triggering redraws."""
         self._web_window = window
 
     def cancel_animation(self) -> None:

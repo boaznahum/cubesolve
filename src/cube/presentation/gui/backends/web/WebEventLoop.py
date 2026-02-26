@@ -2,6 +2,7 @@
 Web event loop implementation.
 
 Runs asyncio event loop with HTTP + WebSocket server for browser communication.
+Routes each WebSocket connection to its own ClientSession via SessionManager.
 """
 
 from __future__ import annotations
@@ -16,7 +17,9 @@ from typing import TYPE_CHECKING, Callable
 from cube.presentation.gui.protocols import EventLoop
 
 if TYPE_CHECKING:
-    pass
+    from aiohttp.web import WebSocketResponse
+
+    from cube.presentation.gui.backends.web.SessionManager import SessionManager
 
 
 class WebEventLoop(EventLoop):
@@ -24,6 +27,10 @@ class WebEventLoop(EventLoop):
 
     Serves static files and maintains WebSocket connections to browsers.
     Uses aiohttp for both HTTP and WebSocket on the same port.
+
+    Each WebSocket connection is routed to its own ClientSession via
+    SessionManager. The event loop no longer stores handler callbacks —
+    all message handling is delegated to individual sessions.
     """
 
     def __init__(self, port: int | None = None, gui_test_mode: bool = False):
@@ -31,7 +38,7 @@ class WebEventLoop(EventLoop):
         self._has_exit = False
         self._gui_test_mode = gui_test_mode
         self._loop: asyncio.AbstractEventLoop | None = None
-        self._clients: set = set()
+        self._session_manager: SessionManager | None = None
         self._scheduled: list[tuple[float, Callable[[float], None], float | None]] = []
         self._start_time = time.monotonic()
         self._explicit_port = port  # Store for lazy port resolution
@@ -41,29 +48,9 @@ class WebEventLoop(EventLoop):
         # Callbacks for call_soon
         self._pending_callbacks: list[Callable[[], None]] = []
 
-        # Key event handler (set by WebAppWindow)
-        self._key_handler: Callable[[int, int], None] | None = None
-
-        # Speed change handler (set by WebAppWindow)
-        self._speed_handler: Callable[[int], None] | None = None
-
-        # Command handler for toolbar buttons (set by WebAppWindow)
-        self._command_handler: Callable[[str], None] | None = None
-
-        # Size change handler (set by WebAppWindow)
-        self._size_handler: Callable[[int], None] | None = None
-
-        # Solver change handler (set by WebAppWindow)
-        self._solver_handler: Callable[[str], None] | None = None
-
-        # Client connected callback (for initial draw)
-        self._on_client_connected: Callable[[], None] | None = None
-
-            # Mouse handlers (set by WebAppWindow)
-        self._mouse_rotate_handler: Callable[[float, float], None] | None = None
-        self._mouse_pan_handler: Callable[[float, float], None] | None = None
-        # face_turn_handler(face, row, col, si, sx, sy, on_left_to_right, on_left_to_top)
-        self._face_turn_handler: Callable[[str, int, int, int, int, int, float, float], None] | None = None
+    def set_session_manager(self, manager: "SessionManager") -> None:
+        """Set the session manager for routing WebSocket connections."""
+        self._session_manager = manager
 
     @staticmethod
     def _find_free_port() -> int:
@@ -74,42 +61,6 @@ class WebEventLoop(EventLoop):
             s.listen(1)
             port = s.getsockname()[1]
         return port
-
-    def set_key_handler(self, handler: Callable[[int, int], None] | None) -> None:
-        """Set handler for key events (symbol, modifiers)."""
-        self._key_handler = handler
-
-    def set_speed_handler(self, handler: Callable[[int], None] | None) -> None:
-        """Set handler for speed changes from browser slider."""
-        self._speed_handler = handler
-
-    def set_command_handler(self, handler: Callable[[str], None] | None) -> None:
-        """Set handler for toolbar command buttons from browser."""
-        self._command_handler = handler
-
-    def set_size_handler(self, handler: Callable[[int], None] | None) -> None:
-        """Set handler for cube size changes from browser slider."""
-        self._size_handler = handler
-
-    def set_solver_handler(self, handler: Callable[[str], None] | None) -> None:
-        """Set handler for solver changes from browser dropdown."""
-        self._solver_handler = handler
-
-    def set_client_connected_handler(self, handler: Callable[[], None] | None) -> None:
-        """Set handler for client connection (for initial draw)."""
-        self._on_client_connected = handler
-
-    def set_mouse_rotate_handler(self, handler: Callable[[float, float], None] | None) -> None:
-        """Set handler for mouse orbit rotation (dx, dy in pixels)."""
-        self._mouse_rotate_handler = handler
-
-    def set_mouse_pan_handler(self, handler: Callable[[float, float], None] | None) -> None:
-        """Set handler for mouse pan (dx, dy in pixels)."""
-        self._mouse_pan_handler = handler
-
-    def set_face_turn_handler(self, handler: Callable[[str, int, int, int, int, int, float, float], None] | None) -> None:
-        """Set handler for mouse face turn (face, row, col, si, sx, sy, on_left_to_right, on_left_to_top)."""
-        self._face_turn_handler = handler
 
     @property
     def gui_test_mode(self) -> bool:
@@ -172,13 +123,13 @@ class WebEventLoop(EventLoop):
         app = web.Application()
         static_dir = Path(__file__).parent / "static"
 
-        # WebSocket handler
-        async def websocket_handler(request):
+        # WebSocket handler — routes each connection to its own ClientSession
+        async def websocket_handler(request: web.Request) -> web.WebSocketResponse:
             ws = web.WebSocketResponse()
             await ws.prepare(request)
 
-            self._clients.add(ws)
-            print(f"Client connected. Total clients: {len(self._clients)}", flush=True)
+            if self._session_manager:
+                await self._session_manager.create_session(ws, request)
 
             try:
                 async for msg in ws:
@@ -187,16 +138,16 @@ class WebEventLoop(EventLoop):
                     elif msg.type == web.WSMsgType.ERROR:
                         print(f"WebSocket error: {ws.exception()}", flush=True)
             finally:
-                self._clients.discard(ws)
-                print(f"Client disconnected. Total clients: {len(self._clients)}", flush=True)
+                if self._session_manager:
+                    self._session_manager.remove_session(ws)
 
             return ws
 
         # Static file handlers
-        async def index_handler(request):
+        async def index_handler(request: web.Request) -> web.StreamResponse:
             return web.FileResponse(static_dir / "index.html")
 
-        async def static_handler(request):
+        async def static_handler(request: web.Request) -> web.StreamResponse:
             filename = request.match_info.get('filename', 'index.html')
             filepath = static_dir / filename
             if filepath.exists():
@@ -236,6 +187,11 @@ class WebEventLoop(EventLoop):
         if not self._gui_test_mode:
             webbrowser.open(f"http://localhost:{port}")
 
+        # Start periodic client logging task
+        logging_task: asyncio.Task[None] | None = None
+        if not self._gui_test_mode:
+            logging_task = asyncio.create_task(self._log_clients_periodically())
+
         # Main loop
         try:
             while not self._has_exit:
@@ -243,71 +199,35 @@ class WebEventLoop(EventLoop):
                 await self._process_pending()
                 await asyncio.sleep(0.016)  # ~60fps
         finally:
+            if logging_task:
+                logging_task.cancel()
             await runner.cleanup()
 
-    async def _handle_message(self, websocket, message: str) -> None:
-        """Handle incoming message from browser."""
+    async def _handle_message(self, websocket: "WebSocketResponse", message: str) -> None:
+        """Handle incoming message — delegate to the session."""
+        if not self._session_manager:
+            return
+
+        session = self._session_manager.get_session(websocket)
+        if session is None:
+            return
+
         try:
             data = json.loads(message)
-            msg_type = data.get("type")
-
-            if msg_type == "connected":
-                print("Browser connected and ready", flush=True)
-                # Trigger initial draw now that browser is connected
-                if self._on_client_connected:
-                    self._on_client_connected()
-            elif msg_type == "key":
-                keycode = data.get("code", 0)
-                modifiers = data.get("modifiers", 0)
-                key_char = data.get("key", "")
-                symbol = self._js_keycode_to_symbol(keycode, key_char)
-                print(f"Key: '{key_char}' code={keycode} -> symbol={symbol} mod={modifiers}", flush=True)
-                if self._key_handler:
-                    self._key_handler(symbol, modifiers)
-                else:
-                    print("  Warning: No key handler set!", flush=True)
-            elif msg_type == "set_speed":
-                speed_value = data.get("value", 0)
-                if self._speed_handler:
-                    self._speed_handler(speed_value)
-            elif msg_type == "set_size":
-                size_value = data.get("value", 3)
-                if self._size_handler:
-                    self._size_handler(size_value)
-            elif msg_type == "set_solver":
-                solver_name = data.get("name", "")
-                if self._solver_handler and solver_name:
-                    self._solver_handler(solver_name)
-            elif msg_type == "command":
-                cmd_name = data.get("name", "")
-                if self._command_handler:
-                    self._command_handler(cmd_name)
-            elif msg_type == "mouse_rotate_view":
-                dx = data.get("dx", 0.0)
-                dy = data.get("dy", 0.0)
-                if self._mouse_rotate_handler:
-                    self._mouse_rotate_handler(dx, dy)
-            elif msg_type == "mouse_pan":
-                dx = data.get("dx", 0.0)
-                dy = data.get("dy", 0.0)
-                if self._mouse_pan_handler:
-                    self._mouse_pan_handler(dx, dy)
-            elif msg_type == "mouse_face_turn":
-                face = data.get("face", "")
-                row = data.get("row", 0)
-                col = data.get("col", 0)
-                si = data.get("si", -1)   # edge slice LTR index
-                sx = data.get("sx", -1)   # center sub-x
-                sy = data.get("sy", -1)   # center sub-y
-                on_ltr = data.get("on_left_to_right", 0.0)
-                on_ltt = data.get("on_left_to_top", 0.0)
-                if self._face_turn_handler:
-                    self._face_turn_handler(face, row, col, si, sx, sy, on_ltr, on_ltt)
-            elif msg_type == "resize":
-                print(f"Resize: {data}", flush=True)
-
+            session.handle_message(data)
         except json.JSONDecodeError:
             print(f"Invalid JSON: {message}", flush=True)
+
+    async def _log_clients_periodically(self) -> None:
+        """Log connected clients every 60 seconds."""
+        try:
+            while True:
+                await asyncio.sleep(60)
+                if self._session_manager and self._session_manager.session_count > 0:
+                    print(f"Connected clients: {self._session_manager.session_count}", flush=True)
+                    self._session_manager._log_all_clients()
+        except asyncio.CancelledError:
+            pass
 
     async def _process_scheduled(self) -> None:
         """Process scheduled callbacks."""
@@ -351,9 +271,12 @@ class WebEventLoop(EventLoop):
         print("Stopping event loop...", flush=True)
         self._has_exit = True
         # Close all WebSocket clients
-        if self._loop and self._clients:
-            for client in self._clients.copy():
-                asyncio.run_coroutine_threadsafe(client.close(), self._loop)
+        if self._loop and self._session_manager:
+            for session in self._session_manager.all_sessions:
+                try:
+                    asyncio.run_coroutine_threadsafe(session._ws.close(), self._loop)
+                except Exception:
+                    pass
 
     def step(self, timeout: float = 0.0) -> bool:
         """Process pending events (limited support in async context)."""
@@ -398,16 +321,20 @@ class WebEventLoop(EventLoop):
         """Wake up the event loop."""
         pass
 
+    def send_to(self, ws: "WebSocketResponse", message: str) -> None:
+        """Send a message to a specific WebSocket client (unicast)."""
+        if self._loop:
+            try:
+                self._loop.create_task(ws.send_str(message))
+            except Exception as e:
+                print(f"Send error: {e}", flush=True)
+
     def broadcast(self, message: str) -> None:
-        """Send message to all connected clients."""
-        if self._clients and self._loop:
-            for client in self._clients.copy():
+        """Send message to all connected clients (rare — e.g., server shutdown)."""
+        if self._session_manager and self._loop:
+            for session in self._session_manager.all_sessions:
                 try:
-                    # create_task is correct here — broadcast is called from
-                    # synchronous callbacks within the running event loop.
-                    # run_coroutine_threadsafe is for cross-thread use and adds
-                    # unnecessary overhead (self-pipe wakeup) when already in-loop.
-                    self._loop.create_task(client.send_str(message))
+                    self._loop.create_task(session._ws.send_str(message))
                 except Exception as e:
                     print(f"Broadcast error: {e}", flush=True)
 
