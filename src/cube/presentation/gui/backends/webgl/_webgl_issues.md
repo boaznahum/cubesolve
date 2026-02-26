@@ -4,11 +4,11 @@
 3. Face rotation:
    4. R ✅
    5. L ✅
-   6. U , U' wrong direction 
-   7. D rotate in owrong side, land in right position
+   6. U ✅ 
+   7. D ✅
    8. F ✅
    9. B ✅
-   10. E rotate on wrong direction land on the right one
+   10. E ✅
    11. M ✅
    12. S ✅
    13. X right durection no animation
@@ -18,3 +18,5 @@
 17. The orange is yellow
 18. Changing cube size, increase it view instead of fit it to current view ✅
 19. code: e.keyCode, is deprected
+20. Stop stop animation in the middle leaving face in undefined place, see pygelt2 how it handled correctly
+21. it ws playing you didnt capture it !!!

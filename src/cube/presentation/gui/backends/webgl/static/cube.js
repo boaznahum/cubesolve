@@ -53,15 +53,6 @@ function createRoundedRectShape(w, h, r) {
     return shape;
 }
 
-/**
- * Create a rounded box geometry for the cube body.
- * Uses a simple box slightly smaller than face size — the dark gaps
- * between stickers already expose the body color naturally.
- */
-function createBodyGeometry(size) {
-    return new THREE.BoxGeometry(size, size, size);
-}
-
 // ═══════════════════════════════════════════════════════════════════
 //  CUBE MODEL
 // ═══════════════════════════════════════════════════════════════════
@@ -75,7 +66,6 @@ class CubeModel {
         this.size = 3;
         this.cellSize = 1.0;
         this.stickers = {};  // {faceName: [meshes in row-major order]}
-        this.bodyMesh = null;
         this.faceGroups = {};
 
         this.build(3);
@@ -99,15 +89,8 @@ class CubeModel {
         const totalSize = size * this.cellSize;
         const half = totalSize / 2;
 
-        // Body mesh — dark box slightly smaller than sticker surface
-        const bodyGeo = createBodyGeometry(totalSize - 0.01);
-        const bodyMat = new THREE.MeshStandardMaterial({
-            color: BODY_COLOR,
-            roughness: 0.8,
-            metalness: 0.1,
-        });
-        this.bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
-        this.cubeGroup.add(this.bodyMesh);
+        // No body mesh — sticker extrusion sides provide the dark gap appearance,
+        // and removing the body avoids gray showing through during rotation animations.
 
         // Create stickers for each face — flat rounded rectangles
         const gap = STICKER_GAP * this.cellSize;
@@ -115,7 +98,20 @@ class CubeModel {
         const cornerR = CORNER_RADIUS * this.cellSize;
 
         const stickerShape = createRoundedRectShape(stickerSize, stickerSize, cornerR);
-        const stickerGeo = new THREE.ShapeGeometry(stickerShape);
+        // Extrude stickers inward to create "cubie" depth that fills gaps during rotation
+        const stickerDepth = this.cellSize * 0.45;
+        const stickerGeo = new THREE.ExtrudeGeometry(stickerShape, {
+            depth: stickerDepth,
+            bevelEnabled: false,
+        });
+
+        // Dark material for sticker sides/back (looks like cubie plastic)
+        const sideMat = new THREE.MeshStandardMaterial({
+            color: BODY_COLOR,
+            roughness: 0.8,
+            metalness: 0.1,
+            side: THREE.DoubleSide,
+        });
 
         for (const [faceName, def] of Object.entries(FACE_DEFS)) {
             const faceGroup = new THREE.Group();
@@ -133,24 +129,29 @@ class CubeModel {
 
             for (let row = 0; row < size; row++) {
                 for (let col = 0; col < size; col++) {
-                    const mat = new THREE.MeshStandardMaterial({
+                    const faceMat = new THREE.MeshStandardMaterial({
                         color: 0x888888,
                         roughness: 0.3,
                         metalness: 0.05,
+                        side: THREE.DoubleSide,
                     });
-                    const mesh = new THREE.Mesh(stickerGeo, mat);
+                    // Material array: [caps (front/back), sides]
+                    // ExtrudeGeometry group 0 = caps, group 1 = side walls
+                    const mesh = new THREE.Mesh(stickerGeo, [faceMat, sideMat]);
 
                     // Position: face surface + offset for row/col
                     // Grid: row 0 is bottom (server convention), col 0 is left
                     const cx = (col + 0.5) * this.cellSize - half;
                     const cy = (row + 0.5) * this.cellSize - half;
 
-                    // Place on face surface, slightly above body
+                    // Place sticker so the extruded back face sits on the cube surface.
+                    // ExtrudeGeometry goes from z=0 to z=depth along local Z (=normal).
+                    // Offset inward by depth so the outer cap is at the surface.
                     const STICKER_LIFT = 0.005;
                     const pos = new THREE.Vector3();
                     pos.addScaledVector(right, cx);
                     pos.addScaledVector(up, cy);
-                    pos.addScaledVector(normal, half + STICKER_LIFT);
+                    pos.addScaledVector(normal, half + STICKER_LIFT - stickerDepth);
                     mesh.position.copy(pos);
 
                     // Orient sticker: face outward along normal
@@ -184,7 +185,9 @@ class CubeModel {
 
         for (let i = 0; i < meshes.length && i < colors.length; i++) {
             const [r, g, b] = colors[i];
-            meshes[i].material.color.setRGB(r / 255, g / 255, b / 255);
+            // Material is either a single material or [faceMat, sideMat] array
+            const mat = Array.isArray(meshes[i].material) ? meshes[i].material[0] : meshes[i].material;
+            mat.color.setRGB(r / 255, g / 255, b / 255);
         }
     }
 
@@ -208,6 +211,7 @@ class CubeModel {
         const size = this.size;
         const half = size * this.cellSize / 2;
         const STICKER_LIFT = 0.005;
+        const stickerDepth = this.cellSize * 0.45;
 
         for (const [faceName, def] of Object.entries(FACE_DEFS)) {
             const right = new THREE.Vector3(...def.right);
@@ -233,7 +237,7 @@ class CubeModel {
                 const pos = new THREE.Vector3();
                 pos.addScaledVector(right, cx);
                 pos.addScaledVector(up, cy);
-                pos.addScaledVector(normal, half + STICKER_LIFT);
+                pos.addScaledVector(normal, half + STICKER_LIFT - stickerDepth);
                 mesh.position.copy(pos);
 
                 const mat4 = new THREE.Matrix4();

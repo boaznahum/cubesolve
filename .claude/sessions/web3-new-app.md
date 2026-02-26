@@ -134,23 +134,19 @@ Client sends:
 
 ### Next Bugs to Fix (Session 6) ❌
 
-#### 16. Gray stickers during rotation animation (INVESTIGATED, NOT FIXED)
+#### 16. Gray stickers during rotation animation — FIXED ✅
 - **Symptom:** During rotation, some stickers appear gray/transparent — you "see into the cube"
-- **Worse on whole-cube rotations** (x/y/z) because all stickers rotate
-- **Root cause:** Sticker material uses default `side: THREE.FrontSide` (cube.js line ~136-140)
-  - Only front face of mesh is rendered
-  - During rotation, stickers facing away from camera become invisible
-  - Dark cube body shows through → appears gray
-- **Fix:** Add `side: THREE.DoubleSide` to sticker MeshStandardMaterial
-- **Location:** `cube.js` line ~136: `new THREE.MeshStandardMaterial({...})`
+- **Root cause:** Sticker material used default `side: THREE.FrontSide` — back faces invisible
+- **Fix:** Added `side: THREE.DoubleSide` to sticker MeshStandardMaterial (cube.js line ~140)
+- **Verified:** No gray stickers during slow-speed solve animation
 
-#### 17. Speed slider change → stuck (INVESTIGATED, NOT FIXED)
-- **Symptom:** Changing speed slider causes app to stop responding
+#### 17. Speed slider change → stuck (COULD NOT REPRODUCE)
+- User reports slider gets stuck, but testing shows it works (click to change, even during animation)
 - HTML slider: min=0, max=7, sends `set_speed` message to server
 - Server `_handle_speed()` (ClientSession.py:316) clamps to 0..7, sets `vs._speed`
 - `_get_animation_duration_ms()` maps speed index to duration: [500,400,300,200,150,100,70,50]ms
 - Speed only affects NEXT move's timer delay (current timer already scheduled)
-- Need deeper investigation — may be race condition in async event loop or error in speed change path
+- May be intermittent or specific to dragging vs clicking — needs user feedback
 
 #### Other Known Bugs
 - **Orange displays as yellow** (color mapping issue)
