@@ -431,16 +431,65 @@ class ClientSession:
         # Client handles pan locally
         pass
 
+    # Face axes (matching client FACE_DEFS) — used for adjacent face lookup
+    _FACE_AXES: dict[str, dict[str, tuple[int, int, int]]] = {
+        'U': {'right': (1, 0, 0), 'up': (0, 0, -1)},
+        'D': {'right': (1, 0, 0), 'up': (0, 0, 1)},
+        'F': {'right': (1, 0, 0), 'up': (0, 1, 0)},
+        'B': {'right': (-1, 0, 0), 'up': (0, 1, 0)},
+        'R': {'right': (0, 0, -1), 'up': (0, 1, 0)},
+        'L': {'right': (0, 0, 1), 'up': (0, 1, 0)},
+    }
+
+    # Map axis-aligned unit vector to face name
+    _VEC_TO_FACE: dict[tuple[int, int, int], str] = {
+        (1, 0, 0): 'R', (-1, 0, 0): 'L',
+        (0, 1, 0): 'U', (0, -1, 0): 'D',
+        (0, 0, 1): 'F', (0, 0, -1): 'B',
+    }
+
+    @classmethod
+    def _get_adjacent_face_name(cls, face_name: str, position: str) -> str:
+        """Get the adjacent face in a direction relative to the given face.
+
+        position: 'top' | 'bottom' | 'left' | 'right'
+        """
+        axes = cls._FACE_AXES[face_name]
+        if position == 'top':
+            vec = axes['up']
+        elif position == 'bottom':
+            vec = tuple(-v for v in axes['up'])
+        elif position == 'right':
+            vec = axes['right']
+        elif position == 'left':
+            vec = tuple(-v for v in axes['right'])
+        else:
+            raise ValueError(f"Unknown position: {position}")
+        return cls._VEC_TO_FACE[vec]
+
     def _handle_mouse_face_turn(
         self, face_name: str, row: int, col: int,
         si: int, sx: int, sy: int,
         on_left_to_right: float, on_left_to_top: float,
     ) -> None:
+        """Handle mouse face turn with consistent row/column rotation rules.
+
+        Rules (same for ALL sticker types — corner, edge, center):
+          - Drag horizontal (along face right axis) → rotate the ROW
+          - Drag vertical   (along face up axis)    → rotate the COLUMN
+
+        Row mapping:  row 0 → bottom-adjacent face, row N-1 → top-adjacent face,
+                      inner row → horizontal slice (E-type)
+        Col mapping:  col 0 → left-adjacent face, col N-1 → right-adjacent face,
+                      inner col → vertical slice (M-type)
+        """
         from cube.domain.algs.Algs import Algs
-        from cube.domain.model import Corner, Edge, Center
         from cube.domain.model.FaceName import FaceName
 
         cube = self._app.cube
+        size: int = cube.size
+        last: int = size - 1
+
         try:
             fn = FaceName[face_name]
         except KeyError:
@@ -448,63 +497,40 @@ class ClientSession:
             return
 
         face: Face = cube.face(fn)
-        it_left_to_right = abs(on_left_to_right) > abs(on_left_to_top)
-        part = self._grid_to_part(face, row, col)
-        if part is None:
-            return
+        is_horizontal: bool = abs(on_left_to_right) > abs(on_left_to_top)
 
         alg: Alg | None = None
-        inv = False
+        inv: bool = False
 
-        if isinstance(part, Corner):
-            alg = Algs.of_face(face.name)
-            if part is face.corner_top_right:
-                inv = on_left_to_right < 0 if it_left_to_right else on_left_to_top > 0
-            elif part is face.corner_top_left:
-                inv = on_left_to_right < 0 if it_left_to_right else on_left_to_top < 0
-            elif part is face.corner_bottom_left:
-                inv = on_left_to_right > 0 if it_left_to_right else on_left_to_top < 0
-            else:
-                inv = on_left_to_right > 0 if it_left_to_right else on_left_to_top > 0
-
-        elif isinstance(part, Edge):
-            if part is face.edge_right:
-                if it_left_to_right:
-                    alg = self._slice_on_edge_alg(part, face, si)
-                    inv = on_left_to_right < 0
-                else:
-                    alg = Algs.of_face(face.name)
-                    inv = on_left_to_top > 0
-            elif part is face.edge_left:
-                if it_left_to_right:
-                    alg = self._slice_on_edge_alg(part, face, si)
-                    inv = on_left_to_right < 0
-                else:
-                    alg = Algs.of_face(face.name)
-                    inv = on_left_to_top < 0
-            elif part is face.edge_top:
-                if not it_left_to_right:
-                    alg = self._slice_on_edge_alg(part, face, si)
-                    inv = on_left_to_top < 0
-                else:
-                    alg = Algs.of_face(face.name)
-                    inv = on_left_to_right < 0
-            elif part is face.edge_bottom:
-                if not it_left_to_right:
-                    alg = self._slice_on_edge_alg(part, face, si)
-                    inv = on_left_to_top < 0
-                else:
-                    alg = Algs.of_face(face.name)
-                    inv = on_left_to_right > 0
-
-        elif isinstance(part, Center):
-            if it_left_to_right:
-                alg = self._slice_on_edge_alg(
-                    face.edge_right, face, sy, on_center=True)
+        if is_horizontal:
+            # ── Horizontal drag → rotate the ROW ──
+            if row == last:
+                adj_fn = FaceName[self._get_adjacent_face_name(face_name, 'top')]
+                alg = Algs.of_face(adj_fn)
+                inv = on_left_to_right > 0
+            elif row == 0:
+                adj_fn = FaceName[self._get_adjacent_face_name(face_name, 'bottom')]
+                alg = Algs.of_face(adj_fn)
                 inv = on_left_to_right < 0
             else:
+                # Inner row → horizontal slice (uses edge_right to determine axis)
                 alg = self._slice_on_edge_alg(
-                    face.edge_top, face, sx, on_center=True)
+                    face.edge_right, face, row - 1, on_center=True)
+                inv = on_left_to_right < 0
+        else:
+            # ── Vertical drag → rotate the COLUMN ──
+            if col == last:
+                adj_fn = FaceName[self._get_adjacent_face_name(face_name, 'right')]
+                alg = Algs.of_face(adj_fn)
+                inv = on_left_to_top < 0
+            elif col == 0:
+                adj_fn = FaceName[self._get_adjacent_face_name(face_name, 'left')]
+                alg = Algs.of_face(adj_fn)
+                inv = on_left_to_top > 0
+            else:
+                # Inner col → vertical slice (uses edge_top to determine axis)
+                alg = self._slice_on_edge_alg(
+                    face.edge_top, face, col - 1, on_center=True)
                 inv = on_left_to_top < 0
 
         if alg:
@@ -517,18 +543,32 @@ class ClientSession:
 
     @staticmethod
     def _grid_to_part(face: "Face", row: int, col: int) -> "Part | None":
-        grid_map: dict[tuple[int, int], Part] = {
-            (2, 0): face.corner_top_left,
-            (2, 1): face.edge_top,
-            (2, 2): face.corner_top_right,
-            (1, 0): face.edge_left,
-            (1, 1): face.center,
-            (1, 2): face.edge_right,
-            (0, 0): face.corner_bottom_left,
-            (0, 1): face.edge_bottom,
-            (0, 2): face.corner_bottom_right,
-        }
-        return grid_map.get((row, col))
+        """Map grid (row, col) to a cube Part for any NxN cube.
+
+        Row 0 is bottom, row N-1 is top. Col 0 is left, col N-1 is right.
+        """
+        size: int = face.cube.size
+        last: int = size - 1
+        # Corners (at the four extremes)
+        if row == last and col == 0:
+            return face.corner_top_left
+        if row == last and col == last:
+            return face.corner_top_right
+        if row == 0 and col == 0:
+            return face.corner_bottom_left
+        if row == 0 and col == last:
+            return face.corner_bottom_right
+        # Edges (one coordinate at the boundary, other in interior)
+        if row == last:
+            return face.edge_top
+        if row == 0:
+            return face.edge_bottom
+        if col == last:
+            return face.edge_right
+        if col == 0:
+            return face.edge_left
+        # Center (both coordinates in interior)
+        return face.center
 
     @staticmethod
     def _slice_on_edge_alg(part: "Edge", face: "Face", index: int,

@@ -569,13 +569,365 @@ class AnimationQueue {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+//  ARROW GUIDE (visual drag-direction arrows on sticker touch)
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Draws two sets of 3D arrows on the cube face when a sticker is touched:
+ *   - Row arrows (orange): drag horizontally → rotate the row
+ *   - Column arrows (cyan): drag vertically → rotate the column
+ *
+ * Arrows appear on touch, then the non-active set hides once drag
+ * direction is detected.  All arrows are removed on pointer-up.
+ */
+class ArrowGuide {
+    constructor(cubeModel, scene) {
+        this.cubeModel = cubeModel;
+        this.group = new THREE.Group();
+        // Add to scene (not cubeGroup) so arrows survive cube rebuilds
+        scene.add(this.group);
+        this._rowGroup = null;
+        this._colGroup = null;
+    }
+
+    /**
+     * Show arrow guides for the given sticker position on a face.
+     */
+    show(face, row, col) {
+        this.hide();
+
+        const def = FACE_DEFS[face];
+        if (!def) return;
+
+        const size = this.cubeModel.size;
+        const cellSize = this.cubeModel.cellSize;
+        const half = size * cellSize / 2;
+
+        const right = new THREE.Vector3(...def.right);
+        const up    = new THREE.Vector3(...def.up);
+        const normal = new THREE.Vector3();
+        if (def.axis === 'x') normal.set(def.sign, 0, 0);
+        else if (def.axis === 'y') normal.set(0, def.sign, 0);
+        else normal.set(0, 0, def.sign);
+
+        const lift   = half + 0.08;   // slightly above face surface
+        const margin = 0.15;          // inset from face edges
+
+        const rowY = (row + 0.5) * cellSize - half;
+        const colX = (col + 0.5) * cellSize - half;
+
+        // ── Row arrow (horizontal, orange) ──
+        const rowStart = new THREE.Vector3()
+            .addScaledVector(right, -half + margin)
+            .addScaledVector(up, rowY)
+            .addScaledVector(normal, lift);
+        const rowEnd = new THREE.Vector3()
+            .addScaledVector(right, half - margin)
+            .addScaledVector(up, rowY)
+            .addScaledVector(normal, lift);
+        this._rowGroup = this._createDoubleArrow(rowStart, rowEnd, 0xff8800);
+        this.group.add(this._rowGroup);
+
+        // ── Column arrow (vertical, cyan) ──
+        const colStart = new THREE.Vector3()
+            .addScaledVector(right, colX)
+            .addScaledVector(up, -half + margin)
+            .addScaledVector(normal, lift);
+        const colEnd = new THREE.Vector3()
+            .addScaledVector(right, colX)
+            .addScaledVector(up, half - margin)
+            .addScaledVector(normal, lift);
+        this._colGroup = this._createDoubleArrow(colStart, colEnd, 0x00bbff);
+        this.group.add(this._colGroup);
+    }
+
+    /**
+     * Show only the active direction.
+     * @param {'row'|'col'|null} direction  null → show both
+     */
+    setActiveDirection(direction) {
+        if (this._rowGroup) this._rowGroup.visible = (direction === 'row' || direction === null);
+        if (this._colGroup) this._colGroup.visible = (direction === 'col' || direction === null);
+    }
+
+    /** Remove all arrows and dispose geometry. */
+    hide() {
+        while (this.group.children.length > 0) {
+            const child = this.group.children[0];
+            this.group.remove(child);
+            child.traverse(obj => {
+                if (obj.geometry) obj.geometry.dispose();
+                if (obj.material) {
+                    if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
+                    else obj.material.dispose();
+                }
+            });
+        }
+        this._rowGroup = null;
+        this._colGroup = null;
+    }
+
+    get isVisible() { return this._rowGroup !== null; }
+
+    /**
+     * Build a double-ended arrow (shaft + arrowhead at each end).
+     * Uses MeshBasicMaterial with depthTest:false so arrows render on top.
+     */
+    _createDoubleArrow(start, end, color) {
+        const group = new THREE.Group();
+        const dir = end.clone().sub(start).normalize();
+        const len = start.distanceTo(end);
+
+        const mat = new THREE.MeshBasicMaterial({
+            color,
+            transparent: true,
+            opacity: 0.85,
+            depthTest: false,
+        });
+
+        const headHeight = 0.20;
+        const headRadius = 0.08;
+        const shaftRadius = 0.025;
+
+        // ── Shaft (cylinder between the two arrowheads) ──
+        const shaftLen = Math.max(0.01, len - headHeight * 2);
+        const shaftGeo = new THREE.CylinderGeometry(shaftRadius, shaftRadius, shaftLen, 6);
+        const shaft = new THREE.Mesh(shaftGeo, mat);
+        shaft.renderOrder = 999;
+        const mid = start.clone().add(end).multiplyScalar(0.5);
+        shaft.position.copy(mid);
+        shaft.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+        group.add(shaft);
+
+        // ── Arrowhead at "end" (pointing start→end) ──
+        const headGeo = new THREE.ConeGeometry(headRadius, headHeight, 8);
+        const head1 = new THREE.Mesh(headGeo, mat);
+        head1.renderOrder = 999;
+        head1.position.copy(end.clone().addScaledVector(dir, -headHeight / 2));
+        head1.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+        group.add(head1);
+
+        // ── Arrowhead at "start" (pointing end→start) ──
+        const head2 = new THREE.Mesh(headGeo, mat);
+        head2.renderOrder = 999;
+        head2.position.copy(start.clone().addScaledVector(dir, headHeight / 2));
+        head2.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().negate());
+        group.add(head2);
+
+        return group;
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  FACE TURN HANDLER (drag-to-turn on sticker)
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Handles mouse/touch drag-to-turn and click-to-rotate on cube stickers.
+ *
+ * Drag workflow:
+ *   1. On pointer-down, raycast to see if a sticker was hit.
+ *   2. Accumulate drag until threshold (15 px).
+ *   3. Project drag vector onto face right/up axes in screen space.
+ *   4. Send {type:'mouse_face_turn', ...} to the server which computes the algorithm.
+ */
+class FaceTurnHandler {
+    constructor(cubeModel, camera, canvas, animQueue, sendFn, scene) {
+        this.cubeModel = cubeModel;
+        this.camera = camera;
+        this.canvas = canvas;
+        this.animQueue = animQueue;
+        this._send = sendFn;
+
+        this._raycaster = new THREE.Raycaster();
+        this.arrowGuide = new ArrowGuide(cubeModel, scene);
+
+        // State
+        this._active = false;
+        this._hitSticker = null;   // { face, row, col, gridIndex }
+        this._startX = 0;
+        this._startY = 0;
+        this._turnSent = false;
+    }
+
+    /** True when animations are playing — face turns are blocked. */
+    get blocked() {
+        return this.animQueue.currentAnim !== null || this.animQueue.queue.length > 0;
+    }
+
+    /**
+     * Try to start a face-turn gesture at the given pointer position.
+     * @returns {boolean} true if a sticker was hit (caller should NOT orbit).
+     */
+    start(clientX, clientY) {
+        if (this.blocked) return false;
+
+        const hit = this._pickSticker(clientX, clientY);
+        if (!hit) return false;
+
+        this._active = true;
+        this._hitSticker = hit;
+        this._startX = clientX;
+        this._startY = clientY;
+        this._turnSent = false;
+
+        // Show both arrow guides on the touched sticker
+        this.arrowGuide.show(hit.face, hit.row, hit.col);
+        return true;
+    }
+
+    /** Feed drag deltas while active. */
+    onDrag(clientX, clientY) {
+        if (!this._active || this._turnSent) return;
+
+        const dx = clientX - this._startX;
+        const dy = clientY - this._startY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        // Preview: show which direction once drag > 5 px
+        if (dist >= 5) {
+            const { dotRight, dotUp } = this._computeFaceDots(dx, dy);
+            const direction = Math.abs(dotRight) > Math.abs(dotUp) ? 'row' : 'col';
+            this.arrowGuide.setActiveDirection(direction);
+        }
+
+        // Execute turn once drag > 15 px
+        if (dist < 15) return;
+        this._executeTurn(dx, dy);
+        this._turnSent = true;
+    }
+
+    /**
+     * End the gesture.
+     * @returns {{ face, row, col } | null} the hit sticker if it was a click (no turn sent).
+     */
+    end() {
+        const hit = this._hitSticker;
+        const wasTurn = this._turnSent;
+        this._active = false;
+        this._hitSticker = null;
+        this._turnSent = false;
+        this.arrowGuide.hide();
+        return wasTurn ? null : hit;
+    }
+
+    get isActive() { return this._active; }
+
+    // ── Raycasting ──
+
+    _pickSticker(clientX, clientY) {
+        const rect = this.canvas.getBoundingClientRect();
+        const mouse = new THREE.Vector2(
+            ((clientX - rect.left) / rect.width) * 2 - 1,
+            -((clientY - rect.top) / rect.height) * 2 + 1,
+        );
+        this._raycaster.setFromCamera(mouse, this.camera);
+
+        const allMeshes = [];
+        for (const meshes of Object.values(this.cubeModel.stickers)) {
+            allMeshes.push(...meshes);
+        }
+        const hits = this._raycaster.intersectObjects(allMeshes);
+        return hits.length > 0 ? hits[0].object.userData : null;
+    }
+
+    // ── Face-axis projection ──
+
+    /**
+     * Project a screen-space drag vector onto the face's right/up axes.
+     * Returns { dotRight, dotUp } where the dominant component tells
+     * whether the drag is along the row (dotRight) or column (dotUp).
+     */
+    _computeFaceDots(dragX, dragY) {
+        const face = this._hitSticker.face;
+        const def = FACE_DEFS[face];
+        if (!def) return { dotRight: 0, dotUp: 0 };
+
+        const size = this.cubeModel.size;
+        const half = size * this.cubeModel.cellSize / 2;
+
+        const normal = new THREE.Vector3();
+        if (def.axis === 'x') normal.set(def.sign, 0, 0);
+        else if (def.axis === 'y') normal.set(0, def.sign, 0);
+        else normal.set(0, 0, def.sign);
+        const faceCenter = normal.clone().multiplyScalar(half);
+
+        const rightEnd = faceCenter.clone().add(new THREE.Vector3(...def.right));
+        const upEnd    = faceCenter.clone().add(new THREE.Vector3(...def.up));
+
+        const cNDC = faceCenter.clone().project(this.camera);
+        const rNDC = rightEnd.clone().project(this.camera);
+        const uNDC = upEnd.clone().project(this.camera);
+
+        const screenRight = new THREE.Vector2(
+            rNDC.x - cNDC.x, -(rNDC.y - cNDC.y),
+        ).normalize();
+        const screenUp = new THREE.Vector2(
+            uNDC.x - cNDC.x, -(uNDC.y - cNDC.y),
+        ).normalize();
+
+        const dragVec = new THREE.Vector2(dragX, dragY);
+        return {
+            dotRight: dragVec.dot(screenRight),
+            dotUp:    dragVec.dot(screenUp),
+        };
+    }
+
+    // ── Turn computation ──
+
+    _executeTurn(dragX, dragY) {
+        const { dotRight, dotUp } = this._computeFaceDots(dragX, dragY);
+
+        const size = this.cubeModel.size;
+        const { si, sx, sy } = this._computeSubIndices(
+            this._hitSticker.row, this._hitSticker.col, size,
+        );
+
+        this._send({
+            type: 'mouse_face_turn',
+            face: this._hitSticker.face,
+            row: this._hitSticker.row,
+            col: this._hitSticker.col,
+            si, sx, sy,
+            on_left_to_right: dotRight,
+            on_left_to_top: dotUp,
+        });
+    }
+
+    /**
+     * Compute edge slice index (si) and center sub-indices (sx, sy)
+     * from grid position for NxN cubes.
+     */
+    _computeSubIndices(row, col, size) {
+        const last = size - 1;
+        const isCorner = (row === 0 || row === last) && (col === 0 || col === last);
+        const isEdgeRow = (row === 0 || row === last) && col > 0 && col < last;
+        const isEdgeCol = (col === 0 || col === last) && row > 0 && row < last;
+
+        let si = -1, sx = -1, sy = -1;
+        if (isEdgeRow) {
+            si = col - 1;
+        } else if (isEdgeCol) {
+            si = row - 1;
+        } else if (!isCorner) {
+            // Center piece
+            sx = col - 1;
+            sy = row - 1;
+        }
+        return { si, sx, sy };
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════
 //  ORBIT CONTROLS (simple implementation)
 // ═══════════════════════════════════════════════════════════════════
 
 class OrbitControls {
-    constructor(camera, domElement) {
+    constructor(camera, domElement, faceTurnHandler, sendFn) {
         this.camera = camera;
         this.domElement = domElement;
+        this._faceTurn = faceTurnHandler;
+        this._sendFn = sendFn;
 
         // Default camera angles
         this._defaultPhi = Math.PI / 4;
@@ -613,23 +965,40 @@ class OrbitControls {
 
     _bindEvents() {
         const el = this.domElement;
+        const ft = this._faceTurn;
+
+        // ── Mouse events ──
 
         el.addEventListener('mousedown', (e) => {
-            if (e.button === 0) {
-                if (e.altKey || e.metaKey) {
-                    this._isPanning = true;
-                } else {
-                    this._isDragging = true;
-                }
-            } else if (e.button === 2) {
-                this._isPanning = true;
-            }
+            e.preventDefault();
             this._lastX = e.clientX;
             this._lastY = e.clientY;
-            e.preventDefault();
+
+            if (e.button === 0) {
+                if (e.altKey || e.metaKey) {
+                    // Alt/Meta + left-click → pan
+                    this._isPanning = true;
+                } else if (e.shiftKey || e.ctrlKey) {
+                    // Shift/Ctrl + click → handled on mouseup (click-to-rotate)
+                    ft.start(e.clientX, e.clientY);
+                } else {
+                    // Left-click: try face turn first, orbit if miss
+                    if (!ft.start(e.clientX, e.clientY)) {
+                        this._isDragging = true;
+                    }
+                }
+            } else if (e.button === 2) {
+                // Right-click → orbit
+                this._isDragging = true;
+            }
         });
 
         window.addEventListener('mousemove', (e) => {
+            if (ft.isActive) {
+                ft.onDrag(e.clientX, e.clientY);
+                return;
+            }
+
             if (!this._isDragging && !this._isPanning) return;
 
             const dx = e.clientX - this._lastX;
@@ -642,7 +1011,6 @@ class OrbitControls {
                 this.spherical.phi -= dy * this.rotateSpeed;
                 this.spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.spherical.phi));
             } else if (this._isPanning) {
-                // Pan in camera-local XY plane
                 const panX = -dx * this.panSpeed;
                 const panY = dy * this.panSpeed;
                 const offset = new THREE.Vector3();
@@ -655,7 +1023,16 @@ class OrbitControls {
             this.update();
         });
 
-        window.addEventListener('mouseup', () => {
+        window.addEventListener('mouseup', (e) => {
+            if (ft.isActive) {
+                const clickHit = ft.end();
+                // Click-to-rotate: Shift → CW, Ctrl → CCW
+                if (clickHit && (e.shiftKey || e.ctrlKey)) {
+                    const prime = e.ctrlKey;
+                    const cmd = 'ROTATE_' + clickHit.face + (prime ? '_PRIME' : '');
+                    this._sendFn({ type: 'command', name: cmd });
+                }
+            }
             this._isDragging = false;
             this._isPanning = false;
         });
@@ -670,18 +1047,27 @@ class OrbitControls {
 
         el.addEventListener('contextmenu', (e) => e.preventDefault());
 
-        // ── Touch support (mobile: iPhone, Android, iPad) ──
-        this._touchState = null;  // null | 'rotate' | 'pinch'
+        // ── Touch events (mobile: iPhone, Android, iPad) ──
+        this._touchState = null;  // null | 'rotate' | 'pinch' | 'face_turn'
         this._lastPinchDist = 0;
         this._lastTouchCenter = { x: 0, y: 0 };
 
         el.addEventListener('touchstart', (e) => {
             e.preventDefault();
             if (e.touches.length === 1) {
-                this._touchState = 'rotate';
-                this._lastX = e.touches[0].clientX;
-                this._lastY = e.touches[0].clientY;
+                const tx = e.touches[0].clientX;
+                const ty = e.touches[0].clientY;
+                // Try face turn first; fall back to orbit
+                if (ft.start(tx, ty)) {
+                    this._touchState = 'face_turn';
+                } else {
+                    this._touchState = 'rotate';
+                }
+                this._lastX = tx;
+                this._lastY = ty;
             } else if (e.touches.length === 2) {
+                // If a face turn was in progress, cancel it
+                if (this._touchState === 'face_turn') ft.end();
                 this._touchState = 'pinch';
                 this._lastPinchDist = this._touchDist(e.touches);
                 this._lastTouchCenter = this._touchCenter(e.touches);
@@ -690,7 +1076,9 @@ class OrbitControls {
 
         el.addEventListener('touchmove', (e) => {
             e.preventDefault();
-            if (this._touchState === 'rotate' && e.touches.length === 1) {
+            if (this._touchState === 'face_turn' && e.touches.length === 1) {
+                ft.onDrag(e.touches[0].clientX, e.touches[0].clientY);
+            } else if (this._touchState === 'rotate' && e.touches.length === 1) {
                 const dx = e.touches[0].clientX - this._lastX;
                 const dy = e.touches[0].clientY - this._lastY;
                 this._lastX = e.touches[0].clientX;
@@ -722,8 +1110,14 @@ class OrbitControls {
             }
         }, { passive: false });
 
-        el.addEventListener('touchend', () => { this._touchState = null; });
-        el.addEventListener('touchcancel', () => { this._touchState = null; });
+        el.addEventListener('touchend', () => {
+            if (this._touchState === 'face_turn') ft.end();
+            this._touchState = null;
+        });
+        el.addEventListener('touchcancel', () => {
+            if (this._touchState === 'face_turn') ft.end();
+            this._touchState = null;
+        });
     }
 
     _touchDist(touches) {
@@ -796,11 +1190,20 @@ class CubeClient {
         // Cube model
         this.cubeModel = new CubeModel(this.scene);
 
-        // Orbit controls
-        this.controls = new OrbitControls(this.camera, this.canvas);
-
         // Animation queue
         this.animQueue = new AnimationQueue(this.cubeModel);
+
+        // Face turn handler (drag-to-turn on sticker)
+        this.faceTurnHandler = new FaceTurnHandler(
+            this.cubeModel, this.camera, this.canvas, this.animQueue,
+            (msg) => this._send(msg), this.scene,
+        );
+
+        // Orbit controls (with face turn integration)
+        this.controls = new OrbitControls(
+            this.camera, this.canvas, this.faceTurnHandler,
+            (msg) => this._send(msg),
+        );
 
         // Latest state (for applying after animation stop)
         this.latestState = null;

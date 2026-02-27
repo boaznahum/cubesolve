@@ -120,6 +120,75 @@ Client sends:
 
 ---
 
+## Session 8-9: Mouse Face Turn Rules (2026-02-27)
+
+### What Was Done
+Implemented mouse-driven face/slice rotation for the WebGL backend using consistent row/column rules:
+
+**Rule:** Drag horizontal → rotate the ROW, Drag vertical → rotate the COLUMN
+(Same for ALL sticker types: corner, edge, center)
+
+**Row mapping:**
+- row 0 (bottom) → rotate bottom-adjacent face
+- row N-1 (top) → rotate top-adjacent face
+- inner row → E-type horizontal slice
+
+**Col mapping:**
+- col 0 (left) → rotate left-adjacent face
+- col N-1 (right) → rotate right-adjacent face
+- inner col → M-type vertical slice
+
+### Files Modified
+
+**cube.js (client):**
+- Added `ArrowGuide` class — shows orange (horizontal/row) and cyan (vertical/column) arrows on sticker touch
+- Added `FaceTurnHandler` class — state machine: idle→pressed→turning, with drag threshold
+- `pickSticker()` — raycasts to find which sticker was clicked
+- `_computeFaceDots()` — projects drag vector onto face's right/up axes in screen space
+- Modified `OrbitControls` — left-click on sticker → face turn, left-click on background → orbit, right-drag → orbit
+- Touch support: 1-finger on sticker → face turn, 1-finger on background → orbit
+
+**ClientSession.py (server):**
+- Rewrote `_handle_mouse_face_turn()` with unified row/column logic (removed corner/edge/center branching)
+- Added `_FACE_AXES` dict — maps each face to its right/up axis vectors
+- Added `_VEC_TO_FACE` dict — maps axis vectors to face names
+- Added `_get_adjacent_face_name()` — finds adjacent face in any direction (top/bottom/left/right)
+- Generalized `_grid_to_part()` for NxN cubes (was hardcoded 3x3)
+
+### Testing Results (automated via Chrome)
+All 6 test cases on F face pass:
+1. Horiz drag corner (2,2) → U ✅
+2. Vert drag corner (2,2) → R ✅
+3. Horiz drag top edge (2,1) → U ✅
+4. Vert drag right edge (1,2) → R ✅
+5. Horiz drag center (1,1) → [1:1]E slice ✅
+6. Vert drag center (1,1) → [1:1]M slice ✅
+
+### Known Issue (being fixed)
+- Face rotation directions were inverted (user reported "faces wrong direction, slices ok")
+- Fix: flipped `inv` signs for all 4 face rotation cases in `_handle_mouse_face_turn`
+- Slices directions are correct and unchanged
+
+### Adjacent Face Lookup Table
+```
+Face | top adj | bottom adj | right adj | left adj
+-----|---------|------------|-----------|----------
+F    | U       | D          | R         | L
+B    | U       | D          | L         | R
+U    | B       | F          | R         | L
+D    | F       | B          | R         | L
+R    | U       | D          | B         | F
+L    | U       | D          | F         | B
+```
+
+### Next Steps
+- Verify direction fix works on all faces (not just F)
+- Test on 4x4+ cubes
+- Test touch support on mobile
+- Run all checks before final commit
+
+---
+
 ## CURRENT STATUS (End of Session 5)
 
 ### Working ✅

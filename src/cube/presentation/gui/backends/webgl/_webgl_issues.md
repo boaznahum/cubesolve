@@ -1,6 +1,6 @@
 1. no Crl C Alt C ✅
 2. changing speed every thing is stuck ❌
-2. Mouse control are all wrong, mouse cahnge view not rotating faces
+2. Mouse control are all wrong, mouse cahnge view not rotating faces ✅
 3. Face rotation:
    4. R ✅
    5. L ✅
