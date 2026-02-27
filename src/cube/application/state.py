@@ -233,18 +233,29 @@ class ApplicationAndViewState:
         self._background_gray = max(0.0, min(0.5, value))
 
     @property
-    def get_speed_index(self):
+    def get_speed_index(self) -> float:
         return self._speed
 
     def inc_speed(self):
-        self._speed = min(len(speeds) - 1, self._speed + 1)
+        self._speed = min(len(speeds) - 1, self._speed + 0.5)
 
     def dec_speed(self):
-        self._speed = max(0, self._speed - 1)
+        self._speed = max(0, self._speed - 0.5)
 
     @property
     def get_speed(self) -> _AnimationSpeed:
-        return speeds[self._speed]
+        idx = self._speed
+        int_idx = int(idx)
+        # For integer indices, return directly
+        if idx == int_idx:
+            return speeds[int_idx]
+        # For fractional indices, interpolate between adjacent speeds
+        lo = speeds[int_idx]
+        hi = speeds[min(int_idx + 1, len(speeds) - 1)]
+        frac = idx - int_idx
+        delay = lo.delay_between_steps * (1 - frac) + hi.delay_between_steps * frac
+        steps = lo.number_of_steps * (1 - frac) + hi.number_of_steps * frac
+        return _AnimationSpeed(delay, round(steps))
 
     def get_draw_shadows_mode(self, face: FaceName) -> bool:
 
@@ -306,9 +317,9 @@ class ApplicationAndViewState:
         return sliced
 
     @contextmanager
-    def w_animation_speed(self, animation_speed: int):
+    def w_animation_speed(self, animation_speed: float):
 
-        assert animation_speed in range(len(speeds))
+        assert 0 <= animation_speed <= len(speeds) - 1
         saved = self._speed
         self._speed = animation_speed
 

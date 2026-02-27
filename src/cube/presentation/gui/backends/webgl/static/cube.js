@@ -1477,7 +1477,7 @@ class CubeClient {
         // Speed slider
         document.getElementById('speed-slider').addEventListener('input', (e) => {
             document.getElementById('speed-value').textContent = e.target.value;
-            this._send({ type: 'set_speed', value: parseInt(e.target.value) });
+            this._send({ type: 'set_speed', value: parseFloat(e.target.value) });
         });
 
         // Size dropdown — populate options 3..20

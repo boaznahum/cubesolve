@@ -166,15 +166,28 @@ class WebglAnimationManager(AnimationManager):
             move.op(move.alg, False)
 
     def _get_animation_duration_ms(self) -> int:
-        """Get animation duration based on current speed setting."""
+        """Get animation duration based on current speed setting.
+
+        Supports fractional speed indices (e.g. 2.5) by interpolating
+        between adjacent duration entries.
+        """
         from cube.application.state import speeds
         speed_index = self._vs.get_speed_index
-        if speed_index >= len(speeds):
+        if speed_index >= len(speeds) - 1:
             speed_index = len(speeds) - 1
 
         # Speed 0 = slowest (long duration), higher = faster
         # Map speed index to duration: 0→500ms, 1→400ms, ... 7→50ms
         durations = [500, 400, 300, 200, 150, 100, 70, 50]
-        if speed_index < len(durations):
-            return durations[speed_index]
-        return 50
+
+        int_idx = int(speed_index)
+        frac = speed_index - int_idx
+
+        if frac == 0 or int_idx >= len(durations) - 1:
+            idx = min(int_idx, len(durations) - 1)
+            return durations[idx]
+
+        # Interpolate between adjacent durations
+        lo = durations[int_idx]
+        hi = durations[min(int_idx + 1, len(durations) - 1)]
+        return round(lo + (hi - lo) * frac)
