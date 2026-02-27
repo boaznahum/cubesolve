@@ -698,13 +698,12 @@ class CubeClient {
         this.animOverlay = document.getElementById('anim-overlay');
         this.statusOverlay = document.getElementById('status-overlay');
 
-        // Three.js setup
+        // Three.js setup — responsive sizing
         this.renderer = new THREE.WebGLRenderer({
             canvas: this.canvas,
             antialias: true,
             alpha: false,
         });
-        this.renderer.setSize(720, 720);
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         this.renderer.setClearColor(BACKGROUND_COLOR);
         this.renderer.outputEncoding = THREE.sRGBEncoding;
@@ -742,6 +741,10 @@ class CubeClient {
         this.version = '';
         this.clientCount = 0;
 
+        // Responsive sizing
+        this._resize();
+        window.addEventListener('resize', () => this._resize());
+
         // Start render loop
         this._startRenderLoop();
 
@@ -751,6 +754,14 @@ class CubeClient {
         // Bind toolbar events
         this._bindToolbar();
         this._bindKeyboard();
+    }
+
+    _resize() {
+        const wrapper = this.canvas.parentElement;
+        const size = Math.min(wrapper.clientWidth, window.innerHeight - 120);
+        this.renderer.setSize(size, size);
+        this.camera.aspect = 1;
+        this.camera.updateProjectionMatrix();
     }
 
     // ── WebSocket ──
