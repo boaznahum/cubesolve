@@ -81,7 +81,7 @@ class ApplicationAndViewState:
 
         # Logger handles debug/quiet flags with env var override
         self._logger = Logger(debug_all=debug_all, quiet_all=quiet_all)
-        self._speed = config.animation_speed
+        self._speed: float = config.animation_speed
 
         # self._alpha_x_0: float = 0.3
         # self._alpha_y_0: float = -0.4

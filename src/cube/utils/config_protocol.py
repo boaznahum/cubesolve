@@ -308,10 +308,10 @@ class ConfigProtocol(Protocol):
         ...
 
     @property
-    def animation_speed(self) -> int:
-        """Default animation speed index (0-7, higher is faster).
+    def animation_speed(self) -> float:
+        """Default animation speed index (0-7, step 0.5, higher is faster).
 
-        Speed presets:
+        Speed presets (integer levels):
         0: 45 deg/s (slowest)
         1: 90 deg/s
         2: 180 deg/s
@@ -320,6 +320,8 @@ class ConfigProtocol(Protocol):
         5: 900 deg/s
         6: 1800 deg/s
         7: 3000 deg/s (fastest)
+
+        Half-step values (e.g. 2.5) interpolate between adjacent presets.
         """
         ...
 

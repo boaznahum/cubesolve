@@ -263,10 +263,9 @@ class AppConfig(ConfigProtocol):
         return cfg.animation_enabled
 
     @property
-    def animation_speed(self) -> int:
-        """Default animation speed index (0-7, higher is faster)."""
-        # Clamp to valid range (0-7)
-        return max(0, min(7, cfg.ANIMATION_SPEED))
+    def animation_speed(self) -> float:
+        """Default animation speed index (0-7, step 0.5, higher is faster)."""
+        return max(0.0, min(7.0, float(cfg.ANIMATION_SPEED)))
 
     @property
     def show_file_algs(self) -> bool:
