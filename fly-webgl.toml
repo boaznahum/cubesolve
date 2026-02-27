@@ -2,7 +2,7 @@ app = 'cubesolve-webgl'
 primary_region = 'cdg'
 
 [build]
-  dockerfile = "Dockerfile.webgl"
+  dockerfile = "Dockerfile"
 
 [deploy]
   release_command = "sh -c 'echo \"=============================================\" && echo \"  Deploying CubeSolve-WebGL v$(cat src/cube/resources/version.txt)\" && echo \"=============================================\" '"
@@ -17,4 +17,4 @@ primary_region = 'cdg'
 [[vm]]
   cpu_kind = 'shared'
   cpus = 1
-  memory = '512mb'
+  memory = '1GB'
