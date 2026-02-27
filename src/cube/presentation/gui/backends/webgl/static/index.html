@@ -97,7 +97,7 @@
             align-items: center;
             gap: 4px;
         }
-        #speed-slider, #size-slider {
+        #speed-slider {
             -webkit-appearance: none;
             appearance: none;
             width: 80px;
@@ -107,8 +107,7 @@
             outline: none;
             cursor: pointer;
         }
-        #speed-slider::-webkit-slider-thumb,
-        #size-slider::-webkit-slider-thumb {
+        #speed-slider::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
             width: 14px;
@@ -118,8 +117,7 @@
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
             cursor: pointer;
         }
-        #speed-slider::-moz-range-thumb,
-        #size-slider::-moz-range-thumb {
+        #speed-slider::-moz-range-thumb {
             width: 14px;
             height: 14px;
             border-radius: 50%;
@@ -128,6 +126,20 @@
             cursor: pointer;
             border: none;
         }
+        #size-select {
+            background: #333;
+            color: #ddd;
+            border: 1px solid #555;
+            border-radius: 3px;
+            padding: 2px 4px;
+            font-size: 11px;
+            font-family: monospace;
+            cursor: pointer;
+            outline: none;
+            max-height: 200px;
+        }
+        #size-select:hover { border-color: #777; }
+        #size-select:focus { border-color: rgb(70, 130, 180); }
 
         /* Canvas wrapper */
         #canvas-wrapper {
@@ -241,12 +253,21 @@
         @media (max-width: 768px) {
             body { align-items: flex-start; overflow-y: auto; }
             #container { padding: 0 2px; }
-            #toolbar { padding: 4px 6px; gap: 4px; justify-content: center; }
+            #toolbar {
+                padding: 4px 6px;
+                gap: 4px;
+                justify-content: flex-start;
+                overflow-x: auto;
+                flex-wrap: nowrap;
+                -webkit-overflow-scrolling: touch;
+            }
             .tb-sep { display: none; }
+            .tb-group { flex-shrink: 0; }
             .tb-btn { padding: 6px 8px; font-size: 12px; }
             #solver-select { font-size: 12px; padding: 4px 6px; }
+            #size-select { font-size: 12px; padding: 4px 6px; }
             .tb-label { font-size: 10px; padding: 0 1px; }
-            #speed-slider, #size-slider { width: 60px; }
+            #speed-slider { width: 60px; }
         }
 
         /* Connection status */
@@ -279,10 +300,9 @@
                 <select id="solver-select" title="Solver"></select>
             </div>
             <div class="tb-sep"></div>
-            <div class="tb-group tb-speed">
+            <div class="tb-group">
                 <span class="tb-label">Size</span>
-                <input type="range" id="size-slider" min="3" max="7" value="3" step="1">
-                <span id="size-value" class="tb-label">3</span>
+                <select id="size-select" title="Cube size"></select>
             </div>
             <div class="tb-sep"></div>
             <div class="tb-group tb-speed">

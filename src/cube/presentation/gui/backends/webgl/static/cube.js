@@ -1328,8 +1328,7 @@ class CubeClient {
                 break;
 
             case 'size_update':
-                document.getElementById('size-slider').value = msg.value;
-                document.getElementById('size-value').textContent = msg.value;
+                document.getElementById('size-select').value = msg.value;
                 break;
 
             case 'color_map':
@@ -1477,9 +1476,15 @@ class CubeClient {
             this._send({ type: 'set_speed', value: parseInt(e.target.value) });
         });
 
-        // Size slider
-        document.getElementById('size-slider').addEventListener('input', (e) => {
-            document.getElementById('size-value').textContent = e.target.value;
+        // Size dropdown — populate options 3..20
+        const sizeSelect = document.getElementById('size-select');
+        for (let n = 3; n <= 20; n++) {
+            const opt = document.createElement('option');
+            opt.value = n;
+            opt.textContent = `${n}×${n}`;
+            sizeSelect.appendChild(opt);
+        }
+        sizeSelect.addEventListener('change', (e) => {
             this._send({ type: 'set_size', value: parseInt(e.target.value) });
         });
     }

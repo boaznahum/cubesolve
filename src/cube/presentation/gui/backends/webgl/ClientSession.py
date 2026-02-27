@@ -357,7 +357,7 @@ class ClientSession:
         self._app.vs._speed = clamped
 
     def _handle_size(self, size: int) -> None:
-        clamped = max(3, min(7, size))
+        clamped = max(3, min(20, size))
         vs = self._app.vs
         if clamped != vs.cube_size:
             vs.cube_size = clamped
