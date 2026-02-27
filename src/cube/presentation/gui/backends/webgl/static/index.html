@@ -237,9 +237,9 @@
             font-weight: 600;
         }
 
-        /* Mobile */
-        @media (max-width: 500px) {
-            body { align-items: flex-start; }
+        /* Mobile / tablet — prevent toolbar from being pushed off-screen */
+        @media (max-width: 768px) {
+            body { align-items: flex-start; overflow-y: auto; }
             #container { padding: 0 2px; }
             #toolbar { padding: 4px 6px; gap: 4px; justify-content: center; }
             .tb-sep { display: none; }
