@@ -63,11 +63,7 @@ class SolverName(Enum):
     CFOP = SolverMeta("CFOP")#, only_3x3="CFOP use same reducer as LBL")
     KOCIEMBA = SolverMeta("Kociemba")
     CAGE = SolverMeta("Cage")  # Cage method: edges first, then corners, then centers
-    LBL_BIG = SolverMeta("LBL-Big",
-                         #implemented=False,  # Not yet fully implemented
-                         #skip_3x3="LBL-Big is for NxN cubes only",
-                         #skip_even="WIP: Even cubes not fully tested"
-              )  # Layer-by-layer for big cubes
+    REDUCER = SolverMeta("Reducer")  # Reduction method for NxN cubes
 
     @property
     def display_name(self) -> str:

@@ -1246,13 +1246,16 @@ class CubeClient {
         this.ws.onopen = () => {
             this.statusEl.textContent = 'Connected';
             this.statusEl.className = 'connected';
-            this.ws.send(JSON.stringify({ type: 'connected' }));
+            const connectMsg = { type: 'connected' };
+            const savedId = localStorage.getItem('cube_session_id');
+            if (savedId) connectMsg.session_id = savedId;
+            this.ws.send(JSON.stringify(connectMsg));
         };
 
         this.ws.onclose = () => {
-            this.statusEl.textContent = 'Disconnected — refreshing...';
+            this.statusEl.textContent = 'Reconnecting...';
             this.statusEl.className = 'error';
-            setTimeout(() => location.reload(), 2000);
+            setTimeout(() => this._connect(), 2000);
         };
 
         this.ws.onerror = () => {
@@ -1340,7 +1343,8 @@ class CubeClient {
                 break;
 
             case 'session_id':
-                // Could display session ID somewhere
+                this.sessionId = msg.session_id;
+                localStorage.setItem('cube_session_id', msg.session_id);
                 break;
         }
     }

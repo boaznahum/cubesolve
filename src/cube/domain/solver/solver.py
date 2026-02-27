@@ -58,7 +58,7 @@ class SolveStep(Enum):
     # Cage method step
     Cage = ("Cage", "Cage", "Cage (Edges + Corners)")
 
-    # LBL-Big method steps (layer-by-layer for big cubes)
+    # Reducer method steps (layer-by-layer for big cubes)
     LBL_L1_Ctr = ("LBL_L1_Ctr", "L1Ctr", "Layer 1 Centers")
     LBL_L1_EDGES = ("LBL_L1_Edges", "L1Edg", "Layer 1 Edges")
     LBL_L1 = ("LBL_L1", "L1", "Layer 1 Complete")

@@ -109,7 +109,7 @@ class LayerByLayerNxNSolver(BaseSolver):
 
     @property
     def get_code(self) -> SolverName:
-        return SolverName.LBL_BIG
+        return SolverName.REDUCER
 
     @property
     def status(self) -> str:

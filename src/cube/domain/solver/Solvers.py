@@ -113,17 +113,12 @@ class Solvers:
         return CageNxNSolver(op, parent_logger)
 
     @staticmethod
-    def lbl_big(op: OperatorProtocol) -> Solver:
+    def reducer(op: OperatorProtocol) -> Solver:
         """
-        Get Layer-by-Layer solver for big (NxN) cubes.
+        Get Reducer solver for NxN cubes.
 
-        Solves the cube one horizontal layer at a time:
-        - Layer 1: Centers → Edges → Corners (on configured face)
-        - Layer 2 to n-1: Centers ring → Edge wings
-        - Layer n: Centers → Edges → Corners
-
-        Unlike reduction method, each layer is fully solved before
-        moving to the next.
+        Reduces the cube to a 3x3 equivalent by solving centers and
+        pairing edges, then solves using a 3x3 method.
         """
         from .direct.lbl.LayerByLayerNxNSolver import LayerByLayerNxNSolver
 
@@ -163,8 +158,8 @@ class Solvers:
             case SolverName.CAGE:
                 return cls.cage(op)
 
-            case SolverName.LBL_BIG:
-                return cls.lbl_big(op)
+            case SolverName.REDUCER:
+                return cls.reducer(op)
 
             case _:
                 raise InternalSWError(f"Unknown solver: {solver_id}")
