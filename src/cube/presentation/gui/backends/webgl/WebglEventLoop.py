@@ -143,15 +143,21 @@ class WebglEventLoop(EventLoop):
 
             return ws
 
-        # Static file handlers
+        # Static file handlers (no-cache to ensure fresh JS during development)
+        no_cache_headers = {"Cache-Control": "no-cache, no-store, must-revalidate"}
+
         async def index_handler(request: web.Request) -> web.StreamResponse:
-            return web.FileResponse(static_dir / "index.html")
+            resp = web.FileResponse(static_dir / "index.html")
+            resp.headers.update(no_cache_headers)
+            return resp
 
         async def static_handler(request: web.Request) -> web.StreamResponse:
             filename = request.match_info.get('filename', 'index.html')
             filepath = static_dir / filename
             if filepath.exists():
-                return web.FileResponse(filepath)
+                resp = web.FileResponse(filepath)
+                resp.headers.update(no_cache_headers)
+                return resp
             return web.Response(status=404, text="Not found")
 
         # Routes

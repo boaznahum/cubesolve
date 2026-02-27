@@ -95,7 +95,10 @@ class CubeModel {
         this.faceGroups = {};
 
         this.size = size;
-        const totalSize = size * this.cellSize;
+        // Keep total physical size constant regardless of N — cube fits the same view
+        const TARGET_TOTAL_SIZE = 3.0;
+        this.cellSize = TARGET_TOTAL_SIZE / size;
+        const totalSize = TARGET_TOTAL_SIZE;
         const half = totalSize / 2;
 
         // No body mesh — sticker extrusion sides provide the dark gap appearance,
@@ -845,7 +848,6 @@ class CubeClient {
             case 'size_update':
                 document.getElementById('size-slider').value = msg.value;
                 document.getElementById('size-value').textContent = msg.value;
-                this.controls.setForCubeSize(msg.value);
                 break;
 
             case 'color_map':
