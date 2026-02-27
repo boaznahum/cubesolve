@@ -86,7 +86,7 @@ Use `--app` to choose which app to deploy to:
 fly deploy --app cubesolve        # deploy to stable
 fly deploy --app cubesolve-dev    # deploy to dev
 
-# WebGL backend (client-side rendering, Dockerfile.webgl + fly-webgl.toml)
+# WebGL backend (client-side rendering, Dockerfile + fly-webgl.toml)
 fly deploy --config fly-webgl.toml --app cubesolve-webgl
 ```
 

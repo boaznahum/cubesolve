@@ -125,6 +125,18 @@ class ClientSession:
     def backend(self) -> object:
         return None
 
+    # -- Reconnection --
+
+    def reattach(self, ws: "WebSocketResponse") -> None:
+        """Reattach this session to a new WebSocket after reconnect.
+
+        Swaps the underlying WebSocket and resends the full state so the
+        client is immediately up-to-date with the server's cube state.
+        """
+        self._ws = ws
+        print(f"Session reattached: {self.client_info.session_id[:8]}", flush=True)
+        self.on_client_connected()
+
     # -- Send helpers (unicast to this session's WebSocket) --
 
     def _send(self, message: str) -> None:
@@ -455,14 +467,17 @@ class ClientSession:
         position: 'top' | 'bottom' | 'left' | 'right'
         """
         axes = cls._FACE_AXES[face_name]
+        vec: tuple[int, int, int]
         if position == 'top':
             vec = axes['up']
         elif position == 'bottom':
-            vec = tuple(-v for v in axes['up'])
+            u = axes['up']
+            vec = (-u[0], -u[1], -u[2])
         elif position == 'right':
             vec = axes['right']
         elif position == 'left':
-            vec = tuple(-v for v in axes['right'])
+            r = axes['right']
+            vec = (-r[0], -r[1], -r[2])
         else:
             raise ValueError(f"Unknown position: {position}")
         return cls._VEC_TO_FACE[vec]

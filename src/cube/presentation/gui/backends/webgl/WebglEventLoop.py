@@ -128,17 +128,29 @@ class WebglEventLoop(EventLoop):
             ws = web.WebSocketResponse()
             await ws.prepare(request)
 
-            if self._session_manager:
-                await self._session_manager.create_session(ws, request)
-
+            session = None
             try:
                 async for msg in ws:
                     if msg.type == web.WSMsgType.TEXT:
-                        await self._handle_message(ws, msg.data)
+                        if session is None and self._session_manager:
+                            # First message — create or restore session.
+                            # The client always sends { type: 'connected' }
+                            # (optionally with session_id) as its first message.
+                            data = json.loads(msg.data)
+                            old_sid = data.get("session_id") if isinstance(data, dict) else None
+                            session = await self._session_manager.create_session(
+                                ws, request, session_id=old_sid,
+                            )
+                            # The 'connected' message is handled inside
+                            # create_session → on_client_connected (for new sessions)
+                            # or reattach → on_client_connected (for restored sessions).
+                            # So we don't forward it to handle_message.
+                        else:
+                            await self._handle_message(ws, msg.data)
                     elif msg.type == web.WSMsgType.ERROR:
                         print(f"WebSocket error: {ws.exception()}", flush=True)
             finally:
-                if self._session_manager:
+                if session and self._session_manager:
                     self._session_manager.remove_session(ws)
 
             return ws

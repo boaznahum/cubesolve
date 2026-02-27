@@ -18,8 +18,8 @@ COPY src/ src/
 RUN python -m pip install --no-cache-dir -U pip && \
     pip install --no-cache-dir -e .
 
-# Web backend port
-EXPOSE 8765
+# WebGL backend port
+EXPOSE 8766
 
-# Run web backend
-CMD ["python", "-m", "cube.main_web", "--quiet"]
+# Run webgl backend
+CMD ["python", "-m", "cube.main_webgl", "--quiet"]

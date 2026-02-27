@@ -11,15 +11,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rm -rf /var/lib/apt/lists/*
 
 # Copy project files
-COPY pyproject.toml .
-COPY src/ src/
+COPY ../pyproject.toml .
+COPY ../src src/
 
 # Upgrade pip, then install the package
 RUN python -m pip install --no-cache-dir -U pip && \
     pip install --no-cache-dir -e .
 
-# WebGL backend port
-EXPOSE 8766
+# Web backend port
+EXPOSE 8765
 
-# Run webgl backend
-CMD ["python", "-m", "cube.main_webgl", "--quiet"]
+# Run web backend
+CMD ["python", "-m", "cube.main_web", "--quiet"]
