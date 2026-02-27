@@ -1326,8 +1326,7 @@ class CubeClient {
                 break;
 
             case 'speed_update':
-                document.getElementById('speed-slider').value = msg.value;
-                document.getElementById('speed-value').textContent = msg.value;
+                document.getElementById('speed-select').value = msg.value;
                 break;
 
             case 'size_update':
@@ -1474,9 +1473,15 @@ class CubeClient {
             this._send({ type: 'set_solver', name: e.target.value });
         });
 
-        // Speed slider
-        document.getElementById('speed-slider').addEventListener('input', (e) => {
-            document.getElementById('speed-value').textContent = e.target.value;
+        // Speed dropdown — populate options 0, 0.5, 1, ... 7
+        const speedSelect = document.getElementById('speed-select');
+        for (let v = 0; v <= 7; v += 0.5) {
+            const opt = document.createElement('option');
+            opt.value = v;
+            opt.textContent = v % 1 === 0 ? v.toFixed(0) : v.toFixed(1);
+            speedSelect.appendChild(opt);
+        }
+        speedSelect.addEventListener('change', (e) => {
             this._send({ type: 'set_speed', value: parseFloat(e.target.value) });
         });
 

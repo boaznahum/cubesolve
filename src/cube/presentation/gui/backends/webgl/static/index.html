@@ -92,40 +92,19 @@
         #solver-select:hover { border-color: #777; }
         #solver-select:focus { border-color: rgb(70, 130, 180); }
 
-        .tb-speed {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-        #speed-slider {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 80px;
-            height: 4px;
-            border-radius: 2px;
-            background: linear-gradient(to right, #4a7ab5, #8ab4e0);
+        #speed-select {
+            background: #333;
+            color: #ddd;
+            border: 1px solid #555;
+            border-radius: 3px;
+            padding: 2px 4px;
+            font-size: 11px;
+            font-family: monospace;
+            cursor: pointer;
             outline: none;
-            cursor: pointer;
         }
-        #speed-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            background: #ddd;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-            cursor: pointer;
-        }
-        #speed-slider::-moz-range-thumb {
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            background: #ddd;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-            cursor: pointer;
-            border: none;
-        }
+        #speed-select:hover { border-color: #777; }
+        #speed-select:focus { border-color: rgb(70, 130, 180); }
         #size-select {
             background: #333;
             color: #ddd;
@@ -266,8 +245,8 @@
             .tb-btn { padding: 6px 8px; font-size: 12px; }
             #solver-select { font-size: 12px; padding: 4px 6px; }
             #size-select { font-size: 12px; padding: 4px 6px; }
+            #speed-select { font-size: 12px; padding: 4px 6px; }
             .tb-label { font-size: 10px; padding: 0 1px; }
-            #speed-slider { width: 60px; }
         }
 
         /* Connection status */
@@ -305,10 +284,9 @@
                 <select id="size-select" title="Cube size"></select>
             </div>
             <div class="tb-sep"></div>
-            <div class="tb-group tb-speed">
+            <div class="tb-group">
                 <span class="tb-label">Spd</span>
-                <input type="range" id="speed-slider" min="0" max="7" value="0" step="0.5">
-                <span id="speed-value" class="tb-label">0</span>
+                <select id="speed-select" title="Animation speed"></select>
             </div>
         </div>
         <div id="canvas-wrapper">
