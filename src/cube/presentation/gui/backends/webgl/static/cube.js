@@ -669,6 +669,74 @@ class OrbitControls {
         }, { passive: false });
 
         el.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        // ── Touch support (mobile: iPhone, Android, iPad) ──
+        this._touchState = null;  // null | 'rotate' | 'pinch'
+        this._lastPinchDist = 0;
+        this._lastTouchCenter = { x: 0, y: 0 };
+
+        el.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (e.touches.length === 1) {
+                this._touchState = 'rotate';
+                this._lastX = e.touches[0].clientX;
+                this._lastY = e.touches[0].clientY;
+            } else if (e.touches.length === 2) {
+                this._touchState = 'pinch';
+                this._lastPinchDist = this._touchDist(e.touches);
+                this._lastTouchCenter = this._touchCenter(e.touches);
+            }
+        }, { passive: false });
+
+        el.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (this._touchState === 'rotate' && e.touches.length === 1) {
+                const dx = e.touches[0].clientX - this._lastX;
+                const dy = e.touches[0].clientY - this._lastY;
+                this._lastX = e.touches[0].clientX;
+                this._lastY = e.touches[0].clientY;
+                this.spherical.theta -= dx * this.rotateSpeed;
+                this.spherical.phi -= dy * this.rotateSpeed;
+                this.spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, this.spherical.phi));
+                this.update();
+            } else if (this._touchState === 'pinch' && e.touches.length === 2) {
+                // Pinch zoom
+                const dist = this._touchDist(e.touches);
+                const scale = this._lastPinchDist / dist;
+                this.spherical.radius *= scale;
+                this.spherical.radius = Math.max(this.minDistance, Math.min(this.maxDistance, this.spherical.radius));
+                this._lastPinchDist = dist;
+                // Two-finger pan
+                const center = this._touchCenter(e.touches);
+                const dx = center.x - this._lastTouchCenter.x;
+                const dy = center.y - this._lastTouchCenter.y;
+                this._lastTouchCenter = center;
+                const panX = -dx * this.panSpeed;
+                const panY = dy * this.panSpeed;
+                const offset = new THREE.Vector3();
+                offset.setFromMatrixColumn(this.camera.matrix, 0).multiplyScalar(panX);
+                this.panOffset.add(offset);
+                offset.setFromMatrixColumn(this.camera.matrix, 1).multiplyScalar(panY);
+                this.panOffset.add(offset);
+                this.update();
+            }
+        }, { passive: false });
+
+        el.addEventListener('touchend', () => { this._touchState = null; });
+        el.addEventListener('touchcancel', () => { this._touchState = null; });
+    }
+
+    _touchDist(touches) {
+        const dx = touches[0].clientX - touches[1].clientX;
+        const dy = touches[0].clientY - touches[1].clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    _touchCenter(touches) {
+        return {
+            x: (touches[0].clientX + touches[1].clientX) / 2,
+            y: (touches[0].clientY + touches[1].clientY) / 2,
+        };
     }
 
     update() {
