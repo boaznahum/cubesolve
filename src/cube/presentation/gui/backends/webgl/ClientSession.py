@@ -33,6 +33,7 @@ if TYPE_CHECKING:
     from cube.application.AbstractApp import AbstractApp
     from cube.domain.algs.Alg import Alg
     from cube.domain.model import Edge, Part
+    from cube.domain.model.Cube import Cube
     from cube.domain.model.Face import Face
     from cube.presentation.gui.backends.webgl.WebglAnimationManager import WebglAnimationManager
     from cube.presentation.gui.backends.webgl.WebglEventLoop import WebglEventLoop
@@ -147,12 +148,15 @@ class ClientSession:
         from cube.domain.solver.SolverName import SolverName
         app = self._app
         solver_list = [s.display_name for s in SolverName.implemented()]
+        vs = app.vs
         self._send(json.dumps({
             "type": "toolbar_state",
             "debug": app.config.solver_debug,
             "animation": app.op.animation_enabled,
             "solver_name": app.slv.name,
             "solver_list": solver_list,
+            "slice_start": vs.slice_start,
+            "slice_stop": vs.slice_stop,
         }))
 
     def send_color_map(self) -> None:
@@ -179,22 +183,41 @@ class ClientSession:
         The model change has already been applied before this is called,
         so extract_cube_state returns the post-move state. This ensures the
         client applies the correct final state when the animation completes.
+
+        Sends physical layer columns (0-based from the negative side of the axis)
+        so the client knows which stickers to animate. For example on a 4x4:
+          R    → layers=[3]       (rightmost column)
+          R[2] → layers=[2]       (second from right)
+          M[1] → layers=[1]       (first inner column)
+          M    → layers=[1, 2]    (all inner columns)
         """
         from cube.domain import algs as alg_types
 
-        face_name = ""
-        direction = 1  # 1=CW, -1=CCW
-        slices: list[int] = [0]
+        face_name: str = ""
+        direction: int = 1  # 1=CW, -1=CCW
+        layers: list[int] = [0]
+        cube = self._app.cube
+        size: int = cube.size
 
         if isinstance(alg, alg_types.AnimationAbleAlg):
             # Extract face name and direction from the algorithm
             face_name = self._alg_to_face_name(alg)
-            n = alg.n if hasattr(alg, 'n') else 1
+            n: int = alg.n if hasattr(alg, 'n') else 1
             direction = 1 if n % 4 == 1 else -1
             if n % 4 == 3:
                 direction = -1
             elif n % 4 == 2:
                 direction = 2  # 180 degrees
+
+            # Extract physical layer columns from algorithm
+            layers = self._extract_layers(alg, cube, size, face_name)
+
+        alg_str: str = str(alg)
+        alg_type: str = type(alg).__name__
+        vs = self._app.vs
+        print(f"  anim: {alg_str} type={alg_type} face={face_name} "
+              f"layers={layers} dir={direction} size={size} "
+              f"slice=[{vs.slice_start}:{vs.slice_stop}]", flush=True)
 
         # Embed post-move state so the client has correct colors at animation end
         state = extract_cube_state(self._app.cube)
@@ -203,9 +226,10 @@ class ClientSession:
             "type": "animation_start",
             "face": face_name,
             "direction": direction,
-            "slices": slices,
+            "layers": layers,
             "duration_ms": duration_ms,
-            "alg": str(alg),
+            "alg": alg_str,
+            "alg_type": alg_type,
             "state": state,
         }))
 
@@ -560,20 +584,89 @@ class ClientSession:
     def _alg_to_face_name(alg: "Alg") -> str:
         """Extract the face name from an algorithm string for animation.
 
-        Handles formats like: "R", "R'", "U2", "M", "[2:2]M", "[1:2]R", "X"
+        Handles formats like: "R", "R'", "U2", "M", "[2:2]M", "[1:2]R", "X",
+        "Rw" (double layer), "d" (wide face, lowercase).
         """
         s = str(alg).strip()
         if not s:
             return ""
-        face_map = {"R": "R", "L": "L", "U": "U", "D": "D", "F": "F", "B": "B",
-                     "M": "M", "E": "E", "S": "S",
-                     "x": "x", "y": "y", "z": "z",
-                     "X": "x", "Y": "y", "Z": "z"}
+        face_map: dict[str, str] = {
+            "R": "R", "L": "L", "U": "U", "D": "D", "F": "F", "B": "B",
+            "M": "M", "E": "E", "S": "S",
+            "x": "x", "y": "y", "z": "z",
+            "X": "x", "Y": "y", "Z": "z",
+            # Wide face moves use lowercase face letters
+            "r": "R", "l": "L", "u": "U", "d": "D", "f": "F", "b": "B",
+        }
         # Search for a known face letter in the string
         for ch in s:
             if ch in face_map:
                 return face_map[ch]
         return ""
+
+    @staticmethod
+    def _face_indices_to_layers(
+        indices: list[int], face_name: str, size: int
+    ) -> list[int]:
+        """Convert 0-based face/slice indices to physical layer columns.
+
+        Physical columns are 0-based from the negative side of the axis:
+          Column 0 = leftmost/bottommost/backmost
+          Column size-1 = rightmost/topmost/frontmost
+        """
+        positive_faces: set[str] = {'R', 'U', 'F'}
+        if face_name in positive_faces:
+            return [size - 1 - i for i in indices]
+        return list(indices)
+
+    def _extract_layers(
+        self, alg: "Alg", cube: "Cube", size: int, face_name: str
+    ) -> list[int]:
+        """Extract physical layer columns from an algorithm for animation.
+
+        Returns 0-based column indices from the negative side of the axis.
+        """
+        from cube.domain import algs as alg_types
+        from cube.domain.algs.WideFaceAlg import WideFaceAlg
+        from cube.domain.algs.DoubleLayerAlg import DoubleLayerAlg
+
+        if isinstance(alg, alg_types.SliceAlgBase):
+            # M, E, S moves: inner slices
+            # M follows L (negative X), E follows D (negative Y): column = index + 1
+            # S follows F (positive Z): column = size - 2 - index
+            indices: list[int] = list(alg.normalize_slice_index(
+                n_max=cube.n_slices,
+                _default=range(1, cube.n_slices + 1)
+            ))
+            if face_name == "S":
+                return [size - 2 - i for i in indices]
+            return [i + 1 for i in indices]
+
+        if isinstance(alg, alg_types.FaceAlgBase):
+            # R, L, U, D, F, B face moves (including SlicedFaceAlg)
+            indices = list(alg.normalize_slice_index(
+                n_max=1 + cube.n_slices,
+                _default=[1]
+            ))
+            return self._face_indices_to_layers(indices, face_name, size)
+
+        if isinstance(alg, DoubleLayerAlg):
+            # Rw = R[1:size-1] — resolve to SlicedFaceAlg and extract
+            resolved: alg_types.FaceAlgBase = alg.compose_base_alg(cube)
+            indices = list(resolved.normalize_slice_index(
+                n_max=1 + cube.n_slices,
+                _default=[1]
+            ))
+            return self._face_indices_to_layers(indices, face_name, size)
+
+        if isinstance(alg, WideFaceAlg):
+            # Wide face: face + all inner layers = [0, 1, ..., size-2]
+            indices = list(range(size - 1))
+            return self._face_indices_to_layers(indices, face_name, size)
+
+        # Whole cube rotations or unknown: default layer [0]
+        # (client selects ALL stickers for x/y/z anyway)
+        return [0]
 
     # -- Solve --
 

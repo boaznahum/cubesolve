@@ -16,7 +16,8 @@
    15. Z ✅
 16. Slices are not animated.
 17. The orange is yellow ✅
-18. Changing cube size, increase it view instead of fit it to current view ✅
+18. still happens Changing cube size, increase it view instead of fit it to current view ❌
 19. code: e.keyCode, is deprected
 20. Stop stop animation in the middle leaving face in undefined place, see pygelt2 how it handled correctly
 no
+21. you insert a bug !!! during solver animation inner slices are naimated as whole silce

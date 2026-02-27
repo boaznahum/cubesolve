@@ -201,6 +201,42 @@
         #status-overlay .seg-status .seg-label { color: rgba(140, 220, 140, 0.6); }
         #status-overlay .seg-moves .seg-label { color: rgba(255, 200, 120, 0.6); }
 
+        /* Debug overlay — animation info */
+        #debug-overlay {
+            position: absolute;
+            bottom: 8px;
+            right: 12px;
+            pointer-events: none;
+            z-index: 10;
+            display: flex;
+            gap: 6px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 0.2px;
+        }
+        #debug-overlay .seg {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 10px;
+            border-radius: 100px;
+            background: rgba(0, 0, 0, 0.72);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            white-space: nowrap;
+        }
+        #debug-overlay .seg-label {
+            color: rgba(130, 190, 255, 0.6);
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+        }
+        #debug-overlay .seg-value {
+            color: rgba(255, 255, 255, 0.95);
+            font-weight: 600;
+        }
+
         /* Mobile */
         @media (max-width: 500px) {
             body { align-items: flex-start; }
@@ -259,6 +295,7 @@
             <canvas id="canvas" width="720" height="720"></canvas>
             <div id="anim-overlay"></div>
             <div id="status-overlay"></div>
+            <div id="debug-overlay"></div>
         </div>
         <div id="status">Connecting...</div>
     </div>

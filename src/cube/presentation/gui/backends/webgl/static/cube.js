@@ -413,7 +413,13 @@ class AnimationQueue {
         if (pivot) tempGroup.position.set(...pivot);
         this.cubeModel.cubeGroup.add(tempGroup);
 
-        const affected = this._getAffectedStickers(face, event.slices || [0]);
+        const layers = event.layers || [0];
+        const affected = this._getAffectedStickers(face, layers);
+
+        // Debug: show animation info
+        console.log(`ANIM: alg=${event.alg} type=${event.alg_type} face=${face} layers=[${layers}] affected=${affected.length} size=${size}`);
+        this._updateDebugOverlay(event.alg || face, layers, affected.length);
+
         for (const mesh of affected) {
             tempGroup.attach(mesh);  // preserves world position, recalcs local
         }
@@ -492,64 +498,70 @@ class AnimationQueue {
         return map[face] || null;
     }
 
-    _getAffectedStickers(face, slices) {
-        // Collect ALL stickers that belong to the rotating layer.
-        const affected = [];
+    _getAffectedStickers(face, layers) {
+        // Select stickers whose position along the rotation axis matches
+        // any of the given physical layer columns.
+        // layers = 0-based column indices from the negative side of the axis.
+        // E.g. on a 4x4: R→[3], L→[0], M[1]→[1], M→[1,2]
         const size = this.cubeModel.size;
         const cellSize = this.cubeModel.cellSize;
         const half = size * cellSize / 2;
-        const tol = cellSize * 0.4;
 
         // Whole-cube rotations: ALL stickers
         if (['x', 'y', 'z'].includes(face)) {
+            const affected = [];
             for (const meshes of Object.values(this.cubeModel.stickers)) {
                 affected.push(...meshes);
             }
             return affected;
         }
 
-        // Face turns: face stickers + adjacent layer stickers
-        const layerMap = {
-            'R': { c: 'x', min: half - cellSize - tol },
-            'L': { c: 'x', max: -half + cellSize + tol },
-            'U': { c: 'y', min: half - cellSize - tol },
-            'D': { c: 'y', max: -half + cellSize + tol },
-            'F': { c: 'z', min: half - cellSize - tol },
-            'B': { c: 'z', max: -half + cellSize + tol },
+        // Map face/slice name to rotation axis
+        const axisMap = {
+            'R': 'x', 'L': 'x', 'M': 'x',
+            'U': 'y', 'D': 'y', 'E': 'y',
+            'F': 'z', 'B': 'z', 'S': 'z',
         };
+        const axis = axisMap[face];
+        if (!axis) return [];
 
-        // Slice moves: stickers between the two outer layers
-        const inner = half - cellSize;  // outer boundary of inner region
-        const sliceMap = {
-            'M': { c: 'x', min: -inner - tol, max: inner + tol },
-            'E': { c: 'y', min: -inner - tol, max: inner + tol },
-            'S': { c: 'z', min: -inner - tol, max: inner + tol },
-        };
+        // Convert layer columns to target positions along the axis
+        // Column c has its center at: (c + 0.5) * cellSize - half
+        const targetPositions = layers.map(col => (col + 0.5) * cellSize - half);
+        const tol = cellSize * 0.45;  // generous but no overlap between layers
 
-        const faceInfo = layerMap[face];
-        const sliceInfo = sliceMap[face];
-
-        if (!faceInfo && !sliceInfo) return affected;
-
+        const affected = [];
         for (const meshes of Object.values(this.cubeModel.stickers)) {
             for (const mesh of meshes) {
-                if (faceInfo) {
-                    const v = mesh.position[faceInfo.c];
-                    if (faceInfo.min !== undefined && v > faceInfo.min) {
+                const v = mesh.position[axis];
+                for (const target of targetPositions) {
+                    if (Math.abs(v - target) < tol) {
                         affected.push(mesh);
-                    } else if (faceInfo.max !== undefined && v < faceInfo.max) {
-                        affected.push(mesh);
-                    }
-                } else if (sliceInfo) {
-                    const v = mesh.position[sliceInfo.c];
-                    if (v > sliceInfo.min && v < sliceInfo.max) {
-                        affected.push(mesh);
+                        break;
                     }
                 }
             }
         }
-
         return affected;
+    }
+
+    _updateDebugOverlay(alg, layers, affectedCount) {
+        const el = document.getElementById('debug-overlay');
+        if (!el) return;
+        el.innerHTML = `
+            <span class="seg">
+                <span class="seg-label">Alg</span>
+                <span class="seg-value">${alg}</span>
+            </span>
+            <span class="seg">
+                <span class="seg-label">Layers</span>
+                <span class="seg-value">[${layers.join(',')}]</span>
+            </span>
+            <span class="seg">
+                <span class="seg-label">Stickers</span>
+                <span class="seg-value">${affectedCount}</span>
+            </span>
+        `;
     }
 }
 
@@ -940,6 +952,26 @@ class CubeClient {
                 sel.appendChild(opt);
             }
         }
+
+        // Slice selection display
+        const sliceStart = msg.slice_start || 0;
+        const sliceStop = msg.slice_stop || 0;
+        this._updateSliceOverlay(sliceStart, sliceStop);
+    }
+
+    _updateSliceOverlay(start, stop) {
+        const el = document.getElementById('debug-overlay');
+        if (!el) return;
+        if (start === 0 && stop === 0) {
+            el.innerHTML = '';
+            return;
+        }
+        el.innerHTML = `
+            <span class="seg">
+                <span class="seg-label">Slice</span>
+                <span class="seg-value">[${start}:${stop}]</span>
+            </span>
+        `;
     }
 
     _bindToolbar() {

@@ -35,10 +35,13 @@ class WebglEventLoop(EventLoop):
     SessionManager.
     """
 
+    _default_open_browser: bool = False  # set by main_webgl before construction
+
     def __init__(self, port: int | None = None, gui_test_mode: bool = False):
         self._running = False
         self._has_exit = False
         self._gui_test_mode = gui_test_mode
+        self._open_browser = self.__class__._default_open_browser
         self._loop: asyncio.AbstractEventLoop | None = None
         self._session_manager: SessionManager | None = None
         self._scheduled: list[tuple[float, Callable[[float], None], float | None]] = []
@@ -179,8 +182,8 @@ class WebglEventLoop(EventLoop):
                 pass
         print("Press Ctrl+C to stop", flush=True)
 
-        # Open browser (skip in test mode)
-        if not self._gui_test_mode:
+        # Open browser only if explicitly requested
+        if self._open_browser and not self._gui_test_mode:
             webbrowser.open(f"http://localhost:{port}")
 
         # Start periodic client logging task
