@@ -35,6 +35,14 @@ python -m cube.main_webgl --open-browser
 
 Opens http://localhost:8766 — serves source files directly via import maps. No HMR, no npm packages.
 
+**How it works without a build step:** The browser loads the raw `.js` source files and
+resolves `import 'three'` using the import map in `index.html` (fetches Three.js from CDN).
+No bundling — the browser does all module resolution natively.
+
+**Limitation:** Once we add npm UI widgets (queue panel, undo/redo), Python-only mode
+won't have those features — npm packages aren't available via CDN. At that point,
+Vite becomes required for development.
+
 ### Options
 
 ```bash

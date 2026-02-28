@@ -1,6 +1,8 @@
-# UR
+# Diagonal swap (Top-Right ↔ Bottom-Left):
+# https://www.speedsolving.com/threads/4x4-supercube-swapping-two-center-cubies-diagonally.73826/
 
-U  R U' L'  U  R' U' L
+#Fw'     L' Fw     Rw2     Fw'     L Fw     D Fw2     D' Fw2     D' Rw2
+ [1:2]F' L' [1:2]F [1:2]R2 [1:2]F' L [1:2]F D [1:2]F2 D' [1:2]F2 D' [1:2]R2
 
 
 

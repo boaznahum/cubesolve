@@ -18,6 +18,8 @@
 17. The orange is yellow ✅
 18. still happens Changing cube size, increase it view instead of fit it to current view ✅
 19. code: e.keyCode, is deprected
-20. Stop stop animation in the middle leaving face in undefined place, see pygelt2 how it handled correctly
+20. Stop stop animation in the middle leaving face in undefined place, see pygelt2 how it handled correctly ✅
 no
-21. you insert a bug !!! during solver animation inner slices are naimated as whole silce
+21. you insert a bug !!! during solver animation inner slices are naimated as whole silce ✅ 
+
+22 Rotation on m slice on U and D are again in the wrong direction !!!
