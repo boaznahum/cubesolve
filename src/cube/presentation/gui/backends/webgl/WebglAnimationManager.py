@@ -70,16 +70,11 @@ class WebglAnimationManager(AnimationManager):
         self._web_window = window
 
     def cancel_animation(self) -> None:
-        """Cancel all pending animations."""
+        """Cancel all pending animations (graceful — client finishes current animation)."""
         self._move_queue.clear()
         self._current_move = None
         self._is_processing = False
         self._pending_timer = False
-
-        # Tell client to stop animations and snap to current state
-        if self._web_window:
-            self._web_window.send_animation_stop()
-            self._web_window.send_cube_state()
 
     def run_animation(self, cube: "Cube", op: "OpProtocol", alg: "SimpleAlg") -> None:
         """Queue a move for animated playback (non-blocking)."""
@@ -168,26 +163,13 @@ class WebglAnimationManager(AnimationManager):
     def _get_animation_duration_ms(self) -> int:
         """Get animation duration based on current speed setting.
 
-        Supports fractional speed indices (e.g. 2.5) by interpolating
-        between adjacent duration entries.
+        Uses the formula: duration = 500 * 0.1^(speed_index / 7)
+
+        This maps speed 0 → 500ms, speed 7 → 50ms, and extends
+        naturally to negative indices for slower speeds:
+          speed -2.107 → 1000ms (1.0s)
+          speed -3.340 → 1500ms (1.5s)
         """
-        from cube.application.state import speeds
         speed_index = self._vs.get_speed_index
-        if speed_index >= len(speeds) - 1:
-            speed_index = len(speeds) - 1
-
-        # Speed 0 = slowest (long duration), higher = faster
-        # Map speed index to duration: 0→500ms, 1→400ms, ... 7→50ms
-        durations = [500, 400, 300, 200, 150, 100, 70, 50]
-
-        int_idx = int(speed_index)
-        frac = speed_index - int_idx
-
-        if frac == 0 or int_idx >= len(durations) - 1:
-            idx = min(int_idx, len(durations) - 1)
-            return durations[idx]
-
-        # Interpolate between adjacent durations
-        lo = durations[int_idx]
-        hi = durations[min(int_idx + 1, len(durations) - 1)]
-        return round(lo + (hi - lo) * frac)
+        duration = 500.0 * (0.1 ** (speed_index / 7.0))
+        return max(10, round(duration))

@@ -297,6 +297,16 @@ class AnimationQueue {
     }
 
     /**
+     * Update stop button enabled/disabled state.
+     * Enabled only during multi-move sequences (queue has items while animating).
+     */
+    _updateStopButton() {
+        const btn = document.getElementById('btn-stop');
+        if (!btn) return;
+        btn.disabled = !(this.currentAnim !== null && this.queue.length > 0);
+    }
+
+    /**
      * Enqueue an animation event from the server.
      */
     enqueue(event, state) {
@@ -304,6 +314,7 @@ class AnimationQueue {
         if (!this.currentAnim) {
             this._processNext();
         }
+        this._updateStopButton();
     }
 
     /**
@@ -323,17 +334,16 @@ class AnimationQueue {
             this.cubeModel.updateFromState(this.pendingState);
             this.pendingState = null;
         }
+        this._updateStopButton();
     }
 
     /**
      * Flush queue and apply latest state.
      */
     flush(state) {
-        this.currentAnim = null;
+        // Graceful stop: only clear queue, let currentAnim finish naturally
         this.queue = [];
-        if (state) {
-            this.cubeModel.updateFromState(state);
-        }
+        this._updateStopButton();
     }
 
     /**
@@ -459,6 +469,7 @@ class AnimationQueue {
         this.cubeModel.resetPositions();
 
         this.currentAnim = null;
+        this._updateStopButton();
         this._processNext();
     }
 
@@ -1325,9 +1336,20 @@ class CubeClient {
                 this._updateStatusBar();
                 break;
 
-            case 'speed_update':
-                document.getElementById('speed-select').value = msg.value;
+            case 'speed_update': {
+                const sel = document.getElementById('speed-select');
+                sel.value = msg.value;
+                if (sel.selectedIndex === -1) {
+                    // Float precision mismatch — find closest option
+                    let bestDist = Infinity, bestIdx = 0;
+                    for (let i = 0; i < sel.options.length; i++) {
+                        const d = Math.abs(parseFloat(sel.options[i].value) - msg.value);
+                        if (d < bestDist) { bestDist = d; bestIdx = i; }
+                    }
+                    sel.selectedIndex = bestIdx;
+                }
                 break;
+            }
 
             case 'size_update':
                 document.getElementById('size-select').value = msg.value;
@@ -1464,6 +1486,11 @@ class CubeClient {
         // Command buttons
         document.querySelectorAll('[data-cmd]').forEach(btn => {
             btn.addEventListener('click', () => {
+                if (btn.dataset.cmd === 'stop') {
+                    // Graceful stop: clear local queue but let currentAnim finish
+                    this.animQueue.queue = [];
+                    this.animQueue._updateStopButton();
+                }
                 this._send({ type: 'command', name: btn.dataset.cmd });
             });
         });
@@ -1473,9 +1500,21 @@ class CubeClient {
             this._send({ type: 'set_solver', name: e.target.value });
         });
 
-        // Speed dropdown — populate options 0, 0.5, 1, ... 7
+        // Speed dropdown — slow entries (by duration), then regular 1-7
         const speedSelect = document.getElementById('speed-select');
-        for (let v = 0; v <= 7; v += 0.5) {
+        const slowEntries = [
+            { value: -(7 * Math.log10(3)), label: '1.5s' },
+            { value: -(7 * Math.log10(2)), label: '1.0s' },
+            { value: 0,                    label: '0.5s' },
+        ];
+        for (const entry of slowEntries) {
+            const opt = document.createElement('option');
+            opt.value = typeof entry.value === 'number' && entry.value !== 0
+                ? entry.value.toFixed(3) : entry.value;
+            opt.textContent = entry.label;
+            speedSelect.appendChild(opt);
+        }
+        for (let v = 0.5; v <= 7; v += 0.5) {
             const opt = document.createElement('option');
             opt.value = v;
             opt.textContent = v % 1 === 0 ? v.toFixed(0) : v.toFixed(1);
