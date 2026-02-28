@@ -150,7 +150,14 @@ class ClientSession:
 
     def send_speed(self) -> None:
         speed_index = self._app.vs.get_speed_index
-        self._send(json.dumps({"type": "speed_update", "value": speed_index}))
+        cfg = self._app.config
+        self._send(json.dumps({
+            "type": "speed_update",
+            "value": speed_index,
+            "step": cfg.animation_speed_step,
+            "d0": cfg.animation_speed_d0,
+            "dn": cfg.animation_speed_dn,
+        }))
 
     def send_size(self) -> None:
         size = self._app.vs.cube_size
@@ -367,8 +374,7 @@ class ClientSession:
             self.inject_command(command)
 
     def _handle_speed(self, speed_index: float) -> None:
-        from cube.application.state import speeds
-        clamped = min(len(speeds) - 1, float(speed_index))
+        clamped = max(0.0, min(7.0, float(speed_index)))
         self._app.vs._speed = clamped
 
     def _handle_size(self, size: int) -> None:

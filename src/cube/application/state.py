@@ -237,10 +237,12 @@ class ApplicationAndViewState:
         return self._speed
 
     def inc_speed(self):
-        self._speed = min(len(speeds) - 1, self._speed + 0.5)
+        step = self._config.animation_speed_step
+        self._speed = min(7.0, self._speed + step)
 
     def dec_speed(self):
-        self._speed -= 0.5
+        step = self._config.animation_speed_step
+        self._speed = max(0.0, self._speed - step)
 
     @property
     def get_speed(self) -> _AnimationSpeed:
@@ -319,7 +321,7 @@ class ApplicationAndViewState:
     @contextmanager
     def w_animation_speed(self, animation_speed: float):
 
-        assert animation_speed <= len(speeds) - 1
+        assert 0 <= animation_speed <= 7
         saved = self._speed
         self._speed = animation_speed
 

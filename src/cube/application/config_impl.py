@@ -264,8 +264,23 @@ class AppConfig(ConfigProtocol):
 
     @property
     def animation_speed(self) -> float:
-        """Default animation speed index (higher is faster, negative for slow)."""
-        return max(-7.0, min(7.0, float(cfg.ANIMATION_SPEED)))
+        """Default animation speed index (higher is faster)."""
+        return max(0.0, min(7.0, float(cfg.ANIMATION_SPEED)))
+
+    @property
+    def animation_speed_step(self) -> float:
+        """Step size between adjacent speed dropdown options."""
+        return max(0.1, float(cfg.ANIMATION_SPEED_STEP))
+
+    @property
+    def animation_speed_d0(self) -> float:
+        """Duration in ms at speed index 0 (slowest)."""
+        return max(1.0, float(cfg.ANIMATION_SPEED_D0))
+
+    @property
+    def animation_speed_dn(self) -> float:
+        """Duration in ms at speed index 7 (fastest)."""
+        return max(1.0, float(cfg.ANIMATION_SPEED_DN))
 
     @property
     def show_file_algs(self) -> bool:

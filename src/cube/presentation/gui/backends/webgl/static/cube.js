@@ -1342,6 +1342,7 @@ class CubeClient {
                 break;
 
             case 'speed_update':
+                this._buildSpeedDropdown(msg.step || 0.5, msg.d0 || 500, msg.dn || 50);
                 document.getElementById('speed-select').value = msg.value;
                 break;
 
@@ -1408,6 +1409,24 @@ class CubeClient {
             }
             this.statusOverlay.innerHTML = html;
         }
+    }
+
+    _buildSpeedDropdown(step, d0, dn) {
+        const sel = document.getElementById('speed-select');
+        const cur = sel.value;
+        sel.innerHTML = '';
+        // I goes from 0 to 7 in increments of step
+        // D(I) = d0 * (dn/d0)^(I/7)
+        // Show label as duration in ms
+        const ratio = dn / d0;
+        for (let v = 0; v <= 7; v = Math.round((v + step) * 1e6) / 1e6) {
+            const opt = document.createElement('option');
+            opt.value = v;
+            const dur = d0 * Math.pow(ratio, v / 7.0);
+            opt.textContent = `${v} (${Math.round(dur)}ms)`;
+            sel.appendChild(opt);
+        }
+        if (cur) sel.value = cur;
     }
 
     _updateStatusBar() {
@@ -1493,17 +1512,9 @@ class CubeClient {
             this._send({ type: 'set_solver', name: e.target.value });
         });
 
-        // Speed dropdown — values from -3.5 (slow) to 7 (fast), step 0.5
-        // Formula: duration = 500 * 0.1^(index / 7)
-        // Negative indices = slower than default (>500ms per move)
-        const speedSelect = document.getElementById('speed-select');
-        for (let v = -3.5; v <= 7; v += 0.5) {
-            const opt = document.createElement('option');
-            opt.value = v;
-            opt.textContent = v % 1 === 0 ? v.toFixed(0) : v.toFixed(1);
-            speedSelect.appendChild(opt);
-        }
-        speedSelect.addEventListener('change', (e) => {
+        // Speed dropdown — built dynamically from server config
+        this._buildSpeedDropdown(0.5, 500, 50);
+        document.getElementById('speed-select').addEventListener('change', (e) => {
             this._send({ type: 'set_speed', value: parseFloat(e.target.value) });
         });
 

@@ -178,13 +178,13 @@ class WebglAnimationManager(AnimationManager):
     def _get_animation_duration_ms(self) -> int:
         """Get animation duration based on current speed setting.
 
-        Uses the formula: duration = 500 * 0.1^(speed_index / 7)
-
-        This maps speed 0 → 500ms, speed 7 → 50ms, and extends
-        naturally to negative indices for slower speeds:
-          speed -2.107 → 1000ms (1.0s)
-          speed -3.340 → 1500ms (1.5s)
+        Uses the formula: D(I) = D0 * (DN/D0)^(I/7)
+        where D0 and DN come from config.
+        This maps speed 0 → D0 ms, speed 7 → DN ms.
         """
         speed_index = self._vs.get_speed_index
-        duration = 500.0 * (0.1 ** (speed_index / 7.0))
+        cfg = self._vs._config
+        d0 = cfg.animation_speed_d0
+        dn = cfg.animation_speed_dn
+        duration = d0 * (dn / d0) ** (speed_index / 7.0)
         return max(10, round(duration))
