@@ -19,7 +19,7 @@ from cube.utils.markers_config import MarkersConfig
 
 ########## Some top important
 # Only initial value, can be changed
-CUBE_SIZE = 4
+CUBE_SIZE = 3
 
 # Enable cube caching for performance optimization
 # Env override: CUBE_DISABLE_CACHE=1 to disable
@@ -30,7 +30,7 @@ PREVENT_RANDOM_FACE_PICK_UP_IN_GEOMETRY=False
 # Available solvers: LBL, CFOP, Kociemba, Cage, Reducer
 # Examples: "lbl", "LBL", "cf" (for CFOP), "k" (for Kociemba), "r" (for Reducer)
 # Note: Keep this list in sync with SolverName enum in src/cube/domain/solver/SolverName.py
-DEFAULT_SOLVER = "Reducer"
+DEFAULT_SOLVER = "Kociemba"
 
 # Solver used by tests (must be implemented - raises error if not)
 # Tests use this instead of DEFAULT_SOLVER to avoid failures when DEFAULT_SOLVER
