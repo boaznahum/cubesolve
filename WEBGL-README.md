@@ -6,9 +6,10 @@
 python -m cube.main_webgl
 ```
 
-Opens `http://localhost:8766` in your browser.
+Starts the server on `http://localhost:8766`. Open that URL manually in your browser.
 
 ```bash
+python -m cube.main_webgl --open-browser    # auto-open browser
 python -m cube.main_webgl --cube-size 5     # 5x5 cube
 python -m cube.main_webgl --debug-all       # verbose logging
 ```
