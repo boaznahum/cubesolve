@@ -123,7 +123,7 @@ export class Toolbar {
             const opt = document.createElement('option');
             opt.value = v;
             const dur = d0 * Math.pow(ratio, v / 7.0);
-            opt.textContent = `${v} (${Math.round(dur)}ms)`;
+            opt.textContent = `${v}`;
             sel.appendChild(opt);
         }
         if (cur) sel.value = cur;
