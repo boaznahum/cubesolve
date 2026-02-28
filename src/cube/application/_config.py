@@ -105,7 +105,7 @@ ANIMATION_SPEED = 2
 ANIMATION_SPEED_STEP = 0.5
 
 # Duration (ms) at speed index 0 (slowest)
-ANIMATION_SPEED_D0 = 500
+ANIMATION_SPEED_D0 = 2000
 
 # Duration (ms) at speed index 7 (fastest)
 ANIMATION_SPEED_DN = 50
