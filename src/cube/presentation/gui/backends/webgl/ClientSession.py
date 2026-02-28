@@ -368,7 +368,7 @@ class ClientSession:
 
     def _handle_speed(self, speed_index: float) -> None:
         from cube.application.state import speeds
-        clamped = max(-7.0, min(len(speeds) - 1, float(speed_index)))
+        clamped = min(len(speeds) - 1, float(speed_index))
         self._app.vs._speed = clamped
 
     def _handle_size(self, size: int) -> None:

@@ -1493,9 +1493,11 @@ class CubeClient {
             this._send({ type: 'set_solver', name: e.target.value });
         });
 
-        // Speed dropdown — values from 0.5 to 7 (step 0.5)
+        // Speed dropdown — values from -3.5 (slow) to 7 (fast), step 0.5
+        // Formula: duration = 500 * 0.1^(index / 7)
+        // Negative indices = slower than default (>500ms per move)
         const speedSelect = document.getElementById('speed-select');
-        for (let v = 0.5; v <= 7; v += 0.5) {
+        for (let v = -3.5; v <= 7; v += 0.5) {
             const opt = document.createElement('option');
             opt.value = v;
             opt.textContent = v % 1 === 0 ? v.toFixed(0) : v.toFixed(1);
