@@ -1336,20 +1336,9 @@ class CubeClient {
                 this._updateStatusBar();
                 break;
 
-            case 'speed_update': {
-                const sel = document.getElementById('speed-select');
-                sel.value = msg.value;
-                if (sel.selectedIndex === -1) {
-                    // Float precision mismatch — find closest option
-                    let bestDist = Infinity, bestIdx = 0;
-                    for (let i = 0; i < sel.options.length; i++) {
-                        const d = Math.abs(parseFloat(sel.options[i].value) - msg.value);
-                        if (d < bestDist) { bestDist = d; bestIdx = i; }
-                    }
-                    sel.selectedIndex = bestIdx;
-                }
+            case 'speed_update':
+                document.getElementById('speed-select').value = msg.value;
                 break;
-            }
 
             case 'size_update':
                 document.getElementById('size-select').value = msg.value;
@@ -1500,21 +1489,9 @@ class CubeClient {
             this._send({ type: 'set_solver', name: e.target.value });
         });
 
-        // Speed dropdown — slow entries (by duration), then regular 1-7
+        // Speed dropdown — values from -3 to 7 (step 0.5)
         const speedSelect = document.getElementById('speed-select');
-        const slowEntries = [
-            { value: -(7 * Math.log10(3)), label: '1.5s' },
-            { value: -(7 * Math.log10(2)), label: '1.0s' },
-            { value: 0,                    label: '0.5s' },
-        ];
-        for (const entry of slowEntries) {
-            const opt = document.createElement('option');
-            opt.value = typeof entry.value === 'number' && entry.value !== 0
-                ? entry.value.toFixed(3) : entry.value;
-            opt.textContent = entry.label;
-            speedSelect.appendChild(opt);
-        }
-        for (let v = 0.5; v <= 7; v += 0.5) {
+        for (let v = -3; v <= 7; v += 0.5) {
             const opt = document.createElement('option');
             opt.value = v;
             opt.textContent = v % 1 === 0 ? v.toFixed(0) : v.toFixed(1);
