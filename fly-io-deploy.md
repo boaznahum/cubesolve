@@ -97,8 +97,7 @@ fly deploy --config fly-webgl.toml --app cubesolve-webgl
 | web | `Dockerfile` | `fly.toml` | 8765 | cubesolve |
 | webgl | `Dockerfile.webgl` | `fly-webgl.toml` | 8766 | cubesolve-webgl |
 
-**Automatic deploys:** Pushing to `web1` on GitHub auto-deploys to the
-**dev** app via GitHub Actions (`.github/workflows/fly-deploy.yml`).
+**Automatic deploys:** See [GitHub Actions Auto-Deploy](#github-actions-auto-deploy) below.
 
 ### Useful Commands
 
@@ -146,3 +145,127 @@ cd ~ && fly open --app cubesolve-dev && cd -
 ### Costs
 - Free tier: 3 shared-cpu-1x VMs with 256MB RAM
 - Auto-stop means you only use resources when someone is connected
+
+
+## GitHub Actions Auto-Deploy
+
+Configured in `.github/workflows/fly-deploy.yml`.
+
+### Branch → App Mapping
+
+| Branch | App | Secret |
+|--------|-----|--------|
+| `main` | `cubesolve` (prod) | `FLY_API_TOKEN` |
+| `webgl-4` | `cubesolve-dev` | `FLY_API_TOKEN_DEV` |
+| `staging` | `cubesolve-staging` | (needs token) |
+
+Push to a branch → GitHub Actions auto-deploys to the corresponding app.
+
+### Monitoring Deploys
+
+```bash
+# List recent workflow runs
+gh run list --limit 5
+
+# View logs of a failed run
+gh run view <RUN_ID> --log-failed
+
+# Re-run a failed deploy
+gh run rerun <RUN_ID>
+
+# Watch a running deploy
+gh run watch <RUN_ID>
+```
+
+
+## Token Management
+
+### List tokens for an app
+
+```bash
+fly tokens list -a cubesolve-dev
+fly tokens list -a cubesolve
+```
+
+**Important:** Token values are shown only once at creation. You cannot retrieve them later.
+
+### Create a deploy token (per-app, recommended)
+
+```bash
+# For dev
+fly tokens create deploy -a cubesolve-dev
+
+# For prod
+fly tokens create deploy -a cubesolve
+
+# For staging
+fly tokens create deploy -a cubesolve-staging
+```
+
+Save the output immediately — copy it before doing anything else.
+
+### Create an org-level token (all apps)
+
+```bash
+fly tokens create org
+```
+
+Works for all apps. Simpler (one token for everything) but less secure.
+
+### Revoke a token
+
+```bash
+# Get the TOKEN_ID from the list
+fly tokens list -a cubesolve-dev
+
+# Revoke it
+fly tokens revoke -a cubesolve-dev <TOKEN_ID>
+```
+
+
+## GitHub Secrets Management
+
+### From CLI (`gh`)
+
+```bash
+# List all secrets
+gh secret list
+
+# Set a secret (pipe the token value)
+echo "FlyV1 fm2_..." | gh secret set FLY_API_TOKEN_DEV
+
+# Set a secret interactively (prompts for value, safer)
+gh secret set FLY_API_TOKEN_DEV
+
+# Delete a secret
+gh secret delete FLY_API_TOKEN_DEV
+```
+
+### From GitHub UI
+
+1. Go to: https://github.com/boaznahum/cubesolve/settings/secrets/actions
+2. Click **New repository secret**
+3. Enter name (e.g., `FLY_API_TOKEN_DEV`) and paste the token value
+4. Click **Add secret**
+
+### Full Setup for a New App
+
+```bash
+# 1. Create the app
+fly apps create cubesolve-staging
+
+# 2. Scale to 1 machine (WebSocket needs single machine)
+# (do this after first deploy)
+fly scale count 1 --app cubesolve-staging
+
+# 3. Create a deploy token — SAVE THE OUTPUT!
+fly tokens create deploy -a cubesolve-staging
+
+# 4. Add token to GitHub secrets
+echo "<paste-token-here>" | gh secret set FLY_API_TOKEN_STAGING
+
+# 5. Update .github/workflows/fly-deploy.yml:
+#    - Add branch to trigger list
+#    - Add job with the new secret name
+#    - Commit and push
+```
