@@ -281,6 +281,9 @@ class ClientSession:
     def send_flush_queue(self) -> None:
         self._send(json.dumps({"type": "flush_queue"}))
 
+    def send_playing(self, playing: bool) -> None:
+        self._send(json.dumps({"type": "playing", "value": playing}))
+
     def send_session_id(self) -> None:
         self._send(json.dumps({
             "type": "session_id",

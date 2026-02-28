@@ -294,16 +294,7 @@ class AnimationQueue {
         this.queue = [];
         this.currentAnim = null;
         this.pendingState = null;  // State to apply after all animations
-    }
-
-    /**
-     * Update stop button enabled/disabled state.
-     * Enabled only during multi-move sequences (queue has items while animating).
-     */
-    _updateStopButton() {
-        const btn = document.getElementById('btn-stop');
-        if (!btn) return;
-        btn.disabled = !(this.currentAnim !== null && this.queue.length > 0);
+        this._stopRequested = false;
     }
 
     /**
@@ -314,7 +305,6 @@ class AnimationQueue {
         if (!this.currentAnim) {
             this._processNext();
         }
-        this._updateStopButton();
     }
 
     /**
@@ -330,20 +320,26 @@ class AnimationQueue {
     stop() {
         this.currentAnim = null;
         this.queue = [];
+        this._stopRequested = false;
         if (this.pendingState) {
             this.cubeModel.updateFromState(this.pendingState);
             this.pendingState = null;
         }
-        this._updateStopButton();
     }
 
     /**
-     * Flush queue and apply latest state.
+     * Flush queue — graceful stop: clear queue, let currentAnim finish.
      */
     flush(state) {
-        // Graceful stop: only clear queue, let currentAnim finish naturally
         this.queue = [];
-        this._updateStopButton();
+    }
+
+    /**
+     * Request stop after current animation finishes.
+     */
+    requestStop() {
+        this._stopRequested = true;
+        this.queue = [];
     }
 
     /**
@@ -469,7 +465,10 @@ class AnimationQueue {
         this.cubeModel.resetPositions();
 
         this.currentAnim = null;
-        this._updateStopButton();
+        if (this._stopRequested) {
+            this._stopRequested = false;
+            return;  // Don't process next — stop was requested
+        }
         this._processNext();
     }
 
@@ -1322,6 +1321,12 @@ class CubeClient {
                 this.animQueue.flush(this.latestState);
                 break;
 
+            case 'playing': {
+                const btn = document.getElementById('btn-stop');
+                if (btn) btn.disabled = !msg.value;
+                break;
+            }
+
             case 'text_update':
                 this._updateTextOverlays(msg);
                 break;
@@ -1476,9 +1481,8 @@ class CubeClient {
         document.querySelectorAll('[data-cmd]').forEach(btn => {
             btn.addEventListener('click', () => {
                 if (btn.dataset.cmd === 'stop') {
-                    // Graceful stop: clear local queue but let currentAnim finish
-                    this.animQueue.queue = [];
-                    this.animQueue._updateStopButton();
+                    // Graceful stop: remember stop, let current animation finish
+                    this.animQueue.requestStop();
                 }
                 this._send({ type: 'command', name: btn.dataset.cmd });
             });

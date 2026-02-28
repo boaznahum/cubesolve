@@ -54,6 +54,7 @@ class WebglAnimationManager(AnimationManager):
         "_operator",
         "_current_move",
         "_pending_timer",
+        "_playing_sent",
     ]
 
     def __init__(self, vs: "ApplicationAndViewState", operator: "Operator") -> None:
@@ -64,6 +65,7 @@ class WebglAnimationManager(AnimationManager):
         self._operator: Operator = operator
         self._current_move: _QueuedMove | None = None
         self._pending_timer: bool = False
+        self._playing_sent: bool = False
 
     def set_web_window(self, window: "ClientSession") -> None:
         """Set the client session reference for sending state."""
@@ -75,6 +77,10 @@ class WebglAnimationManager(AnimationManager):
         self._current_move = None
         self._is_processing = False
         self._pending_timer = False
+        if self._playing_sent:
+            self._playing_sent = False
+            if self._web_window:
+                self._web_window.send_playing(False)
 
     def run_animation(self, cube: "Cube", op: "OpProtocol", alg: "SimpleAlg") -> None:
         """Queue a move for animated playback (non-blocking)."""
@@ -90,6 +96,11 @@ class WebglAnimationManager(AnimationManager):
 
         if not self._is_processing:
             self._process_next()
+        elif not self._playing_sent:
+            # Move enqueued while already processing → multi-move sequence
+            self._playing_sent = True
+            if self._web_window:
+                self._web_window.send_playing(True)
 
     def _process_next(self) -> None:
         """Process queued moves, sending animation events to client."""
@@ -149,6 +160,10 @@ class WebglAnimationManager(AnimationManager):
         # Queue empty
         self._is_processing = False
         self._current_move = None
+        if self._playing_sent:
+            self._playing_sent = False
+            if self._web_window:
+                self._web_window.send_playing(False)
 
     def _on_timer(self, _dt: float) -> None:
         """Timer callback — process next queued move."""
