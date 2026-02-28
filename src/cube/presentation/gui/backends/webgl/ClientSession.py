@@ -472,6 +472,10 @@ class ClientSession:
             self._fast_play_redo()
             return
 
+        if command_name == "fast_rewind":
+            self._fast_rewind()
+            return
+
         command_map: dict[str, Command] = {
             "solve_instant": Commands.SOLVE_ALL_NO_ANIMATION,
             "scramble": Commands.SCRAMBLE_1,
@@ -835,6 +839,22 @@ class ClientSession:
         self.send_playing(True)
         while op.redo_queue():
             op.redo(animation=True)
+            self.send_history_state()
+        self.send_playing(False)
+        self.update_gui_elements()
+        self.send_toolbar_state()
+
+    def _fast_rewind(self) -> None:
+        """Undo all operations with animation (fast rewind).
+
+        Each step is undone via undo(), sending animation events to the client.
+        """
+        op = self._app.op
+        if not op.history():
+            return
+        self.send_playing(True)
+        while op.history():
+            op.undo(animation=True)
             self.send_history_state()
         self.send_playing(False)
         self.update_gui_elements()

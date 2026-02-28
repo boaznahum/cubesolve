@@ -15,6 +15,7 @@ export class HistoryPanel {
         this._btnUndo = document.getElementById('btn-undo');
         this._btnRedo = document.getElementById('btn-redo');
         this._btnPlay = document.getElementById('btn-fastplay');
+        this._btnRewind = document.getElementById('btn-fastrewind');
         this._btnClear = document.getElementById('btn-history-clear');
 
         // State
@@ -39,6 +40,11 @@ export class HistoryPanel {
         if (this._btnPlay) {
             this._btnPlay.addEventListener('click', () => {
                 this._send({ type: 'command', name: 'fast_play' });
+            });
+        }
+        if (this._btnRewind) {
+            this._btnRewind.addEventListener('click', () => {
+                this._send({ type: 'command', name: 'fast_rewind' });
             });
         }
         if (this._btnClear) {
@@ -150,6 +156,7 @@ export class HistoryPanel {
         if (this._btnUndo) this._btnUndo.disabled = !hasDone || this._isPlaying;
         if (this._btnRedo) this._btnRedo.disabled = !hasRedo || this._isPlaying;
         if (this._btnPlay) this._btnPlay.disabled = !hasRedo || this._isPlaying;
+        if (this._btnRewind) this._btnRewind.disabled = !hasDone || this._isPlaying;
 
         // Change redo label to "Next" when solver solution is queued
         if (this._btnRedo && hasRedo) {
