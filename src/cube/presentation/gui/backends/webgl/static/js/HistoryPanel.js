@@ -98,11 +98,11 @@ export class HistoryPanel {
             const redoCount = this._redoItems.length;
             const isSolver = this._redoSource === 'solver';
 
-            let label = `NOW ${doneCount}`;
+            let label = 'NOW';
             if (redoCount > 0 && isSolver) {
                 label += ` (solver ${redoCount})`;
             } else if (redoCount > 0) {
-                label += ` (+${redoCount})`;
+                label += ` (redo ${redoCount})`;
             }
 
             const marker = document.createElement('div');
@@ -158,7 +158,7 @@ export class HistoryPanel {
     _badgeLabel(type) {
         const labels = {
             'move': '',
-            'face': 'F',
+            'face': '',
             'slice': 'S',
             'rotation': 'R',
             'scramble': 'Scr',
