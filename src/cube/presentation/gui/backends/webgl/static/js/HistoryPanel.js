@@ -71,6 +71,7 @@ export class HistoryPanel {
             index: this._doneItems.length + i + 1,
         }));
         this._redoSource = msg.redo_source || 'undo';
+        this._redoTainted = msg.redo_tainted || false;
         this._render();
     }
 
@@ -94,22 +95,27 @@ export class HistoryPanel {
 
         // NOW marker (only if there are items on either side)
         if (this._doneItems.length > 0 || this._redoItems.length > 0) {
-            const doneCount = this._doneItems.length;
             const redoCount = this._redoItems.length;
-            const isSolver = this._redoSource === 'solver';
 
-            let label = 'NOW';
-            if (redoCount > 0 && isSolver) {
-                label += ` (solver ${redoCount})`;
-            } else if (redoCount > 0) {
-                label += ` (redo ${redoCount})`;
+            let label = 'NEXT';
+            if (redoCount > 0) {
+                label += ` ${redoCount}`;
+            }
+
+            // Warning icon when solver queue is tainted by manual moves
+            let warn = '';
+            let tooltip = '';
+            if (this._redoTainted) {
+                warn = ' <span class="hp-marker-warn" title="Manual moves were made — playing the queue will NOT solve the cube">&#x26A0;</span>';
+                tooltip = 'Manual moves were made — playing the queue will NOT solve the cube';
             }
 
             const marker = document.createElement('div');
             marker.className = 'hp-marker';
+            if (tooltip) marker.title = tooltip;
             marker.innerHTML =
                 '<span class="hp-marker-line"></span>' +
-                `<span class="hp-marker-text">${label}</span>` +
+                `<span class="hp-marker-text">${label}${warn}</span>` +
                 '<span class="hp-marker-line"></span>';
             this._list.appendChild(marker);
         }

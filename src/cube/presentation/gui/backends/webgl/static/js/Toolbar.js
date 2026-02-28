@@ -202,9 +202,21 @@ export class Toolbar {
                     // Graceful stop: remember stop, let current animation finish
                     this._animQueue.requestStop();
                 }
+                // Show wait cursor for long operations
+                if (btn.dataset.cmd === 'scramble' || btn.dataset.cmd === 'solve') {
+                    document.body.style.cursor = 'progress';
+                }
                 this._send({ type: 'command', name: btn.dataset.cmd });
             });
         });
+
+        // Assist checkbox (client-side only, controls AnimationQueue preview delay)
+        const chkAssist = document.getElementById('chk-assist');
+        if (chkAssist) {
+            chkAssist.addEventListener('change', () => {
+                this._animQueue.assistDelayMs = chkAssist.checked ? 400 : 0;
+            });
+        }
 
         // Solver dropdown
         document.getElementById('solver-select').addEventListener('change', (e) => {
@@ -234,6 +246,13 @@ export class Toolbar {
         window.addEventListener('keydown', (e) => {
             // Don't capture when typing in inputs
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+
+            // Space → single redo (play next move)
+            if (e.key === ' ' || e.code === 'Space') {
+                e.preventDefault();
+                this._send({ type: 'command', name: 'redo' });
+                return;
+            }
 
             // Camera reset: Alt+C (view reset) or Ctrl+C (cube + view reset)
             // Camera is client-side (OrbitControls), so handle here

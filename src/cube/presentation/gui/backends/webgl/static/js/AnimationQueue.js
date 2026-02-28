@@ -3,6 +3,9 @@
  *
  * Receives animation events from the server, queues them, and plays
  * them sequentially at 60fps using temporary Three.js rotation groups.
+ *
+ * Assist mode: when assistDelayMs > 0, shows a brief move indicator
+ * preview before each animation starts (via callbacks).
  */
 
 import * as THREE from 'three';
@@ -16,6 +19,12 @@ export class AnimationQueue {
         this._stopRequested = false;
         this._onDebugUpdate = null;  // callback(alg, layers, count) for debug overlay
         this._onAllDone = null;      // callback() when queue drains and no animation
+
+        // Assist preview: show move indicator before each animation
+        this.assistDelayMs = 0;      // 0 = off, >0 = preview duration in ms
+        this._onAssistShow = null;   // callback(face, layers, direction)
+        this._onAssistHide = null;   // callback()
+        this._previewState = null;   // { startTime, event, state, face, speedMult }
     }
 
     /**
@@ -23,7 +32,7 @@ export class AnimationQueue {
      */
     enqueue(event, state) {
         this.queue.push({ event, state });
-        if (!this.currentAnim) {
+        if (!this.currentAnim && !this._previewState) {
             this._processNext();
         }
     }
@@ -40,6 +49,10 @@ export class AnimationQueue {
      */
     stop() {
         this.currentAnim = null;
+        if (this._previewState) {
+            this._previewState = null;
+            if (this._onAssistHide) this._onAssistHide();
+        }
         this.queue = [];
         this._stopRequested = false;
         if (this.pendingState) {
@@ -53,6 +66,10 @@ export class AnimationQueue {
      */
     flush(state) {
         this.queue = [];
+        if (this._previewState) {
+            this._previewState = null;
+            if (this._onAssistHide) this._onAssistHide();
+        }
     }
 
     /**
@@ -61,6 +78,10 @@ export class AnimationQueue {
     requestStop() {
         this._stopRequested = true;
         this.queue = [];
+        if (this._previewState) {
+            this._previewState = null;
+            if (this._onAssistHide) this._onAssistHide();
+        }
     }
 
     /**
@@ -68,6 +89,18 @@ export class AnimationQueue {
      * Returns true if an animation is active.
      */
     update() {
+        // Handle assist preview phase — wait for delay then start rotation
+        if (this._previewState) {
+            const elapsed = performance.now() - this._previewState.startTime;
+            if (elapsed >= this.assistDelayMs) {
+                const { event, state, face, speedMult } = this._previewState;
+                this._previewState = null;
+                if (this._onAssistHide) this._onAssistHide();
+                this._startRotation(event, state, face, speedMult);
+            }
+            return true;
+        }
+
         if (!this.currentAnim) return false;
 
         const anim = this.currentAnim;
@@ -83,7 +116,7 @@ export class AnimationQueue {
 
         if (elapsed >= anim.duration) {
             this._finishCurrent();
-            return this.currentAnim !== null;
+            return this.currentAnim !== null || this._previewState !== null;
         }
 
         return true;
@@ -116,6 +149,21 @@ export class AnimationQueue {
                 if (known.includes(ch)) { face = ch; break; }
             }
         }
+
+        // Assist preview: show indicator and delay before starting rotation
+        if (this.assistDelayMs > 0 && this._onAssistShow) {
+            this._onAssistShow(face, event.layers || [0], event.direction || 1);
+            this._previewState = {
+                startTime: performance.now(),
+                event, state, face, speedMult
+            };
+            return;
+        }
+
+        this._startRotation(event, state, face, speedMult);
+    }
+
+    _startRotation(event, state, face, speedMult) {
         const duration = (event.duration_ms || 300) * speedMult;
         const direction = event.direction || 1;
 

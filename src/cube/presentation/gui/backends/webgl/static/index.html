@@ -23,7 +23,7 @@
             display: flex;
             gap: 8px;
             align-items: flex-start;
-            max-width: 1000px;
+            max-width: calc(100vw - 16px);
             width: 100%;
             padding: 0 8px;
         }
@@ -33,7 +33,6 @@
             align-items: center;
             flex: 1;
             min-width: 0;
-            max-width: 724px;
         }
 
         /* ── History Panel ── */
@@ -195,6 +194,11 @@
             letter-spacing: 1.5px;
             text-transform: uppercase;
         }
+        .hp-marker-warn {
+            color: #e44;
+            font-size: 13px;
+            cursor: help;
+        }
 
         /* Footer — undo/redo/play buttons */
         .hp-footer {
@@ -249,7 +253,6 @@
         /* Toolbar */
         #toolbar {
             width: 100%;
-            max-width: 724px;
             background: rgba(40, 40, 40, 0.95);
             border: 2px solid #444;
             border-bottom: none;
@@ -348,7 +351,6 @@
         #canvas-wrapper {
             position: relative;
             width: 100%;
-            max-width: 720px;
         }
         #canvas {
             display: block;
@@ -522,6 +524,7 @@
             <div class="tb-group">
                 <button class="tb-btn tb-on" id="btn-debug" data-cmd="toggle_debug">Dbg:ON</button>
                 <button class="tb-btn tb-on" id="btn-anim" data-cmd="toggle_animation">Anim:ON</button>
+                <label class="tb-label" style="cursor:pointer"><input type="checkbox" id="chk-assist"> Assist</label>
             </div>
             <div class="tb-sep"></div>
             <div class="tb-group">

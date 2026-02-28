@@ -199,9 +199,10 @@ class Operator(OperatorProtocol):
             alg.play(self._cube, False)
             self._cube.sanity()
             self._history.append(alg)
-            # New operations invalidate the redo queue (standard undo/redo behavior)
-            if not self._in_undo_redo:
-                self._redo_queue.clear()
+            # Note: redo queue is NOT cleared on manual moves.
+            # Unlike text editors, clearing the solver's redo queue on an
+            # accidental key press is destructive. The queue is only cleared
+            # explicitly (reset, new scramble, new solve).
 
     def play_seq(self, algs: Reversible[Alg], inv: Any):
 

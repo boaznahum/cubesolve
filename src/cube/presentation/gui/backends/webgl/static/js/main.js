@@ -82,16 +82,29 @@ let _latestHistoryMsg = null;
 animQueue._onDebugUpdate = (alg, layers, count) => toolbar.updateDebug(alg, layers, count);
 
 // When all animations finish, re-show move indicators from latest history_state
+// (but not during autoplay — indicators would just flash between batches)
 animQueue._onAllDone = () => {
+    if (state.isPlaying) return;
     if (_latestHistoryMsg && _latestHistoryMsg.next_move) {
         moveIndicator.show(_latestHistoryMsg.next_move);
     }
 };
 
+// Wire assist preview callbacks from AnimationQueue → MoveIndicator
+animQueue._onAssistShow = (face, layers, direction) => {
+    moveIndicator.show({ face, layers, direction });
+};
+animQueue._onAssistHide = () => {
+    moveIndicator.hide();
+};
+
 // ── Responsive sizing ──
 function resize() {
     const wrapper = canvas.parentElement;
-    const size = Math.min(wrapper.clientWidth, window.innerHeight - 120);
+    // Canvas is square: fit within available width and viewport height
+    const toolbarH = document.getElementById('toolbar')?.offsetHeight || 40;
+    const availH = window.innerHeight - toolbarH - 40;  // toolbar + status bar + padding
+    const size = Math.min(wrapper.clientWidth, availH);
     renderer.setSize(size, size);
     camera.aspect = 1;
     camera.updateProjectionMatrix();
@@ -103,6 +116,7 @@ window.addEventListener('resize', resize);
 function handleMessage(msg) {
     switch (msg.type) {
         case 'cube_state':
+            document.body.style.cursor = '';
             state.latestState = msg;
             if (!animQueue.currentAnim && animQueue.queue.length === 0) {
                 cubeModel.updateFromState(msg);
@@ -112,7 +126,7 @@ function handleMessage(msg) {
             break;
 
         case 'animation_start': {
-            moveIndicator.hide();
+            if (moveIndicator.isVisible) moveIndicator.hide();
             const animState = msg.state || state.latestState;
             if (animState) {
                 state.latestState = animState;
@@ -139,8 +153,8 @@ function handleMessage(msg) {
         case 'history_state':
             historyPanel.updateFromServer(msg);
             _latestHistoryMsg = msg;
-            // Show next-move indicators if not animating
-            if (!animQueue.currentAnim && animQueue.queue.length === 0) {
+            // Show next-move indicators if not animating and not in autoplay
+            if (!state.isPlaying && !animQueue.currentAnim && animQueue.queue.length === 0) {
                 moveIndicator.show(msg.next_move || null);
             }
             break;
@@ -149,8 +163,10 @@ function handleMessage(msg) {
             // Toolbar handles: playing, text_update, version, client_count,
             // speed_update, size_update, toolbar_state, session_id
             toolbar.handleMessage(msg);
-            // Forward playing state to history panel
+            // Forward playing state to history panel + app state
             if (msg.type === 'playing') {
+                state.isPlaying = msg.value;
+                if (msg.value) moveIndicator.hide();
                 historyPanel.setPlaying(msg.value);
             }
             break;

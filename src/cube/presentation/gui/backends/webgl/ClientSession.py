@@ -101,6 +101,9 @@ class ClientSession:
 
         # Track whether redo queue was filled by solver (for UI labels)
         self._redo_is_solver: bool = False
+        # True when user made manual moves while solver redo queue exists
+        # (playing the queue won't solve the cube anymore)
+        self._redo_tainted: bool = False
 
     @property
     def app(self) -> "AbstractApp":
@@ -315,6 +318,7 @@ class ClientSession:
             "done": done,
             "redo": redo,
             "redo_source": "solver" if self._redo_is_solver and redo else "undo",
+            "redo_tainted": self._redo_tainted and bool(redo),
         }
         next_move = self._compute_next_move(redo_list)
         if next_move is not None:
@@ -526,6 +530,9 @@ class ClientSession:
             # Scramble applies instantly (no animation).
             # User can replay via fast-rewind + fast-play later.
             op = self._app.op
+            op.clear_redo()  # New scramble invalidates any existing redo queue
+            self._redo_is_solver = False
+            self._redo_tainted = False
             with op.with_animation(animation=False):
                 ctx = CommandContext.from_window(self)  # type: ignore[arg-type]
                 Commands.SCRAMBLE_1.execute(ctx)
@@ -551,6 +558,7 @@ class ClientSession:
 
         if command_name == "clear_history":
             self._redo_is_solver = False
+            self._redo_tainted = False
             self._app.op.reset()
             self.update_gui_elements()
             self.send_history_state()
@@ -717,6 +725,9 @@ class ClientSession:
             if inv:
                 alg = alg.inv()
             op = self._app.op
+            # Detect manual move while solver redo queue exists → tainted
+            if self._redo_is_solver and op.redo_queue():
+                self._redo_tainted = True
             op.play(alg, animation=True)
             if not op.animation_enabled:
                 self.update_gui_elements()
@@ -907,6 +918,7 @@ class ClientSession:
             steps = list(solution_alg.flatten())
             app.op.enqueue_redo(steps)
             self._redo_is_solver = True
+            self._redo_tainted = False
             self.update_gui_elements()
             self.send_toolbar_state()
             self.send_history_state()
@@ -934,6 +946,12 @@ class ClientSession:
         if not self._fast_playing or not op.redo_queue():
             self._finish_fast_play()
             return
+        if not op.animation_enabled:
+            # Animation OFF: apply all remaining moves instantly
+            while self._fast_playing and op.redo_queue():
+                op.redo(animation=False)
+            self._finish_fast_play()
+            return
         op.redo(animation=True)
         self.send_history_state()
         delay = self._animation_duration_sec()
@@ -954,6 +972,12 @@ class ClientSession:
     def _fast_rewind_step(self) -> None:
         op = self._app.op
         if not self._fast_playing or not op.history():
+            self._finish_fast_play()
+            return
+        if not op.animation_enabled:
+            # Animation OFF: undo all remaining moves instantly
+            while self._fast_playing and op.history():
+                op.undo(animation=False)
             self._finish_fast_play()
             return
         op.undo(animation=True)
@@ -1004,8 +1028,13 @@ class ClientSession:
         try:
             speed_before = self._app.vs.get_speed_index
             size_before = self._app.vs.cube_size
+            history_len_before = len(self._app.op.history())
             ctx = CommandContext.from_window(self)  # type: ignore[arg-type]
             result = command.execute(ctx)
+            # Detect manual move while solver redo queue exists → tainted
+            if (self._redo_is_solver and self._app.op.redo_queue()
+                    and len(self._app.op.history()) > history_len_before):
+                self._redo_tainted = True
             if self._app.vs.get_speed_index != speed_before:
                 self.send_speed()
             if self._app.vs.cube_size != size_before:
