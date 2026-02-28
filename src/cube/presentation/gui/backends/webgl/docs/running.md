@@ -57,6 +57,8 @@ Unlike the `web` backend (which streams rendering commands per frame), the `webg
 | `cube_state` | NxN grid of RGB colors per face |
 | `animation_start` | Face rotation event (face, direction, duration) |
 | `animation_stop` | Cancel all client animations |
+| `flush_queue` | Clear client animation queue (graceful stop) |
+| `playing` | Multi-move sequence started/ended (`value: bool`) |
 | `text_update` | Solver status, move count, animation text |
 | `toolbar_state` | Debug/animation toggles, solver list |
 | `version` | Server version string |
