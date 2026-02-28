@@ -94,15 +94,31 @@ export class HistoryPanel {
 
         // NOW marker (only if there are items on either side)
         if (this._doneItems.length > 0 || this._redoItems.length > 0) {
+            const doneCount = this._doneItems.length;
+            const redoCount = this._redoItems.length;
+            const isSolver = this._redoSource === 'solver';
+
+            let label = `NOW ${doneCount}`;
+            if (redoCount > 0 && isSolver) {
+                label += ` (solver ${redoCount})`;
+            } else if (redoCount > 0) {
+                label += ` (+${redoCount})`;
+            }
+
             const marker = document.createElement('div');
             marker.className = 'hp-marker';
-            marker.innerHTML = '<span class="hp-marker-line"></span><span class="hp-marker-text">NOW</span><span class="hp-marker-line"></span>';
+            marker.innerHTML =
+                '<span class="hp-marker-line"></span>' +
+                `<span class="hp-marker-text">${label}</span>` +
+                '<span class="hp-marker-line"></span>';
             this._list.appendChild(marker);
         }
 
         // Redo items (future operations)
-        for (const item of this._redoItems) {
-            this._list.appendChild(this._createItem(item, 'redo'));
+        for (let i = 0; i < this._redoItems.length; i++) {
+            const el = this._createItem(this._redoItems[i], 'redo');
+            if (i === 0) el.classList.add('hp-next-redo');
+            this._list.appendChild(el);
         }
 
         this._updateButtons();

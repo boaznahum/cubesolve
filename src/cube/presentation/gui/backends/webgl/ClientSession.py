@@ -304,9 +304,10 @@ class ClientSession:
             {"alg": str(a), "type": self._classify_alg(a)}
             for a in op.history()
         ]
+        # redo_queue() is stored reversed (for LIFO pop), reverse for display order
         redo: list[dict[str, str]] = [
             {"alg": str(a), "type": self._classify_alg(a)}
-            for a in op.redo_queue()
+            for a in reversed(op.redo_queue())
         ]
         self._send(json.dumps({
             "type": "history_state",

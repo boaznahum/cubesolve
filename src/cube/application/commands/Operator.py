@@ -269,10 +269,11 @@ class Operator(OperatorProtocol):
     def enqueue_redo(self, algs: Sequence[Alg]) -> None:
         """Replace the redo queue with the given algorithms (e.g., solver solution).
 
-        Clears any existing redo items first.
+        Stores in reversed order so that pop() (LIFO) yields the first step
+        first — matching the same pop() semantics used by manual undo/redo.
         """
         self._redo_queue.clear()
-        self._redo_queue.extend(algs)
+        self._redo_queue.extend(reversed(algs))
 
     def history(self, *, remove_scramble: bool = False) -> Sequence[Alg]:
         """
