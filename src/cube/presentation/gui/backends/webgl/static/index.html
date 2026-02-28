@@ -110,6 +110,12 @@
             background: rgba(70, 130, 180, 0.12);
             border: 1px solid rgba(70, 130, 180, 0.15);
         }
+        /* Last done item — highlighted (next to be undone) */
+        .hp-done.hp-last-done {
+            background: rgba(70, 130, 180, 0.25);
+            border: 1px solid rgba(70, 130, 180, 0.35);
+            box-shadow: 0 0 8px rgba(70, 130, 180, 0.15);
+        }
         .hp-done .hp-item-num {
             color: rgba(130, 180, 220, 0.5);
             font-size: 10px;
@@ -442,7 +448,7 @@
         @media (max-width: 768px) {
             body { align-items: flex-start; overflow-y: auto; }
             #app-layout { flex-direction: column; padding: 0 2px; }
-            #history-panel { width: 100%; max-height: 180px; border-radius: 8px; }
+            #history-panel { width: 100%; max-height: 200px; border-radius: 8px; }
             #container { padding: 0 2px; }
             #toolbar {
                 padding: 4px 6px;

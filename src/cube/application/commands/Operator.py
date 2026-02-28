@@ -266,6 +266,14 @@ class Operator(OperatorProtocol):
         """Clear the redo queue."""
         self._redo_queue.clear()
 
+    def enqueue_redo(self, algs: Sequence[Alg]) -> None:
+        """Replace the redo queue with the given algorithms (e.g., solver solution).
+
+        Clears any existing redo items first.
+        """
+        self._redo_queue.clear()
+        self._redo_queue.extend(algs)
+
     def history(self, *, remove_scramble: bool = False) -> Sequence[Alg]:
         """
         Remove top scrambles

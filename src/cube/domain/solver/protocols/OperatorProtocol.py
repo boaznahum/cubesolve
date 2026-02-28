@@ -59,6 +59,10 @@ class OperatorProtocol(Protocol, metaclass=ABCMeta):
         """Clear the redo queue."""
         ...
 
+    def enqueue_redo(self, algs: Sequence["Alg"]) -> None:
+        """Replace the redo queue with the given algorithms (e.g., solver solution)."""
+        ...
+
     def with_animation(self, animation: bool | None = None) -> ContextManager[None]:
         """Context manager to control animation."""
         ...

@@ -468,6 +468,10 @@ class ClientSession:
             self.send_history_state()
             return
 
+        if command_name == "fast_play":
+            self._fast_play_redo()
+            return
+
         command_map: dict[str, Command] = {
             "solve_instant": Commands.SOLVE_ALL_NO_ANIMATION,
             "scramble": Commands.SCRAMBLE_1,
@@ -796,6 +800,10 @@ class ClientSession:
     # -- Solve --
 
     def _two_phase_solve(self) -> None:
+        """Solve the cube by placing solution steps into the redo queue.
+
+        The user can then step through with redo/next or fast-play.
+        """
         try:
             app = self._app
             slv = app.slv
@@ -803,7 +811,9 @@ class ClientSession:
             if solution_alg.count() == 0:
                 return
             solution_alg = solution_alg.simplify()
-            app.op.play(solution_alg)
+            # Flatten into atomic steps and enqueue as redo
+            steps = list(solution_alg.flatten())
+            app.op.enqueue_redo(steps)
             self.update_gui_elements()
             self.send_toolbar_state()
             self.send_history_state()
@@ -811,6 +821,24 @@ class ClientSession:
             traceback.print_exc()
             self._app.set_error(f"Solve error: {e}")
             self.update_gui_elements()
+
+    def _fast_play_redo(self) -> None:
+        """Play through the entire redo queue with animation.
+
+        Each step is played via redo(), sending animation events to the client.
+        The client's AnimationQueue handles sequential playback.
+        History state is sent after each step so the panel updates live.
+        """
+        op = self._app.op
+        if not op.redo_queue():
+            return
+        self.send_playing(True)
+        while op.redo_queue():
+            op.redo(animation=True)
+            self.send_history_state()
+        self.send_playing(False)
+        self.update_gui_elements()
+        self.send_toolbar_state()
 
     # -- Command injection --
 

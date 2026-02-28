@@ -77,8 +77,11 @@ export class HistoryPanel {
         this._list.innerHTML = '';
 
         // Done items (executed operations)
-        for (const item of this._doneItems) {
-            this._list.appendChild(this._createItem(item, 'done'));
+        const lastDoneIdx = this._doneItems.length - 1;
+        for (let i = 0; i < this._doneItems.length; i++) {
+            const el = this._createItem(this._doneItems[i], 'done');
+            if (i === lastDoneIdx) el.classList.add('hp-last-done');
+            this._list.appendChild(el);
         }
 
         // NOW marker (only if there are items on either side)
