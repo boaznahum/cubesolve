@@ -15,6 +15,7 @@ import { OrbitControls } from './OrbitControls.js';
 import { WsClient } from './WsClient.js';
 import { Toolbar } from './Toolbar.js';
 import { HistoryPanel } from './HistoryPanel.js';
+import { MoveIndicator } from './MoveIndicator.js';
 
 // ── Application state ──
 const state = new AppState();
@@ -71,8 +72,21 @@ toolbar.bind();
 // ── History panel ──
 const historyPanel = new HistoryPanel(send);
 
+// ── Move indicator (next-move arrows) ──
+const moveIndicator = new MoveIndicator(cubeModel, scene);
+
+// Track latest history_state for re-showing indicators after animation
+let _latestHistoryMsg = null;
+
 // Wire debug overlay callback from AnimationQueue → Toolbar
 animQueue._onDebugUpdate = (alg, layers, count) => toolbar.updateDebug(alg, layers, count);
+
+// When all animations finish, re-show move indicators from latest history_state
+animQueue._onAllDone = () => {
+    if (_latestHistoryMsg && _latestHistoryMsg.next_move) {
+        moveIndicator.show(_latestHistoryMsg.next_move);
+    }
+};
 
 // ── Responsive sizing ──
 function resize() {
@@ -98,6 +112,7 @@ function handleMessage(msg) {
             break;
 
         case 'animation_start': {
+            moveIndicator.hide();
             const animState = msg.state || state.latestState;
             if (animState) {
                 state.latestState = animState;
@@ -123,6 +138,11 @@ function handleMessage(msg) {
 
         case 'history_state':
             historyPanel.updateFromServer(msg);
+            _latestHistoryMsg = msg;
+            // Show next-move indicators if not animating
+            if (!animQueue.currentAnim && animQueue.queue.length === 0) {
+                moveIndicator.show(msg.next_move || null);
+            }
             break;
 
         default:
@@ -138,9 +158,15 @@ function handleMessage(msg) {
 }
 
 // ── Render loop ──
+let lastTime = performance.now();
 function animate() {
     requestAnimationFrame(animate);
+    const now = performance.now();
+    const dt = (now - lastTime) / 1000;
+    lastTime = now;
+
     animQueue.update();
+    moveIndicator.updatePulse(dt);
     renderer.render(scene, camera);
 }
 animate();

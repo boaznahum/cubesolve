@@ -15,6 +15,7 @@ export class AnimationQueue {
         this.pendingState = null;  // State to apply after all animations
         this._stopRequested = false;
         this._onDebugUpdate = null;  // callback(alg, layers, count) for debug overlay
+        this._onAllDone = null;      // callback() when queue drains and no animation
     }
 
     /**
@@ -91,6 +92,7 @@ export class AnimationQueue {
     _processNext() {
         if (this.queue.length === 0) {
             this.currentAnim = null;
+            if (this._onAllDone) this._onAllDone();
             return;
         }
 

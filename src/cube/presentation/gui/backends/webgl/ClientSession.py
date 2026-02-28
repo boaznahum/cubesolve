@@ -305,16 +305,21 @@ class ClientSession:
             for a in op.history()
         ]
         # redo_queue() is stored reversed (for LIFO pop), reverse for display order
+        redo_list: list["Alg"] = list(reversed(op.redo_queue()))
         redo: list[dict[str, str]] = [
             {"alg": str(a), "type": self._classify_alg(a)}
-            for a in reversed(op.redo_queue())
+            for a in redo_list
         ]
-        self._send(json.dumps({
+        msg: dict[str, object] = {
             "type": "history_state",
             "done": done,
             "redo": redo,
             "redo_source": "solver" if self._redo_is_solver and redo else "undo",
-        }))
+        }
+        next_move = self._compute_next_move(redo_list)
+        if next_move is not None:
+            msg["next_move"] = next_move
+        self._send(json.dumps(msg))
 
     @staticmethod
     def _classify_alg(alg: "Alg") -> str:
@@ -334,6 +339,67 @@ class ClientSession:
         if isinstance(alg, (FaceAlgBase, WideFaceAlg)):
             return "face"
         return "move"
+
+    def _compute_next_move(self, redo_list: list["Alg"]) -> dict[str, object] | None:
+        """Peek at the first redo item and compute its face/layers/direction.
+
+        Returns None for: empty redo, scrambles.
+        Whole-cube rotations (x/y/z) are mapped to all layers on equivalent face.
+        """
+        from cube.domain.algs.Algs import Algs
+
+        if not redo_list:
+            return None
+
+        alg = redo_list[0]
+
+        # Skip scrambles
+        if Algs.is_scramble(alg):
+            return None
+
+        face_name: str = self._alg_to_face_name(alg)
+        if not face_name:
+            return None
+
+        # Direction and layers
+        from cube.domain.algs.AnimationAbleAlg import AnimationAbleAlg
+        cube = self._app.cube
+        size: int = cube.size
+        direction: int = 1
+        layers: list[int] = [0]
+
+        # Whole-cube rotations: all layers, map to equivalent face
+        if face_name in ("x", "y", "z"):
+            whole_cube_map: dict[str, str] = {"x": "R", "y": "U", "z": "F"}
+            face_name = whole_cube_map[face_name]
+            layers = list(range(size))
+            if isinstance(alg, AnimationAbleAlg):
+                n = alg.n if hasattr(alg, 'n') else 1
+                if n % 4 == 1:
+                    direction = 1
+                elif n % 4 == 3:
+                    direction = -1
+                elif n % 4 == 2:
+                    direction = 2
+        elif isinstance(alg, AnimationAbleAlg):
+            n = alg.n if hasattr(alg, 'n') else 1
+            if n % 4 == 1:
+                direction = 1
+            elif n % 4 == 3:
+                direction = -1
+            elif n % 4 == 2:
+                direction = 2
+            layers = self._extract_layers(alg, cube, size, face_name)
+
+        alg_type: str = self._classify_alg(alg)
+
+        return {
+            "face": face_name,
+            "layers": layers,
+            "direction": direction,
+            "alg": str(alg),
+            "type": alg_type,
+        }
 
     def send_session_id(self) -> None:
         self._send(json.dumps({
