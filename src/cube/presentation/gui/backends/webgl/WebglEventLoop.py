@@ -164,9 +164,12 @@ class WebglEventLoop(EventLoop):
             return resp
 
         async def static_handler(request: web.Request) -> web.StreamResponse:
-            filename = request.match_info.get('filename', 'index.html')
-            filepath = static_dir / filename
-            if filepath.exists():
+            path = request.match_info.get('path', 'index.html')
+            filepath = static_dir / path
+            # Security: ensure resolved path is within static_dir
+            if not filepath.resolve().is_relative_to(static_dir.resolve()):
+                return web.Response(status=403, text="Forbidden")
+            if filepath.exists() and filepath.is_file():
                 resp = web.FileResponse(filepath)
                 resp.headers.update(no_cache_headers)
                 return resp
@@ -175,7 +178,7 @@ class WebglEventLoop(EventLoop):
         # Routes
         app.router.add_get('/ws', websocket_handler)
         app.router.add_get('/', index_handler)
-        app.router.add_get('/{filename}', static_handler)
+        app.router.add_get('/{path:.*}', static_handler)
 
         port = self._resolve_port()
 

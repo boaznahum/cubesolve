@@ -53,9 +53,11 @@ $env:PYTHONIOENCODING="utf-8"; python -m cube.main_webgl --open-browser
 Unlike the `web` backend (which streams rendering commands per frame), the `webgl` backend:
 
 - **Python server** sends **cube state** (face colors as NxN grids of RGB values) and **animation events** (face/direction/duration)
-- **Browser client** (`backends/webgl/static/cube.js`) **builds and owns the 3D model** using Three.js, rendering at 60fps on the GPU
+- **Browser client** (`backends/webgl/static/js/`) **builds and owns the 3D model** using Three.js, rendering at 60fps on the GPU
 - No per-frame server dependency — camera orbit, zoom, pan are all client-side
 - Face rotation animations run client-side at 60fps with easing
+
+See [design.md](design.md) for detailed frontend module structure.
 
 ### Message Protocol (Server → Client)
 
