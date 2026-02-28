@@ -21,6 +21,7 @@ export class HistoryPanel {
         // State
         this._doneItems = [];    // [{alg, type, index}, ...]
         this._redoItems = [];    // [{alg, type, index}, ...]
+        this._redoSource = 'undo';  // 'solver' | 'undo'
         this._isPlaying = false;
 
         this._bind();
@@ -56,7 +57,7 @@ export class HistoryPanel {
 
     /**
      * Update from server history_state message.
-     * msg: { done: [{alg, type}], redo: [{alg, type}] }
+     * msg: { done: [{alg, type}], redo: [{alg, type}], redo_source: "solver"|"undo" }
      */
     updateFromServer(msg) {
         this._doneItems = (msg.done || []).map((item, i) => ({
@@ -69,6 +70,7 @@ export class HistoryPanel {
             type: item.type || 'move',
             index: this._doneItems.length + i + 1,
         }));
+        this._redoSource = msg.redo_source || 'undo';
         this._render();
     }
 
@@ -158,14 +160,18 @@ export class HistoryPanel {
         if (this._btnPlay) this._btnPlay.disabled = !hasRedo || this._isPlaying;
         if (this._btnRewind) this._btnRewind.disabled = !hasDone || this._isPlaying;
 
-        // Change redo label to "Next" when solver solution is queued
-        if (this._btnRedo && hasRedo) {
-            const firstRedo = this._redoItems[0];
-            if (firstRedo && firstRedo.type === 'solve') {
-                this._btnRedo.title = 'Next solver step';
-            } else {
-                this._btnRedo.title = 'Redo';
-            }
+        // Context-aware labels: solver steps → Play/Play All, manual → Redo/Redo All
+        const isSolver = this._redoSource === 'solver';
+
+        if (this._btnRedo) {
+            this._btnRedo.title = hasRedo
+                ? (isSolver ? 'Play next step' : 'Redo')
+                : 'Redo';
+        }
+        if (this._btnPlay) {
+            this._btnPlay.title = hasRedo
+                ? (isSolver ? 'Play all' : 'Redo all')
+                : 'Play all';
         }
     }
 

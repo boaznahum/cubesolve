@@ -96,6 +96,12 @@ class ClientSession:
         am.set_web_window(self)
         self._animation_manager: WebglAnimationManager = am
 
+        # Fast-play/rewind state — step-by-step so stop can interrupt
+        self._fast_playing: bool = False
+
+        # Track whether redo queue was filled by solver (for UI labels)
+        self._redo_is_solver: bool = False
+
     @property
     def app(self) -> "AbstractApp":
         return self._app
@@ -306,6 +312,7 @@ class ClientSession:
             "type": "history_state",
             "done": done,
             "redo": redo,
+            "redo_source": "solver" if self._redo_is_solver and redo else "undo",
         }))
 
     @staticmethod
@@ -448,7 +455,20 @@ class ClientSession:
             self._two_phase_solve()
             return
 
+        if command_name == "scramble":
+            # Scramble applies instantly (no animation).
+            # User can replay via fast-rewind + fast-play later.
+            op = self._app.op
+            with op.with_animation(animation=False):
+                ctx = CommandContext.from_window(self)  # type: ignore[arg-type]
+                Commands.SCRAMBLE_1.execute(ctx)
+            self.update_gui_elements()
+            self.send_toolbar_state()
+            self.send_history_state()
+            return
+
         if command_name == "undo":
+            self._redo_is_solver = False  # Manual undo → redo items are not solver
             self._app.op.undo(animation=True)
             if not self._app.op.animation_enabled:
                 self.update_gui_elements()
@@ -463,6 +483,7 @@ class ClientSession:
             return
 
         if command_name == "clear_history":
+            self._redo_is_solver = False
             self._app.op.reset()
             self.update_gui_elements()
             self.send_history_state()
@@ -818,6 +839,7 @@ class ClientSession:
             # Flatten into atomic steps and enqueue as redo
             steps = list(solution_alg.flatten())
             app.op.enqueue_redo(steps)
+            self._redo_is_solver = True
             self.update_gui_elements()
             self.send_toolbar_state()
             self.send_history_state()
@@ -827,38 +849,71 @@ class ClientSession:
             self.update_gui_elements()
 
     def _fast_play_redo(self) -> None:
-        """Play through the entire redo queue with animation.
+        """Play through the redo queue one step at a time.
 
-        Each step is played via redo(), sending animation events to the client.
-        The client's AnimationQueue handles sequential playback.
-        History state is sent after each step so the panel updates live.
+        Each step is scheduled after the animation duration so the stop
+        command can interrupt between steps.  Remaining redo items stay
+        in the queue when stopped.
         """
         op = self._app.op
-        if not op.redo_queue():
+        if not op.redo_queue() or self._fast_playing:
             return
+        self._fast_playing = True
         self.send_playing(True)
-        while op.redo_queue():
-            op.redo(animation=True)
-            self.send_history_state()
-        self.send_playing(False)
-        self.update_gui_elements()
-        self.send_toolbar_state()
+        self._fast_play_step()
+
+    def _fast_play_step(self) -> None:
+        op = self._app.op
+        if not self._fast_playing or not op.redo_queue():
+            self._finish_fast_play()
+            return
+        op.redo(animation=True)
+        self.send_history_state()
+        delay = self._animation_duration_sec()
+        self.schedule_once(lambda _dt: self._fast_play_step(), delay)
 
     def _fast_rewind(self) -> None:
-        """Undo all operations with animation (fast rewind).
+        """Undo all operations one step at a time (fast rewind).
 
-        Each step is undone via undo(), sending animation events to the client.
+        Stoppable — remaining history items stay when stopped.
         """
         op = self._app.op
-        if not op.history():
+        if not op.history() or self._fast_playing:
             return
+        self._fast_playing = True
         self.send_playing(True)
-        while op.history():
-            op.undo(animation=True)
-            self.send_history_state()
+        self._fast_rewind_step()
+
+    def _fast_rewind_step(self) -> None:
+        op = self._app.op
+        if not self._fast_playing or not op.history():
+            self._finish_fast_play()
+            return
+        op.undo(animation=True)
+        self.send_history_state()
+        delay = self._animation_duration_sec()
+        self.schedule_once(lambda _dt: self._fast_rewind_step(), delay)
+
+    def _finish_fast_play(self) -> None:
+        """End fast-play/rewind: clear flag, update client."""
+        self._fast_playing = False
         self.send_playing(False)
         self.update_gui_elements()
         self.send_toolbar_state()
+        self.send_history_state()
+
+    def _animation_duration_sec(self) -> float:
+        """Current animation duration in seconds from speed settings.
+
+        Formula: D(I) = D0 * (DN/D0)^(I/7)
+        """
+        cfg = self._app.config
+        vs = self._app.vs
+        d0: float = cfg.animation_speed_d0
+        dn: float = cfg.animation_speed_dn
+        i: float = vs.get_speed_index
+        duration_ms: float = d0 * (dn / d0) ** (i / 7.0)
+        return max(0.01, duration_ms / 1000.0)
 
     # -- Command injection --
 
@@ -870,8 +925,13 @@ class ClientSession:
             return
 
         if command is Commands.STOP_ANIMATION:
+            self._fast_playing = False  # Cancel fast-play/rewind
             self.send_flush_queue()
             self._animation_manager.cancel_animation()
+            self.send_playing(False)
+            self.update_gui_elements()
+            self.send_toolbar_state()
+            self.send_history_state()
             return
 
         try:
