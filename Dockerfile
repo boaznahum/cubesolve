@@ -5,18 +5,18 @@ WORKDIR /app
 # Ensure Python output appears in fly logs (no buffering in containers)
 ENV PYTHONUNBUFFERED=1
 
-# Install system deps for numpy/kociemba build
+# Install system deps for numpy/kociemba build + uv
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc g++ && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    pip install --no-cache-dir uv
 
 # Copy project files
 COPY pyproject.toml .
 COPY src/ src/
 
-# Upgrade pip, then install the package
-RUN python -m pip install --no-cache-dir -U pip && \
-    pip install --no-cache-dir -e .
+# Install the package with uv
+RUN uv pip install --system --no-cache -e .
 
 # WebGL backend port
 EXPOSE 8766
