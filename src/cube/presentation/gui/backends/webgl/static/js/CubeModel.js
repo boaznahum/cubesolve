@@ -157,7 +157,7 @@ export class CubeModel {
             if (this.colorCorrections[key]) [r, g, b] = this.colorCorrections[key];
             // Material is either a single material or [faceMat, sideMat] array
             const mat = Array.isArray(meshes[i].material) ? meshes[i].material[0] : meshes[i].material;
-            mat.color.setRGB(r / 255, g / 255, b / 255, THREE.SRGBColorSpace);
+            mat.color.setRGB(r / 255, g / 255, b / 255);
         }
     }
 

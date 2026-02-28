@@ -121,7 +121,11 @@ class WebglEventLoop(EventLoop):
         self._loop = asyncio.get_running_loop()
 
         app = web.Application()
+        # Serve from Vite build output (dist/) if available, else raw source (static/)
         static_dir = Path(__file__).parent / "static"
+        dist_dir = static_dir / "dist"
+        if dist_dir.exists() and (dist_dir / "index.html").exists():
+            static_dir = dist_dir
 
         # WebSocket handler
         async def websocket_handler(request: web.Request) -> web.WebSocketResponse:

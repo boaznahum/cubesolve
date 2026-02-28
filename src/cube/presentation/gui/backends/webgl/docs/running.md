@@ -1,18 +1,33 @@
 # WebGL Backend — Running Instructions
 
-## Start the Server
+## Prerequisites
 
 ```bash
-python -m cube.main_webgl
+# Install frontend dependencies (one-time)
+cd src/cube/presentation/gui/backends/webgl
+npm install
 ```
 
-This starts an HTTP + WebSocket server on `http://localhost:8766`. Open that URL manually in your browser.
+## Development (two terminals)
 
-To auto-open the browser on startup:
+```bash
+# Terminal 1: Python backend (WebSocket + cube logic)
+python -m cube.main_webgl
+
+# Terminal 2: Vite dev server (HMR + auto-reload)
+cd src/cube/presentation/gui/backends/webgl
+npm run dev
+```
+
+Open the **Vite URL** (http://localhost:5173) — it proxies `/ws` to the Python backend automatically.
+
+### Alternative: Python-only (no Vite)
 
 ```bash
 python -m cube.main_webgl --open-browser
 ```
+
+Opens http://localhost:8766 — serves source files directly via import maps. Works without Node.js, but no HMR and no npm packages.
 
 ### Options
 
@@ -21,6 +36,21 @@ python -m cube.main_webgl --open-browser    # auto-open browser
 python -m cube.main_webgl --debug-all       # verbose logging
 python -m cube.main_webgl --quiet           # minimal output
 python -m cube.main_webgl --cube-size 5     # 5×5 cube
+```
+
+## Production Build
+
+```bash
+cd src/cube/presentation/gui/backends/webgl
+npm run build
+```
+
+Outputs bundled files to `static/dist/`. The Python server auto-detects `dist/` and serves from there.
+
+## Deploy (Fly.io)
+
+```bash
+fly deploy          # uses fly.toml + Dockerfile (multi-stage: Node build + Python)
 ```
 
 ### Windows (PowerShell) — UTF-8 fix

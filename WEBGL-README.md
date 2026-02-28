@@ -90,14 +90,17 @@ Face | Top adj | Bottom adj | Right adj | Left adj
 The `webgl` backend differs from the `web` backend:
 
 - **Python server** sends **cube state** (face colors as NxN grids) and **animation events**
-- **Browser client** (`cube.js`) builds and owns the 3D model using Three.js, rendering at 60fps
+- **Browser client** (`backends/webgl/static/js/`) builds and owns the 3D model using Three.js ES modules, rendering at 60fps
 - Camera orbit, zoom, pan are all client-side (no server round-trips)
 - Face rotation animations run client-side with easing
+- **Vite** bundles the frontend for production (Three.js from npm, not CDN)
+
+See [WEBGL-build-run.md](WEBGL-build-run.md) for build & dev instructions.
 
 ## Deployment
 
 ```bash
-fly deploy -c fly-webgl.toml
+fly deploy          # uses fly.toml + Dockerfile (multi-stage: Node build + Python)
 ```
 
 Port: 8766 (vs 8765 for the `web` backend)
