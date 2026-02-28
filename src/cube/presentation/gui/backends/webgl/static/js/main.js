@@ -14,6 +14,7 @@ import { FaceTurnHandler } from './FaceTurnHandler.js';
 import { OrbitControls } from './OrbitControls.js';
 import { WsClient } from './WsClient.js';
 import { Toolbar } from './Toolbar.js';
+import { HistoryPanel } from './HistoryPanel.js';
 
 // ── Application state ──
 const state = new AppState();
@@ -67,6 +68,9 @@ const controls = new OrbitControls(camera, canvas, faceTurnHandler, send);
 const toolbar = new Toolbar(state, send, controls, animQueue);
 toolbar.bind();
 
+// ── History panel ──
+const historyPanel = new HistoryPanel(send);
+
 // Wire debug overlay callback from AnimationQueue → Toolbar
 animQueue._onDebugUpdate = (alg, layers, count) => toolbar.updateDebug(alg, layers, count);
 
@@ -117,10 +121,18 @@ function handleMessage(msg) {
             cubeModel.buildColorCorrections(msg.colors);
             break;
 
+        case 'history_state':
+            historyPanel.updateFromServer(msg);
+            break;
+
         default:
             // Toolbar handles: playing, text_update, version, client_count,
             // speed_update, size_update, toolbar_state, session_id
             toolbar.handleMessage(msg);
+            // Forward playing state to history panel
+            if (msg.type === 'playing') {
+                historyPanel.setPlaying(msg.value);
+            }
             break;
     }
 }

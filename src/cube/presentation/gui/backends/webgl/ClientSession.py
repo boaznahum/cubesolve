@@ -291,6 +291,42 @@ class ClientSession:
     def send_playing(self, playing: bool) -> None:
         self._send(json.dumps({"type": "playing", "value": playing}))
 
+    def send_history_state(self) -> None:
+        """Send current operation history and redo queue to the client."""
+        op = self._app.op
+        done: list[dict[str, str]] = [
+            {"alg": str(a), "type": self._classify_alg(a)}
+            for a in op.history()
+        ]
+        redo: list[dict[str, str]] = [
+            {"alg": str(a), "type": self._classify_alg(a)}
+            for a in op.redo_queue()
+        ]
+        self._send(json.dumps({
+            "type": "history_state",
+            "done": done,
+            "redo": redo,
+        }))
+
+    @staticmethod
+    def _classify_alg(alg: "Alg") -> str:
+        """Classify an algorithm for history panel badges."""
+        from cube.domain.algs.Algs import Algs
+        from cube.domain.algs.FaceAlgBase import FaceAlgBase
+        from cube.domain.algs.SliceAlgBase import SliceAlgBase
+        from cube.domain.algs.WholeCubeAlg import WholeCubeAlg
+        from cube.domain.algs.WideFaceAlg import WideFaceAlg
+
+        if Algs.is_scramble(alg):
+            return "scramble"
+        if isinstance(alg, WholeCubeAlg):
+            return "rotation"
+        if isinstance(alg, SliceAlgBase):
+            return "slice"
+        if isinstance(alg, (FaceAlgBase, WideFaceAlg)):
+            return "face"
+        return "move"
+
     def send_session_id(self) -> None:
         self._send(json.dumps({
             "type": "session_id",
@@ -317,6 +353,7 @@ class ClientSession:
         self.send_toolbar_state()
         self.send_cube_state()
         self.send_text()
+        self.send_history_state()
 
     # -- Message handling --
 
@@ -386,6 +423,7 @@ class ClientSession:
             self._app.op.reset()
             self.send_cube_state()
             self.send_text()
+            self.send_history_state()
 
     def _handle_solver(self, name: str) -> None:
         from cube.domain.solver.SolverName import SolverName
@@ -401,12 +439,33 @@ class ClientSession:
         self.send_cube_state()
         self.send_text()
         self.send_toolbar_state()
+        self.send_history_state()
 
     def _handle_command(self, command_name: str) -> None:
         from cube.presentation.gui.commands import Commands
 
         if command_name == "solve":
             self._two_phase_solve()
+            return
+
+        if command_name == "undo":
+            self._app.op.undo(animation=True)
+            if not self._app.op.animation_enabled:
+                self.update_gui_elements()
+            self.send_history_state()
+            return
+
+        if command_name == "redo":
+            self._app.op.redo(animation=True)
+            if not self._app.op.animation_enabled:
+                self.update_gui_elements()
+            self.send_history_state()
+            return
+
+        if command_name == "clear_history":
+            self._app.op.reset()
+            self.update_gui_elements()
+            self.send_history_state()
             return
 
         command_map: dict[str, Command] = {
@@ -442,6 +501,7 @@ class ClientSession:
         if command:
             self.inject_command(command)
             self.send_toolbar_state()
+            self.send_history_state()
 
     def _handle_mouse_rotate(self, dx: float, dy: float) -> None:
         # Client handles orbit camera locally — no server round-trip needed
@@ -564,6 +624,7 @@ class ClientSession:
             op.play(alg, animation=True)
             if not op.animation_enabled:
                 self.update_gui_elements()
+            self.send_history_state()
 
     @staticmethod
     def _grid_to_part(face: "Face", row: int, col: int) -> "Part | None":
@@ -745,6 +806,7 @@ class ClientSession:
             app.op.play(solution_alg)
             self.update_gui_elements()
             self.send_toolbar_state()
+            self.send_history_state()
         except Exception as e:
             traceback.print_exc()
             self._app.set_error(f"Solve error: {e}")
@@ -776,6 +838,7 @@ class ClientSession:
             self.send_toolbar_state()
             if not result.no_gui_update and not self.animation_running:
                 self.update_gui_elements()
+            self.send_history_state()
         except AppExit:
             print(f"Session {self.client_info.session_id[:8]} closing...", flush=True)
         except Exception as e:

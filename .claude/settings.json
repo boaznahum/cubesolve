@@ -20,7 +20,11 @@
       "mcp__ide__getDiagnostics",
       "mcp__plugin_github_github__*",
       "mcp__pycharm2__",
-      "mcp__pycharm__"
+      "mcp__pycharm__",
+      "mcp__pycharm2__list_directory_tree",
+      "mcp__pycharm2__get_file_text_by_path",
+      "mcp__pycharm2__read_file"
+
     ]
   },
   "enabledPlugins": {
