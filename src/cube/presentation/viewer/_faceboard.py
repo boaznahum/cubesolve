@@ -45,7 +45,8 @@ class _FaceBoard:
         self._config: ConfigProtocol = board.vs.config
 
         self._cells: dict[PartFixedID, _Cell] = {p.fixed_id: _Cell(self) for p in
-                                                 self.cube_face_supplier().parts}
+                                                 self.cube_face_supplier().parts
+                                                 if p.has_slices}
 
     def release_resources(self) -> None:
 
@@ -59,7 +60,8 @@ class _FaceBoard:
             c.release_resources()
 
         self._cells = {p.fixed_id: _Cell(self) for p in
-                                                 self.cube_face_supplier().parts}
+                                                 self.cube_face_supplier().parts
+                                                 if p.has_slices}
 
     @property
     def cube_face(self) -> Face:
@@ -85,23 +87,24 @@ class _FaceBoard:
             # why it is needed
             l_box = [x.reshape((3,)) for x in box]
 
-            # # convert to gl,
-            # # but this is waste of time, when calculating center and rotate axis, we again convert to ndarray
-            # for i in range(len(l_box)):
-            #     l_box[i] = [c_float(l_box[i][0]), c_float(l_box[i][1]), c_float(l_box[i][2])]
-
-
             self._cells[part.fixed_id].prepare_geometry(part, l_box)
 
-        _create_cell(2, 0, f.corner_top_left)
-        _create_cell(2, 1, f.edge_top)
-        _create_cell(2, 2, f.corner_top_right)
-        _create_cell(1, 0, f.edge_left)
-        _create_cell(1, 1, f.center)
-        _create_cell(1, 2, f.edge_right)
-        _create_cell(0, 0, f.corner_bottom_left)
-        _create_cell(0, 1, f.edge_bottom)
-        _create_cell(0, 2, f.corner_bottom_right)
+        if f.cube.n_slices == 0:
+            # 2x2: only corners, no edges or center
+            _create_cell(1, 0, f.corner_top_left)
+            _create_cell(1, 1, f.corner_top_right)
+            _create_cell(0, 0, f.corner_bottom_left)
+            _create_cell(0, 1, f.corner_bottom_right)
+        else:
+            _create_cell(2, 0, f.corner_top_left)
+            _create_cell(2, 1, f.edge_top)
+            _create_cell(2, 2, f.corner_top_right)
+            _create_cell(1, 0, f.edge_left)
+            _create_cell(1, 1, f.center)
+            _create_cell(1, 2, f.edge_right)
+            _create_cell(0, 0, f.corner_bottom_left)
+            _create_cell(0, 1, f.edge_bottom)
+            _create_cell(0, 2, f.corner_bottom_right)
 
     def update(self) -> None:
         c: _Cell
@@ -116,10 +119,26 @@ class _FaceBoard:
 
         face_size: float = cell_size * 3.0
 
+        cube_size = part.cube.size
+
+        if cube_size == 2:
+            # 2x2: 4 corners fill the entire face, each gets half width/height
+            half = face_size / 2.0
+            x0 = cx * half
+            x1 = x0 + half
+            y0 = cy * half
+            y1 = y0 + half
+
+            l_r_d = self.left_right_direction
+            l_t_d = self.left_top_direction
+            left_bottom3 = self.f0 + l_r_d * x0 + l_t_d * y0
+            right_bottom3 = self.f0 + l_r_d * x1 + l_t_d * y0
+            right_top3 = self.f0 + l_r_d * x1 + l_t_d * y1
+            left_top3 = self.f0 + l_r_d * x0 + l_t_d * y1
+            return left_bottom3, left_top3, right_bottom3, right_top3
+
         max_corner_size = cell_size  #  3x3 Cube
         min_corner_size: float = face_size * corner_size_ratio  # Very big NxN -> oo
-
-        cube_size = part.cube.size
 
         #
         corner_size = min_corner_size + (max_corner_size-min_corner_size) * 3/cube_size

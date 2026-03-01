@@ -75,6 +75,11 @@ class Part(ABC, CubeElement):
     def all_slices(self) -> Iterator[PartSlice]:
         pass
 
+    @property
+    def has_slices(self) -> bool:
+        """True if this part has at least one slice (False for 2x2 edges/centers)."""
+        return next(self.all_slices, None) is not None
+
     @abstractmethod
     def get_slice(self, index: SliceIndex) -> PartSlice:
         pass
@@ -133,7 +138,7 @@ class Part(ABC, CubeElement):
 
         See: design2/model-id-system.md for visual diagrams
         """
-        assert self._fixed_id
+        assert self._fixed_id is not None
         return self._fixed_id
 
     def get_face_edge(self, face: _Face) -> PartEdge:

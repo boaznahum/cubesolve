@@ -275,13 +275,16 @@ def _plot_face(b: _Board, f: Face, fy: int, fx: int, flip_v=False, flip_h=False)
         x2 = 2
 
     _plot_cell(y0, x0, f.corner_top_left)
-    _plot_cell(y0, 1, f.edge_top)
+    if f.cube.n_slices > 0:
+        _plot_cell(y0, 1, f.edge_top)
     _plot_cell(y0, x2, f.corner_top_right)
-    _plot_cell(1, x0, f.edge_left)
-    _plot_cell(1, 1, f.center)
-    _plot_cell(1, x2, f.edge_right)
+    if f.cube.n_slices > 0:
+        _plot_cell(1, x0, f.edge_left)
+        _plot_cell(1, 1, f.center)
+        _plot_cell(1, x2, f.edge_right)
     _plot_cell(y2, x0, f.corner_bottom_left)
-    _plot_cell(y2, 1, f.edge_bottom)
+    if f.cube.n_slices > 0:
+        _plot_cell(y2, 1, f.edge_bottom)
     _plot_cell(y2, x2, f.corner_bottom_right)
 
 
