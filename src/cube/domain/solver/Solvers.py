@@ -187,17 +187,14 @@ class Solvers:
     def by_name(cls, solver_id: SolverName, op: OperatorProtocol) -> Solver:
         """Get a solver by its name.
 
-        For 2x2 cubes, all solvers except TWO_BY_TWO delegate to the 2x2 solver.
+        For 2x2 cubes, all solvers delegate to the dedicated 2x2 solver.
         """
-        # For 2x2 cubes, delegate all non-2x2 solvers to the 2x2 solver
+        # For 2x2 cubes, delegate to the 2x2 solver
         # but preserve the original solver name for the UI
-        if op.cube.size == 2 and solver_id != SolverName.TWO_BY_TWO:
+        if op.cube.size == 2:
             return cls.two_by_two(op, display_as=solver_id)
 
         match solver_id:
-
-            case SolverName.TWO_BY_TWO:
-                return cls.two_by_two(op)
 
             case SolverName.LBL:
                 return cls.beginner(op)

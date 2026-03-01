@@ -19,6 +19,7 @@ import { MoveIndicator } from './MoveIndicator.js';
 
 // ── Application state ──
 const state = new AppState();
+window.appState = state;  // Expose for E2E test assertions
 
 // ── Three.js setup ──
 const canvas = document.getElementById('canvas');

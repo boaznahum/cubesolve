@@ -57,6 +57,7 @@ dev = [
     "types-keyboard",
     "Pillow",  # For generating test face textures (resources/faces/generate_images.py)
     "tabulate",  # For formatting test failure tables
+    "playwright",  # WebGL E2E browser tests
 ]
 
 [project.urls]
@@ -81,6 +82,7 @@ markers = [
     "benchmark: marks tests as benchmarks",
     "gui: marks tests as GUI tests (require display, run with 'pytest tests/gui -v')",
     "console: marks tests as console tests (run with 'pytest tests/console -v')",
+    "webgl: marks tests as WebGL browser E2E tests (run with 'pytest tests/webgl -v -n0')",
 ]
 addopts = "-n auto"
 
