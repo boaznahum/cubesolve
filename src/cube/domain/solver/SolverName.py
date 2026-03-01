@@ -14,11 +14,10 @@ class SolverMeta:
 
     0. implemented - if False, solver is not available (app or tests)
     1. not_testable - if set, skip all tests (but solver may work in app)
-    2. only_2x2 - if set, skip non-2x2 tests
-    3. only_3x3 - if set, skip non-3x3 tests
-    4. skip_3x3 - if set, skip 3x3 tests
-    5. skip_even - if set, skip even-sized cube tests (4x4, 6x6, ...)
-    6. skip_odd - if set, skip odd-sized cube tests (5x5, 7x7, ...)
+    2. only_3x3 - if set, skip non-3x3 tests
+    3. skip_3x3 - if set, skip 3x3 tests
+    4. skip_even - if set, skip even-sized cube tests (4x4, 6x6, ...)
+    5. skip_odd - if set, skip odd-sized cube tests (5x5, 7x7, ...)
     """
     display_name: str
     implemented: bool = True  # If False, solver not available anywhere
@@ -67,6 +66,13 @@ class SolverName(Enum):
     LBL = SolverMeta("LBL")
     CFOP = SolverMeta("CFOP")
     KOCIEMBA = SolverMeta("Kociemba")
+    CAGE = SolverMeta("Cage")  # Cage method: edges first, then corners, then centers
+    DWALTON = SolverMeta("Dwalton")  # Table-based Kociemba (dwalton76-inspired)
+    LBL_BIG = SolverMeta("LBL-Big",
+                         #implemented=False,  # Not yet fully implemented
+                         #skip_3x3="LBL-Big is for NxN cubes only",
+                         #skip_even="WIP: Even cubes not fully tested"
+              )  # Layer-by-layer for big cubes
     CAGE = SolverMeta("Cage")
     REDUCER = SolverMeta("Reducer")
     TWO_BY_TWO = SolverMeta("2x2", user_visible=False, only_2x2="2x2 solver only supports 2x2 cubes")
@@ -139,11 +145,6 @@ class SolverName(Enum):
     def implemented(cls) -> list["SolverName"]:
         """Return list of implemented solvers (for use in tests)."""
         return [s for s in cls if s.meta.implemented]
-
-    @classmethod
-    def user_visible(cls) -> list["SolverName"]:
-        """Return list of solvers visible to users (UI lists, test parametrization)."""
-        return [s for s in cls if s.meta.implemented and s.meta.user_visible]
 
     @classmethod
     def all(cls) -> list["SolverName"]:
