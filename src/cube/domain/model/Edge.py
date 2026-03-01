@@ -478,7 +478,7 @@ class Edge(Part):
         :return:
         """
         if not self._slices or not other._slices:
-            raise ValueError(f"Edge has no slices (2x2 cube)")
+            raise ValueError("Edge has no slices (2x2 cube)")
 
         return self._slices[0].single_shared_face(other._slices[0])
 

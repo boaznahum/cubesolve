@@ -63,18 +63,12 @@ class SolverName(Enum):
 
     Each enum value contains SolverMeta with test skip reasons (None = supported).
     """
-    LBL = SolverMeta("LBL")
+    LBL = SolverMeta("Beginner Reducer")
     CFOP = SolverMeta("CFOP")
     KOCIEMBA = SolverMeta("Kociemba")
     CAGE = SolverMeta("Cage")  # Cage method: edges first, then corners, then centers
     DWALTON = SolverMeta("Dwalton")  # Table-based Kociemba (dwalton76-inspired)
-    LBL_BIG = SolverMeta("LBL-Big",
-                         #implemented=False,  # Not yet fully implemented
-                         #skip_3x3="LBL-Big is for NxN cubes only",
-                         #skip_even="WIP: Even cubes not fully tested"
-              )  # Layer-by-layer for big cubes
-    CAGE = SolverMeta("Cage")
-    REDUCER = SolverMeta("Reducer")
+    LBL_BIG = SolverMeta("Big LBL")  # Layer-by-layer for big cubes
     TWO_BY_TWO = SolverMeta("2x2", user_visible=False, only_2x2="2x2 solver only supports 2x2 cubes")
 
     @property
@@ -106,7 +100,7 @@ class SolverName(Enum):
             ValueError: If name doesn't match any solver or matches multiple solvers
 
         Examples:
-            SolverName.lookup("lbl") -> SolverName.LBL
+            SolverName.lookup("beginner") -> SolverName.LBL
             SolverName.lookup("ca") -> SolverName.CAGE
             SolverName.lookup("c") -> ValueError (ambiguous: CFOP, CAGE)
         """
@@ -145,6 +139,11 @@ class SolverName(Enum):
     def implemented(cls) -> list["SolverName"]:
         """Return list of implemented solvers (for use in tests)."""
         return [s for s in cls if s.meta.implemented]
+
+    @classmethod
+    def user_visible(cls) -> list["SolverName"]:
+        """Return list of user-visible implemented solvers."""
+        return [s for s in cls if s.meta.implemented and s.meta.user_visible]
 
     @classmethod
     def all(cls) -> list["SolverName"]:

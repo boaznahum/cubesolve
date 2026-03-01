@@ -1,14 +1,19 @@
-"""
-2x2 Rubik's Cube Solver — Beginner Layer-by-Layer Method.
+"""2x2 Rubik's Cube Solver — IDA* Optimal Method.
 
-A 2x2 cube has only 8 corner pieces (no edges, no centers).
-The solving strategy is:
-  1. Solve bottom layer (4 white corners)
-  2. Position top layer corners
-  3. Orient top layer corners
+Uses precomputed pruning tables and IDA* search to find optimal solutions
+(≤11 moves HTM). The state space is only 3,674,160 positions.
 
-This reuses the same algorithmic ideas from the 3x3 beginner solver
-but skips all cross/edge/center steps.
+We fix the DBL corner and only use U, R, F moves (9 total).
+Two coordinates encode the full state: twist (orientation) and permutation.
+
+Before solving, the cube is oriented so the original DBL piece is at
+position 7 (back-down-left) with correct orientation (co=0). This is
+needed because D/L/B moves on a 2x2 displace the DBL corner, but the
+IDA* solver only uses U/R/F.
+
+After solving, the virtual center pieces (which exist in the domain model
+even on a 2x2) are reset to match the original face colors, since whole-cube
+rotations during pre-orientation may have displaced them.
 """
 
 from __future__ import annotations
@@ -16,25 +21,117 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from cube.domain.algs import Alg, Algs
-from cube.domain.model import Corner, Part, PartColorsID
-from cube.domain.model.Face import Face
+from cube.domain.solver._2x2.cube_to_coordinates import cube_to_coords
+from cube.domain.solver._2x2.ida_star_search import solve as ida_solve
+from cube.domain.solver._2x2.ida_star_tables import get_tables
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.solver import SolverResults, SolveStep
 from cube.domain.solver.SolverName import SolverName
 
 if TYPE_CHECKING:
+    from cube.domain.model.Corner import Corner
+    from cube.domain.model.Cube import Cube
     from cube.utils.logger_protocol import ILogger
+
+# Move index → Alg mapping.
+# Indices 0–8: U, U2, U', R, R2, R', F, F2, F'
+_MOVE_TO_ALG: list[Alg] = [
+    Algs.U, Algs.U * 2, Algs.U.prime,
+    Algs.R, Algs.R * 2, Algs.R.prime,
+    Algs.F, Algs.F * 2, Algs.F.prime,
+]
+
+# Pre-orientation table: (slot, co) → rotation sequence.
+# For each possible position and orientation of the original DBL piece,
+# gives the whole-cube rotations needed to bring it to slot 7 with co=0.
+# There are 8 slots × 3 orientations = 24 entries, matching the 24
+# possible cube orientations.
+_ORIENT_TABLE: dict[tuple[int, int], list[Alg]] = {
+    (0, 0): [Algs.Y, Algs.X * 2],
+    (0, 1): [Algs.Y * 2, Algs.Z.prime],
+    (0, 2): [Algs.Y * 2, Algs.X],
+    (1, 0): [Algs.X * 2],
+    (1, 1): [Algs.Y, Algs.Z.prime],
+    (1, 2): [Algs.Y, Algs.X],
+    (2, 0): [Algs.Y.prime, Algs.X * 2],
+    (2, 1): [Algs.Z.prime],
+    (2, 2): [Algs.X],
+    (3, 0): [Algs.Y * 2, Algs.X * 2],
+    (3, 1): [Algs.Y.prime, Algs.Z.prime],
+    (3, 2): [Algs.Y.prime, Algs.X],
+    (4, 0): [Algs.Y * 2],
+    (4, 1): [Algs.Y.prime, Algs.Z],
+    (4, 2): [Algs.Y, Algs.X.prime],
+    (5, 0): [Algs.Y],
+    (5, 1): [Algs.Y * 2, Algs.Z],
+    (5, 2): [Algs.X.prime],
+    (6, 0): [Algs.Y.prime],
+    (6, 1): [Algs.Z],
+    (6, 2): [Algs.Y * 2, Algs.X.prime],
+    (7, 0): [],
+    (7, 1): [Algs.Y, Algs.Z],
+    (7, 2): [Algs.Y.prime, Algs.X.prime],
+}
+
+
+def _find_dbl_piece_slot_and_co(cube: Cube) -> tuple[int, int]:
+    """Find the slot and orientation of the original DBL piece.
+
+    Returns:
+        (slot, co) where slot is 0-7 and co is 0-2.
+    """
+    corners: list[Corner] = [
+        cube.fru, cube.flu, cube.blu, cube.bru,
+        cube.frd, cube.fld, cube.brd, cube.bld,
+    ]
+
+    # Home colors of the DBL slot (the original face colors at back-down-left)
+    dbl_home_colors: frozenset[object] = frozenset(
+        e.face.original_color for e in cube.bld._slice.edges
+    )
+
+    # Twist face pairs for each slot: (CW_face, CCW_face)
+    twist_faces: list[tuple[object, object]] = [
+        (cube.right, cube.front),   # URF
+        (cube.front, cube.left),    # UFL
+        (cube.left, cube.back),     # ULB
+        (cube.back, cube.right),    # UBR
+        (cube.front, cube.right),   # DFR
+        (cube.left, cube.front),    # DLF
+        (cube.right, cube.back),    # DRB
+        (cube.back, cube.left),     # DBL
+    ]
+
+    up_color: object = cube.up.original_color
+    down_color: object = cube.down.original_color
+
+    for i, corner in enumerate(corners):
+        piece_colors: frozenset[object] = frozenset(
+            e.color for e in corner._slice.edges
+        )
+        if piece_colors != dbl_home_colors:
+            continue
+
+        # Found the DBL piece at slot i. Determine its orientation.
+        for e in corner._slice.edges:
+            if e.color == up_color or e.color == down_color:
+                if e.face is cube.up or e.face is cube.down:
+                    return i, 0
+                t1, _t2 = twist_faces[i]
+                if e.face is t1:
+                    return i, 1
+                return i, 2
+
+    raise AssertionError("DBL piece not found in any slot")
 
 
 class Solver2x2(BaseSolver):
-    """
-    Dedicated 2x2 cube solver using beginner corner-only method.
+    """Optimal 2x2 cube solver using IDA* with precomputed pruning tables.
 
-    Steps:
-    1. L1 (bottom corners): Position and orient all 4 bottom corners
-    2. L3 Corners Position: Permute top corners into correct slots
-    3. L3 Corners Orient: Twist top corners so all stickers match
+    Finds solutions of ≤11 moves (God's number for 2x2).
+    Tables are built lazily on first use (~2–5 seconds), then cached.
+    Subsequent solves complete in sub-millisecond time.
     """
 
     __slots__: list[str] = ["_display_as"]
@@ -56,242 +153,70 @@ class Solver2x2(BaseSolver):
     def status(self) -> str:
         if self._cube.solved:
             return "Solved"
-
-        wf = self.cmn.white_face
-        if Part.all_match_faces(wf.corners):
-            return "L1, No L3"
-        return "No L1"
+        return "Unsolved"
 
     def _solve_impl(self, what: SolveStep) -> SolverResults:
+        _ = what  # All steps do a full optimal solve (only ~9 moves)
         sr = SolverResults()
 
         if self._cube.solved:
             return sr
 
-        match what:
-            case SolveStep.L1:
-                self.cmn.bring_face_up(self.cmn.white_face)
-                self._solve_bottom_corners()
-
-            case SolveStep.ALL | SolveStep.L3:
-                self._solve_2x2()
+        self._solve_optimal()
 
         return sr
 
     def supported_steps(self) -> list[SolveStep]:
         return [SolveStep.L1, SolveStep.L3]
 
-    # =========================================================================
-    # Core solving logic
-    # =========================================================================
+    def _orient_dbl(self) -> None:
+        """Orient the cube so the original DBL piece is at slot 7 with co=0.
 
-    def _solve_2x2(self) -> None:
-        """Solve the 2x2 cube."""
-        # Bring white face up for bottom-layer solving
-        self.cmn.bring_face_up(self.cmn.white_face)
-
-        # Step 1: Solve bottom layer (all 4 white corners)
-        self._solve_bottom_corners()
-
-        if self._cube.solved:
-            return
-
-        # Step 2: Bring yellow face up for top-layer solving
-        self.cmn.bring_face_up(self.cmn.white_face.opposite)
-
-        # Step 3: Position top corners
-        self._position_top_corners()
-
-        # Step 4: Orient top corners
-        self._orient_top_corners()
-
-    # =========================================================================
-    # Bottom layer: Position and orient 4 white corners
-    # =========================================================================
-
-    def _solve_bottom_corners(self) -> None:
-        """Solve all 4 bottom-layer corners (white face is up)."""
-        wf: Face = self.cmn.white_face
-        assert wf is self._cube.up
-
-        color_codes = Part.parts_id_by_pos(wf.corners)
-
-        for code in color_codes:
-            self._solve_one_bottom_corner(code)
-
-    def _solve_one_bottom_corner(self, corner_id: PartColorsID) -> None:
-        """Place one bottom corner into its correct slot with correct orientation."""
-
-        def sc() -> Corner:
-            """Source corner: the corner piece with these colors."""
-            return self._cube.find_corner_by_colors(corner_id)
-
-        def tc() -> Corner:
-            """Target corner: the slot where this corner belongs."""
-            return self._cube.find_corner_by_pos_colors(corner_id)
-
-        if sc().match_faces:
-            return  # already solved
-
-        wf: Face = self._cube.up
-
-        # Bring target slot to front-right-up position
-        self._bring_corner_to_front_right(wf, tc())
-
-        # Get source corner into front-right-down (bottom layer working position)
-        if sc().on_face(wf):
-            self.debug(f"2x2 L1: source {sc()} on top → bring to bottom")
-            self._top_corner_to_front_right_down(wf, sc())
-        else:
-            self.debug(f"2x2 L1: source {sc()} on bottom → bring to FRD")
-            self._bottom_corner_to_front_right_down(sc())
-
-        assert self._cube.front.corner_bottom_right is sc()
-
-        # Now insert: corner is at FRD, target is at FRU
-        # Check if white is on the down face
-        if sc().f_color(wf.opposite) == wf.color:
-            self.debug("2x2 L1: white on bottom, fixing...")
-            self.op.play(Algs.R.prime + Algs.D.prime * 2 + Algs.R + Algs.D)
-            assert sc().f_color(wf.opposite) != wf.color
-
-        if sc().f_color(self._cube.front) == wf.color:
-            self.op.play(Algs.D.prime + Algs.R.prime + Algs.D + Algs.R)
-        else:
-            self.op.play(Algs.D + Algs.F + Algs.D.prime + Algs.F.prime)
-
-        assert sc().match_faces
-
-    def _bring_corner_to_front_right(self, wf: Face, c: Corner) -> None:
-        """Bring corner c on the top face to front-right-up position via Y rotation."""
-        assert c.on_face(wf)
-
-        if wf.corner_bottom_right is c:
-            return
-        if wf.corner_top_right is c:
-            self.op.play(Algs.Y)
-            return
-        if wf.corner_top_left is c:
-            self.op.play(Algs.Y * 2)
-            return
-        if wf.corner_bottom_left is c:
-            self.op.play(Algs.Y.prime)
-            return
-        raise ValueError(f"{c} is not on {wf}")
-
-    def _top_corner_to_front_right_down(self, wf: Face, c: Corner) -> None:
-        """Move a top corner to front-right-down position (doesn't preserve top layer)."""
-        assert c.on_face(wf)
-        saved_id = c.colors_id
-
-        if wf.corner_bottom_right is c:
-            self.op.play(Algs.R.prime + Algs.D.prime + Algs.R)
-        elif wf.corner_top_right is c:
-            self.op.play(Algs.B.prime + Algs.D.prime + Algs.B)
-        elif wf.corner_top_left is c:
-            self.op.play(Algs.B + Algs.D.prime + Algs.B.prime)
-        elif wf.corner_bottom_left is c:
-            self.op.play(Algs.F.prime + Algs.D.prime + Algs.F)
-        else:
-            raise ValueError(f"{c} is not on {wf}")
-
-        c = self._cube.find_corner_by_colors(saved_id)
-        self._bottom_corner_to_front_right_down(c)
-
-    def _bottom_corner_to_front_right_down(self, c: Corner) -> None:
-        """Rotate D to bring bottom corner to front-right-down."""
-        f: Face = self._cube.down
-        assert c.on_face(f)
-
-        if f.corner_top_right is c:
-            pass  # already there
-        elif f.corner_bottom_right is c:
-            self.op.play(Algs.D.prime)
-        elif f.corner_bottom_left is c:
-            self.op.play(Algs.D * 2)
-        elif f.corner_top_left is c:
-            self.op.play(Algs.D)
-        else:
-            raise ValueError(f"{c} is not on {f}")
-
-    # =========================================================================
-    # Top layer: Position and orient 4 yellow corners
-    # =========================================================================
-
-    def _position_top_corners(self) -> None:
-        """Permute top corners so each is in its correct slot (ignoring orientation).
-
-        On a 2x2, the top layer permutation can be any element of S_4:
-        - Identity: already solved
-        - 4-cycle: solved by U rotations (1-3 quarter turns)
-        - 3-cycle: solved by A-perm (1-2 applications with Y setup)
-        - Double transposition: A-perm converts to 3-cycle, then solve
-        - Transposition: U converts to 3-cycle, then solve
-
-        The A-perm (U R U' L' U R' U' L) is a 3-cycle that fixes FRU
-        and cycles BRU → BLU → FLU → BRU.
+        The IDA* solver only uses U, R, F moves which keep DBL fixed.
+        If D/L/B moves were used during scrambling, the DBL piece may
+        have been displaced or twisted. This method applies whole-cube
+        rotations to restore it (both position and orientation) before solving.
         """
-        yf: Face = self._cube.up
+        slot, co = _find_dbl_piece_slot_and_co(self._cube)
+        if slot == 7 and co == 0:
+            return  # Already in place with correct orientation
 
-        for _attempt in range(12):
-            if Part.all_in_position(yf.corners):
-                return
+        self.debug(f"DBL piece at slot {slot} co={co}, rotating to fix")
+        for alg in _ORIENT_TABLE[(slot, co)]:
+            self.op.play(alg)
 
-            # Try U rotations first — solves 4-cycles in 1-3 moves
-            for _ in range(3):
-                self.op.play(Algs.U)
-                if Part.all_in_position(yf.corners):
-                    return
-            self.op.play(Algs.U)  # restore to original (4 U = identity)
+    @staticmethod
+    def _fix_centers(cube: Cube) -> None:
+        """Reset virtual center pieces to match original face colors.
 
-            # Count corners currently in position
-            in_pos = [c for c in yf.corners if c.in_position]
-            n_in_pos = len(in_pos)
-
-            if n_in_pos == 0:
-                # Double transposition (not a 4-cycle since U didn't solve it).
-                # A-perm converts it to a state with 1+ corners in position.
-                self.op.play(self._ur_perm)
-            elif n_in_pos == 1:
-                # 3-cycle: bring the in-position corner to FRU (A-perm's
-                # fixed point), then A-perm cycles the other 3.
-                self._bring_corner_to_front_right(yf, in_pos[0])
-                self.op.play(self._ur_perm)
-            elif n_in_pos == 2:
-                # Transposition: U converts the structure so that 0 or 1
-                # corners are in position, breaking the transposition deadlock.
-                self.op.play(Algs.U)
-                # Don't apply A-perm yet — let the next iteration handle
-                # the new structure (will be 0 or 1 in position).
-            else:
-                return  # 3 in position implies 4th is too
-
-        assert Part.all_in_position(yf.corners), "Top corner permutation failed"
-
-    def _orient_top_corners(self) -> None:
-        """Orient top corners so all stickers match their face.
-
-        Uses the classic R' D' R D algorithm applied to each corner in turn.
-        This twists the FRU corner while temporarily disturbing the bottom layer.
-        Over all 4 corners, the bottom layer disturbances cancel out (because
-        the total corner twist is 0 mod 3 on a valid cube).
+        On a 2x2, the domain model has virtual center pieces that move with
+        whole-cube rotations but not with face moves. After pre-orientation
+        (whole-cube rotations) and solving (face moves only), the centers
+        may be displaced while corners are correct. This resets them.
         """
-        yf: Face = self._cube.up
+        for face in cube.faces:
+            face.center._virtual_color = face.original_color  # type: ignore[attr-defined]
 
-        for _ in range(4):
-            # Twist current front-right corner until its top sticker matches
-            while not yf.corner_bottom_right.match_face(yf):
-                self.op.play(Algs.alg(None, Algs.R.prime, Algs.D.prime, Algs.R, Algs.D) * 2)
+    def _solve_optimal(self) -> None:
+        """Solve the 2x2 cube optimally using IDA*."""
+        # Orient cube so DBL piece is at position 7 with co=0 (required by IDA*)
+        self._orient_dbl()
 
-            # Rotate U to bring next corner to front-right
-            self.op.play(Algs.U.prime)
+        # Extract coordinates from the physical cube
+        perm, twist = cube_to_coords(self._cube)
 
-        # After orienting all 4 corners, the cube should be solved.
-        # The 4 U' moves = identity, and the commutator twists cancel.
-        assert self._cube.solved, "2x2 orient failed — cube not solved"
+        # Get precomputed tables (built lazily on first call)
+        tables = get_tables()
 
-    @property
-    def _ur_perm(self) -> Alg:
-        """Corner permutation algorithm: U R U' L' U R' U' L."""
-        return Algs.alg(None, Algs.U, Algs.R, Algs.U.prime, Algs.L.prime,
-                        Algs.U, Algs.R.prime, Algs.U.prime, Algs.L)
+        # IDA* search returns a list of move indices
+        solution: list[int] = ida_solve(perm, twist, tables)
+
+        self.debug(f"IDA* solution: {len(solution)} moves")
+        assert len(solution) <= 11, f"IDA* returned {len(solution)} moves (max is 11)"
+
+        # Play each move on the physical cube
+        for move_idx in solution:
+            self.op.play(_MOVE_TO_ALG[move_idx])
+
+        # Fix virtual center pieces that were displaced by pre-orientation
+        self._fix_centers(self._cube)

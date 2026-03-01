@@ -46,7 +46,7 @@ from cube.domain.solver.direct.lbl._common import setup_l1, _get_side_face_track
 from cube.domain.solver.direct.lbl._sanity import SanityChecker
 
 if TYPE_CHECKING:
-    from cube.domain.solver.direct.lbl.LayerByLayerNxNSolver import LayerByLayerNxNSolver
+    from cube.domain.solver.direct.lbl.DirectLayerByLayerNxNSolver import DirectLayerByLayerNxNSolver
 
 
 class _LBLSlices(SolverHelper):
@@ -61,7 +61,7 @@ class _LBLSlices(SolverHelper):
 
     __slots__ = ["_slv", "_last_centers", "_edges", "_sanity", "_accumulated_stats"]
 
-    def __init__(self, slv: LayerByLayerNxNSolver) -> None:
+    def __init__(self, slv: DirectLayerByLayerNxNSolver) -> None:
 
         super().__init__(slv, "_LBLSlices")
 
@@ -70,7 +70,7 @@ class _LBLSlices(SolverHelper):
         Args:
             slv: LayerByLayerNxNSolver instance (for cube access and operations)
         """
-        self._slv: LayerByLayerNxNSolver = slv
+        self._slv: DirectLayerByLayerNxNSolver = slv
         self._last_centers: _LBLNxNCenters | None = None
         self._edges = _LBLNxNEdges(self)
         self._sanity = SanityChecker(self.cube, slv.config.lbl_sanity_check)

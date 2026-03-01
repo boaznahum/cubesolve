@@ -23,7 +23,7 @@ from cube.domain.tracker import FacesTrackerHolder
 from cube.domain.tracker._face_trackers import FaceTracker
 
 if TYPE_CHECKING:
-    from cube.domain.solver.direct.lbl.LayerByLayerNxNSolver import LayerByLayerNxNSolver
+    from cube.domain.solver.direct.lbl.DirectLayerByLayerNxNSolver import DirectLayerByLayerNxNSolver
 
 
 class _LBLL3Edges(SolverHelper):
@@ -73,7 +73,7 @@ class _LBLL3Edges(SolverHelper):
 
     D_LEVEL = 3
 
-    def __init__(self, slv: LayerByLayerNxNSolver) -> None:
+    def __init__(self, slv: DirectLayerByLayerNxNSolver) -> None:
         super().__init__(slv, "_LBLL3Edges")
         self._logger.set_level(_LBLL3Edges.D_LEVEL)
 
@@ -88,8 +88,8 @@ class _LBLL3Edges(SolverHelper):
 
     @property
     def _parent(self):
-        from cube.domain.solver.direct.lbl.LayerByLayerNxNSolver import LayerByLayerNxNSolver
-        return cast(LayerByLayerNxNSolver, self._solver)
+        from cube.domain.solver.direct.lbl.DirectLayerByLayerNxNSolver import DirectLayerByLayerNxNSolver
+        return cast(DirectLayerByLayerNxNSolver, self._solver)
 
     def do_l3_edges(self, l3_tracker: FaceTracker) -> None:
         """

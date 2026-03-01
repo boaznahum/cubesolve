@@ -17,7 +17,7 @@ from __future__ import annotations
 import pytest
 
 from cube.application.AbstractApp import AbstractApp
-from cube.domain.solver.direct.lbl.LayerByLayerNxNSolver import LayerByLayerNxNSolver
+from cube.domain.solver.direct.lbl.DirectLayerByLayerNxNSolver import DirectLayerByLayerNxNSolver
 from cube.domain.solver.solver import SolveStep
 
 # =============================================================================
@@ -49,7 +49,7 @@ class TestL3EdgesPreserveOthers:
 
         # Setup
         app = AbstractApp.create_app(cube_size=cube_size)
-        solver = LayerByLayerNxNSolver(app.op, app.op.sp.logger)
+        solver = DirectLayerByLayerNxNSolver(app.op, app.op.sp.logger)
 
         # Scramble
         app.scramble(scramble_seed, None, animation=False, verbose=False)
@@ -97,7 +97,7 @@ class TestL3EdgesPreserveOthersExtended:
         """Test 5x5 L3 edges with many scrambles to find edge cases."""
 
         app = AbstractApp.create_app(cube_size=cube_size)
-        solver = LayerByLayerNxNSolver(app.op, app.op.sp.logger)
+        solver = DirectLayerByLayerNxNSolver(app.op, app.op.sp.logger)
 
         app.scramble(scramble_seed, None, animation=False, verbose=False)
         solver.solve(what=SolveStep.LBL_L3_CENTER, debug=False, animation=False)

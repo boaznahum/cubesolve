@@ -153,17 +153,16 @@ class Solvers:
         return CageNxNSolver(op, parent_logger)
 
     @staticmethod
-    def reducer(op: OperatorProtocol) -> Solver:
+    def direct_big_lbl(op: OperatorProtocol) -> Solver:
         """
-        Get Reducer solver for NxN cubes.
+        Get Big LBL solver for NxN cubes.
 
-        Reduces the cube to a 3x3 equivalent by solving centers and
-        pairing edges, then solves using a 3x3 method.
+        Layer-by-layer approach for big cubes.
         """
-        from .direct.lbl.LayerByLayerNxNSolver import LayerByLayerNxNSolver
+        from .direct.lbl.DirectLayerByLayerNxNSolver import DirectLayerByLayerNxNSolver
 
         parent_logger = op.cube.sp.logger
-        return LayerByLayerNxNSolver(op, parent_logger)
+        return DirectLayerByLayerNxNSolver(op, parent_logger)
 
     @classmethod
     def next_solver(cls, current: SolverName, op: OperatorProtocol) -> Solver:
@@ -215,8 +214,8 @@ class Solvers:
             case SolverName.CAGE:
                 return cls.cage(op)
 
-            case SolverName.REDUCER:
-                return cls.reducer(op)
+            case SolverName.LBL_BIG:
+                return cls.direct_big_lbl(op)
 
             case _:
                 raise InternalSWError(f"Unknown solver: {solver_id}")

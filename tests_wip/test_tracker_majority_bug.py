@@ -36,7 +36,7 @@ from cube.application.AbstractApp import AbstractApp
 from cube.domain.model import Color
 from cube.domain.model.FaceName import FaceName
 from cube.domain.solver.common.tracker.FacesTrackerHolder import FacesTrackerHolder
-from cube.domain.solver.direct.lbl.LayerByLayerNxNSolver import LayerByLayerNxNSolver
+from cube.domain.solver.direct.lbl.DirectLayerByLayerNxNSolver import DirectLayerByLayerNxNSolver
 
 
 def _setup_even_distribution_cube(app: AbstractApp) -> None:
@@ -120,7 +120,7 @@ class TestTrackerMajorityBug:
         _setup_even_distribution_cube(app)
 
         # Create solver (which creates trackers)
-        solver = LayerByLayerNxNSolver(app.op)
+        solver = DirectLayerByLayerNxNSolver(app.op)
 
         # Create trackers using FacesTrackerHolder
         with FacesTrackerHolder(solver) as th:
@@ -161,7 +161,7 @@ class TestTrackerMajorityBug:
         # Set up the problematic cube configuration
         _setup_even_distribution_cube(app)
 
-        solver = LayerByLayerNxNSolver(app.op)
+        solver = DirectLayerByLayerNxNSolver(app.op)
 
         # Create a tracker holder and keep it across Y rotation
         # The trackers should move with the rotation
@@ -203,7 +203,7 @@ class TestTrackerMajorityBug:
         # Set up the problematic cube configuration
         _setup_even_distribution_cube(app)
 
-        solver = LayerByLayerNxNSolver(app.op)
+        solver = DirectLayerByLayerNxNSolver(app.op)
 
         # Create first set of trackers and get face→color mapping
         with FacesTrackerHolder(solver) as th1:
@@ -258,7 +258,7 @@ def test_random_scramble_tracker_validity(seed: int) -> None:
     # Normal scramble
     app.scramble(seed, None, animation=False, verbose=False)
 
-    solver = LayerByLayerNxNSolver(app.op)
+    solver = DirectLayerByLayerNxNSolver(app.op)
 
     with FacesTrackerHolder(solver) as th:
         unique_colors = _count_unique_colors(th.trackers)

@@ -2,7 +2,7 @@
 Simple test to reproduce bug with GUI seed 1, size 12.
 """
 from cube.application.AbstractApp import AbstractApp
-from cube.domain.solver.direct.lbl.LayerByLayerNxNSolver import LayerByLayerNxNSolver
+from cube.domain.solver.direct.lbl.DirectLayerByLayerNxNSolver import DirectLayerByLayerNxNSolver
 from cube.domain.solver.solver import SolveStep
 
 
@@ -18,7 +18,7 @@ def test_seed1_size12_simple():
     app.scramble(1, None, animation=False, verbose=False)
 
     # Solve
-    solver = LayerByLayerNxNSolver(app.op, app.op.sp.logger)
+    solver = DirectLayerByLayerNxNSolver(app.op, app.op.sp.logger)
     solver.solve(what=SolveStep.ALL, debug=False, animation=False)
 
     # Assert solved

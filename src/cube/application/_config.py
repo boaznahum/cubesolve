@@ -27,8 +27,8 @@ ENABLE_CUBE_CACHE = True
 PREVENT_RANDOM_FACE_PICK_UP_IN_GEOMETRY=False
 
 # Default solver name - case-insensitive, prefix matching allowed if unambiguous
-# Available solvers: LBL, CFOP, Kociemba, Cage, Reducer
-# Examples: "lbl", "LBL", "cf" (for CFOP), "k" (for Kociemba), "r" (for Reducer)
+# Available solvers: Beginner Reducer, CFOP, Kociemba, Cage, Dwalton, Big LBL
+# Examples: "beginner", "cf" (for CFOP), "k" (for Kociemba), "big" (for Big LBL)
 # Note: Keep this list in sync with SolverName enum in src/cube/domain/solver/SolverName.py
 DEFAULT_SOLVER = "Kociemba"
 

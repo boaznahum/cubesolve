@@ -1958,7 +1958,6 @@ class Cube(CubeSupplier):
         """
         from .part_names import (
             CornerName,
-            EdgeName,
             faces_to_corner_name,
             faces_to_edge_name,
         )
