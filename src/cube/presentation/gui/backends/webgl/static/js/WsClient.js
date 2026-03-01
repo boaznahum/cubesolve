@@ -32,6 +32,12 @@ export class WsClient {
             this._statusEl.textContent = 'Connected';
             this._statusEl.className = 'connected';
             const connectMsg = { type: 'connected' };
+            const params = new URLSearchParams(window.location.search);
+            if (params.has('new')) {
+                localStorage.removeItem('cube_session_id');
+                // Clean URL without reload
+                history.replaceState(null, '', window.location.pathname);
+            }
             const savedId = localStorage.getItem('cube_session_id');
             if (savedId) connectMsg.session_id = savedId;
             this._ws.send(JSON.stringify(connectMsg));

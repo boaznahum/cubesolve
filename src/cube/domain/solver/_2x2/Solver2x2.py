@@ -37,18 +37,20 @@ class Solver2x2(BaseSolver):
     3. L3 Corners Orient: Twist top corners so all stickers match
     """
 
-    __slots__: list[str] = []
+    __slots__: list[str] = ["_display_as"]
 
     def __init__(
         self,
         op: OperatorProtocol,
         parent_logger: ILogger,
+        display_as: SolverName | None = None,
     ) -> None:
         super().__init__(op, parent_logger, logger_prefix="Solver2x2")
+        self._display_as: SolverName = display_as or SolverName.TWO_BY_TWO
 
     @property
     def get_code(self) -> SolverName:
-        return SolverName.TWO_BY_TWO
+        return self._display_as
 
     @property
     def status(self) -> str:
@@ -66,12 +68,18 @@ class Solver2x2(BaseSolver):
         if self._cube.solved:
             return sr
 
-        self._solve_2x2()
+        match what:
+            case SolveStep.L1:
+                self.cmn.bring_face_up(self.cmn.white_face)
+                self._solve_bottom_corners()
+
+            case SolveStep.ALL | SolveStep.L3:
+                self._solve_2x2()
 
         return sr
 
     def supported_steps(self) -> list[SolveStep]:
-        return [SolveStep.ALL]
+        return [SolveStep.L1, SolveStep.L3]
 
     # =========================================================================
     # Core solving logic

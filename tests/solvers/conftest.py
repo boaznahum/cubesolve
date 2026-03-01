@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 # =============================================================================
 
 # Cube sizes to test (start with 3, can extend to [3, 4, 5] later)
-CUBE_SIZES: list[int] = [3, 4, 5, 8]
+CUBE_SIZES: list[int] = [2, 3, 4, 5, 8]
 
 # GUI keyboard scramble seeds (keys 0-9) - same as ScrambleCommand(0-9)
 GUI_SCRAMBLE_SEEDS: list[int] = list(range(10))  # 0, 1, 2, ..., 9
@@ -71,8 +71,8 @@ def session_random_seed() -> int:
 
 @pytest.fixture
 def all_solver_names() -> list[SolverName]:
-    """Return all available solver names."""
-    return SolverName.implemented()
+    """Return all user-visible solver names."""
+    return SolverName.user_visible()
 
 
 @pytest.fixture
@@ -134,8 +134,13 @@ def get_scramble_params_remaining() -> list[tuple[str, int | None]]:
 
 
 def get_solver_names() -> list[SolverName]:
-    """Get all solver names for parametrization."""
-    return SolverName.implemented()
+    """Get user-visible solver names for parametrization.
+
+    Uses user_visible() so that:
+    - LBL/CFOP/etc run on 2x2 (verifying delegation to 2x2 solver)
+    - TWO_BY_TWO is excluded (implementation detail, tested indirectly)
+    """
+    return SolverName.user_visible()
 
 
 def get_cube_sizes() -> list[int]:

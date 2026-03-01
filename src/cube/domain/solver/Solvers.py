@@ -26,21 +26,24 @@ class Solvers:
     def default(cls, op: OperatorProtocol) -> Solver:
         """Get the default solver based on config setting.
 
-        For 2x2 cubes, always returns the dedicated 2x2 solver regardless
-        of the configured default.
+        For 2x2 cubes, by_name() delegates to the dedicated 2x2 solver
+        automatically, so no special case is needed here.
         """
-        if op.cube.size == 2:
-            return cls.two_by_two(op)
         solver_name = SolverName.lookup(op.app_state.config.default_solver)
         return cls.by_name(solver_name, op)
 
     @staticmethod
-    def two_by_two(op: OperatorProtocol) -> Solver:
-        """Get the dedicated 2x2 cube solver."""
+    def two_by_two(op: OperatorProtocol, display_as: SolverName | None = None) -> Solver:
+        """Get the dedicated 2x2 cube solver.
+
+        Args:
+            display_as: If set, the solver reports this name instead of TWO_BY_TWO.
+                Used when delegating from user-visible solvers (e.g. LBL on a 2x2 cube).
+        """
         from ._2x2.Solver2x2 import Solver2x2
 
         parent_logger = op.cube.sp.logger
-        return Solver2x2(op, parent_logger)
+        return Solver2x2(op, parent_logger, display_as=display_as)
 
     @staticmethod
     def beginner(op: OperatorProtocol) -> Solver:
@@ -141,16 +144,18 @@ class Solvers:
 
     @classmethod
     def next_solver(cls, current: SolverName, op: OperatorProtocol) -> Solver:
-        """Get the next solver in rotation (skips unimplemented and incompatible solvers)."""
+        """Get the next solver in rotation (skips hidden, unimplemented, and incompatible solvers)."""
         cube_size = op.cube.size
         all_solvers = [*SolverName]
         index = all_solvers.index(current)
 
-        # Find next implemented and compatible solver
+        # Find next user-visible, implemented, and compatible solver
         for _ in range(len(all_solvers)):
             index = (index + 1) % len(all_solvers)
             candidate = all_solvers[index]
-            if candidate.meta.implemented and candidate.meta.get_skip_reason(cube_size) is None:
+            if (candidate.meta.implemented
+                    and candidate.meta.user_visible
+                    and candidate.meta.get_skip_reason(cube_size) is None):
                 return cls.by_name(candidate, op)
 
         # All solvers are incompatible — fall back to current
@@ -163,8 +168,9 @@ class Solvers:
         For 2x2 cubes, all solvers except TWO_BY_TWO delegate to the 2x2 solver.
         """
         # For 2x2 cubes, delegate all non-2x2 solvers to the 2x2 solver
+        # but preserve the original solver name for the UI
         if op.cube.size == 2 and solver_id != SolverName.TWO_BY_TWO:
-            return cls.two_by_two(op)
+            return cls.two_by_two(op, display_as=solver_id)
 
         match solver_id:
 

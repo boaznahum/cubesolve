@@ -175,7 +175,7 @@ class ClientSession:
     def send_toolbar_state(self) -> None:
         from cube.domain.solver.SolverName import SolverName
         app = self._app
-        solver_list = [s.display_name for s in SolverName.implemented()]
+        solver_list = [s.display_name for s in SolverName.user_visible()]
         vs = app.vs
         self._send(json.dumps({
             "type": "toolbar_state",
@@ -493,12 +493,11 @@ class ClientSession:
         self._app.vs._speed = clamped
 
     def _handle_size(self, size: int) -> None:
-        clamped = max(3, min(20, size))
+        clamped = max(2, min(20, size))
         vs = self._app.vs
         if clamped != vs.cube_size:
             vs.cube_size = clamped
-            self._app.cube.reset(clamped)
-            self._app.op.reset()
+            self._app.reset(clamped)
             self.send_cube_state()
             self.send_text()
             self.send_history_state()
