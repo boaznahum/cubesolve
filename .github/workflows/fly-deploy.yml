@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - main
-      - webgl-4
+      - webgl-dev
       - staging
 
 jobs:
