@@ -85,11 +85,12 @@ export class HistoryPanel {
         if (!this._list) return;
         this._list.innerHTML = '';
 
-        // Done items (executed operations)
-        const lastDoneIdx = this._doneItems.length - 1;
-        for (let i = 0; i < this._doneItems.length; i++) {
-            const el = this._createItem(this._doneItems[i], 'done');
-            if (i === lastDoneIdx) el.classList.add('hp-last-done');
+        // Done items (executed operations) — skip scramble summaries
+        const doneVisible = this._doneItems.filter(item => item.type !== 'scramble');
+        const lastVisIdx = doneVisible.length - 1;
+        for (let i = 0; i < doneVisible.length; i++) {
+            const el = this._createItem(doneVisible[i], 'done');
+            if (i === lastVisIdx) el.classList.add('hp-last-done');
             this._list.appendChild(el);
         }
 

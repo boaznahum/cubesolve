@@ -242,10 +242,6 @@ class ClientSession:
 
         alg_str: str = str(alg)
         alg_type: str = type(alg).__name__
-        vs = self._app.vs
-        print(f"  anim: {alg_str} type={alg_type} face={face_name} "
-              f"layers={layers} dir={direction} size={size} "
-              f"slice=[{vs.slice_start}:{vs.slice_stop}]", flush=True)
 
         # Embed post-move state so the client has correct colors at animation end
         state = extract_cube_state(self._app.cube)
