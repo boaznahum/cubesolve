@@ -6,6 +6,8 @@ L1 or middle layer edges. Uses commutator-based algorithms.
 
 See: L3_EDGES_DIAGRAMS.md (same directory) for full algorithm details.
 """
+from __future__ import annotations
+
 from typing import cast, TYPE_CHECKING
 
 from cube.domain.algs import Alg, Algs, SeqAlg

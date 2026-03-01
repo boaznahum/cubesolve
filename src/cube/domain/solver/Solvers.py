@@ -24,9 +24,23 @@ class Solvers:
 
     @classmethod
     def default(cls, op: OperatorProtocol) -> Solver:
-        """Get the default solver based on config setting."""
+        """Get the default solver based on config setting.
+
+        For 2x2 cubes, always returns the dedicated 2x2 solver regardless
+        of the configured default.
+        """
+        if op.cube.size == 2:
+            return cls.two_by_two(op)
         solver_name = SolverName.lookup(op.app_state.config.default_solver)
         return cls.by_name(solver_name, op)
+
+    @staticmethod
+    def two_by_two(op: OperatorProtocol) -> Solver:
+        """Get the dedicated 2x2 cube solver."""
+        from ._2x2.Solver2x2 import Solver2x2
+
+        parent_logger = op.cube.sp.logger
+        return Solver2x2(op, parent_logger)
 
     @staticmethod
     def beginner(op: OperatorProtocol) -> Solver:
@@ -132,24 +146,35 @@ class Solvers:
 
     @classmethod
     def next_solver(cls, current: SolverName, op: OperatorProtocol) -> Solver:
-        """Get the next solver in rotation (skips unimplemented solvers)."""
+        """Get the next solver in rotation (skips unimplemented and incompatible solvers)."""
+        cube_size = op.cube.size
         all_solvers = [*SolverName]
         index = all_solvers.index(current)
 
-        # Find next implemented solver
+        # Find next implemented and compatible solver
         for _ in range(len(all_solvers)):
             index = (index + 1) % len(all_solvers)
             candidate = all_solvers[index]
-            if candidate.meta.implemented:
+            if candidate.meta.implemented and candidate.meta.get_skip_reason(cube_size) is None:
                 return cls.by_name(candidate, op)
 
-        # All solvers are unimplemented (shouldn't happen)
-        raise InternalSWError("No implemented solvers available")
+        # All solvers are incompatible — fall back to current
+        return cls.by_name(current, op)
 
     @classmethod
     def by_name(cls, solver_id: SolverName, op: OperatorProtocol) -> Solver:
-        """Get a solver by its name."""
+        """Get a solver by its name.
+
+        For 2x2 cubes, all solvers except TWO_BY_TWO delegate to the 2x2 solver.
+        """
+        # For 2x2 cubes, delegate all non-2x2 solvers to the 2x2 solver
+        if op.cube.size == 2 and solver_id != SolverName.TWO_BY_TWO:
+            return cls.two_by_two(op)
+
         match solver_id:
+
+            case SolverName.TWO_BY_TWO:
+                return cls.two_by_two(op)
 
             case SolverName.LBL:
                 return cls.beginner(op)

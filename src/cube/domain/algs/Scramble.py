@@ -118,18 +118,19 @@ def __scramble(cube_size: int, rnd: Random, n: int, nest) -> list[Alg]:
                 else:  # SliceAlg
                     max_slice = cube_size - 2  # see :class:`SliceAlg`
 
-                slice_start = rnd.randint(1, max_slice)
-                if slice_start == max_slice:
-                    slice_stop = slice_start
-                else:
-                    left = max_slice - slice_start
-
-                    if left == 0 or rnd.random() > 0.5:
+                if max_slice >= 1:
+                    slice_start = rnd.randint(1, max_slice)
+                    if slice_start == max_slice:
                         slice_stop = slice_start
                     else:
-                        slice_stop = rnd.randint(1, left) + slice_start
+                        left = max_slice - slice_start
 
-                a = a[slice_start:slice_stop]
+                        if left == 0 or rnd.random() > 0.5:
+                            slice_stop = slice_start
+                        else:
+                            slice_stop = rnd.randint(1, left) + slice_start
+
+                    a = a[slice_start:slice_stop]
 
         if prob(_PROB_INV):
             a = a.inv()

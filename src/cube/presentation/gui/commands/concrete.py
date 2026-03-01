@@ -413,9 +413,7 @@ class SizeIncCommand(Command):
 
     def execute(self, ctx: CommandContext) -> CommandResult:
         ctx.vs.cube_size += 1
-        ctx.cube.reset(ctx.vs.cube_size)
-        ctx.op.reset()
-        # Note: viewer.reset() not needed - cube.reset() triggers CubeListener.on_reset()
+        ctx.app.reset(ctx.vs.cube_size)
         return CommandResult()
 
 
@@ -424,11 +422,9 @@ class SizeDecCommand(Command):
     """Command to decrease cube size."""
 
     def execute(self, ctx: CommandContext) -> CommandResult:
-        if ctx.vs.cube_size > 3:
+        if ctx.vs.cube_size > 2:
             ctx.vs.cube_size -= 1
-        ctx.cube.reset(ctx.vs.cube_size)
-        ctx.op.reset()
-        # Note: viewer.reset() not needed - cube.reset() triggers CubeListener.on_reset()
+        ctx.app.reset(ctx.vs.cube_size)
         return CommandResult()
 
 

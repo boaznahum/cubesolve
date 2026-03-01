@@ -93,7 +93,7 @@ class Face(SuperElement, Hashable):
         slices: list[list[CenterSlice]]
         slices = [[CenterSlice((i, j), PartEdge(f, color)) for j in range(n)] for i in range(n)]
 
-        return Center(slices)
+        return Center(slices, face=self)
 
     def __hash__(self) -> int:
         # we use faces in set in nxn_centers
@@ -148,6 +148,12 @@ class Face(SuperElement, Hashable):
         super().finish_init()
         self._init_finished = True
 
+        n = self.cube.n_slices
+
+        if n == 0:
+            # 2x2: no edges or centers to set markers on
+            return
+
         markers_cfg = self.config.markers_config
         draw_markers = markers_cfg.GUI_DRAW_MARKERS
         sample_markers = markers_cfg.GUI_DRAW_SAMPLE_MARKERS
@@ -155,7 +161,6 @@ class Face(SuperElement, Hashable):
         mf = self.cube.sp.marker_factory
         mm = self.cube.sp.marker_manager
 
-        n = self.cube.n_slices
         n1 = n - 1
 
         if draw_ltr_cords:
@@ -406,7 +411,7 @@ class Face(SuperElement, Hashable):
 
     def __str__(self) -> str:
         # return f"{self._center.edg().color.name}/{self._original_color.name}@{self._name.value}"
-        return f"{self._center.edg().color.name}@{self._name.value}"
+        return f"{self.color.name}@{self._name.value}"
 
     def __repr__(self):
         return self.__str__()
@@ -640,7 +645,12 @@ class Face(SuperElement, Hashable):
         if not self.is3x3:
             return False
 
-        return (self.center.color ==
+        c = self.color
+        if self.cube.n_slices == 0:
+            # 2x2: only corners (no edges, no centers)
+            return all(corner.f_color(self) == c for corner in self._corners)
+
+        return (c ==
                 self._edge_top.f_color(self) ==
                 self._edge_right.f_color(self) ==
                 self._edge_bottom.f_color(self) ==
@@ -653,6 +663,8 @@ class Face(SuperElement, Hashable):
 
     @property
     def is3x3(self):
+        if self.cube.n_slices == 0:
+            return True  # 2x2: no edges/centers, trivially reduced
         return all(p.is3x3 for p in self.edges) and self.center.is3x3
 
     def reset_after_faces_changes(self):
