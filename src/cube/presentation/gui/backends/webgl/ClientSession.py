@@ -910,8 +910,6 @@ class ClientSession:
             app = self._app
             slv = app.slv
             solution_alg = slv.solution()
-            if solution_alg.count() == 0:
-                return
             solution_alg = solution_alg.simplify()
             # Flatten into atomic steps and enqueue as redo
             steps = list(solution_alg.flatten())
