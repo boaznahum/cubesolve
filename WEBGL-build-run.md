@@ -2,10 +2,12 @@
 
 ## Prerequisites
 
+1. **Node.js** (v18+) — download from https://nodejs.org/ (includes `npm`)
+2. Install frontend dependencies (one-time):
+
 ```bash
-# Install frontend dependencies (one-time)
 cd src/cube/presentation/gui/backends/webgl
-npm install
+npm install          # installs Vite, Three.js, and other dependencies
 ```
 
 ## Development (two terminals)

@@ -5,6 +5,14 @@ export default defineConfig({
     build: {
         outDir: 'dist',
         emptyOutDir: true,
+        chunkSizeWarningLimit: 600,  // Three.js is ~530KB, can't be split further
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    three: ['three'],
+                },
+            },
+        },
     },
     server: {
         proxy: {
