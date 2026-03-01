@@ -126,6 +126,11 @@ ignore_errors = true
 module = "kociemba"
 ignore_missing_imports = true
 
+[tool.ruff.lint.per-file-ignores]
+# Cube.py has a long module docstring after `from __future__ import annotations`,
+# which pushes all other imports past line 134. This is not a real issue.
+"src/cube/domain/model/Cube.py" = ["E402"]
+
 [tool.pyright]
 pythonVersion = "3.14"
 typeCheckingMode = "standard"

@@ -119,7 +119,7 @@ class Center(Part):
         return rep[0]
 
     @property
-    def color(self):
+    def color(self) -> Color:
         """
         Meaningfully only for 3x3.
         For 2x2: returns virtual color that tracks through whole-cube rotations.
@@ -127,6 +127,7 @@ class Center(Part):
         """
         if not self._slices:
             # 2x2: use virtual color (updated by Slice.rotate for whole-cube rotations)
+            assert self._virtual_color is not None, "Center._virtual_color not initialized"
             return self._virtual_color
         return self.edg().color
 

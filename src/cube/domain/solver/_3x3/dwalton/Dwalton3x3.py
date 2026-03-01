@@ -246,16 +246,16 @@ class Dwalton3x3(AbstractSolver, Solver3x3Protocol):
 
         # Edges
         for i, (f1, f2) in enumerate(_EDGE_FACELETS):
-            colors = (face_map[s[f1]], face_map[s[f2]])
+            edge_colors = (face_map[s[f1]], face_map[s[f2]])
 
             found = False
             for j, (g1, g2) in enumerate(_EDGE_FACELETS):
-                solved = (g1 // 9, g2 // 9)
+                edge_solved = (g1 // 9, g2 // 9)
 
-                if colors == solved:
+                if edge_colors == edge_solved:
                     ep[i], eo[i], found = j, 0, True
                     break
-                elif colors == (solved[1], solved[0]):
+                elif edge_colors == (edge_solved[1], edge_solved[0]):
                     ep[i], eo[i], found = j, 1, True
                     break
 

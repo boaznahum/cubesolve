@@ -12,6 +12,7 @@ from __future__ import annotations
 import base64
 import os
 import zlib
+from typing import IO
 
 from cube.domain.solver._2x2.ida_star_tables import (
     _build_perm_move_table,
@@ -72,14 +73,14 @@ def generate() -> None:
     print(f"File size: {os.path.getsize(out_path):,} bytes")
 
 
-def _write_bytes_literal(f: object, name: str, data: bytes, line_width: int = 76) -> None:
+def _write_bytes_literal(f: IO[str], name: str, data: bytes, line_width: int = 76) -> None:
     """Write a bytes literal spread across multiple lines."""
-    f.write(f"{name} = (\n")  # type: ignore[union-attr]
+    f.write(f"{name} = (\n")
     text = data.decode("ascii")
     for i in range(0, len(text), line_width):
         chunk = text[i:i + line_width]
-        f.write(f'    b"{chunk}"\n')  # type: ignore[union-attr]
-    f.write(")\n\n")  # type: ignore[union-attr]
+        f.write(f'    b"{chunk}"\n')
+    f.write(")\n\n")
 
 
 if __name__ == "__main__":

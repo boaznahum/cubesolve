@@ -82,6 +82,7 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         self._modern_renderer: ModernGLRenderer | None = None
         self._renderer_adapter: ModernGLRendererAdapter | None = None
         self._toolbar: GUIToolbar | None = None
+        self._popup: TextPopup = TextPopup(width, height)
 
         # Create the pyglet window (composition pattern)
         # Pass self as parent so events are delegated back to us
@@ -152,9 +153,6 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         # Native GUI toolbar (replaces ImGui complexity)
         # All button setup is centralized in create_toolbar() in GUIToolbar.py
         self._toolbar = create_toolbar(self)
-
-        # Text popup overlay (for Help, etc.)
-        self._popup: TextPopup = TextPopup(width, height)
 
         # Initial GUI update
         self.update_gui_elements()
