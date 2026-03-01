@@ -15,8 +15,12 @@ viewer are totally seperated from other layers(as should be :wink:)
 
 ## Credits:
 [Ruwix](https://ruwix.com/the-rubiks-cube/notation/advanced)
-        
+
 [cubing](https://alg.cubing.net/?alg=mx)
+
+[Daniel Walton (dwalton76)](https://github.com/dwalton76/rubiks-cube-NxNxN-solver) — The Dwalton solver is inspired by his rubiks-cube-NxNxN-solver project, which uses precomputed lookup/pruning tables with IDA* search based on Herbert Kociemba's two-phase algorithm.
+
+[Herbert Kociemba](http://kociemba.org/cube.htm) — Two-phase algorithm for optimal 3x3 cube solving, the foundation of the Dwalton table-based solver.
 
 ## Installing and running
 

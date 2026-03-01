@@ -63,6 +63,7 @@ class SolverName(Enum):
     CFOP = SolverMeta("CFOP")#, only_3x3="CFOP use same reducer as LBL")
     KOCIEMBA = SolverMeta("Kociemba")
     CAGE = SolverMeta("Cage")  # Cage method: edges first, then corners, then centers
+    DWALTON = SolverMeta("Dwalton")  # Table-based Kociemba (dwalton76-inspired)
     LBL_BIG = SolverMeta("LBL-Big",
                          #implemented=False,  # Not yet fully implemented
                          #skip_3x3="LBL-Big is for NxN cubes only",

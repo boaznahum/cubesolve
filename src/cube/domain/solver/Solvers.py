@@ -95,6 +95,29 @@ class Solvers:
         )
 
     @staticmethod
+    def dwalton(op: OperatorProtocol) -> Solver:
+        """
+        Get Dwalton table-based solver with NxN support.
+
+        For 3x3: Uses Kociemba two-phase with pruning tables (pure Python)
+        For NxN: Uses BeginnerReducer + Dwalton3x3
+
+        Inspired by dwalton76/rubiks-cube-NxNxN-solver.
+        Uses advanced (R/L-slice) edge parity algorithm.
+        """
+        from .NxNSolverOrchestrator import NxNSolverOrchestrator
+        from .Reducers import Reducers
+        from .Solvers3x3 import Solvers3x3
+
+        parent_logger = op.cube.sp.logger
+        solver_3x3 = Solvers3x3.dwalton(op, parent_logger)
+        reducer = Reducers.beginner(op, advanced_edge_parity=True)
+
+        return NxNSolverOrchestrator(
+            op, parent_logger, reducer, solver_3x3, SolverName.DWALTON
+        )
+
+    @staticmethod
     def cage(op: OperatorProtocol) -> Solver:
         """
         Get Cage method solver (odd cubes only).
@@ -159,6 +182,9 @@ class Solvers:
 
             case SolverName.KOCIEMBA:
                 return cls.kociemba(op)
+
+            case SolverName.DWALTON:
+                return cls.dwalton(op)
 
             case SolverName.CAGE:
                 return cls.cage(op)
