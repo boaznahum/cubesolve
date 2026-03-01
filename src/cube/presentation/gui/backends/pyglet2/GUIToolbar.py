@@ -16,6 +16,7 @@ import pyglet
 from pyglet import shapes
 
 from cube.domain.solver import SolveStep
+from cube.domain.solver.SolverName import SolverName
 
 if TYPE_CHECKING:
     from cube.application.AbstractApp import AbstractApp
@@ -47,6 +48,28 @@ SEPARATOR_WIDTH = 15
 LABEL_COLOR = (200, 200, 200, 255)  # Light gray for labels
 FONT_SIZE = 12
 
+# Dropdown style constants
+DROPDOWN_BG_COLOR = (50, 50, 60, 245)
+DROPDOWN_ITEM_HOVER = (80, 120, 170, 255)
+DROPDOWN_ITEM_CURRENT = (60, 90, 130, 255)  # Slightly highlighted for current solver
+DROPDOWN_TEXT_COLOR = (255, 255, 255, 255)
+DROPDOWN_CURRENT_TEXT = (180, 220, 255, 255)  # Brighter text for current solver
+DROPDOWN_BORDER_COLOR = (100, 140, 180, 255)
+DROPDOWN_ITEM_HEIGHT = 28
+DROPDOWN_ITEM_PADDING = 6
+
+
+# Sentinel tag to identify the Solver button for dropdown toggling
+_SOLVER_BUTTON_TAG = "__solver_dropdown__"
+
+
+@dataclass
+class DropdownItem:
+    """An item in the solver dropdown menu."""
+    label: str
+    solver_name: SolverName
+    is_current: bool
+
 
 @dataclass
 class GUIButton:
@@ -65,6 +88,7 @@ class GUIButton:
     tooltip: str | None = None  # Hover tooltip text
     shift_label: str | None = None  # Alternative label when Shift is held
     shift_command: "Command | None" = None  # Alternative command for Shift+click
+    tag: str = ""  # Optional tag for identification (e.g., solver dropdown)
 
     def get_label(self, shift_held: bool = False) -> str:
         """Get current label (static, dynamic, or shift-modified)."""
@@ -131,6 +155,15 @@ class GUIToolbar:
         # Store window reference for rebuild (set by create_toolbar)
         self._window: "PygletAppWindow | None" = None
 
+        # Solver dropdown state
+        self._dropdown_open: bool = False
+        self._dropdown_items: list[DropdownItem] = []
+        self._dropdown_hover_idx: int = -1
+        # Anchor: (x, y, width) of the Solver button — set when dropdown opens
+        self._dropdown_anchor_x: int = 0
+        self._dropdown_anchor_y: int = 0
+        self._dropdown_anchor_w: int = 0
+
     def add_button(
             self,
             label: str,
@@ -141,6 +174,7 @@ class GUIToolbar:
             tooltip: str | None = None,
             shift_label: str | None = None,
             shift_command: "Command | None" = None,
+            tag: str = "",
     ) -> None:
         """Add a clickable button to current row."""
         # Auto-enrich tooltip with key binding
@@ -159,6 +193,7 @@ class GUIToolbar:
             tooltip=tooltip,
             shift_label=shift_label,
             shift_command=shift_command,
+            tag=tag,
         ))
         self._shapes_dirty = True
 
@@ -195,6 +230,8 @@ class GUIToolbar:
         self._window_width = width
         self._window_height = height
         self._shapes_dirty = True
+        # Close dropdown on resize to avoid stale positioning
+        self._dropdown_open = False
 
     def _rebuild_shapes(self) -> None:
         """Rebuild all shapes."""
@@ -360,29 +397,232 @@ class GUIToolbar:
 
         self._batch.draw()
 
+        # Draw dropdown overlay (on top of toolbar, before tooltip)
+        if self._dropdown_open:
+            self._draw_dropdown()
+
         # Draw tooltip on top of everything
         self.draw_tooltip()
+
+    # === Solver Dropdown ===
+
+    def _open_dropdown(self) -> None:
+        """Open the solver dropdown, populating items from SolverName.implemented()."""
+        if self._window is None:
+            return
+        app = self._window.app
+        current_name: str = app.slv.name
+
+        self._dropdown_items = [
+            DropdownItem(
+                label=sn.display_name,
+                solver_name=sn,
+                is_current=(sn.display_name == current_name),
+            )
+            for sn in SolverName.implemented()
+        ]
+
+        # Find the Solver button to anchor the dropdown below it
+        for btn in self._buttons:
+            if btn.tag == _SOLVER_BUTTON_TAG:
+                self._dropdown_anchor_x = btn.x
+                self._dropdown_anchor_y = btn.y
+                self._dropdown_anchor_w = btn.width
+                break
+
+        self._dropdown_open = True
+        self._dropdown_hover_idx = -1
+
+    def _close_dropdown(self) -> None:
+        """Close the solver dropdown."""
+        self._dropdown_open = False
+        self._dropdown_items = []
+        self._dropdown_hover_idx = -1
+
+    def _dropdown_rect(self) -> tuple[int, int, int, int]:
+        """Return (x, y, width, height) of the dropdown panel.
+
+        The dropdown is positioned below the Solver button.
+        In pyglet, y=0 is at the bottom, so "below" means lower y values.
+        """
+        num_items: int = len(self._dropdown_items)
+        if num_items == 0:
+            return (0, 0, 0, 0)
+
+        # Calculate width: max of solver names or button width
+        max_label_len: int = max(len(item.label) for item in self._dropdown_items)
+        # Account for ">" prefix on current item
+        text_width: int = (max_label_len + 2) * 9 + DROPDOWN_ITEM_PADDING * 2
+        dd_width: int = max(text_width, self._dropdown_anchor_w)
+
+        dd_height: int = num_items * DROPDOWN_ITEM_HEIGHT + 2  # 2px for border
+        dd_x: int = self._dropdown_anchor_x
+        # Position below the Solver button (button y is its bottom edge)
+        dd_y: int = self._dropdown_anchor_y - dd_height
+
+        return (dd_x, dd_y, dd_width, dd_height)
+
+    def _dropdown_item_at(self, mx: int, my: int) -> int:
+        """Return index of dropdown item at (mx, my), or -1 if none."""
+        dd_x, dd_y, dd_width, dd_height = self._dropdown_rect()
+        if not (dd_x <= mx <= dd_x + dd_width and dd_y <= my <= dd_y + dd_height):
+            return -1
+
+        # Items are drawn top-to-bottom (highest y = first item)
+        # Use int() because pyglet2 passes mouse coords as float
+        top_y: int = dd_y + dd_height - 1  # -1 for top border
+        idx: int = int((top_y - my) // DROPDOWN_ITEM_HEIGHT)
+        if 0 <= idx < len(self._dropdown_items):
+            return idx
+        return -1
+
+    def _draw_dropdown(self) -> None:
+        """Draw the solver dropdown panel (called from draw(), after batch)."""
+        if not self._dropdown_items:
+            return
+
+        dd_x, dd_y, dd_width, dd_height = self._dropdown_rect()
+
+        # Background
+        bg = shapes.Rectangle(dd_x, dd_y, dd_width, dd_height,
+                              color=DROPDOWN_BG_COLOR[:3])
+        bg.opacity = DROPDOWN_BG_COLOR[3]
+        bg.draw()
+
+        # Border
+        border_color = DROPDOWN_BORDER_COLOR[:3]
+        border_opacity = DROPDOWN_BORDER_COLOR[3]
+        lines: list[shapes.Line] = [
+            shapes.Line(dd_x, dd_y, dd_x + dd_width, dd_y, color=border_color),
+            shapes.Line(dd_x, dd_y + dd_height, dd_x + dd_width, dd_y + dd_height, color=border_color),
+            shapes.Line(dd_x, dd_y, dd_x, dd_y + dd_height, color=border_color),
+            shapes.Line(dd_x + dd_width, dd_y, dd_x + dd_width, dd_y + dd_height, color=border_color),
+        ]
+        for line in lines:
+            line.opacity = border_opacity
+            line.draw()
+
+        # Draw items top-to-bottom
+        top_y: int = dd_y + dd_height - 1  # -1 for border
+
+        for idx, item in enumerate(self._dropdown_items):
+            item_y: int = top_y - (idx + 1) * DROPDOWN_ITEM_HEIGHT
+
+            # Item background (hover or current)
+            if idx == self._dropdown_hover_idx:
+                item_bg = shapes.Rectangle(dd_x + 1, item_y, dd_width - 2,
+                                           DROPDOWN_ITEM_HEIGHT,
+                                           color=DROPDOWN_ITEM_HOVER[:3])
+                item_bg.opacity = DROPDOWN_ITEM_HOVER[3]
+                item_bg.draw()
+            elif item.is_current:
+                item_bg = shapes.Rectangle(dd_x + 1, item_y, dd_width - 2,
+                                           DROPDOWN_ITEM_HEIGHT,
+                                           color=DROPDOWN_ITEM_CURRENT[:3])
+                item_bg.opacity = DROPDOWN_ITEM_CURRENT[3]
+                item_bg.draw()
+
+            # Item text: prefix current solver with ">"
+            prefix: str = "> " if item.is_current else "  "
+            text_color = DROPDOWN_CURRENT_TEXT if item.is_current else DROPDOWN_TEXT_COLOR
+
+            lbl = pyglet.text.Label(
+                prefix + item.label,
+                font_size=FONT_SIZE - 1,
+                x=dd_x + DROPDOWN_ITEM_PADDING,
+                y=item_y + DROPDOWN_ITEM_HEIGHT // 2,
+                anchor_y='center',
+                color=text_color,
+            )
+            lbl.draw()
 
     def handle_click(self, x: int, y: int) -> Command | None:
         """Handle mouse click. Returns command to execute or None.
 
         If Shift is held and button has shift_command, returns that instead.
+        Returns a command or None. When dropdown is open and click is consumed,
+        returns a SwitchToSolverCommand or None (but always consumes the event
+        by returning a special sentinel — see _CLICK_CONSUMED).
         """
+        # If dropdown is open, handle dropdown clicks first
+        if self._dropdown_open:
+            return self._handle_dropdown_click(x, y)
+
+        # Check if solver button was clicked — toggle dropdown instead of cycling
         for btn in self._buttons:
             if btn.contains(x, y) and btn.is_enabled():
+                if btn.tag == _SOLVER_BUTTON_TAG:
+                    self._open_dropdown()
+                    return None  # Consumed — no command to execute
                 if self._shift_held and btn.shift_command:
                     return btn.shift_command
                 if btn.command:
                     return btn.command
         return None
 
+    def _handle_dropdown_click(self, x: int, y: int) -> Command | None:
+        """Handle a click while dropdown is open.
+
+        Returns command if solver selected, None otherwise.
+        Always closes the dropdown.
+        """
+        from cube.presentation.gui.commands.concrete import SwitchToSolverCommand
+
+        idx: int = self._dropdown_item_at(x, y)
+
+        if idx >= 0:
+            item: DropdownItem = self._dropdown_items[idx]
+            self._close_dropdown()
+            if not item.is_current:
+                return SwitchToSolverCommand(item.solver_name)
+            return None  # Already on this solver
+
+        # Check if click is on the Solver button itself (toggle close)
+        for btn in self._buttons:
+            if btn.tag == _SOLVER_BUTTON_TAG and btn.contains(x, y):
+                self._close_dropdown()
+                return None
+
+        # Click outside — close dropdown and consume the event
+        self._close_dropdown()
+        return None
+
+    def handle_click_consumed(self, x: int, y: int) -> bool:
+        """Check if a click at (x, y) would be consumed by the toolbar.
+
+        Used by the window to know whether to pass the click to cube rotation.
+        When the dropdown is open, ALL clicks are consumed (either selecting an
+        item or closing the dropdown).
+        """
+        # When dropdown is open, consume all clicks (close on outside click)
+        if self._dropdown_open:
+            return True
+
+        # Check toolbar buttons
+        for btn in self._buttons:
+            if btn.contains(x, y) and not btn.is_label:
+                return True
+
+        return False
+
     def handle_motion(self, x: int, y: int) -> None:
         """Handle mouse motion for hover effects."""
+        # Update dropdown hover if open
+        if self._dropdown_open:
+            self._dropdown_hover_idx = self._dropdown_item_at(x, y)
+
         self._hover_button = None
         for btn in self._buttons:
             if btn.contains(x, y) and not btn.is_label:
                 self._hover_button = btn
                 break
+
+    def handle_key_escape(self) -> bool:
+        """Handle Escape key. Returns True if dropdown was closed (event consumed)."""
+        if self._dropdown_open:
+            self._close_dropdown()
+            return True
+        return False
 
     def set_shift_state(self, shift_held: bool) -> None:
         """Update Shift key state (called from window on key events)."""
@@ -704,12 +944,14 @@ def create_toolbar(window: PygletAppWindow) -> GUIToolbar:
 
     toolbar.add_separator()
 
-    # Solver
+    # Solver — tagged for dropdown toggling (command is unused, kept for key binding tooltip)
     toolbar.add_button(
         "Solver",
         Commands.SWITCH_SOLVER,
         label_fn=lambda: f"Slv:{app.slv.name[:6]}",
         min_width=75,
+        tooltip="Click to choose solver",
+        tag=_SOLVER_BUTTON_TAG,
     )
 
     toolbar.add_separator()

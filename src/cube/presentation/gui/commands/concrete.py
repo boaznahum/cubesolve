@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Literal
 
 from cube.domain.model.FaceName import FaceName
 from cube.domain.solver import SolveStep
+from cube.domain.solver.SolverName import SolverName
 
 from ..ViewSetup import ViewSetup
 from .base import Command, CommandContext, CommandResult
@@ -627,6 +628,23 @@ class QuitCommand(Command):
 
 
 @dataclass(frozen=True)
+class NewSessionCommand(Command):
+    """Command to start a fresh session (web backend).
+
+    Resets the cube to default size, resets the view, and resets the solver.
+    Unlike QuitCommand, this doesn't raise AppExit — just resets everything.
+    """
+
+    def execute(self, ctx: CommandContext) -> CommandResult:
+        default_size: int = ctx.app.config.cube_size
+        ctx.app.reset(default_size)
+        ctx.vs.reset()
+        ctx.op.reset()
+        ViewSetup.set_projection(ctx.vs, ctx.window.width, ctx.window.height, ctx.window.renderer)
+        return CommandResult()
+
+
+@dataclass(frozen=True)
 class ResetCubeCommand(Command):
     """Command to reset the cube."""
 
@@ -665,6 +683,26 @@ class SwitchSolverCommand(Command):
 
         # Rebuild toolbar solver buttons for new solver
         # Use getattr to safely access optional _toolbar attribute (pyglet2 only)
+        toolbar = getattr(ctx.window, '_toolbar', None)
+        if toolbar is not None:
+            toolbar.rebuild_solver_buttons(ctx.app)
+
+        return CommandResult()
+
+
+@dataclass(frozen=True)
+class SwitchToSolverCommand(Command):
+    """Command to switch to a specific solver by name.
+
+    Used by the toolbar dropdown menu to jump directly to any solver.
+    """
+    solver_name: SolverName
+
+    def execute(self, ctx: CommandContext) -> CommandResult:
+        ctx.app.switch_to_solver(self.solver_name)
+        ctx.op.reset()
+
+        # Rebuild toolbar solver buttons for new solver
         toolbar = getattr(ctx.window, '_toolbar', None)
         if toolbar is not None:
             toolbar.rebuild_solver_buttons(ctx.app)
