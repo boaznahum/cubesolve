@@ -210,6 +210,14 @@ export class Toolbar {
             });
         });
 
+        // View reset button (client-side only — resets OrbitControls camera)
+        const btnViewReset = document.getElementById('btn-view-reset');
+        if (btnViewReset) {
+            btnViewReset.addEventListener('click', () => {
+                this._controls.reset();
+            });
+        }
+
         // Assist checkbox (client-side only, controls AnimationQueue preview delay)
         const chkAssist = document.getElementById('chk-assist');
         if (chkAssist) {
