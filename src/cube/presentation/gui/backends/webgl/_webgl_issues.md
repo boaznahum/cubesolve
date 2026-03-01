@@ -23,3 +23,5 @@ no
 21. you insert a bug !!! during solver animation inner slices are naimated as whole silce ✅ 
 
 22 Rotation on m slice on U and D are again in the wrong direction !!!
+
+the queu it tool big, we can remove the indexing and put many algs in one line see https://cube-solver.com/#id=8
