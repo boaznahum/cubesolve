@@ -651,6 +651,10 @@ def create_toolbar(window: PygletAppWindow) -> GUIToolbar:
 
     # Cube size display and controls
     toolbar.add_label("Size", label_fn=lambda: f"{app.cube.size}x{app.cube.size}", min_width=50)
+    toolbar.add_button("2", Commands.SIZE_2)
+    toolbar.add_button("3", Commands.SIZE_3)
+    toolbar.add_button("4", Commands.SIZE_4)
+    toolbar.add_button("5", Commands.SIZE_5)
     toolbar.add_button("-", Commands.SIZE_DEC)
     toolbar.add_button("+", Commands.SIZE_INC)
 

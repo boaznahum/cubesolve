@@ -44,6 +44,9 @@ class WebEventLoop(EventLoop):
         # Key event handler (set by WebAppWindow)
         self._key_handler: Callable[[int, int], None] | None = None
 
+        # Command handler (set by WebAppWindow, receives command name string)
+        self._command_handler: Callable[[str], None] | None = None
+
         # Client connected callback (for initial draw)
         self._on_client_connected: Callable[[], None] | None = None
 
@@ -60,6 +63,10 @@ class WebEventLoop(EventLoop):
     def set_key_handler(self, handler: Callable[[int, int], None] | None) -> None:
         """Set handler for key events (symbol, modifiers)."""
         self._key_handler = handler
+
+    def set_command_handler(self, handler: Callable[[str], None] | None) -> None:
+        """Set handler for command messages (receives command name string)."""
+        self._command_handler = handler
 
     def set_client_connected_handler(self, handler: Callable[[], None] | None) -> None:
         """Set handler for client connection (for initial draw)."""
@@ -208,6 +215,13 @@ class WebEventLoop(EventLoop):
                     self._key_handler(symbol, modifiers)
                 else:
                     print("  Warning: No key handler set!", flush=True)
+            elif msg_type == "command":
+                command_name = data.get("name", "")
+                print(f"Command: {command_name}", flush=True)
+                if self._command_handler:
+                    self._command_handler(command_name)
+                else:
+                    print("  Warning: No command handler set!", flush=True)
             elif msg_type == "mouse_press":
                 print(f"Mouse press: {data}", flush=True)
             elif msg_type == "mouse_drag":

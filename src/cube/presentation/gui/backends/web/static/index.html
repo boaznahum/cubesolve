@@ -38,10 +38,70 @@
         #status.error {
             color: #a44;
         }
+        #toolbar {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        #toolbar .group {
+            display: flex;
+            gap: 2px;
+            align-items: center;
+        }
+        #toolbar .group-label {
+            color: #888;
+            font-size: 11px;
+            margin-right: 2px;
+        }
+        #toolbar .separator {
+            width: 8px;
+        }
+        #toolbar button {
+            background: #333;
+            color: #ddd;
+            border: 1px solid #555;
+            border-radius: 3px;
+            padding: 4px 10px;
+            font-size: 13px;
+            cursor: pointer;
+            font-family: Arial, sans-serif;
+        }
+        #toolbar button:hover {
+            background: #444;
+            border-color: #777;
+        }
+        #toolbar button:active {
+            background: #555;
+        }
     </style>
 </head>
 <body>
     <div id="container">
+        <div id="toolbar">
+            <div class="group">
+                <span class="group-label">Size:</span>
+                <button data-command="SIZE_2">2</button>
+                <button data-command="SIZE_3">3</button>
+                <button data-command="SIZE_4">4</button>
+                <button data-command="SIZE_5">5</button>
+                <button data-command="SIZE_DEC">-</button>
+                <button data-command="SIZE_INC">+</button>
+            </div>
+            <div class="separator"></div>
+            <div class="group">
+                <span class="group-label">Scramble:</span>
+                <button data-command="SCRAMBLE_1">1</button>
+                <button data-command="SCRAMBLE_3">3</button>
+                <button data-command="SCRAMBLE_5">5</button>
+            </div>
+            <div class="separator"></div>
+            <div class="group">
+                <button data-command="SOLVE_ALL">Solve</button>
+                <button data-command="RESET_CUBE">Reset</button>
+            </div>
+        </div>
         <canvas id="canvas" width="720" height="720"></canvas>
         <div id="status">Connecting...</div>
     </div>

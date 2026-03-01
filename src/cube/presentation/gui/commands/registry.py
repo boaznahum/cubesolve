@@ -44,6 +44,7 @@ from .concrete import (
     ShadowToggleAllCommand,
     ShadowToggleCommand,
     SingleStepToggleCommand,
+    SetSizeCommand,
     SizeDecCommand,
     # Size
     SizeIncCommand,
@@ -232,6 +233,10 @@ class Commands:
     # =========================================================================
     SIZE_INC = SizeIncCommand()
     SIZE_DEC = SizeDecCommand()
+    SIZE_2 = SetSizeCommand(size=2)
+    SIZE_3 = SetSizeCommand(size=3)
+    SIZE_4 = SetSizeCommand(size=4)
+    SIZE_5 = SetSizeCommand(size=5)
 
     # =========================================================================
     # SLICE SELECTION

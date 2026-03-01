@@ -260,6 +260,18 @@ document.addEventListener('keydown', (event) => {
     }
 });
 
+// Toolbar button handling
+document.addEventListener('click', (event) => {
+    const button = event.target.closest('button[data-command]');
+    if (button && window.cubeClient && window.cubeClient.connected) {
+        const commandName = button.dataset.command;
+        window.cubeClient.send({
+            type: 'command',
+            name: commandName
+        });
+    }
+});
+
 // Initialize on page load
 window.addEventListener('load', () => {
     window.cubeClient = new CubeClient();

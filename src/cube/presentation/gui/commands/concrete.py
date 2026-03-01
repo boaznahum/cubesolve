@@ -428,6 +428,18 @@ class SizeDecCommand(Command):
         return CommandResult()
 
 
+@dataclass(frozen=True)
+class SetSizeCommand(Command):
+    """Command to set cube to a specific size."""
+    size: int
+
+    def execute(self, ctx: CommandContext) -> CommandResult:
+        if ctx.vs.cube_size != self.size:
+            ctx.vs.cube_size = self.size
+            ctx.app.reset(ctx.vs.cube_size)
+        return CommandResult()
+
+
 # =============================================================================
 # SLICE SELECTION COMMANDS
 # =============================================================================

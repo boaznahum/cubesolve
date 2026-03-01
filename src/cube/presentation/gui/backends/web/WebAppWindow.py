@@ -63,6 +63,9 @@ class WebAppWindow(AppWindow):
         # Wire key handler to event loop (receives keys from browser)
         self._event_loop.set_key_handler(self._handle_browser_key)
 
+        # Wire command handler to event loop (receives command names from browser buttons)
+        self._event_loop.set_command_handler(self._handle_browser_command)
+
         # Wire client connected callback for initial draw
         self._event_loop.set_client_connected_handler(self._on_client_connected)
 
@@ -126,6 +129,16 @@ class WebAppWindow(AppWindow):
         command = lookup_command(symbol, modifiers, self.animation_running)
         if command:
             self.inject_command(command)
+
+    def _handle_browser_command(self, command_name: str) -> None:
+        """Handle command by name from browser via WebSocket (e.g., toolbar buttons)."""
+        from cube.presentation.gui.commands import Commands
+
+        try:
+            command = Commands.get_by_name(command_name)
+            self.inject_command(command)
+        except KeyError:
+            print(f"Unknown command: {command_name}", flush=True)
 
     def _on_client_connected(self) -> None:
         """Handle browser client connection - trigger initial draw."""
