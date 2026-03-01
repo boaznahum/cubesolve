@@ -148,6 +148,19 @@ class SolveAllNoAnimationCommand(Command):
 
 
 @dataclass(frozen=True)
+class SolveAndPlayCommand(Command):
+    """Command to solve and immediately play the solution with animation.
+
+    Always forces animation ON regardless of current animation setting,
+    like the user pressed 'play all' after solving.
+    """
+
+    def execute(self, ctx: CommandContext) -> CommandResult:
+        ctx.slv.solve(animation=True)
+        return CommandResult()
+
+
+@dataclass(frozen=True)
 class SolveStepNoAnimationCommand(Command):
     """Command to execute a solve step without animation."""
     step: SolveStep
