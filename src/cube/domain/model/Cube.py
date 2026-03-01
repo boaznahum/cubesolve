@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Rubik's Cube Virtual Model
 ===========================
@@ -1948,6 +1950,7 @@ class Cube(CubeSupplier):
 
         For NxN cubes, uses the representative edge slices (middle slice for edges).
         Does NOT require cube to actually be 3x3 - works on any NxN cube.
+        For 2x2 cubes: edges are empty, centers use face original colors.
 
         Returns:
             Cube3x3Colors containing the colors of all edges, corners, and centers.
@@ -1955,21 +1958,21 @@ class Cube(CubeSupplier):
         """
         from .part_names import (
             CornerName,
-            EdgeName,
             faces_to_corner_name,
             faces_to_edge_name,
         )
         from .Cube3x3Colors import CornerColors, Cube3x3Colors, EdgeColors
 
         edges_dict: dict[EdgeName, EdgeColors] = {}
-        for edge in self.edges:
-            # e1 and e2 are PartEdges, each belongs to a face
-            edge_colors: dict[FaceName, Color] = {
-                edge.e1.face.name: edge.e1.color,
-                edge.e2.face.name: edge.e2.color,
-            }
-            edge_name = faces_to_edge_name(edge_colors.keys())
-            edges_dict[edge_name] = EdgeColors(edge_colors)
+        if self.n_slices > 0:
+            for edge in self.edges:
+                # e1 and e2 are PartEdges, each belongs to a face
+                edge_colors: dict[FaceName, Color] = {
+                    edge.e1.face.name: edge.e1.color,
+                    edge.e2.face.name: edge.e2.color,
+                }
+                edge_name = faces_to_edge_name(edge_colors.keys())
+                edges_dict[edge_name] = EdgeColors(edge_colors)
 
         corners_dict: dict[CornerName, CornerColors] = {}
         for corner in self.corners:
@@ -1984,7 +1987,7 @@ class Cube(CubeSupplier):
 
         centers_dict: dict[FaceName, Color] = {}
         for face in self.faces:
-            centers_dict[face.name] = face.center.get_slice((0, 0)).edges[0].color
+            centers_dict[face.name] = face.color
 
         return Cube3x3Colors(edges=edges_dict, corners=corners_dict, centers=centers_dict)
 

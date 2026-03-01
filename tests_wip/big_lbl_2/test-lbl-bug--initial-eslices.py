@@ -6,7 +6,7 @@ import pytest
 from cube.domain.algs import Algs
 from tests_wip.big_lbl_2.conftest import get_scramble_params, CUBE_SIZES_EVEN
 from cube.application.AbstractApp import AbstractApp
-from cube.domain.solver.direct.lbl.LayerByLayerNxNSolver import LayerByLayerNxNSolver
+from cube.domain.solver.direct.lbl.DirectLayerByLayerNxNSolver import DirectLayerByLayerNxNSolver
 from cube.domain.solver.solver import SolveStep
 
 
@@ -21,7 +21,7 @@ class TestLBLBigCubeFullSolver:
         """Test full solve (SolveStep.ALL) on even cubes."""
         app = AbstractApp.create_app(cube_size=cube_size)
 
-        solver = LayerByLayerNxNSolver(app.op, app.op.sp.logger)
+        solver = DirectLayerByLayerNxNSolver(app.op, app.op.sp.logger)
 
 
         alg = Algs.E[1:4] + Algs.E[7:8]

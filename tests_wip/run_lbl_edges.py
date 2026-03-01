@@ -19,8 +19,8 @@ def main():
     app = AbstractApp.create_app(cube_size=cube_size)
     cube = app.cube
 
-    # Create Reducer solver (LayerByLayerNxNSolver)
-    solver = Solvers.reducer(app.op)
+    # Create Big LBL solver (LayerByLayerNxNSolver)
+    solver = Solvers.direct_big_lbl(app.op)
 
     print(f"Scrambling with seed {seed}...")
     app.scramble(seed, None, animation=False, verbose=False)

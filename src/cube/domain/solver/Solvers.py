@@ -24,9 +24,26 @@ class Solvers:
 
     @classmethod
     def default(cls, op: OperatorProtocol) -> Solver:
-        """Get the default solver based on config setting."""
+        """Get the default solver based on config setting.
+
+        For 2x2 cubes, by_name() delegates to the dedicated 2x2 solver
+        automatically, so no special case is needed here.
+        """
         solver_name = SolverName.lookup(op.app_state.config.default_solver)
         return cls.by_name(solver_name, op)
+
+    @staticmethod
+    def two_by_two(op: OperatorProtocol, display_as: SolverName | None = None) -> Solver:
+        """Get the dedicated 2x2 cube solver.
+
+        Args:
+            display_as: If set, the solver reports this name instead of TWO_BY_TWO.
+                Used when delegating from user-visible solvers (e.g. LBL on a 2x2 cube).
+        """
+        from ._2x2.Solver2x2 import Solver2x2
+
+        parent_logger = op.cube.sp.logger
+        return Solver2x2(op, parent_logger, display_as=display_as)
 
     @staticmethod
     def beginner(op: OperatorProtocol) -> Solver:
@@ -95,6 +112,29 @@ class Solvers:
         )
 
     @staticmethod
+    def dwalton(op: OperatorProtocol) -> Solver:
+        """
+        Get Dwalton table-based solver with NxN support.
+
+        For 3x3: Uses Kociemba two-phase with pruning tables (pure Python)
+        For NxN: Uses BeginnerReducer + Dwalton3x3
+
+        Inspired by dwalton76/rubiks-cube-NxNxN-solver.
+        Uses advanced (R/L-slice) edge parity algorithm.
+        """
+        from .NxNSolverOrchestrator import NxNSolverOrchestrator
+        from .Reducers import Reducers
+        from .Solvers3x3 import Solvers3x3
+
+        parent_logger = op.cube.sp.logger
+        solver_3x3 = Solvers3x3.dwalton(op, parent_logger)
+        reducer = Reducers.beginner(op, advanced_edge_parity=True)
+
+        return NxNSolverOrchestrator(
+            op, parent_logger, reducer, solver_3x3, SolverName.DWALTON
+        )
+
+    @staticmethod
     def cage(op: OperatorProtocol) -> Solver:
         """
         Get Cage method solver (odd cubes only).
@@ -113,38 +153,51 @@ class Solvers:
         return CageNxNSolver(op, parent_logger)
 
     @staticmethod
-    def reducer(op: OperatorProtocol) -> Solver:
+    def direct_big_lbl(op: OperatorProtocol) -> Solver:
         """
-        Get Reducer solver for NxN cubes.
+        Get Big LBL solver for NxN cubes.
 
-        Reduces the cube to a 3x3 equivalent by solving centers and
-        pairing edges, then solves using a 3x3 method.
+        Layer-by-layer approach for big cubes.
         """
-        from .direct.lbl.LayerByLayerNxNSolver import LayerByLayerNxNSolver
+        from .direct.lbl.DirectLayerByLayerNxNSolver import DirectLayerByLayerNxNSolver
 
         parent_logger = op.cube.sp.logger
-        return LayerByLayerNxNSolver(op, parent_logger)
+        return DirectLayerByLayerNxNSolver(op, parent_logger)
 
     @classmethod
     def next_solver(cls, current: SolverName, op: OperatorProtocol) -> Solver:
-        """Get the next solver in rotation (skips unimplemented solvers)."""
+        """Get the next solver in rotation (skips hidden, unimplemented, and incompatible solvers)."""
+        cube_size = op.cube.size
         all_solvers = [*SolverName]
         index = all_solvers.index(current)
 
-        # Find next implemented solver
+        # Find next user-visible, implemented, and compatible solver
         for _ in range(len(all_solvers)):
             index = (index + 1) % len(all_solvers)
             candidate = all_solvers[index]
-            if candidate.meta.implemented:
+            if (candidate.meta.implemented
+                    and candidate.meta.user_visible
+                    and candidate.meta.get_skip_reason(cube_size) is None):
                 return cls.by_name(candidate, op)
 
-        # All solvers are unimplemented (shouldn't happen)
-        raise InternalSWError("No implemented solvers available")
+        # All solvers are incompatible — fall back to current
+        return cls.by_name(current, op)
 
     @classmethod
     def by_name(cls, solver_id: SolverName, op: OperatorProtocol) -> Solver:
-        """Get a solver by its name."""
+        """Get a solver by its name.
+
+        For 2x2 cubes, all solvers except TWO_BY_TWO delegate to the 2x2 solver.
+        """
+        # For 2x2 cubes, delegate all non-2x2 solvers to the 2x2 solver
+        # but preserve the original solver name for the UI
+        if op.cube.size == 2 and solver_id != SolverName.TWO_BY_TWO:
+            return cls.two_by_two(op, display_as=solver_id)
+
         match solver_id:
+
+            case SolverName.TWO_BY_TWO:
+                return cls.two_by_two(op)
 
             case SolverName.LBL:
                 return cls.beginner(op)
@@ -155,11 +208,14 @@ class Solvers:
             case SolverName.KOCIEMBA:
                 return cls.kociemba(op)
 
+            case SolverName.DWALTON:
+                return cls.dwalton(op)
+
             case SolverName.CAGE:
                 return cls.cage(op)
 
-            case SolverName.REDUCER:
-                return cls.reducer(op)
+            case SolverName.LBL_BIG:
+                return cls.direct_big_lbl(op)
 
             case _:
                 raise InternalSWError(f"Unknown solver: {solver_id}")

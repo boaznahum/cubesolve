@@ -104,6 +104,9 @@ class CubeSanity:
         if not cube.is3x3:
             return
 
+        if cube.n_slices == 0:
+            return  # 2x2: no centers or edges to validate at 3x3 level
+
         # Validate all 6 center colors exist
         for c in cs.colors():
             cube.find_part_by_colors(frozenset([c]))
@@ -129,6 +132,8 @@ class CubeSanity:
             InternalSWError: If distribution is invalid.
         """
         n_slices = cube.n_slices
+        if n_slices == 0:
+            return  # 2x2: no center pieces to validate
         dist: Mapping[Color, Mapping[Hashable, Sequence[tuple[int, int]]]] = cube.cqr.get_centers_dist()
         for clr in cube.layout.colors():
             clr_dist = dist[clr]
@@ -187,6 +192,8 @@ class CubeSanity:
             InternalSWError: If distribution is invalid.
         """
         n_slices = cube.n_slices
+        if n_slices == 0:
+            return  # 2x2: no edge pieces to validate
         from .CubeQueries2 import CubeQueries2
 
         cqr: CubeQueries2 = cube.cqr

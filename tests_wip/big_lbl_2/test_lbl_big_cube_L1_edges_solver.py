@@ -10,7 +10,7 @@ from __future__ import annotations
 import pytest
 
 from cube.application.AbstractApp import AbstractApp
-from cube.domain.solver.direct.lbl.LayerByLayerNxNSolver import LayerByLayerNxNSolver
+from cube.domain.solver.direct.lbl.DirectLayerByLayerNxNSolver import DirectLayerByLayerNxNSolver
 from cube.domain.solver.solver import SolveStep
 from .conftest import get_scramble_params, CUBE_SIZES_EVEN
 
@@ -31,7 +31,7 @@ class TestLBLBigCubeSolver:
         """Test LBL_L1_Ctr step solves Layer 1 centers (even + odd cubes)."""
         app = AbstractApp.create_app(cube_size=cube_size)
 
-        solver = LayerByLayerNxNSolver(app.op, app.op.sp.logger)
+        solver = DirectLayerByLayerNxNSolver(app.op, app.op.sp.logger)
 
         app.scramble(scramble_seed, None, animation=False, verbose=False)
 

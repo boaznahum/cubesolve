@@ -1,5 +1,5 @@
 """Layer-by-Layer NxN Solver package."""
 
-from cube.domain.solver.direct.lbl.LayerByLayerNxNSolver import LayerByLayerNxNSolver
+from cube.domain.solver.direct.lbl.DirectLayerByLayerNxNSolver import DirectLayerByLayerNxNSolver
 
-__all__ = ["LayerByLayerNxNSolver"]
+__all__ = ["DirectLayerByLayerNxNSolver"]

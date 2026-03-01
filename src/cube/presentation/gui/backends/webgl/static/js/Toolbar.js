@@ -231,7 +231,7 @@ export class Toolbar {
 
         // Size dropdown — populate options 3..20
         const sizeSelect = document.getElementById('size-select');
-        for (let n = 3; n <= 20; n++) {
+        for (let n = 2; n <= 20; n++) {
             const opt = document.createElement('option');
             opt.value = n;
             opt.textContent = `${n}×${n}`;

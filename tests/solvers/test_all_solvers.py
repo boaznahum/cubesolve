@@ -115,9 +115,13 @@ class TestSolverBasics:
     """Basic sanity tests for solver infrastructure."""
 
     def test_all_solvers_are_tested(self) -> None:
-        """Verify that our test covers all known solvers."""
+        """Verify that our test covers all known user-visible solvers.
+
+        TWO_BY_TWO is excluded because it's an implementation detail (user_visible=False).
+        It's tested indirectly when user-visible solvers (LBL, CFOP, etc.) run on 2x2 cubes.
+        """
         tested_solvers = set(get_solver_names())
-        all_solvers = set(SolverName.implemented())
+        all_solvers = set(SolverName.user_visible())
 
         assert tested_solvers == all_solvers, (
             f"Test configuration is missing solvers: {all_solvers - tested_solvers}"

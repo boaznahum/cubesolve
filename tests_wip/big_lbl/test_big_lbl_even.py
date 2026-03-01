@@ -17,7 +17,7 @@ from __future__ import annotations
 import pytest
 
 from cube.application.AbstractApp import AbstractApp
-from cube.domain.solver.direct.lbl.LayerByLayerNxNSolver import LayerByLayerNxNSolver
+from cube.domain.solver.direct.lbl.DirectLayerByLayerNxNSolver import DirectLayerByLayerNxNSolver
 from cube.domain.solver.solver import SolveStep
 
 # =============================================================================
@@ -48,7 +48,7 @@ class TestBigLBLEven:
 
         # Setup
         app = AbstractApp.create_app(cube_size=cube_size)
-        solver = LayerByLayerNxNSolver(app.op, app.op.sp.logger)
+        solver = DirectLayerByLayerNxNSolver(app.op, app.op.sp.logger)
 
         # Scramble
         app.scramble(scramble_seed, None, animation=False, verbose=False)
@@ -70,7 +70,7 @@ class TestBigLBLEven:
 
         # Setup
         app = AbstractApp.create_app(cube_size=cube_size)
-        solver = LayerByLayerNxNSolver(app.op, app.op.sp.logger)
+        solver = DirectLayerByLayerNxNSolver(app.op, app.op.sp.logger)
 
         # Scramble
         app.scramble(scramble_seed, None, animation=False, verbose=False)

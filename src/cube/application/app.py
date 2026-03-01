@@ -68,6 +68,7 @@ class _App(AbstractApp, IServiceProvider):
     def reset(self, cube_size: int | None = None):
         self.cube.reset(cube_size)
         self.op.reset()
+        self._slv = Solvers.default(self.op)
         self._error = None
 
     def set_error(self, _error: str):

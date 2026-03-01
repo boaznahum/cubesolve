@@ -39,7 +39,7 @@ from tests.gui.tester.GUITestRunner import GUITestRunner
 pytestmark = pytest.mark.gui
 
 
-@pytest.mark.parametrize("cube_size", [3])
+@pytest.mark.parametrize("cube_size", [2, 3])
 def test_scramble_and_solve(cube_size: int, enable_animation: bool, speed_up_count: int, backend: str):
     """
     Test scrambling and solving a cube.
@@ -96,7 +96,7 @@ def test_multiple_scrambles(cube_size: int, enable_animation: bool, speed_up_cou
     assert result.success, f"GUI test failed: {result.message}. Error: {result.error}"
 
 
-@pytest.mark.parametrize("cube_size", [3])
+@pytest.mark.parametrize("cube_size", [2, 3])
 def test_face_rotations(cube_size: int, enable_animation: bool, speed_up_count: int, backend: str):
     """Test basic face rotations.
 
@@ -129,7 +129,7 @@ def test_face_rotations(cube_size: int, enable_animation: bool, speed_up_count: 
     assert result.success, f"GUI test failed: {result.message}. Error: {result.error}"
 
 
-@pytest.mark.parametrize("cube_size", [3])
+@pytest.mark.parametrize("cube_size", [2, 3])
 def test_simple_quit(cube_size: int, backend: str):
     """Test that the window opens and quits cleanly.
 
@@ -164,6 +164,23 @@ def test_simple_quit(cube_size: int, backend: str):
 # 3. Fix the bug in the code
 # 4. Run the test again to confirm it now PASSES
 # 5. Update __todo.md to mark the bug as fixed (move to Done section)
+
+
+def test_size_dec_to_2x2_and_solve(backend: str):
+    """Test decreasing to 2x2 and solving.
+
+    Starts with default 4x4, decreases twice to 2x2, scrambles, and solves.
+    Verifies the full GUI pipeline works for 2x2 after size transitions.
+    """
+    result = GUITestRunner.run_test(
+        commands=(Commands.SIZE_DEC * 2 +  # 4 -> 3 -> 2
+                  Commands.SCRAMBLE_1 + Commands.SOLVE_ALL + Commands.QUIT),
+        timeout_sec=30.0,
+        enable_animation=False,
+        backend=backend,
+        debug=True
+    )
+    assert result.success, f"Size dec to 2x2 test failed: {result.message}. Error: {result.error}"
 
 
 def test_bug_B7_size_dec_viewer_error(backend: str):

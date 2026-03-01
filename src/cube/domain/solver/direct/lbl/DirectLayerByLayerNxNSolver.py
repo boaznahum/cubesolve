@@ -50,7 +50,7 @@ from cube.domain.tracker._face_trackers import FaceTracker
 if TYPE_CHECKING:
     from cube.utils.logger_protocol import ILogger
 
-class LayerByLayerNxNSolver(BaseSolver):
+class DirectLayerByLayerNxNSolver(BaseSolver):
     """
     Layer-by-Layer solver for NxN cubes.
 
@@ -109,7 +109,7 @@ class LayerByLayerNxNSolver(BaseSolver):
 
     @property
     def get_code(self) -> SolverName:
-        return SolverName.REDUCER
+        return SolverName.LBL_BIG
 
     @property
     def status(self) -> str:

@@ -471,6 +471,12 @@ class Slice(SuperElement):
         if n == 0:
             return
 
+        # 2x2: no physical center/edge slices, but rotate virtual center colors
+        # so that face.color tracks correctly through whole-cube rotations
+        if self.n_slices == 0:
+            self._rotate_virtual_center_colors(n)
+            return
+
         # Invert direction: _rotate() cycles opposite to geometric traversal order
         # See docstring above for detailed explanation with diagrams
         n = -n
@@ -495,6 +501,36 @@ class Slice(SuperElement):
         _p()
         self.cube.sanity()
         _p()
+
+    # Face-name cycles for virtual center color rotation on 2x2 cubes.
+    # Each cycle defines the 4 faces whose virtual colors rotate together
+    # when the corresponding slice is rotated by 1 quarter turn.
+    # M(1): U→F→D→B→U, E(1): F→R→B→L→F, S(1): L→U→R→D→L
+    _VIRTUAL_COLOR_CYCLES: dict[SliceName, tuple[FaceName, ...]] = {
+        SliceName.M: (FaceName.U, FaceName.F, FaceName.D, FaceName.B),
+        SliceName.E: (FaceName.F, FaceName.R, FaceName.B, FaceName.L),
+        SliceName.S: (FaceName.L, FaceName.U, FaceName.R, FaceName.D),
+    }
+
+    def _rotate_virtual_center_colors(self, n: int) -> None:
+        """Rotate virtual center colors for 2x2 cubes.
+
+        On 2x2, there are no physical center stickers, but we track a virtual
+        color per face so that face.color, match_face, position_id, and
+        color_2_face all work correctly after whole-cube rotations.
+        """
+        cycle_names = self._VIRTUAL_COLOR_CYCLES[self._name]
+        # Access cube's face dict to get Center objects by face name
+        faces_dict = self.cube._faces  # type: ignore[attr-defined]
+        centers = [faces_dict[fn].center for fn in cycle_names]
+        colors = [c._virtual_color for c in centers]
+
+        shift = n % 4
+        for i in range(4):
+            centers[i]._virtual_color = colors[(i - shift) % 4]
+
+        self.cube.reset_after_faces_changes()
+        self.cube.sanity()
 
     def _update_texture_directions_after_rotate(self, quarter_turns: int, slices_indexes: Iterable[int] | None) -> None:
         """Update texture direction for stickers affected by slice rotation.

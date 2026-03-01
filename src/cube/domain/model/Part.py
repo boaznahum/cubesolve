@@ -44,7 +44,13 @@ class Part(ABC, CubeElement):
     __slots__ = ["_cube", "_fixed_id", "_colors_id_by_pos", "_colors_id_by_colors"]
 
     def __init__(self) -> None:
-        cube = next(self.all_slices).cube
+        _first = next(self.all_slices, None)
+        if _first is not None:
+            cube = _first.cube
+        else:
+            # 2x2: edges and centers have no slices.
+            # Subclass must set self._cube before calling super().__init__().
+            cube = self._cube
         super().__init__(cube)
 
         self._colors_id_by_pos: PartColorsID | None = None
@@ -69,6 +75,11 @@ class Part(ABC, CubeElement):
     def all_slices(self) -> Iterator[PartSlice]:
         pass
 
+    @property
+    def has_slices(self) -> bool:
+        """True if this part has at least one slice (False for 2x2 edges/centers)."""
+        return next(self.all_slices, None) is not None
+
     @abstractmethod
     def get_slice(self, index: SliceIndex) -> PartSlice:
         pass
@@ -84,10 +95,18 @@ class Part(ABC, CubeElement):
         :return:
         """
 
-        for s in self.all_slices:
+        slices_list = list(self.all_slices)
+
+        if not slices_list:
+            # 2x2: edges and centers have no slices — use a synthetic fixed_id
+            if not self._fixed_id:
+                self._fixed_id = frozenset()
+            return
+
+        for s in slices_list:
             s.finish_init()
 
-        _id = frozenset(s.fixed_id for s in self.all_slices)
+        _id = frozenset(s.fixed_id for s in slices_list)
 
         if self._fixed_id:
             if _id != self._fixed_id:
@@ -119,7 +138,7 @@ class Part(ABC, CubeElement):
 
         See: design2/model-id-system.md for visual diagrams
         """
-        assert self._fixed_id
+        assert self._fixed_id is not None
         return self._fixed_id
 
     def get_face_edge(self, face: _Face) -> PartEdge:
@@ -128,7 +147,10 @@ class Part(ABC, CubeElement):
         :param face:
         :return:
         """
-        for e in self._3x3_representative_edges:
+        rep_edges = self._3x3_representative_edges
+        if not rep_edges:
+            raise ValueError(f"Part {self} has no slices (2x2 cube)")
+        for e in rep_edges:
             if face is e.face:
                 return e
 
@@ -155,8 +177,13 @@ class Part(ABC, CubeElement):
 
     def __str__(self) -> str:
 
+        rep_edges = self._3x3_representative_edges
+        if not rep_edges:
+            # 2x2: no representative edges (empty part)
+            return f"({self.part_name}:empty)"
+
         st = ""
-        n_edges = len(self._3x3_representative_edges)
+        n_edges = len(rep_edges)
         for i in range(n_edges):
             es = ""
             s: PartSlice
@@ -256,7 +283,11 @@ class Part(ABC, CubeElement):
 
         See: design2/model-id-system.md section "Key State Check Properties"
         """
-        for p in self._3x3_representative_edges:
+        rep_edges = self._3x3_representative_edges
+        if not rep_edges:
+            return True  # 2x2: empty parts are trivially matched
+
+        for p in rep_edges:
             if p.color != p.face.color:
                 return False
 
@@ -314,7 +345,11 @@ class Part(ABC, CubeElement):
         by_pos: PartColorsID | None = self._colors_id_by_pos
 
         if not by_pos or (self.config.dont_optimized_part_id):
-            by_pos = frozenset(e.face.color for e in self._3x3_representative_edges)
+            rep_edges = self._3x3_representative_edges
+            if not rep_edges:
+                by_pos = frozenset()  # 2x2: empty part has empty position_id
+            else:
+                by_pos = frozenset(e.face.color for e in rep_edges)
             self._colors_id_by_pos = by_pos
 
         return by_pos
@@ -359,7 +394,13 @@ class Part(ABC, CubeElement):
 
         if not colors_id or self.config.dont_optimized_part_id:
 
-            new_colors_id = frozenset(e.color for e in self._3x3_representative_edges)
+            rep_edges = self._3x3_representative_edges
+            if not rep_edges:
+                colors_id = frozenset()  # 2x2: empty part
+                self._colors_id_by_colors = colors_id
+                return colors_id
+
+            new_colors_id = frozenset(e.color for e in rep_edges)
 
             if colors_id and new_colors_id != colors_id:
                 print("Bug here !!!!", file=sys.stderr)
@@ -400,7 +441,11 @@ class Part(ABC, CubeElement):
         :return:
         """
 
-        for p in self._3x3_representative_edges:
+        rep_edges = self._3x3_representative_edges
+        if not rep_edges:
+            raise ValueError(f"Part {self} has no slices (2x2 cube)")
+
+        for p in rep_edges:
             if p.color == c:
                 return p.face
 

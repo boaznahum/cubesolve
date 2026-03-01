@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from cube.application.AbstractApp import AbstractApp
-from cube.domain.solver.direct.lbl.LayerByLayerNxNSolver import LayerByLayerNxNSolver
+from cube.domain.solver.direct.lbl.DirectLayerByLayerNxNSolver import DirectLayerByLayerNxNSolver
 from cube.domain.solver.solver import SolveStep
 
 
@@ -22,7 +22,7 @@ def run_with_search_method(use_new: bool, seed: int = 12345) -> dict[int, int]:
 
     # Create cube and solver
     app = AbstractApp.create_app(cube_size=12)
-    solver = LayerByLayerNxNSolver(app.op, app.op.sp.logger)
+    solver = DirectLayerByLayerNxNSolver(app.op, app.op.sp.logger)
 
     # Apply random scramble
     print(f"Scrambling with seed {seed}...")
