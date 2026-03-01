@@ -130,7 +130,7 @@ class Solver2x2(BaseSolver):
     """Optimal 2x2 cube solver using IDA* with precomputed pruning tables.
 
     Finds solutions of ≤11 moves (God's number for 2x2).
-    Tables are built lazily on first use (~2–5 seconds), then cached.
+    Tables are loaded from pre-computed data (~100ms), then cached.
     Subsequent solves complete in sub-millisecond time.
     """
 
