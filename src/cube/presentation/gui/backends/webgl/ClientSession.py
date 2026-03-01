@@ -529,6 +529,11 @@ class ClientSession:
             self._two_phase_solve()
             return
 
+        if command_name == "solve_and_play":
+            self._two_phase_solve()
+            self._fast_play_redo()
+            return
+
         if command_name == "scramble":
             # Scramble applies instantly (no animation).
             # User can replay via fast-rewind + fast-play later.
