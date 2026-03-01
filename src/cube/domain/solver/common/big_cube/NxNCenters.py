@@ -1,5 +1,4 @@
 from collections.abc import Iterable, Iterator, Sequence, Set
-from contextlib import AbstractContextManager, nullcontext
 from dataclasses import dataclass
 from enum import Enum, unique
 from typing import Tuple
@@ -9,6 +8,7 @@ from cube.domain.algs import Algs
 from cube.domain.exceptions import InternalSWError
 from cube.domain.geometric.block import Block
 from cube.domain.geometric.cube_layout import CubeLayout
+from cube.domain.geometric.Face2FaceTranslator import Face2FaceTranslator, FaceTranslationResult
 from cube.domain.geometric.geometry_types import Point
 from cube.domain.model import CenterSlice, Color
 from cube.domain.model.Cube import Cube
@@ -129,7 +129,6 @@ class NxNCenters(SolverHelper):
                     - Setup moves ARE undone (preserves 3x3 solution)
                     - Disables certain optimizations that break the cage:
                       * _OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES
-                      * _OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS
 
             tracker_holder: Optional FacesTrackerHolder. When provided,
                 each commutator execution is wrapped with
@@ -149,18 +148,23 @@ class NxNCenters(SolverHelper):
         if preserve_cage:
             # CAGE METHOD: Disable optimizations that break the cage!
             # _do_complete_slices uses U2/B2 which permanently moves corners.
-            # _swap_entire_face_odd_cube also uses moves that break the cage.
             self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES = False
-            self._OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS = False
         else:
             self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES = cfg.optimize_big_cube_centers_search_complete_slices
-            self._OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS = cfg.optimize_odd_cube_centers_switch_centers
 
         self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES_ONLY_TARGET_ZERO = cfg.optimize_big_cube_centers_search_complete_slices_only_target_zero
         self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS = cfg.optimize_big_cube_centers_search_blocks
 
+
+        #fix: a pathc is this is the problem ? yes it is !!!
+        self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES = False
+
         # Use CommutatorHelper for block search operations
         self._comm_helper = CommutatorHelper(slv)
+
+        # Track complete slice swap statistics
+        self._slice_stats = CenterBlockStatistics()
+        self._slice_stats.register_topic("SliceSwap")
 
     def _is_solved(self):
         return all((f.center.is3x3 for f in self.cube.faces)) and self.cube.match_original_scheme
@@ -217,7 +221,7 @@ class NxNCenters(SolverHelper):
 
             # Solve only the target face
             while True:
-                if not self._do_faces(holder, [target_tracker], False, True):
+                if not self._do_faces(holder, [target_tracker]):
                     break
                 self._asserts_is_boy(all_faces)
 
@@ -254,20 +258,8 @@ class NxNCenters(SolverHelper):
 
             # now each face has at least one color, so
 
-        # SPECIAL_CASE_1
-        # A rare case here, when use_back_too is false and complete slice is enabled
-        # We have two slices, that have no source other on of the other and on back(but back is not is used)
-        # These sources are on the same slice S
-        # Face RED finds two colors on S
-        # Face Orange finds two colors S
-        # what happens is that RED takes slice from ORANGE
-        # then ORANGE take from RED, infinite loop
-        # It is very rare:
-        #   there should be empty target slice in the target face (see config)
-        #   this slice is swapped, and not filled by other step(becuase it's sources are on back)
-        # To overcome it we swap only if number sources is > n//2
         while True:
-            if not self._do_faces(holder, faces, False, True):
+            if not self._do_faces(holder, faces):
                 break
             self._asserts_is_boy(faces)
 
@@ -275,14 +267,14 @@ class NxNCenters(SolverHelper):
 
         assert self._is_solved()
 
-    def _do_faces(self, tracker_holder: "FacesTrackerHolder", faces: Sequence[FaceTracker], minimal_bring_one_color, use_back_too: bool) -> bool:
+    def _do_faces(self, tracker_holder: "FacesTrackerHolder", faces: Sequence[FaceTracker]) -> bool:
         # while True:
         self.debug( "_do_faces:", *faces, level=3)
         work_done = False
         for f in faces:
             # we must trace faces, because they are moved by algorith
             # we need to locate the face by original_color, b ut on odd cube, the color is of the center
-            if self._do_center(tracker_holder, f, minimal_bring_one_color, use_back_too, faces):
+            if self._do_center(tracker_holder, f, faces):
                 work_done = True
                 self._asserts_is_boy(tracker_holder)
             # if NxNCenters.work_on_b or not work_done:
@@ -302,7 +294,7 @@ class NxNCenters(SolverHelper):
         CubeLayout.sanity_cost_assert_matches_scheme(self.cube,
                                                      lambda: {f.face.name: f.color for f in faces})
 
-    def _do_center(self, tracker_holder: "FacesTrackerHolder", face_loc: FaceTracker, minimal_bring_one_color, use_back_too: bool, faces: Iterable[FaceTracker]) -> bool:
+    def _do_center(self, tracker_holder: "FacesTrackerHolder", face_loc: FaceTracker, faces: Iterable[FaceTracker]) -> bool:
 
         if self._is_face_solved(face_loc.face, face_loc.color):
             self.debug( f"Face is already done {face_loc.face}", level=1)
@@ -310,13 +302,7 @@ class NxNCenters(SolverHelper):
 
         color = face_loc.color
 
-        if minimal_bring_one_color and self._has_color_on_face(face_loc.face, color):
-            self.debug( f"{face_loc.face} already has at least one {color}", level=3)
-            return False
-
-        sources:Set[Face] = OrderedSet(self.cube.faces) - {face_loc.face}
-        if not use_back_too:
-            sources -= {face_loc.face.opposite}
+        sources: Set[Face] = OrderedSet(self.cube.faces) - {face_loc.face}
 
         if all(not self._has_color_on_face(f, color) for f in sources):
             self.debug( f"For face {face_loc.face}, No color {color} available on  {sources}", level=1)
@@ -324,21 +310,21 @@ class NxNCenters(SolverHelper):
 
         self.debug( f"Need to work on {face_loc.face}", level=1)
 
-        work_done = self.__do_center(tracker_holder, face_loc, minimal_bring_one_color, use_back_too, faces)
+        work_done = self.__do_center(tracker_holder, face_loc, faces)
 
         self.debug( f"After working on {face_loc.face} {work_done=}, "
                            f"solved={self._is_face_solved(face_loc.face, face_loc.color)}", level=1)
 
         return work_done
 
-    def __do_center(self, tracker_holder: "FacesTrackerHolder", face_loc: FaceTracker, minimal_bring_one_color: bool, use_back_too: bool, faces: Iterable[FaceTracker]) -> bool:
+    def __do_center(self, tracker_holder: "FacesTrackerHolder", face_loc: FaceTracker, faces: Iterable[FaceTracker]) -> bool:
         """
         Process one face - bring correct colored pieces from ALL source faces.
 
         Iterates all source faces directly — no B[1:n] rotations needed.
         CommutatorHelper supports all 30 face pairs. BACK is not special.
 
-        For each source: complete slices + odd-cube swap + blocks + 1x1 commutators.
+        For each source: complete slices + blocks + 1x1 commutators.
         Skip sources with no matching colors (zero-cost).
 
         :return: if any work was done
@@ -346,13 +332,8 @@ class NxNCenters(SolverHelper):
         face: Face = face_loc.face
         color: Color = face_loc.color
 
-
         if self._is_face_solved(face, color):
             self.debug(f"Face is already done {face}", level=1)
-            return False
-
-        if minimal_bring_one_color and self._has_color_on_face(face_loc.face, color):
-            self.debug(f"{face_loc.face} already has at least one {color}", level=3)
             return False
 
         cmn = self.cmn
@@ -375,11 +356,9 @@ class NxNCenters(SolverHelper):
                     continue  # Zero-cost skip
 
                 if self._do_center_from_face_direct(tracker_holder, cube.front,
-                                                     minimal_bring_one_color, color,
+                                                     color,
                                                      source_face, faces):
                     work_done = True
-                    if minimal_bring_one_color:
-                        return work_done
 
                 if self._is_face_solved(face_loc.face, color):
                     return work_done
@@ -387,16 +366,15 @@ class NxNCenters(SolverHelper):
             return work_done
 
     def _do_center_from_face_direct(self, tracker_holder: "FacesTrackerHolder", face: Face,
-                                     minimal_bring_one_color: bool, color: Color,
+                                     color: Color,
                                      source_face: Face, faces: Iterable[FaceTracker]) -> bool:
         """
         Bring correct colored pieces from source_face to target face.
 
         Works with ANY source face. Does everything for that source:
-        1. Odd-cube face swap (UP/BACK only — needs M-slice axis)
-        2. Complete slice swaps (UP/BACK only — needs M-slice axis)
-        3. Block commutators (all faces)
-        4. 1x1 commutators fallback (all faces)
+        1. Complete slice swaps (UP/DOWN/BACK — M-axis faces)
+        2. Block commutators (all faces)
+        3. 1x1 commutators fallback (all faces)
 
         :param face: Target face (must be front)
         :param color: Required color
@@ -411,32 +389,22 @@ class NxNCenters(SolverHelper):
 
         work_done = False
         center = face.center
-        n = cube.n_slices
 
-        # Complete slices and odd-cube swap only work for UP/BACK
-        # (use M-slice axis which connects UP/FRONT/DOWN/BACK)
-        # TODO A4: Use Face2FaceTranslator to support all source faces
-        source_is_up_or_back = source_face is cube.up or source_face is cube.back
+        # Complete slice swaps use the M-slice axis which connects UP/FRONT/DOWN/BACK.
+        # E/S slices (for LEFT/RIGHT) operate on rows/depth, not columns — the swap
+        # formula assumes column alignment, so we restrict to M-connected faces.
+        # TODO A4b: Support E/S slices for LEFT/RIGHT complete slice swaps
+        # fix: support all faces !!!
+        source_on_m_axis = source_face in (cube.up, cube.down, cube.back)
 
-        if source_is_up_or_back:
-            if n % 2 and self._OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS:
-                ok_on_this = self.count_color_on_face(face, color)
-                on_source = self.count_color_on_face(source_face, color)
-                if on_source - ok_on_this > 2:
-                    self._swap_entire_face_odd_cube(tracker_holder, color, face, source_face, faces)
-                    work_done = True
-
+        if source_on_m_axis:
             if self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES:
                 if self._do_complete_slices(tracker_holder, color, face, source_face):
                     work_done = True
-                    if minimal_bring_one_color:
-                        return work_done
 
         if self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS:
             if self._do_blocks(tracker_holder, color, face, source_face, faces):
                 work_done = True
-                if minimal_bring_one_color:
-                    return work_done
         else:
             # Fallback: 1x1 commutators for each center position
             for rc in self._comm_helper._2d_center_iter():
@@ -452,8 +420,6 @@ class NxNCenters(SolverHelper):
                                               f"actual={after_fixed_color}")
                     self.debug(f"Fixed slice {rc}", level=3)
                     work_done = True
-                    if minimal_bring_one_color:
-                        return work_done
 
         return work_done
 
@@ -576,6 +542,8 @@ class NxNCenters(SolverHelper):
         Similarly, source rotation (U * n_rotate) aligns source with target.
         This also needs to be undone for cage method.
         """
+
+        #fix: use modern translator
         cube = self.cube
         n_slices = cube.n_slices
 
@@ -595,7 +563,7 @@ class NxNCenters(SolverHelper):
             # column
             target_index = target_slice.index
 
-        # now we must bring source slice into position (0,  target_index^)
+        # now we must bring source slice into position
 
         nm1 = cube.n_slices - 1
         source_index = source_slice.index
@@ -606,22 +574,35 @@ class NxNCenters(SolverHelper):
             s1 = Point(0, source_index)
             s2 = Point(nm1, source_index)
 
-        # now we need to bring source slice such that one of its endpoints is (0,  target_index^)
-        required_on_target = Point(0, cube.inv(target_index))
+        # Use Face2FaceTranslator to get the correct slice axis (M/E/S),
+        # coordinate mapping, and rotation count for ANY source face.
+        # Pass (0, target_index) — a point at the top of target column — so the
+        # translator returns the slice that carries content to this column.
+        target_coord = Point(0, target_index)
+        all_results: list[FaceTranslationResult] = Face2FaceTranslator.translate_source_from_target(
+            target_face, source_face, target_coord
+        )
+        # For adjacent faces: 1 result. For opposite: 2 results (pick first deterministically)
+        sorted_results = sorted(
+            all_results, key=lambda r: r.slice_algorithm.whole_slice_alg.slice_name.value
+        )
+        result = sorted_results[0]
+        slice_alg_result = result.slice_algorithm
 
-        def is_column(p1: Point, p2: Point):
+        # get_alg() returns the indexed slice with direction already applied
+        slice_alg: algs.Alg = slice_alg_result.get_alg()
 
+        # Expected source coord from translator — this is where the source
+        # slice endpoint must be after rotation to align with the swap
+        expected_source_coord = Point(*slice_alg_result.source_coord)
+
+        def is_column(p1: Point, p2: Point) -> bool:
             return (p1[0] == 0 and p2[0] == n_slices - 1) or (p2[0] == 0 and p1[0] == n_slices - 1)
 
-        source_is_back = source_face is cube.back
         n_rotate: int | None = None
         for i in range(4):
-
             if is_column(s1, s2):
-                s1_on_target = self._point_on_target(source_is_back, s1)
-                s2_on_target = self._point_on_target(source_is_back, s2)
-
-                if s1_on_target == required_on_target or s2_on_target == required_on_target:
+                if s1 == expected_source_coord or s2 == expected_source_coord:
                     n_rotate = i
                     break
 
@@ -634,24 +615,22 @@ class NxNCenters(SolverHelper):
         rotate_source_alg = Algs.of_face(source_face.name)
         op.play(rotate_source_alg * n_rotate)
 
-        mul = 2 if source_is_back else 1
-        # do the swap:
-        slice_source_alg: algs.Alg = self._get_slice_m_alg(target_index, target_index)
-
         def ann_source() -> Iterator[CenterSlice]:
             for rc in self._2d_range(s1, s2):
                 yield source_face.center.get_center_slice(rc)
 
         def ann_target() -> Iterator[CenterSlice]:
-
             for rc in self._2d_range(Point(0, target_index), Point(nm1, target_index)):
                 yield target_face.center.get_center_slice(rc)
 
         with self.ann.annotate((ann_source(), AnnWhat.Moved), (ann_target(), AnnWhat.FixedPosition)):
-            op.play(slice_source_alg * mul +
-                  rotate_source_alg * 2 +  # this replaces source slice with target
-                  slice_source_alg.prime * mul
+            op.play(slice_alg +
+                  rotate_source_alg * 2 +
+                  slice_alg.prime
                   )
+
+        # Track slice swap statistics (one complete row/column = n_slices pieces)
+        self._slice_stats.add_block("SliceSwap", n_slices)
 
         # =========================================================
         # CAGE METHOD: Undo setup moves to preserve paired edges
@@ -729,57 +708,6 @@ class NxNCenters(SolverHelper):
             yield r, c
             (r, c) = (c, inv(r))
 
-    def _swap_entire_face_odd_cube(self, tracker_holder: "FacesTrackerHolder", required_color: Color, face: Face, source: Face, faces: Iterable[FaceTracker]):
-
-        cube = self.cube
-        nn = cube.n_slices
-
-        assert nn % 2, "Cube must be odd"
-
-        assert face is cube.front
-        assert source is cube.up or source is cube.back
-
-        op = self.op
-
-        mid = nn // 2
-        mid_pls_1 = 1 + nn // 2  # == 3 on 5
-
-        end = nn
-
-        rotate_mul = 1
-        if source is cube.back:
-            rotate_mul = 2
-
-        # TODO [#12]: MM algorithm broken - needs fix before odd cube face swap can work
-        raise InternalSWError("Need to fix MM")
-
-        swap_faces = [Algs.MM()[1:mid_pls_1 - 1].prime * rotate_mul, Algs.F.prime * 2,
-                      Algs.MM()[1:mid_pls_1 - 1] * rotate_mul,
-                      Algs.MM()[mid_pls_1 + 1:end].prime * rotate_mul,
-                      Algs.F * 2 + Algs.MM()[mid_pls_1 + 1:end] * rotate_mul
-                      ]
-        op.op(Algs.seq_alg(None, *swap_faces))
-
-        # commutator 1, upper block about center
-        self._block_commutator(tracker_holder, required_color, face, source,
-                                 (mid + 1, mid), (nn - 1, mid),
-                                 _SearchBlockMode.BigThanSource, faces)
-
-        # commutator 2, lower block below center
-        self._block_commutator(tracker_holder, required_color, face, source,
-                                 (0, mid), (mid - 1, mid),
-                                 _SearchBlockMode.BigThanSource, faces)
-
-        # commutator 3, left to center
-        self._block_commutator(tracker_holder, required_color, face, source,
-                                 (mid, 0), (mid, mid - 1),
-                                 _SearchBlockMode.BigThanSource, faces)
-
-        # commutator 4, right ot center
-        self._block_commutator(tracker_holder, required_color, face, source,
-                                 (mid, mid + 1), (mid, nn - 1),
-                                 _SearchBlockMode.BigThanSource, faces)
-
     def _block_commutator(self,
                             tracker_holder: "FacesTrackerHolder",
                             required_color: Color,
@@ -806,6 +734,8 @@ class NxNCenters(SolverHelper):
         """
         cube: Cube = face.cube
         assert face is cube.front
+
+        # fix: use block methods, simplify
 
         # normalize block
         r1: int = rc1[0]
@@ -864,19 +794,6 @@ class NxNCenters(SolverHelper):
 
         return True
 
-    def _preserve_trackers(self) -> AbstractContextManager[object]:
-        """Return context manager that preserves tracker markers, or no-op.
-
-        When tracker_holder is set (even cubes), returns
-        preserve_physical_faces() to restore MarkedFaceTracker markers
-        after commutators move center pieces between faces.
-        Otherwise returns nullcontext() (no-op).
-        """
-        th = self._tracker_holder
-        if th is not None:
-            return th.preserve_physical_faces()
-        return nullcontext()
-
     @staticmethod
     def count_missing(face: Face, color: Color) -> int:
         n = 0
@@ -912,6 +829,10 @@ class NxNCenters(SolverHelper):
         fix_back_coords = not ignore_if_back and source_face is cube.back
 
         if fix_back_coords:
+            # Fix:
+            # claude: we can fix it !!!, itis easy !!!
+            # lets understand all the callers and why it works today !!!
+
             # the logic here is hard code of the logic in slice rotate
             # it will be broken if cube layout is changed
             # here we assume we work on F, and UP has same coord system as F, and
@@ -990,19 +911,6 @@ class NxNCenters(SolverHelper):
 
         return _slices
 
-    def _point_on_target(self, source_is_back: bool, rc: Tuple[int, int]) -> Point:
-
-        inv = self.cube.inv
-
-        # the logic here is hard code of the logic in slice rotate
-        # it will be broken if cube layout is changed
-        # here we assume we work on F, and UP has same coord system as F, and
-        # back is mirrored in both direction
-        if source_is_back:
-            return Point(inv(rc[0]), inv(rc[1]))
-        else:
-            # on up
-            return Point(*rc)
 
     @staticmethod
     def _2d_range(rc1: Point, rc2: Point) -> Iterator[Point]:
@@ -1112,29 +1020,17 @@ class NxNCenters(SolverHelper):
 
         return None
 
-    def _get_slice_m_alg(self, c1, c2):
-
-        """
-
-        :param c1: Center Slice index [0, n)
-        :param c2: Center Slice index [0, n)
-        :return: m slice in range suitable for [c1, c2]
-        """
-
-        #   index is from left to right, L is from left to right,
-        # so we don't need to invert
-
-        if c1 > c2:
-            c1, c2 = c2, c1
-
-        return Algs.M[c1 + 1:c2 + 1].prime
 
     def reset_block_statistics(self) -> None:
         """Reset block solving statistics."""
         self._comm_helper.reset_block_statistics()
+        self._slice_stats.reset()
+        self._slice_stats.register_topic("SliceSwap")
 
     def get_block_statistics(self) -> CenterBlockStatistics:
-        """Get accumulated block solving statistics."""
-        return self._comm_helper.get_block_statistics()
+        """Get accumulated block solving statistics (commutators + slice swaps)."""
+        result = self._comm_helper.get_block_statistics()
+        result.accumulate(self._slice_stats)
+        return result
 
     D_LEVEL = 3
