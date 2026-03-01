@@ -483,9 +483,13 @@ class ClientSession:
     # -- Input handlers --
 
     def _handle_key(self, symbol: int, modifiers: int) -> None:
+        from cube.presentation.gui.commands.concrete import NewSessionCommand, QuitCommand
         from cube.presentation.gui.key_bindings import lookup_command
         command = lookup_command(symbol, modifiers, self.animation_running)
         if command:
+            # Web sessions can't quit — restart as a new session instead
+            if isinstance(command, QuitCommand):
+                command = NewSessionCommand()
             self.inject_command(command)
 
     def _handle_speed(self, speed_index: float) -> None:
@@ -1026,11 +1030,19 @@ class ClientSession:
             return
 
         try:
+            from cube.presentation.gui.commands.concrete import NewSessionCommand
+
             speed_before = self._app.vs.get_speed_index
             size_before = self._app.vs.cube_size
             history_len_before = len(self._app.op.history())
             ctx = CommandContext.from_window(self)  # type: ignore[arg-type]
             result = command.execute(ctx)
+
+            if isinstance(command, NewSessionCommand):
+                # Full state refresh — reuse the single source of truth
+                self.on_client_connected()
+                return
+
             # Detect manual move while solver redo queue exists → tainted
             if (self._redo_is_solver and self._app.op.redo_queue()
                     and len(self._app.op.history()) > history_len_before):
@@ -1134,6 +1146,10 @@ class ClientSession:
         pass
 
     # -- Cleanup --
+
+    def close(self) -> None:
+        """No-op for web sessions — use NewSessionCommand to restart instead."""
+        pass
 
     def cleanup(self) -> None:
         self._renderer.cleanup()

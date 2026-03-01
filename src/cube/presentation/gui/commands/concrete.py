@@ -620,6 +620,23 @@ class QuitCommand(Command):
 
 
 @dataclass(frozen=True)
+class NewSessionCommand(Command):
+    """Command to start a fresh session (web backend).
+
+    Resets the cube to default size, resets the view, and resets the solver.
+    Unlike QuitCommand, this doesn't raise AppExit — just resets everything.
+    """
+
+    def execute(self, ctx: CommandContext) -> CommandResult:
+        default_size: int = ctx.app.config.cube_size
+        ctx.app.reset(default_size)
+        ctx.vs.reset()
+        ctx.op.reset()
+        ViewSetup.set_projection(ctx.vs, ctx.window.width, ctx.window.height, ctx.window.renderer)
+        return CommandResult()
+
+
+@dataclass(frozen=True)
 class ResetCubeCommand(Command):
     """Command to reset the cube."""
 

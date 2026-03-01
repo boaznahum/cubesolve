@@ -25,3 +25,14 @@ no
 22 Rotation on m slice on U and D are again in the wrong direction !!!
 
 the queu it tool big, we can remove the indexing and put many algs in one line see https://cube-solver.com/#id=8
+
+23. No central client state management. Client state is scattered across individual
+    `send_*()` calls (send_speed, send_size, send_toolbar_state, send_cube_state,
+    send_text, send_history_state, etc.). When state needs a full refresh (e.g.
+    NewSessionCommand), we rely on `on_client_connected()` as a catch-all, but
+    adding new state requires updating that method too. A proper solution would be
+    a single state snapshot object that the client subscribes to, so any server-side
+    change automatically syncs. Consider React or a centralized state store.
+    Example: resize cube to 10x10, press Q (new session), nothing visually changes,
+    scramble — still 10x10, press Q again — now shows 3x3. The scattered send calls
+    mean some state updates are missed on the first reset.
