@@ -401,6 +401,7 @@ class GUIToolbar:
             DiagnosticsCommand,
             SolveAllCommand,
             SolveAllNoAnimationCommand,
+            SolveAndPlayCommand,
             SolveStepCommand,
             SolveStepNoAnimationCommand,
         )
@@ -432,13 +433,21 @@ class GUIToolbar:
             min_width=45,
         )
 
-        # Add "Solve" button with Shift = Instant
+        # Add "Solution" button (renamed from Solve) - uses current animation setting
         self.add_button(
-            label="Solve",
+            label="Solution",
             command=SolveAllCommand(),
-            tooltip="Solve complete cube (Shift: instant)",
+            tooltip="Find solution (Shift: instant)",
             shift_label="Instant",
             shift_command=SolveAllNoAnimationCommand(),
+            min_width=70,
+        )
+
+        # Add "Solve" button - solves and always plays with animation
+        self.add_button(
+            label="Solve",
+            command=SolveAndPlayCommand(),
+            tooltip="Solve and play solution with animation",
             min_width=55,
         )
 
@@ -675,8 +684,13 @@ def create_toolbar(window: PygletAppWindow) -> GUIToolbar:
 
     toolbar.add_separator()
 
-    # Reset button only (Solve moved to Row 3)
+    # Reset buttons
     toolbar.add_button("Reset", Commands.RESET_CUBE)
+    toolbar.add_button(
+        "View",
+        Commands.VIEW_RESET,
+        tooltip="Reset view to default camera position",
+    )
 
     # === ROW 2: Texture, Shadow, Solver, Quit ===
     toolbar.new_row()
