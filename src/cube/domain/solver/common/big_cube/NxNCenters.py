@@ -5,12 +5,12 @@ from enum import Enum, unique
 from typing import Tuple
 
 from cube.domain import algs
-from cube.domain.algs import Algs, SeqAlg
+from cube.domain.algs import Algs
 from cube.domain.exceptions import InternalSWError
 from cube.domain.geometric.block import Block
 from cube.domain.geometric.cube_layout import CubeLayout
 from cube.domain.geometric.geometry_types import Point
-from cube.domain.model import CenterSlice, Color, FaceName
+from cube.domain.model import CenterSlice, Color
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
@@ -206,6 +206,7 @@ class NxNCenters(SolverHelper):
                     (needed to know face colors and for source pieces).
             target_tracker: FaceTracker for the target face (tracks by color).
         """
+
         target_face = target_tracker.face
         if self._is_face_solved(target_face, target_tracker.color):
             return
@@ -216,14 +217,11 @@ class NxNCenters(SolverHelper):
 
             # Solve only the target face
             while True:
-                if not self._do_faces(holder, [target_tracker], False, False):
+                if not self._do_faces(holder, [target_tracker], False, True):
                     break
                 self._asserts_is_boy(all_faces)
 
             self._asserts_is_boy(all_faces)
-
-            # Final pass with back face too
-            self._do_faces(holder, [target_tracker], False, True)
 
             self._asserts_is_boy(all_faces)
 
@@ -269,13 +267,9 @@ class NxNCenters(SolverHelper):
         #   this slice is swapped, and not filled by other step(becuase it's sources are on back)
         # To overcome it we swap only if number sources is > n//2
         while True:
-            if not self._do_faces(holder, faces, False, False):
+            if not self._do_faces(holder, faces, False, True):
                 break
             self._asserts_is_boy(faces)
-
-        self._asserts_is_boy(faces)
-
-        self._do_faces(holder, faces, False, True)
 
         self._asserts_is_boy(faces)
 
@@ -339,198 +333,127 @@ class NxNCenters(SolverHelper):
 
     def __do_center(self, tracker_holder: "FacesTrackerHolder", face_loc: FaceTracker, minimal_bring_one_color: bool, use_back_too: bool, faces: Iterable[FaceTracker]) -> bool:
         """
-        Process one face - bring correct colored pieces from adjacent faces.
+        Process one face - bring correct colored pieces from ALL source faces.
 
-        CAGE METHOD (preserve_cage=True):
-        =================================
-        Tracks all _bring_face_up_preserve_front rotations and undoes them before return.
+        Iterates all source faces directly — no B[1:n] rotations needed.
+        CommutatorHelper supports all 30 face pairs. BACK is not special.
 
-        WHY THIS MATTERS - VISUAL EXAMPLE:
-        -----------------------------------
-        Initial cube orientation (looking at front):
-
-            ┌───┐
-            │ U │  <- UP face (source)
-        ┌───┼───┼───┐
-        │ L │ F │ R │  <- FRONT face (target), LEFT, RIGHT
-        └───┼───┼───┘
-            │ D │  <- DOWN face
-            └───┘
-
-        The algorithm loops through L, D, R faces, bringing each to UP:
-        - Iteration 1: Process UP (already up)
-        - Iteration 2: B'[1:n] -> brings LEFT to UP
-        - Iteration 3: B'[1:n] -> brings DOWN to UP
-        - Iteration 4: B'[1:n] -> brings RIGHT to UP (now done)
-
-        After 3 B'[1:n] rotations, cube is rotated 270° around front axis.
-        This BREAKS paired edges and moves corners.
-
-        With preserve_cage=True: We undo these rotations before returning.
-        setup_alg = B'[1:n] + B'[1:n] + B'[1:n] = B'[1:n] * 3
-        undo = setup_alg.prime = B[1:n] * 3
+        For each source: complete slices + odd-cube swap + blocks + 1x1 commutators.
+        Skip sources with no matching colors (zero-cost).
 
         :return: if any work was done
         """
         face: Face = face_loc.face
         color: Color = face_loc.color
 
+
         if self._is_face_solved(face, color):
-            self.debug( f"Face is already done {face}", level=1)
+            self.debug(f"Face is already done {face}", level=1)
             return False
 
         if minimal_bring_one_color and self._has_color_on_face(face_loc.face, color):
-            self.debug( f"{face_loc.face} already has at least one {color}", level=3)
+            self.debug(f"{face_loc.face} already has at least one {color}", level=3)
             return False
 
         cmn = self.cmn
 
-        self.debug( f"Working on face {face}", level=1)
+        self.debug(f"Working on face {face}", level=1)
 
         with self.ann.annotate(h2=f"{face_loc.color.long} face"):
             cube = self.cube
 
-            # we loop bringing all adjusted faces up
             cmn.bring_face_front(face_loc.face)
             # from here face is no longer valid
 
             work_done = False
 
-            if any(self._has_color_on_face(f, color) for f in cube.front.adjusted_faces()):
-                # =========================================================
-                # CAGE METHOD: Track setup rotations for undo
-                # =========================================================
-                setup_alg: SeqAlg = Algs.NOOP
+            # All source faces — BACK is not special
+            source_faces: list[Face] = [*cube.front.adjusted_faces(), cube.back]
 
-                for _ in range(3):  # 3 faces: L, D, R brought to UP
-                    # don't use face - it was moved !!!
-                    if self._do_center_from_face(tracker_holder, cube.front, minimal_bring_one_color, color, cube.up, faces):
-                        work_done = True
-                        if minimal_bring_one_color:
-                            if self._preserve_cage:
-                                self.op.play(setup_alg.prime)  # UNDO before return!
-                            return work_done
+            for source_face in source_faces:
+                if self.count_color_on_face(source_face, color) == 0:
+                    continue  # Zero-cost skip
 
-                    if self._is_face_solved(face_loc.face, color):
-                        if self._preserve_cage:
-                            self.op.play(setup_alg.prime)  # UNDO before return!
-                        return work_done
-
-                    # Rotate to bring next adjacent face to UP
-                    # Track the algorithm so we can undo
-                    setup_alg = setup_alg + self._bring_face_up_preserve_front(cube.left)
-
-                # on the last face (4th iteration)
-                # don't use face - it was moved !!!
-                if self._do_center_from_face(tracker_holder, cube.front, minimal_bring_one_color, color, cube.up, faces):
+                if self._do_center_from_face_direct(tracker_holder, cube.front,
+                                                     minimal_bring_one_color, color,
+                                                     source_face, faces):
                     work_done = True
                     if minimal_bring_one_color:
-                        if self._preserve_cage:
-                            self.op.play(setup_alg.prime)  # UNDO before return!
                         return work_done
 
                 if self._is_face_solved(face_loc.face, color):
-                    if self._preserve_cage:
-                        self.op.play(setup_alg.prime)  # UNDO before return!
                     return work_done
-
-                # =========================================================
-                # CAGE METHOD: Undo all setup rotations
-                # =========================================================
-                if self._preserve_cage:
-                    self.op.play(setup_alg.prime)
-
-            if use_back_too:
-                # now from back
-                # don't use face - it was moved !!!
-                if self._do_center_from_face(tracker_holder, cube.front, minimal_bring_one_color, color, cube.back, faces):
-                    work_done = True
 
             return work_done
 
-    def _do_center_from_face(self, tracker_holder: "FacesTrackerHolder", face: Face, minimal_bring_one_color, color: Color, source_face: Face, faces: Iterable[FaceTracker]) -> bool:
-
+    def _do_center_from_face_direct(self, tracker_holder: "FacesTrackerHolder", face: Face,
+                                     minimal_bring_one_color: bool, color: Color,
+                                     source_face: Face, faces: Iterable[FaceTracker]) -> bool:
         """
-        The sources are on source_face !!! source face is in its location up /back
-        The target face is on front !!!
-        :param face:
-        :param color:
-        :param source_face:
-        :return:
-        """
+        Bring correct colored pieces from source_face to target face.
 
+        Works with ANY source face. Does everything for that source:
+        1. Odd-cube face swap (UP/BACK only — needs M-slice axis)
+        2. Complete slice swaps (UP/BACK only — needs M-slice axis)
+        3. Block commutators (all faces)
+        4. 1x1 commutators fallback (all faces)
+
+        :param face: Target face (must be front)
+        :param color: Required color
+        :param source_face: Source face (any face except front)
+        :return: True if any work was done
+        """
         cube = self.cube
-
         assert face is cube.front
-        assert source_face in [cube.up, cube.back]
 
         if self.count_color_on_face(source_face, color) == 0:
             return False  # nothing can be done here
 
         work_done = False
-
         center = face.center
-
         n = cube.n_slices
 
-        if n % 2 and self._OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS:
+        # Complete slices and odd-cube swap only work for UP/BACK
+        # (use M-slice axis which connects UP/FRONT/DOWN/BACK)
+        # TODO A4: Use Face2FaceTranslator to support all source faces
+        source_is_up_or_back = source_face is cube.up or source_face is cube.back
 
-            ok_on_this = self.count_color_on_face(face, color)
+        if source_is_up_or_back:
+            if n % 2 and self._OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS:
+                ok_on_this = self.count_color_on_face(face, color)
+                on_source = self.count_color_on_face(source_face, color)
+                if on_source - ok_on_this > 2:
+                    self._swap_entire_face_odd_cube(tracker_holder, color, face, source_face, faces)
+                    work_done = True
 
-            on_source = self.count_color_on_face(source_face, color)
-
-            if on_source - ok_on_this > 2:  # swap two faces is about two commutators
-                self._swap_entire_face_odd_cube(tracker_holder, color, face, source_face, faces)
-                work_done = True
-
-        if self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES:
-            if self._do_complete_slices(tracker_holder, color, face, source_face):
-                work_done = True
-                if minimal_bring_one_color:
-                    return work_done
+            if self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES:
+                if self._do_complete_slices(tracker_holder, color, face, source_face):
+                    work_done = True
+                    if minimal_bring_one_color:
+                        return work_done
 
         if self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS:
-            # should move minimal_bring_one_color into _do_blocks, because ein case of back, it can do too much
             if self._do_blocks(tracker_holder, color, face, source_face, faces):
                 work_done = True
                 if minimal_bring_one_color:
                     return work_done
-
         else:
-
-            # the above also did a 1 size block
+            # Fallback: 1x1 commutators for each center position
             for rc in self._comm_helper._2d_center_iter():
-
                 if self._block_commutator(tracker_holder, color,
                                             face,
                                             source_face,
                                             rc, rc,
                                             _SearchBlockMode.CompleteBlock, faces):
-
                     after_fixed_color = center.get_center_slice(rc).color
-
                     if after_fixed_color != color:
                         raise InternalSWError(f"Slice was not fixed {rc}, " +
                                               f"required={color}, " +
                                               f"actual={after_fixed_color}")
-
-                    self.debug( f"Fixed slice {rc}", level=3)
-
+                    self.debug(f"Fixed slice {rc}", level=3)
                     work_done = True
                     if minimal_bring_one_color:
                         return work_done
-
-        if not work_done:
-            self.debug( f"Internal error, no work was done on face {face} required color {color}, "
-                               f"but source face  {source_face} contains {self.count_color_on_face(source_face, color)}", level=3)
-            for rc in self._comm_helper._2d_center_iter():
-                if center.get_center_slice(rc).color != color:
-                    print(f"Missing: {rc}  {[*self._get_four_center_points(rc[0], rc[1])]}")
-            for rc in self._comm_helper._2d_center_iter():
-                if source_face.center.get_center_slice(rc).color == color:
-                    print(f"Found on {source_face}: {rc}  {source_face.center.get_center_slice(rc)}")
-
-            raise InternalSWError("See error in log")
 
         return work_done
 
@@ -742,54 +665,51 @@ class NxNCenters(SolverHelper):
                 self.debug( "  [CAGE] Undoing F' setup: F", level=1)
                 op.play(Algs.F)
 
-    def _do_blocks(self, tracker_holder: "FacesTrackerHolder", color, face, source_face, faces: Iterable[FaceTracker]):
+    def _do_blocks(self, tracker_holder: "FacesTrackerHolder", color: Color, face: Face, source_face: Face, faces: Iterable[FaceTracker]) -> bool:
+        """
+        Search for unsolved blocks on target face and bring matching colors from source.
 
+        Searches the TARGET face for blocks of wrong color (unsolved), then uses
+        _block_commutator with dry_run to check if the source has matching colors
+        and execute the commutator.
+
+        Works with ANY source face (not restricted to UP/BACK).
+        """
         work_done = False
 
-        cube = self.cube
+        # Search for unsolved blocks on the TARGET face
+        def unsolved_cell_predicate(f: Face, pt: Point) -> bool:
+            """Cell is unsolved — wrong color."""
+            return f.center.get_center_slice(pt).color != color
 
-        big_blocks = self._comm_helper.search_big_block(source_face, color)
+        big_blocks = self._comm_helper.search_big_block(
+            face, color, cell_predicate=unsolved_cell_predicate
+        )
 
         if not big_blocks:
-            self.debug(f"  No blocks found for {color} on {source_face.name}", level=2)
+            self.debug(f"  No unsolved blocks found for {color} on {face.name}", level=2)
             return False
 
         # Log found blocks
-        block_sizes = [(b.size, b) for _, b in big_blocks]
-        large_blocks = [(s, b) for s, b in block_sizes if s > 1]
-        self.debug(f"  Found {len(big_blocks)} blocks on {source_face.name}, "
+        large_blocks = [(b.size, b) for _, b in big_blocks if b.size > 1]
+        self.debug(f"  Found {len(big_blocks)} unsolved blocks on {face.name}, "
                    f"{len(large_blocks)} larger than 1x1", level=1)
 
-        # because we do exact match, there is no risk that that new blocks will be constructed,
-        # so we try all
-
         for _, big_block in big_blocks:
-            rc1 = big_block[0]
-            rc2 = big_block[1]
             block_size = big_block.size
             block_dims = big_block.dim
 
-            rc1_on_target = self._point_on_source(source_face is cube.back, rc1)
-            rc2_on_target = self._point_on_source(source_face is cube.back, rc2)
-
-            for rotation in range(4):
-                if self._block_commutator(tracker_holder, color,
-                                            face,
-                                            source_face,
-                                            rc1_on_target, rc2_on_target,
-                                            # actually we want big-than, but for this we need to find best match
-                                            # it still doesn't work, we need another mode, Source and Target Match
-                                            # but for this we need to search source only
-                                            _SearchBlockMode.ExactMatch, faces):
-                    # Log successful block commutator
-                    self.debug(f"    ✓ Block {block_dims[0]}x{block_dims[1]} ({block_size} pieces) "
-                               f"from {source_face.name}{rc1}->{rc2} to {face.name} "
-                               f"(rotation={rotation})", level=1)
-                    work_done = True
-                    break
-
-                rc1_on_target = cube.cqr.rotate_point_clockwise(rc1_on_target)
-                rc2_on_target = cube.cqr.rotate_point_clockwise(rc2_on_target)
+            # Pass target-face coordinates directly — _block_commutator uses
+            # dry_run internally to find natural source coordinates and checks
+            # if source has matching colors
+            if self._block_commutator(tracker_holder, color,
+                                        face,
+                                        source_face,
+                                        big_block[0], big_block[1],
+                                        _SearchBlockMode.ExactMatch, faces):
+                self.debug(f"    ✓ Block {block_dims[0]}x{block_dims[1]} ({block_size} pieces) "
+                           f"from {source_face.name} to {face.name}", level=1)
+                work_done = True
 
         return work_done
 
@@ -800,48 +720,6 @@ class NxNCenters(SolverHelper):
         slice__color = face.center.get_center_slice((0, 0)).color
 
         return x and slice__color == color
-
-    def _bring_face_up_preserve_front(self, face) -> algs.Alg:
-        """
-        Bring an adjacent face to the UP position while preserving front.
-
-        Returns the algorithm played so caller can undo with alg.prime if needed.
-        For cage method: __do_center tracks these and undoes them at the end.
-
-        Args:
-            face: The face to bring to UP position (must be L, D, or R)
-
-        Returns:
-            The algorithm that was played (Algs.NOOP if face was already UP)
-        """
-        if face.name == FaceName.U:
-            return Algs.NOOP  # Already UP, no rotation needed
-
-        if face.name == FaceName.B or face.name == FaceName.F:
-            raise InternalSWError(f"{face.name} is not supported, can't bring them to up preserving front")
-
-        self.debug( f"Need to bring {face} to up", level=3)
-
-        # rotate back with all slices clockwise
-        rotate = Algs.B[1:self.cube.n_slices + 1]
-
-        alg_to_play: algs.Alg
-        match face.name:
-
-            case FaceName.L:
-                alg_to_play = rotate.prime
-
-            case FaceName.D:
-                alg_to_play = rotate.prime * 2
-
-            case FaceName.R:
-                alg_to_play = rotate
-
-            case _:
-                raise InternalSWError(f" Unknown face {face.name}")
-
-        self.op.play(alg_to_play)
-        return alg_to_play
 
     def _get_four_center_points(self, r, c) -> Iterator[Tuple[int, int]]:
 
@@ -910,13 +788,17 @@ class NxNCenters(SolverHelper):
         """
         Execute block commutator to move pieces from source to target.
 
+        Uses CommutatorHelper dry_run to get natural source coordinates,
+        then searches with 4 rotations. Supports ALL source face pairs
+        (not just UP/BACK).
+
         Delegates to CommutatorHelper.execute_commutator() which handles:
         - The 3-cycle algorithm: [M', F, M', F', M, F, M, F']
         - Animation annotations including s2 (at-risk) marker
         - Cage preservation (preserve_state parameter)
 
         :param face: Target face (must be front)
-        :param source_face: Source face (must be up or back)
+        :param source_face: Source face (any face except front)
         :param rc1: one corner of block, center slices indexes [0..n)
         :param rc2: other corner of block, center slices indexes [0..n)
         :param mode: to search complete block or with colors more than mine
@@ -924,9 +806,6 @@ class NxNCenters(SolverHelper):
         """
         cube: Cube = face.cube
         assert face is cube.front
-        assert source_face is cube.up or source_face is cube.back
-
-        is_back = source_face is cube.back
 
         # normalize block
         r1: int = rc1[0]
@@ -944,29 +823,43 @@ class NxNCenters(SolverHelper):
         rc2 = Point(r2, c2)
         normalized_block = Block(rc1, rc2)
 
-        # in case of odd and (mid, mid), search will fail, nothing to do
-        # if we change the order, then block validation below will fail,
-        # so we need to check for case odd (mid, mid) somewhere else
-        # now search block
-        n_rotate = self._search_block(face, source_face, required_color, mode, normalized_block)
+        # Use dry_run to get natural source coordinates — works for ALL source faces
+        dry_result = self._comm_helper.execute_commutator(
+            source_face=source_face,
+            target_face=face,
+            target_block=normalized_block,
+            dry_run=True
+        )
+        natural_source_block = dry_result.natural_source_block
+
+        # Search for required color on source face at natural source coordinates
+        # with 4 rotations (like _LBLNxNCenters._source_block_has_color_with_rotation)
+        n_rotate = self._search_block_via_dry_run(
+            face, source_face, required_color, mode, normalized_block, natural_source_block
+        )
 
         if n_rotate is None:
             return False
 
-        # Compute source block: rotate the target block position by -n_rotate
-        # to find where the source block is BEFORE the source face setup rotation
-        cqr = cube.cqr
-        _on_src1_1 = self._point_on_source(is_back, rc1)
-        _on_src1_2 = self._point_on_source(is_back, rc2)
-        # Apply inverse rotation to get original source position
-        source_rc1 = Point(*cqr.rotate_point_clockwise(_on_src1_1, -n_rotate))
-        source_rc2 = Point(*cqr.rotate_point_clockwise(_on_src1_2, -n_rotate))
+        # Compute actual source block by rotating natural source block by -n_rotate
+        n_slices = cube.n_slices
+        source_block = natural_source_block
+        for _ in range((-n_rotate) % 4):
+            source_block = source_block.rotate_clockwise(n_slices)
 
         # Use CommutatorHelper to execute the commutator
         # This handles the algorithm, annotations (including s2), and cage preservation
         self._asserts_is_boy(tracker_holder)
         with tracker_holder.preserve_physical_faces():
-            self._execute_commutator(source_face, face, rc1, rc2, source_rc1, source_rc2)
+            self._comm_helper.execute_commutator(
+                source_face=source_face,
+                target_face=face,
+                target_block=normalized_block,
+                source_block=source_block,
+                preserve_state=self._preserve_cage,
+                dry_run=False,
+                _cached_secret=dry_result
+            )
         self._asserts_is_boy(tracker_holder)
 
         return True
@@ -983,20 +876,6 @@ class NxNCenters(SolverHelper):
         if th is not None:
             return th.preserve_physical_faces()
         return nullcontext()
-
-    def _execute_commutator(self, source_face: Face, target_face: Face,
-                            rc1: Point, rc2: Point,
-                            source_rc1: Point, source_rc2: Point) -> None:
-        """Execute a commutator, wrapping with preserve_physical_faces if needed."""
-        with self._preserve_trackers():
-            self._comm_helper.execute_commutator(
-                source_face=source_face,
-                target_face=target_face,
-                target_block=Block(rc1, rc2),
-                source_block=Block(source_rc1, source_rc2),
-                preserve_state=self._preserve_cage,
-                dry_run=False
-            )
 
     @staticmethod
     def count_missing(face: Face, color: Color) -> int:
@@ -1111,20 +990,6 @@ class NxNCenters(SolverHelper):
 
         return _slices
 
-    def _point_on_source(self, is_back: bool, rc: Tuple[int, int]) -> Point:
-
-        inv = self.cube.inv
-
-        # the logic here is hard code of the logic in slice rotate
-        # it will be broken if cube layout is changed
-        # here we assume we work on F, and UP has same coord system as F, and
-        # back is mirrored in both direction
-        if is_back:
-            return Point(inv(rc[0]), inv(rc[1]))
-        else:
-            # on up
-            return Point(*rc)
-
     def _point_on_target(self, source_is_back: bool, rc: Tuple[int, int]) -> Point:
 
         inv = self.cube.inv
@@ -1138,21 +1003,6 @@ class NxNCenters(SolverHelper):
         else:
             # on up
             return Point(*rc)
-
-    def _2d_range_on_source(self, is_back: bool, rc1: Point, rc2: Point) -> Iterator[Point]:
-
-        """
-        Iterator over 2d block columns advanced faster
-        Convert block to source coordinates
-        :param rc1: one corner of block, front coords, center slice indexes
-        :param rc2: other corner of block, front coords, center slice indexes
-        :return:
-        """
-
-        rc1 = self._point_on_source(is_back, rc1)
-        rc2 = self._point_on_source(is_back, rc2)
-
-        yield from self._2d_range(rc1, rc2)
 
     @staticmethod
     def _2d_range(rc1: Point, rc2: Point) -> Iterator[Point]:
@@ -1184,88 +1034,79 @@ class NxNCenters(SolverHelper):
                   source_face: Face,
                   required_color: Color,
                   min_points: int | None,
-                  block: Block,
-                  dont_convert_coordinates: bool = False) -> bool:
-
+                  block: Block) -> bool:
         """
+        Check if block on source face has at least min_points matching required_color.
 
-        :param source_face:
-        :param required_color:
-        :param min_points: If None that all block , min = block size
-        :param block: Block to check
-        :param dont_convert_coordinates if True then don't convert coordinates according to source face
-        :return:
+        Block coordinates are in source face space (no coordinate conversion needed).
+
+        :param source_face: Face to check
+        :param required_color: Color to match
+        :param min_points: Minimum matching points (None = all must match)
+        :param block: Block to check (coordinates in source face space)
+        :return: True if enough points match
         """
-
-        # Number of points in block
         _max = block.size
 
         if min_points is None:
             min_points = _max
 
-        max_allowed_not_match = _max - min_points  # 0 in cas emin is max
+        max_allowed_not_match = _max - min_points
 
         center = source_face.center
         miss_count = 0
 
-        if dont_convert_coordinates:
-            _range = self._2d_range(block.start, block.end)
-        else:
-            _range = self._2d_range_on_source(source_face is source_face.cube.back, block.start, block.end)
-
-        for rc in _range:
-
+        for rc in self._2d_range(block.start, block.end):
             if center.get_center_slice(rc).color != required_color:
-
                 miss_count += 1
                 if miss_count > max_allowed_not_match:
                     return False
 
         return True
 
-    def _search_block(self,
-                      target_face: Face,
-                      source_face: Face,
-                      required_color: Color,
-                      mode: _SearchBlockMode,
-                      block: Block) -> int | None:
-
+    def _search_block_via_dry_run(self,
+                                  target_face: Face,
+                                  source_face: Face,
+                                  required_color: Color,
+                                  mode: _SearchBlockMode,
+                                  target_block: Block,
+                                  natural_source_block: Block) -> int | None:
         """
-        Search block according to mode, if target is already satisfied, then return not found
-        :param source_face:
-        :param required_color:
-        :param mode:
-        :param block: Block to search for
-        :return: How many source clockwise rotate in order to match the block to source
+        Search for required color on source face using natural source coordinates from dry_run.
+
+        Uses CommutatorHelper's natural source block instead of manual _point_on_source mapping.
+        Searches with 4 rotations of the natural source block on the source face.
+
+        :param target_face: Target face
+        :param source_face: Source face (any face — not restricted to UP/BACK)
+        :param required_color: Color to search for
+        :param mode: Search mode (CompleteBlock, BigThanSource, ExactMatch)
+        :param target_block: Block on target face
+        :param natural_source_block: Natural source block from dry_run
+        :return: Number of clockwise rotations to apply to source face to align, or None
         """
+        n_ok = self._count_colors_on_block(required_color, target_face, target_block.start, target_block.end)
 
-        n_ok = self._count_colors_on_block(required_color, target_face, block.start, block.end)
-
-        if n_ok == block.size:
+        if n_ok == target_block.size:
             return None  # nothing to do
 
         if mode == _SearchBlockMode.CompleteBlock:
-            min_required = block.size
+            min_required = target_block.size
         elif mode == _SearchBlockMode.BigThanSource:
-            # The number of commutators before > after
-            # before = size - n_ok
-            # after  = n_ok  - because the need somehow to get back
-            # size-n_ok > n_ok
             min_required = n_ok + 1
         elif mode == _SearchBlockMode.ExactMatch:
             if n_ok:
                 return None
-            min_required = block.size
-
+            min_required = target_block.size
         else:
             raise InternalSWError
 
         n_slices = self.cube.n_slices
-        rotated_block = block
+        rotated_block = natural_source_block
 
         for n in range(4):
+            # Check directly on source face — block coords are already in source face space
             if self._is_block(source_face, required_color, min_required, rotated_block):
-                # we rotate n to find the block, so client need to rotate -n
                 return (-n) % 4
             rotated_block = rotated_block.rotate_clockwise(n_slices)
 

@@ -19,7 +19,7 @@ from cube.utils.markers_config import MarkersConfig
 
 ########## Some top important
 # Only initial value, can be changed
-CUBE_SIZE = 4
+CUBE_SIZE = 3
 
 # Enable cube caching for performance optimization
 # Env override: CUBE_DISABLE_CACHE=1 to disable
@@ -27,11 +27,10 @@ ENABLE_CUBE_CACHE = True
 PREVENT_RANDOM_FACE_PICK_UP_IN_GEOMETRY=False
 
 # Default solver name - case-insensitive, prefix matching allowed if unambiguous
-# Available solvers: LBL, CFOP, Kociemba, Cage
-# Examples: "lbl", "LBL", "cf" (for CFOP), "k" (for Kociemba)
-# "LBL-Big"
+# Available solvers: LBL, CFOP, Kociemba, Cage, Reducer
+# Examples: "lbl", "LBL", "cf" (for CFOP), "k" (for Kociemba), "r" (for Reducer)
 # Note: Keep this list in sync with SolverName enum in src/cube/domain/solver/SolverName.py
-DEFAULT_SOLVER = "lbl-big"
+DEFAULT_SOLVER = "Kociemba"
 
 # Solver used by tests (must be implemented - raises error if not)
 # Tests use this instead of DEFAULT_SOLVER to avoid failures when DEFAULT_SOLVER
@@ -56,7 +55,7 @@ CHECK_CUBE_SANITY = False
 
 # First face color - the color that determines Layer 1 for 3x3 beginner and LBL solvers
 # This is the color to start with, not a fixed face position (cube may be rotated)
-# Used by: 3x3 beginner solver, LBL-Big cube solver
+# Used by: 3x3 beginner solver, Reducer cube solver
 from cube.domain.model.Color import Color as _Color  # noqa: E402
 
 #L1 color
@@ -100,7 +99,16 @@ animation_enabled = True
 
 # Default animation speed index (0-7, higher is faster)
 # Speed presets: 0=45°/s, 1=90°/s, 2=180°/s, 3=360°/s, 4=540°/s, 5=900°/s, 6=1800°/s, 7=3000°/s
-ANIMATION_SPEED = 7
+ANIMATION_SPEED = 2
+
+# Speed dropdown step size (index increment between adjacent options)
+ANIMATION_SPEED_STEP = 0.5
+
+# Duration (ms) at speed index 0 (slowest)
+ANIMATION_SPEED_D0 = 2000
+
+# Duration (ms) at speed index 7 (fastest)
+ANIMATION_SPEED_DN = 50
 
 # Single-step mode codes - enable specific breakpoints for debugging
 # Import SSCode here to avoid circular imports (config is loaded early)
@@ -278,3 +286,8 @@ TEXTURE_SET_INDEX: int = 0  # Start with debug4x4 for 4x4 cube debugging
 DEBUG_TEXTURE: bool = False
 
 
+################ Deploy
+# How long (seconds) to keep a disconnected WebSocket session alive on the server.
+# If the client reconnects within this window, their cube state is restored.
+# Set to 0 to disable server-side session keep-alive (client localStorage only).
+DEPLOY_SESSION_KEEPALIVE_TIMEOUT: int = 30 * 60  # 30 minutes

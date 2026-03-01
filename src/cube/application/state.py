@@ -81,7 +81,7 @@ class ApplicationAndViewState:
 
         # Logger handles debug/quiet flags with env var override
         self._logger = Logger(debug_all=debug_all, quiet_all=quiet_all)
-        self._speed = config.animation_speed
+        self._speed: float = config.animation_speed
 
         # self._alpha_x_0: float = 0.3
         # self._alpha_y_0: float = -0.4
@@ -233,18 +233,31 @@ class ApplicationAndViewState:
         self._background_gray = max(0.0, min(0.5, value))
 
     @property
-    def get_speed_index(self):
+    def get_speed_index(self) -> float:
         return self._speed
 
     def inc_speed(self):
-        self._speed = min(len(speeds) - 1, self._speed + 1)
+        step = self._config.animation_speed_step
+        self._speed = min(7.0, self._speed + step)
 
     def dec_speed(self):
-        self._speed = max(0, self._speed - 1)
+        step = self._config.animation_speed_step
+        self._speed = max(0.0, self._speed - step)
 
     @property
     def get_speed(self) -> _AnimationSpeed:
-        return speeds[self._speed]
+        idx = self._speed
+        int_idx = int(idx)
+        # For integer indices, return directly
+        if idx == int_idx:
+            return speeds[int_idx]
+        # For fractional indices, interpolate between adjacent speeds
+        lo = speeds[int_idx]
+        hi = speeds[min(int_idx + 1, len(speeds) - 1)]
+        frac = idx - int_idx
+        delay = lo.delay_between_steps * (1 - frac) + hi.delay_between_steps * frac
+        steps = lo.number_of_steps * (1 - frac) + hi.number_of_steps * frac
+        return _AnimationSpeed(delay, round(steps))
 
     def get_draw_shadows_mode(self, face: FaceName) -> bool:
 
@@ -306,9 +319,9 @@ class ApplicationAndViewState:
         return sliced
 
     @contextmanager
-    def w_animation_speed(self, animation_speed: int):
+    def w_animation_speed(self, animation_speed: float):
 
-        assert animation_speed in range(len(speeds))
+        assert 0 <= animation_speed <= 7
         saved = self._speed
         self._speed = animation_speed
 

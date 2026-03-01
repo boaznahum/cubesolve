@@ -1,0 +1,41 @@
+name: Fly Deploy
+on:
+  push:
+    branches:
+      - main
+      - webgl-4
+      - staging
+
+jobs:
+  deploy-prod:
+    name: Deploy Production
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy --remote-only --app cubesolve
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+  deploy-dev:
+    name: Deploy Dev
+    if: github.ref == 'refs/heads/webgl-4'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy --remote-only --app cubesolve-dev
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_DEV }}
+
+  deploy-staging:
+    name: Deploy Staging
+    if: github.ref == 'refs/heads/staging'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy --remote-only --app cubesolve-staging
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

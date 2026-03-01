@@ -87,7 +87,10 @@ class _FaceBoard:
             # why it is needed
             l_box = [x.reshape((3,)) for x in box]
 
-            self._cells[part.fixed_id].prepare_geometry(part, l_box)
+            cell = self._cells[part.fixed_id]
+            cell._grid_row = cy
+            cell._grid_col = cx
+            cell.prepare_geometry(part, l_box)
 
         if f.cube.n_slices == 0:
             # 2x2: only corners, no edges or center

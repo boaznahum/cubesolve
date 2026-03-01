@@ -27,6 +27,8 @@ if TYPE_CHECKING:
 class Operator(OperatorProtocol):
     __slots__ = ["_cube",
                  "_history",
+                 "_redo_queue",
+                 "_in_undo_redo",
                  "_recording",
                  "_self_annotation_running",
                  "_aborted",
@@ -46,6 +48,8 @@ class Operator(OperatorProtocol):
         self._aborted: Any = None
         self._cube = cube
         self._history: MutableSequence[Alg] = []
+        self._redo_queue: MutableSequence[Alg] = []
+        self._in_undo_redo: bool = False
 
         # a non none indicates that recorder is running
         self._recording: MutableSequence[Alg] | None = None
@@ -195,6 +199,10 @@ class Operator(OperatorProtocol):
             alg.play(self._cube, False)
             self._cube.sanity()
             self._history.append(alg)
+            # Note: redo queue is NOT cleared on manual moves.
+            # Unlike text editors, clearing the solver's redo queue on an
+            # accidental key press is destructive. The queue is only cleared
+            # explicitly (reset, new scramble, new solve).
 
     def play_seq(self, algs: Reversible[Alg], inv: Any):
 
@@ -205,20 +213,38 @@ class Operator(OperatorProtocol):
             for alg in algs:
                 self.play(alg, inv)
 
-    def undo(self, animation=True) -> Alg | None:
+    def undo(self, animation: bool = True) -> Alg | None:
+        """Undo the last operation. Pushes undone alg to redo queue.
 
+        :return: the undone alg, or None if history is empty
         """
-        :return: the undo alg
-        """
-        # with self.with_animation(animation=False):
         if self.history():
             alg = self._history.pop()
             _history = [*self._history]
-            self.play(alg, True, animation=animation)
-            # do not add to history !!! otherwise history will never shrink
-            # because op may break big algs to steps, and add more than one , we can't just pop
-            # self._history.pop()
+            self._in_undo_redo = True
+            try:
+                self.play(alg, True, animation=animation)
+            finally:
+                self._in_undo_redo = False
+            # Restore history (play() adds to it, but undo shouldn't grow history)
             self._history[:] = _history
+            self._redo_queue.append(alg)
+            return alg
+        else:
+            return None
+
+    def redo(self, animation: bool = True) -> Alg | None:
+        """Redo the last undone operation. Pops from redo queue and plays forward.
+
+        :return: the redone alg, or None if redo queue is empty
+        """
+        if self._redo_queue:
+            alg = self._redo_queue.pop()
+            self._in_undo_redo = True
+            try:
+                self.play(alg, animation=animation)
+            finally:
+                self._in_undo_redo = False
             return alg
         else:
             return None
@@ -232,6 +258,23 @@ class Operator(OperatorProtocol):
         """Get the service provider."""
         return self.cube.sp
 
+
+    def redo_queue(self) -> Sequence[Alg]:
+        """Get the redo queue (operations available for redo)."""
+        return self._redo_queue[:]
+
+    def clear_redo(self) -> None:
+        """Clear the redo queue."""
+        self._redo_queue.clear()
+
+    def enqueue_redo(self, algs: Sequence[Alg]) -> None:
+        """Replace the redo queue with the given algorithms (e.g., solver solution).
+
+        Stores in reversed order so that pop() (LIFO) yields the first step
+        first — matching the same pop() semantics used by manual undo/redo.
+        """
+        self._redo_queue.clear()
+        self._redo_queue.extend(reversed(algs))
 
     def history(self, *, remove_scramble: bool = False) -> Sequence[Alg]:
         """
@@ -274,15 +317,16 @@ class Operator(OperatorProtocol):
     def count(self):
         return functools.reduce(lambda n, a: n + a.count(), self._history, 0)
 
-    def reset(self):
+    def reset(self) -> None:
         """
-        Reset the cube and clear the history.
+        Reset the cube and clear the history and redo queue.
         So,:meth: `count` will return zero
         :return:
         """
         self._aborted = False
         self._cube.reset()
         self._history.clear()
+        self._redo_queue.clear()
 
     @contextmanager
     def with_animation(self, animation: bool | None = None):

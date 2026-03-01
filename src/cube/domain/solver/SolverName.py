@@ -71,7 +71,7 @@ class SolverName(Enum):
     CFOP = SolverMeta("CFOP", skip_2x2="CFOP needs edges/centers (3x3+)")
     KOCIEMBA = SolverMeta("Kociemba", skip_2x2="Kociemba needs edges/centers (3x3+)")
     CAGE = SolverMeta("Cage", skip_2x2="Cage needs edges/centers (3x3+)")
-    LBL_BIG = SolverMeta("LBL-Big", skip_2x2="LBL-Big needs edges/centers (3x3+)")
+    REDUCER = SolverMeta("Reducer", skip_2x2="Reducer needs edges/centers (3x3+)")
     TWO_BY_TWO = SolverMeta("2x2", only_2x2="2x2 solver only supports 2x2 cubes")
 
     @property

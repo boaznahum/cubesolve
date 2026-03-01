@@ -2,9 +2,14 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from enum import Enum, auto
+from typing import TYPE_CHECKING
+
 from cube.domain.solver.protocols.OperatorProtocol import OperatorProtocol
 from cube.domain.solver.protocols.SolverElementsProvider import SolverElementsProvider
 from cube.domain.solver.SolverName import SolverName
+
+if TYPE_CHECKING:
+    from cube.domain.algs.Alg import Alg
 
 from cube.domain.solver.common.CenterBlockStatistics import CenterBlockStatistics
 
@@ -53,7 +58,7 @@ class SolveStep(Enum):
     # Cage method step
     Cage = ("Cage", "Cage", "Cage (Edges + Corners)")
 
-    # LBL-Big method steps (layer-by-layer for big cubes)
+    # Reducer method steps (layer-by-layer for big cubes)
     LBL_L1_Ctr = ("LBL_L1_Ctr", "L1Ctr", "Layer 1 Centers")
     LBL_L1_EDGES = ("LBL_L1_Edges", "L1Edg", "Layer 1 Edges")
     LBL_L1 = ("LBL_L1", "L1", "Layer 1 Complete")
@@ -157,6 +162,16 @@ class Solver(SolverElementsProvider, ABC):
 
         Returns:
             SolverResults with parity information
+        """
+        pass
+
+    @abstractmethod
+    def solution(self) -> Alg:
+        """Compute the full solution without modifying the cube.
+
+        Solves the cube with animation OFF, records all moves, then undoes
+        them so the cube returns to its original state. Returns the solution
+        as an Alg that can be replayed with op.play().
         """
         pass
 

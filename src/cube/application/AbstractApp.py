@@ -118,6 +118,11 @@ class AbstractApp(metaclass=ABCMeta):
     def switch_to_next_solver(self) -> Solver:
         raise NotImplementedError
 
+    @abstractmethod
+    def switch_to_solver(self, name: SolverName) -> Solver:
+        """Switch to a specific solver by name."""
+        raise NotImplementedError
+
     @property
     @abstractmethod
     def cube(self) -> "Cube":
