@@ -163,9 +163,9 @@ class ClientSession:
         self._send(json.dumps({
             "type": "speed_update",
             "value": speed_index,
-            "step": cfg.animation_speed_step,
-            "d0": cfg.animation_speed_d0,
-            "dn": cfg.animation_speed_dn,
+            "step": cfg.animation_speed_config.step,
+            "d0": cfg.animation_speed_config.d0,
+            "dn": cfg.animation_speed_config.dn,
         }))
 
     def send_size(self) -> None:
@@ -185,6 +185,8 @@ class ClientSession:
             "solver_list": solver_list,
             "slice_start": vs.slice_start,
             "slice_stop": vs.slice_stop,
+            "assist_enabled": app.config.assist_config.enabled,
+            "assist_delay_ms": app.config.assist_config.delay_ms,
         }))
 
     def send_color_map(self) -> None:
@@ -945,8 +947,15 @@ class ClientSession:
 
     def _fast_play_step(self) -> None:
         op = self._app.op
-        if not self._fast_playing or not op.redo_queue():
+        if not self._fast_playing:
             self._finish_fast_play()
+            return
+        if not op.redo_queue():
+            # Queue empty — but the last move's animation is still playing
+            # on the client. Delay playing(False) by one animation duration
+            # so the client finishes the animation before Stop is disabled.
+            delay = self._animation_duration_sec()
+            self.schedule_once(lambda _dt: self._finish_fast_play(), delay)
             return
         if not op.animation_enabled:
             # Animation OFF: apply all remaining moves instantly
@@ -973,8 +982,13 @@ class ClientSession:
 
     def _fast_rewind_step(self) -> None:
         op = self._app.op
-        if not self._fast_playing or not op.history():
+        if not self._fast_playing:
             self._finish_fast_play()
+            return
+        if not op.history():
+            # History empty — last move's animation still playing on client.
+            delay = self._animation_duration_sec()
+            self.schedule_once(lambda _dt: self._finish_fast_play(), delay)
             return
         if not op.animation_enabled:
             # Animation OFF: undo all remaining moves instantly
@@ -1002,8 +1016,8 @@ class ClientSession:
         """
         cfg = self._app.config
         vs = self._app.vs
-        d0: float = cfg.animation_speed_d0
-        dn: float = cfg.animation_speed_dn
+        d0: float = cfg.animation_speed_config.d0
+        dn: float = cfg.animation_speed_config.dn
         i: float = vs.get_speed_index
         duration_ms: float = d0 * (dn / d0) ** (i / 7.0)
         return max(0.01, duration_ms / 1000.0)

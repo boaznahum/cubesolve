@@ -17,6 +17,34 @@ if TYPE_CHECKING:
 
 
 @runtime_checkable
+class AnimationSpeedConfigProtocol(Protocol):
+    """Protocol for animation speed configuration."""
+
+    @property
+    def default_index(self) -> float: ...
+
+    @property
+    def step(self) -> float: ...
+
+    @property
+    def d0(self) -> float: ...
+
+    @property
+    def dn(self) -> float: ...
+
+
+@runtime_checkable
+class AssistConfigProtocol(Protocol):
+    """Protocol for assist mode configuration."""
+
+    @property
+    def enabled(self) -> bool: ...
+
+    @property
+    def delay_ms(self) -> int: ...
+
+
+@runtime_checkable
 class ArrowConfigProtocol(Protocol):
     """Protocol for 3D arrow configuration.
 
@@ -308,23 +336,13 @@ class ConfigProtocol(Protocol):
         ...
 
     @property
-    def animation_speed(self) -> float:
-        """Default animation speed index (0-7, higher is faster)."""
+    def animation_speed_config(self) -> AnimationSpeedConfigProtocol:
+        """Animation speed parameters for WebGL frontend."""
         ...
 
     @property
-    def animation_speed_step(self) -> float:
-        """Step size between adjacent speed dropdown options (default 0.5)."""
-        ...
-
-    @property
-    def animation_speed_d0(self) -> float:
-        """Duration in ms at speed index 0 — the slowest (default 500)."""
-        ...
-
-    @property
-    def animation_speed_dn(self) -> float:
-        """Duration in ms at speed index 7 — the fastest (default 50)."""
+    def assist_config(self) -> AssistConfigProtocol:
+        """Assist mode configuration for WebGL frontend."""
         ...
 
     @property
