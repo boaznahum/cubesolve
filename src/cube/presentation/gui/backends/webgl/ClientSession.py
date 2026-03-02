@@ -896,7 +896,7 @@ class ClientSession:
             else:
                 slice_alg_base = Algs.S
                 neg_slice_index = face_name == FaceName.D
-                inv = face_name == FaceName.U
+                inv = face_name == FaceName.D
         else:
             return Algs.M
 
