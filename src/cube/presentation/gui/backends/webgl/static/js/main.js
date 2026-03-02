@@ -77,6 +77,14 @@ const historyPanel = new HistoryPanel(send, animQueue);
 // ── Move indicator (next-move arrows) ──
 const moveIndicator = new MoveIndicator(cubeModel, scene);
 
+/** Check if assist is active (respects local user override). */
+function isAssistActive() {
+    if (toolbar._assistLocalOverride !== undefined) {
+        return toolbar._assistLocalOverride;
+    }
+    return state.assistEnabled;
+}
+
 // Wire debug overlay callback from AnimationQueue → Toolbar
 animQueue._onDebugUpdate = (alg, layers, count) => toolbar.updateDebug(alg, layers, count);
 
@@ -87,15 +95,16 @@ animQueue._onAllDone = () => {
     if (stopBtn && !state.isPlaying) {
         stopBtn.disabled = true;
     }
-    // Re-show move indicators (but not during autoplay)
+    // Re-show move indicators (but not during autoplay, and only if assist is on)
     if (state.isPlaying) return;
-    if (state.nextMove) {
+    if (isAssistActive() && state.nextMove) {
         moveIndicator.show(state.nextMove);
     }
 };
 
 // Wire assist preview callbacks from AnimationQueue → MoveIndicator
 animQueue._onAssistShow = (face, layers, direction, isUndo) => {
+    if (!isAssistActive()) return;
     moveIndicator.show({ face, layers, direction }, { isUndo });
 };
 animQueue._onAssistHide = () => {
@@ -139,19 +148,21 @@ function handleMessage(msg) {
             toolbar.updateFromState(state);
             historyPanel.updateFromState(state);
 
-            // Update assist delay from state
-            animQueue.assistDelayMs = state.assistEnabled ? state.assistDelayMs : 0;
+            // Update assist delay from state (skip if user locally overrode assist checkbox)
+            if (toolbar._assistLocalOverride === undefined) {
+                animQueue.assistDelayMs = state.assistEnabled ? state.assistDelayMs : 0;
+            }
 
             // Save session ID
             if (state.sessionId) {
                 localStorage.setItem('cube_session_id', state.sessionId);
             }
 
-            // Show next-move indicators if not animating and not in autoplay
-            if (!state.isPlaying && !animQueue.isBusy) {
+            // Show next-move indicators if assist is on, not animating, not in autoplay
+            if (isAssistActive() && !state.isPlaying && !animQueue.isBusy) {
                 moveIndicator.show(state.nextMove);
             }
-            if (state.isPlaying && !wasPlaying) {
+            if ((state.isPlaying && !wasPlaying) || !isAssistActive()) {
                 moveIndicator.hide();
             }
 

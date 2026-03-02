@@ -97,6 +97,18 @@ class ClientSession:
         am.set_web_window(self)
         self._animation_manager: WebglAnimationManager = am
 
+        # Wrap op.undo so _is_undo flag is set automatically for ALL undo paths
+        _orig_undo = self._app.op.undo
+
+        def _undo_with_flag(*args: object, **kwargs: object) -> object:
+            am._is_undo = True
+            try:
+                return _orig_undo(*args, **kwargs)
+            finally:
+                am._is_undo = False
+
+        self._app.op.undo = _undo_with_flag  # type: ignore[assignment]
+
         # Client-initiated playback state
         self._fast_playing: bool = False
 
@@ -649,14 +661,11 @@ class ClientSession:
 
         if command_name == "undo":
             self._redo_is_solver = False  # Manual undo → redo items are not solver
-            self._animation_manager._is_undo = True
             self._app.op.undo(animation=True)
-            self._animation_manager._is_undo = False
             self.send_state()
             return
 
         if command_name == "redo":
-            self._animation_manager._is_undo = False
             self._app.op.redo(animation=True)
             self.send_state()
             return
@@ -893,6 +902,7 @@ class ClientSession:
             if face.is_bottom_or_top(part):
                 slice_alg_base = Algs.M
                 neg_slice_index = False
+                inv = True
             else:
                 slice_alg_base = Algs.S
                 neg_slice_index = face_name == FaceName.D
@@ -1071,12 +1081,10 @@ class ClientSession:
             return
 
         # Pop one move with animation — may queue multiple items in AM
-        am._is_undo = not forward
         if forward:
             op.redo(animation=True)
         else:
             op.undo(animation=True)
-        am._is_undo = False
 
         # If AM is idle after the move (non-animatable was processed instantly),
         # recurse to get the next animatable move or reach empty

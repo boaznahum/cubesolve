@@ -105,9 +105,9 @@ export class Toolbar {
             }
         }
 
-        // Assist checkbox
+        // Assist checkbox — only set from server if user hasn't locally overridden
         const chkAssist = document.getElementById('chk-assist');
-        if (chkAssist) {
+        if (chkAssist && this._assistLocalOverride === undefined) {
             chkAssist.checked = appState.assistEnabled;
         }
 
@@ -282,7 +282,7 @@ export class Toolbar {
             this._assistDelayMs = msg.assist_delay_ms;
         }
         const chkAssist = document.getElementById('chk-assist');
-        if (chkAssist && msg.assist_enabled !== undefined) {
+        if (chkAssist && msg.assist_enabled !== undefined && this._assistLocalOverride === undefined) {
             chkAssist.checked = msg.assist_enabled;
             this._animQueue.assistDelayMs = msg.assist_enabled ? this._assistDelayMs : 0;
         }
@@ -366,7 +366,9 @@ export class Toolbar {
         const chkAssist = document.getElementById('chk-assist');
         if (chkAssist) {
             chkAssist.addEventListener('change', () => {
+                this._assistLocalOverride = chkAssist.checked;
                 this._animQueue.assistDelayMs = chkAssist.checked ? (this._assistDelayMs || 400) : 0;
+                chkAssist.blur();  // Release focus so keyboard handler works
             });
         }
 
