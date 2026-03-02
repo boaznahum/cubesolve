@@ -7,7 +7,7 @@ scramble should be entred to queue not as one log, it should be fanout first !!!
 
 # B. ✅undo show assist in the wrong direction, the operation is revered
 
-# C. mouse E slices on U and D are reversed, all other slices/faces are OK
+# C. ✅ mouse E slices on U and D are reversed, all other slices/faces are OK
 
 # D. ❓Need to check queue control on phone 
 
