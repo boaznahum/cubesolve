@@ -115,56 +115,6 @@ export class Toolbar {
         this._updateSliceOverlay(appState.sliceStart, appState.sliceStop);
     }
 
-    /** Handle a server message that affects toolbar/overlays (legacy). */
-    handleMessage(msg) {
-        switch (msg.type) {
-            case 'playing': {
-                const btn = document.getElementById('btn-stop');
-                if (btn) {
-                    btn.disabled = !msg.value;
-                }
-                break;
-            }
-
-            case 'play_empty':
-                // Server has no more moves — stop playback mode
-                this._animQueue.stopPlayback();
-                break;
-
-            case 'text_update':
-                this._updateTextOverlays(msg);
-                break;
-
-            case 'version':
-                this._state.update({ version: msg.version || '' });
-                this._updateStatusBar();
-                break;
-
-            case 'client_count':
-                this._state.update({ clientCount: msg.count || 0 });
-                this._updateStatusBar();
-                break;
-
-            case 'speed_update':
-                this._buildSpeedDropdown(msg.step || 0.5, msg.d0 || 500, msg.dn || 50);
-                document.getElementById('speed-select').value = msg.value;
-                break;
-
-            case 'size_update':
-                document.getElementById('size-select').value = msg.value;
-                break;
-
-            case 'toolbar_state':
-                this._updateToolbar(msg);
-                break;
-
-            case 'session_id':
-                this._state.update({ sessionId: msg.session_id });
-                localStorage.setItem('cube_session_id', msg.session_id);
-                break;
-        }
-    }
-
     /** Update debug overlay (called from AnimationQueue via callback). */
     updateDebug(alg, layers, count) {
         const el = document.getElementById('debug-overlay');
@@ -183,37 +133,6 @@ export class Toolbar {
                 <span class="seg-value">${count}</span>
             </span>
         `;
-    }
-
-    // ── Text overlays ──
-
-    _updateTextOverlays(msg) {
-        // Animation text
-        if (this._animOverlay) {
-            let html = '';
-            if (msg.animation) {
-                for (const line of msg.animation) {
-                    const style = `color:${line.color}; font-size:${line.size}px; font-weight:${line.bold ? 'bold' : 'normal'}`;
-                    html += `<div class="anim-line" style="${style}">${this._esc(line.text)}</div>`;
-                }
-            }
-            this._animOverlay.innerHTML = html;
-        }
-
-        // Status overlay
-        if (this._statusOverlay) {
-            let html = '';
-            if (msg.solver) {
-                html += `<span class="seg seg-solver"><span class="seg-label">Solver</span><span class="seg-value">${this._esc(msg.solver)}</span></span>`;
-            }
-            if (msg.status) {
-                html += `<span class="seg seg-status"><span class="seg-label">Status</span><span class="seg-value">${this._esc(msg.status)}</span></span>`;
-            }
-            if (msg.moves !== undefined) {
-                html += `<span class="seg seg-moves"><span class="seg-label">Moves</span><span class="seg-value">${msg.moves}</span></span>`;
-            }
-            this._statusOverlay.innerHTML = html;
-        }
     }
 
     _buildSpeedDropdown(step, d0, dn) {
@@ -245,52 +164,6 @@ export class Toolbar {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
-    }
-
-    // ── Toolbar ──
-
-    _updateToolbar(msg) {
-        // Debug toggle
-        const btnDebug = document.getElementById('btn-debug');
-        if (btnDebug) {
-            btnDebug.textContent = msg.debug ? 'Dbg:ON' : 'Dbg:OFF';
-            btnDebug.className = 'tb-btn ' + (msg.debug ? 'tb-on' : 'tb-off');
-        }
-
-        // Animation toggle
-        const btnAnim = document.getElementById('btn-anim');
-        if (btnAnim) {
-            btnAnim.textContent = msg.animation ? 'Anim:ON' : 'Anim:OFF';
-            btnAnim.className = 'tb-btn ' + (msg.animation ? 'tb-on' : 'tb-off');
-        }
-
-        // Solver list
-        const sel = document.getElementById('solver-select');
-        if (sel && msg.solver_list) {
-            sel.innerHTML = '';
-            for (const name of msg.solver_list) {
-                const opt = document.createElement('option');
-                opt.value = name;
-                opt.textContent = name;
-                if (name === msg.solver_name) opt.selected = true;
-                sel.appendChild(opt);
-            }
-        }
-
-        // Assist config from server
-        if (msg.assist_delay_ms !== undefined) {
-            this._assistDelayMs = msg.assist_delay_ms;
-        }
-        const chkAssist = document.getElementById('chk-assist');
-        if (chkAssist && msg.assist_enabled !== undefined && this._assistLocalOverride === undefined) {
-            chkAssist.checked = msg.assist_enabled;
-            this._animQueue.assistDelayMs = msg.assist_enabled ? this._assistDelayMs : 0;
-        }
-
-        // Slice selection display
-        const sliceStart = msg.slice_start || 0;
-        const sliceStop = msg.slice_stop || 0;
-        this._updateSliceOverlay(sliceStart, sliceStop);
     }
 
     _updateSliceOverlay(start, stop) {
