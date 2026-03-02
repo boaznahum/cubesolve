@@ -12,7 +12,10 @@ import os
 from cube.application import _config as cfg
 from cube.config.face_tracer_config import FaceTrackerConfig, TrackerIndicatorConfig
 from cube.domain.model.Color import Color
-from cube.utils.config_protocol import AnimationTextDef, ArrowConfigProtocol, ConfigProtocol, MarkerDef
+from cube.utils.config_protocol import (
+    AnimationSpeedConfigProtocol, AnimationTextDef, ArrowConfigProtocol,
+    AssistConfigProtocol, ConfigProtocol, MarkerDef,
+)
 from cube.utils.markers_config import MarkersConfig
 from cube.utils.SSCode import SSCode
 
@@ -263,24 +266,14 @@ class AppConfig(ConfigProtocol):
         return cfg.animation_enabled
 
     @property
-    def animation_speed(self) -> float:
-        """Default animation speed index (higher is faster)."""
-        return max(0.0, min(7.0, float(cfg.ANIMATION_SPEED)))
+    def animation_speed_config(self) -> AnimationSpeedConfigProtocol:
+        """Animation speed parameters for WebGL frontend."""
+        return cfg.ANIMATION_SPEED_CONFIG
 
     @property
-    def animation_speed_step(self) -> float:
-        """Step size between adjacent speed dropdown options."""
-        return max(0.1, float(cfg.ANIMATION_SPEED_STEP))
-
-    @property
-    def animation_speed_d0(self) -> float:
-        """Duration in ms at speed index 0 (slowest)."""
-        return max(1.0, float(cfg.ANIMATION_SPEED_D0))
-
-    @property
-    def animation_speed_dn(self) -> float:
-        """Duration in ms at speed index 7 (fastest)."""
-        return max(1.0, float(cfg.ANIMATION_SPEED_DN))
+    def assist_config(self) -> AssistConfigProtocol:
+        """Assist mode configuration for WebGL frontend."""
+        return cfg.ASSIST_CONFIG
 
     @property
     def show_file_algs(self) -> bool:
