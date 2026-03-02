@@ -10,7 +10,7 @@ static/
   js/
     main.js               <- Entry point, wires all components
     constants.js           <- Colors, FACE_DEFS, geometry helpers
-    AppState.js            <- Central state store (EventTarget)
+    AppState.js            <- Central state store (unified snapshot receiver)
     CubeModel.js           <- Three.js geometry + sticker colors
     AnimationQueue.js      <- Animation state machine (queue + easing)
     ArrowGuide.js          <- Visual drag-direction arrows
@@ -20,17 +20,44 @@ static/
     Toolbar.js             <- DOM toolbar + overlays + keyboard
 ```
 
-## Data Flow
+## Data Flow — Unified State Snapshot
+
+The server sends a single `state` message containing ALL application state
+after every state change. The client applies this snapshot atomically.
 
 ```
-WsClient receives message
-  -> dispatches to handler
-    -> AppState.update(patch)        <- central state change
-      -> Toolbar listens -> updates DOM
-      -> CubeModel listens -> updates 3D
-    -> AnimationQueue.enqueue()      <- animation events
-    -> CubeModel.updateFromState()   <- direct state updates
+Server state change (any)
+  -> ClientSession._build_state_snapshot()   <- gather ALL state
+  -> send_state()                            <- ONE JSON message
+
+WsClient receives 'state' message
+  -> AppState.applyServerSnapshot(msg)       <- update ALL fields
+  -> Toolbar.updateFromState(appState)       <- update DOM from state
+  -> HistoryPanel.updateFromState(appState)  <- update history UI
+  -> CubeModel.updateFromState(latestState)  <- update 3D (if not animating)
 ```
+
+### Separate event messages (NOT state, real-time events)
+
+```
+animation_start  (server → client)   Start a 3D face rotation
+animation_done   (client → server)   Animation finished, ack
+play_next_redo   (client → server)   Request next forward move
+play_next_undo   (client → server)   Request next backward move
+play_empty       (server → client)   No more moves to play
+flush_queue      (server → client)   Clear pending animations
+color_map        (server → client)   One-time on connect (static)
+```
+
+### State ownership
+
+| State | Owner | Notes |
+|-------|-------|-------|
+| Cube, history, config, is_playing | Server (in snapshot) | Single source of truth |
+| currentAnim, queue, playbackMode | Client (AnimationQueue) | Rendering concern |
+| _stopRequested | Client (AnimationQueue) | Client remembers to stop after current |
+| Camera, orbit controls | Client (OrbitControls) | Pure rendering |
+| Stop button enabled | Derived: server.isPlaying OR client.hasAnimation | Both sides considered |
 
 ## Module Dependencies
 

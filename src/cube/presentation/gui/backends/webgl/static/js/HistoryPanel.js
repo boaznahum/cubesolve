@@ -63,7 +63,28 @@ export class HistoryPanel {
     }
 
     /**
-     * Update from server history_state message.
+     * Update from unified AppState snapshot.
+     * Replaces both updateFromServer() and setPlaying().
+     */
+    updateFromState(appState) {
+        this._doneItems = (appState.historyDone || []).map((item, i) => ({
+            alg: item.alg,
+            type: item.type || 'move',
+            index: i + 1,
+        }));
+        this._redoItems = (appState.historyRedo || []).map((item, i) => ({
+            alg: item.alg,
+            type: item.type || 'move',
+            index: (appState.historyDone || []).length + i + 1,
+        }));
+        this._redoSource = appState.redoSource || 'undo';
+        this._redoTainted = appState.redoTainted || false;
+        this._isPlaying = appState.isPlaying;
+        this._render();
+    }
+
+    /**
+     * Update from server history_state message (legacy).
      * msg: { done: [{alg, type}], redo: [{alg, type}], redo_source: "solver"|"undo" }
      */
     updateFromServer(msg) {

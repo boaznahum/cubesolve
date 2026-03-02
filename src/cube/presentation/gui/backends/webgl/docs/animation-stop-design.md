@@ -1,6 +1,12 @@
 # Animation Queue & Stop Button — Design Document
 
-## Problem
+> **Note (2026-03-02):** This document describes the original timer-based architecture.
+> The implementation has since moved to a **client-initiated pull model** with a
+> **unified state snapshot**. The stop button state is now derived from:
+> `stopButton.disabled = !(server.isPlaying || client.hasActiveAnimation)`
+> See `design.md` for the current architecture.
+
+## Problem (historical)
 
 The stop button must be **enabled throughout a multi-move sequence** (solve,
 scramble) and **disabled for single moves** (individual face rotations).

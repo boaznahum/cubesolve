@@ -105,6 +105,13 @@ export class AnimationQueue {
     }
 
     /**
+     * True when queue has pending work: animating, previewing, or queued items.
+     */
+    get isBusy() {
+        return this.currentAnim !== null || this._previewState !== null || this.queue.length > 0;
+    }
+
+    /**
      * Update animation progress (called each frame).
      * Returns true if an animation is active.
      */

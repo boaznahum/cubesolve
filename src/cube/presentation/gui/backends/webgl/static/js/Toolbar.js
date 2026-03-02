@@ -20,7 +20,102 @@ export class Toolbar {
         this._bindKeyboard();
     }
 
-    /** Handle a server message that affects toolbar/overlays. */
+    /** Update all toolbar UI from the unified AppState snapshot. */
+    updateFromState(appState) {
+        // Stop button: enabled if server says playing OR client has active animation
+        const stopBtn = document.getElementById('btn-stop');
+        if (stopBtn) {
+            const clientBusy = this._animQueue.playbackMode !== null
+                || this._animQueue.currentAnim !== null
+                || this._animQueue.queue.length > 0;
+            stopBtn.disabled = !(appState.isPlaying || clientBusy);
+        }
+
+        // Text overlays
+        this._updateTextOverlaysFromState(appState);
+
+        // Status bar
+        this._state.version = appState.version;
+        this._state.clientCount = appState.clientCount;
+        this._updateStatusBar();
+
+        // Speed dropdown
+        this._buildSpeedDropdown(appState.speedStep, appState.speedD0, appState.speedDn);
+        document.getElementById('speed-select').value = appState.speedIndex;
+
+        // Size dropdown
+        document.getElementById('size-select').value = appState.cubeSize;
+
+        // Toolbar toggles + solver list
+        this._updateToolbarFromState(appState);
+    }
+
+    _updateTextOverlaysFromState(appState) {
+        // Animation text
+        if (this._animOverlay) {
+            let html = '';
+            for (const line of appState.animationText) {
+                const style = `color:${line.color}; font-size:${line.size}px; font-weight:${line.bold ? 'bold' : 'normal'}`;
+                html += `<div class="anim-line" style="${style}">${this._esc(line.text)}</div>`;
+            }
+            this._animOverlay.innerHTML = html;
+        }
+
+        // Status overlay
+        if (this._statusOverlay) {
+            let html = '';
+            if (appState.solverText) {
+                html += `<span class="seg seg-solver"><span class="seg-label">Solver</span><span class="seg-value">${this._esc(appState.solverText)}</span></span>`;
+            }
+            if (appState.statusText) {
+                html += `<span class="seg seg-status"><span class="seg-label">Status</span><span class="seg-value">${this._esc(appState.statusText)}</span></span>`;
+            }
+            if (appState.moveCount !== undefined) {
+                html += `<span class="seg seg-moves"><span class="seg-label">Moves</span><span class="seg-value">${appState.moveCount}</span></span>`;
+            }
+            this._statusOverlay.innerHTML = html;
+        }
+    }
+
+    _updateToolbarFromState(appState) {
+        // Debug toggle
+        const btnDebug = document.getElementById('btn-debug');
+        if (btnDebug) {
+            btnDebug.textContent = appState.debug ? 'Dbg:ON' : 'Dbg:OFF';
+            btnDebug.className = 'tb-btn ' + (appState.debug ? 'tb-on' : 'tb-off');
+        }
+
+        // Animation toggle
+        const btnAnim = document.getElementById('btn-anim');
+        if (btnAnim) {
+            btnAnim.textContent = appState.animationEnabled ? 'Anim:ON' : 'Anim:OFF';
+            btnAnim.className = 'tb-btn ' + (appState.animationEnabled ? 'tb-on' : 'tb-off');
+        }
+
+        // Solver list
+        const sel = document.getElementById('solver-select');
+        if (sel && appState.solverList.length > 0) {
+            sel.innerHTML = '';
+            for (const name of appState.solverList) {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = name;
+                if (name === appState.solverName) opt.selected = true;
+                sel.appendChild(opt);
+            }
+        }
+
+        // Assist checkbox
+        const chkAssist = document.getElementById('chk-assist');
+        if (chkAssist) {
+            chkAssist.checked = appState.assistEnabled;
+        }
+
+        // Slice selection display
+        this._updateSliceOverlay(appState.sliceStart, appState.sliceStop);
+    }
+
+    /** Handle a server message that affects toolbar/overlays (legacy). */
     handleMessage(msg) {
         switch (msg.type) {
             case 'playing': {
