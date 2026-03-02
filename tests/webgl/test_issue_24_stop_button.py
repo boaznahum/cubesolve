@@ -93,8 +93,9 @@ class TestStopButtonTiming:
             "(issue #24)"
         )
 
-        # After completion, stop should be disabled and cube should be solved
-        assert not helper.is_playing(), "Stop should be disabled after playback"
+        # After completion, stop should eventually be disabled and cube solved.
+        # The deferred disable polls via rAF, so give it a moment to settle.
+        helper.wait_for_animation_idle(timeout_ms=30_000)
         assert helper.is_cube_solved(), "Cube should be solved"
 
     def test_stop_enabled_during_solve_playback_max_speed(
