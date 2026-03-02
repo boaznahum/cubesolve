@@ -36,3 +36,7 @@ the queu it tool big, we can remove the indexing and put many algs in one line s
     Example: resize cube to 10x10, press Q (new session), nothing visually changes,
     scramble — still 10x10, press Q again — now shows 3x3. The scattered send calls
     mean some state updates are missed on the first reset.
+
+24 fuck !!! ht emssing central state machine, stop become dsiabled before qube  completly solved
+   it seems that there are waitng animation qui but gui thibj it is laready solved 
+    vefore you fix add a test in tests/webgl !!!
