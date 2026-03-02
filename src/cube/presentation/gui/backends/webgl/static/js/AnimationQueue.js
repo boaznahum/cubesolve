@@ -179,7 +179,7 @@ export class AnimationQueue {
 
         // Assist preview: show indicator and delay before starting rotation
         if (this.assistDelayMs > 0 && this._onAssistShow) {
-            this._onAssistShow(face, event.layers || [0], event.direction || 1);
+            this._onAssistShow(face, event.layers || [0], event.direction || 1, !!event.is_undo);
             this._previewState = {
                 startTime: performance.now(),
                 event, state, face, speedMult
