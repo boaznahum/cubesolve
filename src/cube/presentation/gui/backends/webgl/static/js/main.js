@@ -204,16 +204,6 @@ function handleMessage(msg) {
         case 'color_map':
             cubeModel.buildColorCorrections(msg.colors);
             break;
-
-        default:
-            // Legacy message types (kept for backward compatibility during migration)
-            toolbar.handleMessage(msg);
-            if (msg.type === 'playing') {
-                state.isPlaying = msg.value;
-                if (msg.value) moveIndicator.hide();
-                historyPanel.setPlaying(msg.value);
-            }
-            break;
     }
 }
 

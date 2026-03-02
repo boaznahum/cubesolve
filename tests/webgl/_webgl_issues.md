@@ -12,3 +12,7 @@ scramble should be entred to queue not as one log, it should be fanout first !!!
 # D. ❓Need to check queue control on phone 
 
 # E. ✅some of the assist are in the worng idrection !!!
+
+# when play all from queue, the queu jump to next, but assit is of the current, so it ocnfuse
+  not sure weh ave a slution for this
+  

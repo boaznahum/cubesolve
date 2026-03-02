@@ -32,53 +32,49 @@ Replace fragmented state management (~10 individual `send_*()` calls) with a sin
 - All 9 WebGL tests pass
 - Added `tests/webgl/test_startup_state.py` — 3 tests for startup state
 
-## Current Task: Assist Arrows for Keyboard Operations
-
-### Goal
-When assist is ON, show gesture/assist arrows for user keyboard operations too (not just queue playback). This helps debug the "some assists are in the wrong direction" issue by letting the user see arrow directions for every operation, independent of queue/undo/redo logic.
-
-### Context
-Currently the assist system has two modes:
-1. **Static next-move indicators** — chevrons shown when idle, based on `state.nextMove` (peek at redo queue)
-2. **Pre-animation assist preview** — brief arrow flash before each queued animation (`assistDelayMs`)
-
-The pre-animation preview already fires for keyboard ops via `AnimationQueue._processNext()`, but the user wants to ensure arrows are clearly visible for all keyboard-initiated moves to verify direction correctness.
-
-### Key Files
-- `static/js/MoveIndicator.js` — renders chevron arrows on affected stickers
-- `static/js/AnimationQueue.js` — manages assist preview delay before animations
-- `static/js/main.js` — wires assist show/hide callbacks
-- `ClientSession.py` — server-side command handling, `animation_start` message
-- `WebglAnimationManager.py` — sends animation events with face/layers/direction
-
-### What Was Done
+## Assist Arrows for Keyboard Operations (v1.20.1)
 - Found bug: `state` message arriving during assist preview phase overwrites arrows
-  - `main.js` state handler checked `!animQueue.currentAnim && queue.length === 0` but missed `_previewState`
-  - During preview: `currentAnim` is null, queue is empty (item dequeued into preview), so condition was true
-  - `moveIndicator.show(state.nextMove)` with null nextMove → hid the assist arrows
 - Fix: Added `get isBusy()` getter to `AnimationQueue` (includes `_previewState`)
 - Used `!animQueue.isBusy` in both state handler conditions in `main.js`
-- User tested all 12 basic face moves (F/F'/B/B'/U/U'/R/R'/L/L'/D/D') — all arrows correct
+- User tested all 12 basic face moves — all arrows correct
 
 ## Red Undo Assist Arrows (v1.20.2)
-- Server tags `animation_start` with `is_undo` flag (set around undo calls in AM)
+- Server tags `animation_start` with `is_undo` flag
 - Client renders undo assist arrows in red (`0xcc0000`) instead of black
-- Helps user visually distinguish undo from normal moves
 
-## Fix: Mouse E-Slices Reversed on U/D (v1.20.3)
-- Bug: horizontal drag on inner rows of U and D faces produced reversed rotation
-- Root cause: `_slice_on_edge_alg()` had `inv = face_name == FaceName.D` but should be `inv = face_name == FaceName.U`
-- One-line fix in `ClientSession.py` line 899
+## Fix: Mouse M-Slices Reversed on U/D (v1.20.5)
+- Bug: vertical drag on middle column of U/D faces produced reversed M-slice
+- Root cause: `_slice_on_edge_alg()` was missing `inv = True` in the `is_bottom_or_top` branch for U/D
+- Fix: Added `inv = True` to the U/D `is_bottom_or_top` branch in `ClientSession.py`
+
+## Universal Undo Flag (v1.20.5)
+- User complained undo from keyboard didn't show red arrows
+- Root cause: `_is_undo` flag was scattered across individual callers, missing keyboard undo
+- Fix: Wrap `op.undo` once at init time so ALL undo paths automatically set the flag
+
+## Assist Checkbox Bugs (v1.20.5)
+- Bug 1: Unchecking assist stole keyboard focus (INPUT tag check in keydown handler)
+  - Fix: `chkAssist.blur()` after change event
+- Bug 2: Any server state update reset assist checkbox to server value
+  - Fix: `_assistLocalOverride` tracks user's local toggle, skips server overwrite
+- Bug 3: Static arrows still showed when assist was off
+  - Fix: `isAssistActive()` helper in main.js gates ALL arrow-showing
 
 ## Commits
 - `d8a0239c` — Fix assist arrows hidden during keyboard operations (v1.20.1)
 - `7e80137b` — Red assist arrows for undo operations (v1.20.2)
-- `5202f838` — Fix reversed mouse E-slices on U and D faces (v1.20.3)
+- `5202f838` — Fix reversed mouse E-slices on U/D faces (v1.20.3) — REVERTED
+- `3ac29861` — Revert wrong E-slice fix
+- `0e05d2a5` — Fix M-slice direction, universal undo flag, assist checkbox bugs (v1.20.5)
+
+## Next: Remove Legacy Message Handlers
+- Delete `handleMessage()`, `_updateToolbar()`, `_updateTextOverlays()` from Toolbar.js
+- Delete legacy `case` branches from main.js `default:` handler
+- Server-side: remove any `send_*()` methods that only sent legacy individual messages
 
 ## Known Bugs (to investigate)
-- User reports: "cube in startup whole gray" — could not reproduce in tests or Chrome
+- User reports: "cube in startup whole gray" — could not reproduce
 - User reports: "pressing solve stuck the application" — could not reproduce
-- These may be related to stale browser state or server restart timing
 
 ## Key Files
 ```

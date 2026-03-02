@@ -62,10 +62,7 @@ export class HistoryPanel {
         }
     }
 
-    /**
-     * Update from unified AppState snapshot.
-     * Replaces both updateFromServer() and setPlaying().
-     */
+    /** Update from unified AppState snapshot. */
     updateFromState(appState) {
         this._doneItems = (appState.historyDone || []).map((item, i) => ({
             alg: item.alg,
@@ -81,32 +78,6 @@ export class HistoryPanel {
         this._redoTainted = appState.redoTainted || false;
         this._isPlaying = appState.isPlaying;
         this._render();
-    }
-
-    /**
-     * Update from server history_state message (legacy).
-     * msg: { done: [{alg, type}], redo: [{alg, type}], redo_source: "solver"|"undo" }
-     */
-    updateFromServer(msg) {
-        this._doneItems = (msg.done || []).map((item, i) => ({
-            alg: item.alg,
-            type: item.type || 'move',
-            index: i + 1,
-        }));
-        this._redoItems = (msg.redo || []).map((item, i) => ({
-            alg: item.alg,
-            type: item.type || 'move',
-            index: this._doneItems.length + i + 1,
-        }));
-        this._redoSource = msg.redo_source || 'undo';
-        this._redoTainted = msg.redo_tainted || false;
-        this._render();
-    }
-
-    /** Update playing state (disable/enable buttons). */
-    setPlaying(playing) {
-        this._isPlaying = playing;
-        this._updateButtons();
     }
 
     _render() {

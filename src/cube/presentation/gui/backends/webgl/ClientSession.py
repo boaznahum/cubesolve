@@ -100,10 +100,10 @@ class ClientSession:
         # Wrap op.undo so _is_undo flag is set automatically for ALL undo paths
         _orig_undo = self._app.op.undo
 
-        def _undo_with_flag(*args: object, **kwargs: object) -> object:
+        def _undo_with_flag(animation: bool = True) -> "Alg | None":
             am._is_undo = True
             try:
-                return _orig_undo(*args, **kwargs)
+                return _orig_undo(animation)
             finally:
                 am._is_undo = False
 
@@ -259,47 +259,12 @@ class ClientSession:
         snapshot = self._build_state_snapshot()
         self._send(snapshot.to_json())
 
-    # -- Legacy send helpers (kept for event messages + backward compat) --
-
-    def send_version(self) -> None:
-        self._send(json.dumps({"type": "version", "version": get_version()}))
+    # -- Send helpers (event messages + client count) --
 
     def send_client_count(self, count: int) -> None:
         """Update client count and send full state snapshot."""
         self._client_count = count
         self.send_state()
-
-    def send_speed(self) -> None:
-        speed_index = self._app.vs.get_speed_index
-        cfg = self._app.config
-        self._send(json.dumps({
-            "type": "speed_update",
-            "value": speed_index,
-            "step": cfg.animation_speed_config.step,
-            "d0": cfg.animation_speed_config.d0,
-            "dn": cfg.animation_speed_config.dn,
-        }))
-
-    def send_size(self) -> None:
-        size = self._app.vs.cube_size
-        self._send(json.dumps({"type": "size_update", "value": size}))
-
-    def send_toolbar_state(self) -> None:
-        from cube.domain.solver.SolverName import SolverName
-        app = self._app
-        solver_list = [s.display_name for s in SolverName.user_visible()]
-        vs = app.vs
-        self._send(json.dumps({
-            "type": "toolbar_state",
-            "debug": app.config.solver_debug,
-            "animation": app.op.animation_enabled,
-            "solver_name": app.slv.name,
-            "solver_list": solver_list,
-            "slice_start": vs.slice_start,
-            "slice_stop": vs.slice_stop,
-            "assist_enabled": app.config.assist_config.enabled,
-            "assist_delay_ms": app.config.assist_config.delay_ms,
-        }))
 
     def send_color_map(self) -> None:
         """Send color name → RGB mapping to client (once at connection).
@@ -313,11 +278,6 @@ class ClientSession:
             rgb = color2rgb_int(color)
             colors[color.name.lower()] = list(rgb)
         self._send(json.dumps({"type": "color_map", "colors": colors}))
-
-    def send_cube_state(self) -> None:
-        """Send current cube face colors to the client."""
-        state = extract_cube_state(self._app.cube)
-        self._send(json.dumps(state))
 
     def send_animation_start(self, alg: "Alg", duration_ms: int, *, is_undo: bool = False) -> None:
         """Send animation start event with post-move state embedded.
@@ -372,73 +332,9 @@ class ClientSession:
             "state": state,
         }))
 
-    def send_animation_stop(self) -> None:
-        """Tell the client to stop all animations and snap to state."""
-        self._send(json.dumps({"type": "animation_stop"}))
-
-    def send_text(self) -> None:
-        """Send animation text and status info to this client."""
-        vs = self._app.vs
-        app = self._app
-        at = vs.animation_text
-
-        anim_lines: list[dict[str, object]] = []
-        animation_text_props = app.config.animation_text
-        for i in range(3):
-            line = at.get_line(i)
-            if line:
-                prop = animation_text_props[i]
-                color: tuple[int, int, int, int] = prop[3]
-                anim_lines.append({
-                    "text": line,
-                    "size": prop[2],
-                    "color": f"rgba({color[0]},{color[1]},{color[2]},{color[3] / 255:.2f})",
-                    "bold": prop[4],
-                })
-
-        slv = app.slv
-        self._send(json.dumps({
-            "type": "text_update",
-            "animation": anim_lines,
-            "status": slv.status,
-            "solver": slv.name,
-            "moves": app.op.count,
-        }))
-
-    def send_flush_queue(self) -> None:
-        self._send(json.dumps({"type": "flush_queue"}))
-
-    def send_playing(self, playing: bool) -> None:
-        self._send(json.dumps({"type": "playing", "value": playing}))
-
     def send_play_empty(self) -> None:
         """Tell client there are no more moves to play."""
         self._send(json.dumps({"type": "play_empty"}))
-
-    def send_history_state(self) -> None:
-        """Send current operation history and redo queue to the client."""
-        op = self._app.op
-        done: list[dict[str, str]] = [
-            {"alg": str(a), "type": self._classify_alg(a)}
-            for a in op.history()
-        ]
-        # redo_queue() is stored reversed (for LIFO pop), reverse for display order
-        redo_list: list["Alg"] = list(reversed(op.redo_queue()))
-        redo: list[dict[str, str]] = [
-            {"alg": str(a), "type": self._classify_alg(a)}
-            for a in redo_list
-        ]
-        msg: dict[str, object] = {
-            "type": "history_state",
-            "done": done,
-            "redo": redo,
-            "redo_source": "solver" if self._redo_is_solver and redo else "undo",
-            "redo_tainted": self._redo_tainted and bool(redo),
-        }
-        next_move = self._compute_next_move(redo_list)
-        if next_move is not None:
-            msg["next_move"] = next_move
-        self._send(json.dumps(msg))
 
     @staticmethod
     def _classify_alg(alg: "Alg") -> str:
@@ -520,12 +416,6 @@ class ClientSession:
             "type": alg_type,
         }
 
-    def send_session_id(self) -> None:
-        self._send(json.dumps({
-            "type": "session_id",
-            "session_id": self.client_info.session_id,
-        }))
-
     # -- Update --
 
     def update_gui_elements(self) -> None:
@@ -537,7 +427,6 @@ class ClientSession:
     def on_client_connected(self) -> None:
         """Send initial state to newly connected client."""
         print(f"Session {self.client_info.session_id[:8]} - sending initial state", flush=True)
-        self.send_session_id()
         self.send_color_map()
         self.send_state()
 
