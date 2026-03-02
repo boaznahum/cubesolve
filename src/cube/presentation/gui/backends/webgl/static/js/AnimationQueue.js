@@ -21,7 +21,7 @@ export class AnimationQueue {
         this._onAllDone = null;      // callback() when queue drains and no animation
 
         // Assist preview: show move indicator before each animation
-        this.assistDelayMs = 0;      // 0 = off, >0 = preview duration in ms
+        this.assistDelayMs = 400;    // default on; 0 = off, >0 = preview duration in ms
         this._onAssistShow = null;   // callback(face, layers, direction)
         this._onAssistHide = null;   // callback()
         this._previewState = null;   // { startTime, event, state, face, speedMult }
