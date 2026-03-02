@@ -947,15 +947,8 @@ class ClientSession:
 
     def _fast_play_step(self) -> None:
         op = self._app.op
-        if not self._fast_playing:
+        if not self._fast_playing or not op.redo_queue():
             self._finish_fast_play()
-            return
-        if not op.redo_queue():
-            # Queue empty — but the last move's animation is still playing
-            # on the client. Delay playing(False) by one animation duration
-            # so the client finishes the animation before Stop is disabled.
-            delay = self._animation_duration_sec()
-            self.schedule_once(lambda _dt: self._finish_fast_play(), delay)
             return
         if not op.animation_enabled:
             # Animation OFF: apply all remaining moves instantly
@@ -982,13 +975,8 @@ class ClientSession:
 
     def _fast_rewind_step(self) -> None:
         op = self._app.op
-        if not self._fast_playing:
+        if not self._fast_playing or not op.history():
             self._finish_fast_play()
-            return
-        if not op.history():
-            # History empty — last move's animation still playing on client.
-            delay = self._animation_duration_sec()
-            self.schedule_once(lambda _dt: self._finish_fast_play(), delay)
             return
         if not op.animation_enabled:
             # Animation OFF: undo all remaining moves instantly
