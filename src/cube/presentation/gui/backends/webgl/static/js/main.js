@@ -51,13 +51,13 @@ scene.add(dirLight2);
 // ── Cube model ──
 const cubeModel = new CubeModel(scene);
 
-// ── Animation queue ──
-const animQueue = new AnimationQueue(cubeModel);
-window._testAnimQueue = animQueue;  // Expose for E2E test assertions
-
 // ── WebSocket client ──
 const wsClient = new WsClient(handleMessage);
 const send = (msg) => wsClient.send(msg);
+
+// ── Animation queue ──
+const animQueue = new AnimationQueue(cubeModel, send);
+window._testAnimQueue = animQueue;  // Expose for E2E test assertions
 
 // ── Face turn handler ──
 const faceTurnHandler = new FaceTurnHandler(

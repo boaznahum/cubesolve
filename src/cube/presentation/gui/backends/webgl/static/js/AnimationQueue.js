@@ -11,8 +11,9 @@
 import * as THREE from 'three';
 
 export class AnimationQueue {
-    constructor(cubeModel) {
+    constructor(cubeModel, sendFn) {
         this.cubeModel = cubeModel;
+        this._send = sendFn || (() => {});  // WebSocket send function
         this.queue = [];
         this.currentAnim = null;
         this.pendingState = null;  // State to apply after all animations
@@ -237,6 +238,10 @@ export class AnimationQueue {
         this.cubeModel.resetPositions();
 
         this.currentAnim = null;
+
+        // Tell server this animation is done — server sends next move on ack
+        this._send({ type: 'animation_done' });
+
         if (this._stopRequested) {
             this._stopRequested = false;
             return;  // Don't process next — stop was requested
