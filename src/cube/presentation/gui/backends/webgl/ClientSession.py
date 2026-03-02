@@ -98,6 +98,7 @@ class ClientSession:
 
         # Fast-play/rewind state — step-by-step so stop can interrupt
         self._fast_playing: bool = False
+        self._fast_forward: bool = True
 
         # Track whether redo queue was filled by solver (for UI labels)
         self._redo_is_solver: bool = False
@@ -474,6 +475,13 @@ class ClientSession:
                 data.get("si", -1), data.get("sx", -1), data.get("sy", -1),
                 data.get("on_left_to_right", 0.0), data.get("on_left_to_top", 0.0),
             )
+
+        elif msg_type == "animation_done":
+            self._animation_manager.on_client_animation_done()
+            # Pull model: AM processed its queue. If fast-playing and AM
+            # is idle, feed the next redo/undo step.
+            if self._fast_playing and self._animation_manager.is_idle:
+                self._fast_play_next()
 
         elif msg_type == "resize":
             pass
@@ -932,84 +940,59 @@ class ClientSession:
             self.update_gui_elements()
 
     def _fast_play_redo(self) -> None:
-        """Play through the redo queue one step at a time.
-
-        Each step is scheduled after the animation duration so the stop
-        command can interrupt between steps.  Remaining redo items stay
-        in the queue when stopped.
-        """
+        """Play redo queue one move at a time via pull model."""
         op = self._app.op
         if not op.redo_queue() or self._fast_playing:
             return
         self._fast_playing = True
+        self._fast_forward = True
         self.send_playing(True)
-        self._fast_play_step()
-
-    def _fast_play_step(self) -> None:
-        op = self._app.op
-        if not self._fast_playing or not op.redo_queue():
-            self._finish_fast_play()
-            return
-        if not op.animation_enabled:
-            # Animation OFF: apply all remaining moves instantly
-            while self._fast_playing and op.redo_queue():
-                op.redo(animation=False)
-            self._finish_fast_play()
-            return
-        op.redo(animation=True)
-        self.send_history_state()
-        delay = self._animation_duration_sec()
-        self.schedule_once(lambda _dt: self._fast_play_step(), delay)
+        self._fast_play_next()
 
     def _fast_rewind(self) -> None:
-        """Undo all operations one step at a time (fast rewind).
-
-        Stoppable — remaining history items stay when stopped.
-        """
+        """Undo all moves one at a time via pull model."""
         op = self._app.op
         if not op.history() or self._fast_playing:
             return
         self._fast_playing = True
+        self._fast_forward = False
         self.send_playing(True)
-        self._fast_rewind_step()
+        self._fast_play_next()
 
-    def _fast_rewind_step(self) -> None:
+    def _fast_play_next(self) -> None:
+        """Feed one move to AM. Called on start and after each animation_done."""
         op = self._app.op
-        if not self._fast_playing or not op.history():
+        if not self._fast_playing:
+            return
+
+        has_more = op.redo_queue() if self._fast_forward else op.history()
+        if not has_more:
             self._finish_fast_play()
             return
+
         if not op.animation_enabled:
-            # Animation OFF: undo all remaining moves instantly
-            while self._fast_playing and op.history():
-                op.undo(animation=False)
+            if self._fast_forward:
+                while self._fast_playing and op.redo_queue():
+                    op.redo(animation=False)
+            else:
+                while self._fast_playing and op.history():
+                    op.undo(animation=False)
             self._finish_fast_play()
             return
-        op.undo(animation=True)
+
+        if self._fast_forward:
+            op.redo(animation=True)
+        else:
+            op.undo(animation=True)
         self.send_history_state()
-        delay = self._animation_duration_sec()
-        self.schedule_once(lambda _dt: self._fast_rewind_step(), delay)
 
     def _finish_fast_play(self) -> None:
-        """End fast-play/rewind: clear flag, update client."""
+        """End fast-play/rewind."""
         self._fast_playing = False
         self.send_playing(False)
         self.update_gui_elements()
         self.send_toolbar_state()
         self.send_history_state()
-
-    def _animation_duration_sec(self) -> float:
-        """Current animation duration in seconds from speed settings.
-
-        Formula: D(I) = D0 * (DN/D0)^(I/7)
-        """
-        cfg = self._app.config
-        vs = self._app.vs
-        d0: float = cfg.animation_speed_config.d0
-        dn: float = cfg.animation_speed_config.dn
-        i: float = vs.get_speed_index
-        duration_ms: float = d0 * (dn / d0) ** (i / 7.0)
-        return max(0.01, duration_ms / 1000.0)
-
     # -- Command injection --
 
     def inject_command(self, command: Command) -> None:
@@ -1020,7 +1003,7 @@ class ClientSession:
             return
 
         if command is Commands.STOP_ANIMATION:
-            self._fast_playing = False  # Cancel fast-play/rewind
+            self._fast_playing = False
             self.send_flush_queue()
             self._animation_manager.cancel_animation()
             self.send_playing(False)
