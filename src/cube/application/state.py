@@ -16,51 +16,40 @@ from cube.utils.config_protocol import ConfigProtocol
 
 
 class _AnimationSpeed:
+    """Animation speed computed from config, storing total duration in seconds.
+
+    Uses same exponential formula as WebGL: duration = d0 * (dn/d0)^(i/7).
+    Animation progress is time-based (elapsed/duration) with cubic ease-in-out.
     """
 
-    """
-
-    def __init__(self, delay_between_steps: float, number_of_steps_in_90_degree: int) -> None:
+    def __init__(self, duration_s: float) -> None:
         super().__init__()
-        self._delay_between_steps: float = delay_between_steps  # 1 / 25  # 1/50
-        self._number_of_steps = number_of_steps_in_90_degree
+        self._duration_s: float = duration_s
 
     @property
-    def number_of_steps(self):
-        """
-        Number of steps in 90 degree
-        Speed is 90 / animation_speed_number_of_steps / animation_speed_delay_between_steps
-        :return:
-        """
-        return self._number_of_steps
+    def duration_s(self) -> float:
+        """Total animation duration in seconds for a 90-degree rotation."""
+        return self._duration_s
 
     @property
     def delay_between_steps(self) -> float:
-        """
-
-        :return: delay (seconds) between steps
-        """
-        return self._delay_between_steps
+        """Fixed frame interval (~60 FPS) for event loop scheduling."""
+        return 1.0 / 60.0
 
     def get_speed(self) -> str:
+        """Return speed as degrees per second string."""
+        if self._duration_s > 0:
+            return str(round(90 / self._duration_s)) + " Deg/S"
+        return "Instant"
+
+    @staticmethod
+    def from_config(d0: float, dn: float, index: float) -> '_AnimationSpeed':
+        """Compute animation duration from AnimationSpeedConfig parameters.
+
+        Uses same exponential formula as WebGL: duration = d0 * (dn/d0)^(i/7)
         """
-
-        :return:  Degree/S "Deg/S"
-        """
-        return str(90 / self._number_of_steps / self._delay_between_steps) + " Deg/S"
-
-
-speeds = [
-    # delay in seconds, number of steps
-    _AnimationSpeed(1 / 10, 20),
-    _AnimationSpeed(1 / 20, 20),
-    _AnimationSpeed(1 / 40, 20),  # default
-    _AnimationSpeed(1 / 40, 10),
-    _AnimationSpeed(1 / 60, 10),
-    _AnimationSpeed(1 / 100, 10),
-    _AnimationSpeed(1 / 100, 5),
-    _AnimationSpeed(1 / 100, 3)  # 3000 d/s
-]
+        duration_s = (d0 * (dn / d0) ** (index / 7.0)) / 1000.0
+        return _AnimationSpeed(duration_s)
 
 
 class ApplicationAndViewState:
@@ -81,7 +70,7 @@ class ApplicationAndViewState:
 
         # Logger handles debug/quiet flags with env var override
         self._logger = Logger(debug_all=debug_all, quiet_all=quiet_all)
-        self._speed: float = config.animation_speed
+        self._speed: float = config.animation_speed_config.default_index
 
         # self._alpha_x_0: float = 0.3
         # self._alpha_y_0: float = -0.4
@@ -237,27 +226,17 @@ class ApplicationAndViewState:
         return self._speed
 
     def inc_speed(self):
-        step = self._config.animation_speed_step
+        step = self._config.animation_speed_config.step
         self._speed = min(7.0, self._speed + step)
 
     def dec_speed(self):
-        step = self._config.animation_speed_step
+        step = self._config.animation_speed_config.step
         self._speed = max(0.0, self._speed - step)
 
     @property
     def get_speed(self) -> _AnimationSpeed:
-        idx = self._speed
-        int_idx = int(idx)
-        # For integer indices, return directly
-        if idx == int_idx:
-            return speeds[int_idx]
-        # For fractional indices, interpolate between adjacent speeds
-        lo = speeds[int_idx]
-        hi = speeds[min(int_idx + 1, len(speeds) - 1)]
-        frac = idx - int_idx
-        delay = lo.delay_between_steps * (1 - frac) + hi.delay_between_steps * frac
-        steps = lo.number_of_steps * (1 - frac) + hi.number_of_steps * frac
-        return _AnimationSpeed(delay, round(steps))
+        sc = self._config.animation_speed_config
+        return _AnimationSpeed.from_config(sc.d0, sc.dn, self._speed)
 
     def get_draw_shadows_mode(self, face: FaceName) -> bool:
 

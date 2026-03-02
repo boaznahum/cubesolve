@@ -8,8 +8,9 @@
  */
 
 export class HistoryPanel {
-    constructor(sendFn) {
+    constructor(sendFn, animQueue) {
         this._send = sendFn;
+        this._animQueue = animQueue;
         this._panel = document.getElementById('history-panel');
         this._list = document.getElementById('history-list');
         this._btnUndo = document.getElementById('btn-undo');
@@ -40,12 +41,18 @@ export class HistoryPanel {
         }
         if (this._btnPlay) {
             this._btnPlay.addEventListener('click', () => {
-                this._send({ type: 'command', name: 'fast_play' });
+                if (this._animQueue) {
+                    this._animQueue.startPlayback('forward');
+                }
+                this._send({ type: 'play_next_redo' });
             });
         }
         if (this._btnRewind) {
             this._btnRewind.addEventListener('click', () => {
-                this._send({ type: 'command', name: 'fast_rewind' });
+                if (this._animQueue) {
+                    this._animQueue.startPlayback('backward');
+                }
+                this._send({ type: 'play_next_undo' });
             });
         }
         if (this._btnClear) {
@@ -130,11 +137,15 @@ export class HistoryPanel {
 
         this._updateButtons();
 
-        // Scroll to NOW marker
+        // Scroll to NOW marker (use scrollTop instead of scrollIntoView
+        // to avoid scrolling the entire page on mobile Safari)
         requestAnimationFrame(() => {
             const marker = this._list.querySelector('.hp-marker');
             if (marker) {
-                marker.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                const list = this._list;
+                const targetTop = marker.offsetTop - list.offsetTop
+                    - list.clientHeight / 2 + marker.offsetHeight / 2;
+                list.scrollTo({ top: targetTop, behavior: 'smooth' });
             }
         });
     }

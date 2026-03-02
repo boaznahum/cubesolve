@@ -1,16 +1,15 @@
-"""WebGL animation manager — sends animation events to client.
+"""WebGL animation manager — client-driven pull model.
 
-Unlike the web backend which sends per-frame rendering commands, the webgl
-backend sends animation START events and lets the client animate at 60fps.
-The server applies the model change immediately and sends the new cube state.
+The server sends one animation event at a time and WAITS for the client
+to acknowledge completion before sending the next. No timers, no speculation.
 
 Flow:
     1. run_animation() queues a move and returns immediately
     2. _process_next() dequeues one move:
        a. Non-animatable: apply model change, send cube_state, continue
-       b. Animatable: send animation_start event, apply model change,
-          send cube_state (client uses it after animation completes),
-          schedule next move after estimated animation duration
+       b. Animatable: send animation_start + cube_state, WAIT for client
+    3. Client sends animation_done when its animation finishes
+    4. on_client_animation_done() calls _process_next() for the next move
 """
 
 from __future__ import annotations
@@ -40,11 +39,11 @@ class _QueuedMove:
 
 
 class WebglAnimationManager(AnimationManager):
-    """Animation manager that sends events to the client for local animation.
+    """Animation manager using client-driven pull model.
 
-    Instead of rendering frames server-side, sends:
-    - animation_start: face rotation animation event
-    - cube_state: updated face colors (applied after client animation)
+    Sends one animation event at a time and waits for the client to
+    acknowledge via animation_done before sending the next. No timers,
+    no duration speculation.
     """
 
     __slots__ = [
@@ -53,8 +52,7 @@ class WebglAnimationManager(AnimationManager):
         "_web_window",
         "_operator",
         "_current_move",
-        "_pending_timer",
-        "_playing_sent",
+        "_waiting_for_client",
     ]
 
     def __init__(self, vs: "ApplicationAndViewState", operator: "Operator") -> None:
@@ -64,23 +62,28 @@ class WebglAnimationManager(AnimationManager):
         self._web_window: ClientSession | None = None
         self._operator: Operator = operator
         self._current_move: _QueuedMove | None = None
-        self._pending_timer: bool = False
-        self._playing_sent: bool = False
+        self._waiting_for_client: bool = False
+
+    @property
+    def is_idle(self) -> bool:
+        """True when AM has no pending work and is not waiting for client."""
+        return not self._waiting_for_client and not self._move_queue and not self._is_processing
 
     def set_web_window(self, window: "ClientSession") -> None:
         """Set the client session reference for sending state."""
         self._web_window = window
 
     def cancel_animation(self) -> None:
-        """Cancel all pending animations (graceful — client finishes current animation)."""
+        """Cancel all pending animations (graceful — client finishes current).
+
+        Playing state is managed exclusively by ClientSession
+        (via _fast_playing flag). This method only clears the AM's
+        internal queue — the caller is responsible for send_playing().
+        """
         self._move_queue.clear()
         self._current_move = None
         self._is_processing = False
-        self._pending_timer = False
-        if self._playing_sent:
-            self._playing_sent = False
-            if self._web_window:
-                self._web_window.send_playing(False)
+        self._waiting_for_client = False
 
     def run_animation(self, cube: "Cube", op: "OpProtocol", alg: "SimpleAlg") -> None:
         """Queue a move for animated playback (non-blocking)."""
@@ -94,13 +97,13 @@ class WebglAnimationManager(AnimationManager):
 
         self._move_queue.append(_QueuedMove(cube, op, alg))
 
-        if not self._is_processing:
+        if not self._is_processing and not self._waiting_for_client:
             self._process_next()
-        elif not self._playing_sent:
-            # Move enqueued while already processing → multi-move sequence
-            self._playing_sent = True
-            if self._web_window:
-                self._web_window.send_playing(True)
+
+    def on_client_animation_done(self) -> None:
+        """Called when client sends animation_done — process next queued move."""
+        self._waiting_for_client = False
+        self._process_next()
 
     def _process_next(self) -> None:
         """Process queued moves, sending animation events to client."""
@@ -118,7 +121,7 @@ class WebglAnimationManager(AnimationManager):
 
             alg = move.alg
 
-            # Non-animatable moves: apply and continue
+            # Non-animatable moves: apply and continue immediately
             if isinstance(alg, algs.AnnotationAlg):
                 self._apply_model_change(move)
                 if self._web_window:
@@ -138,9 +141,7 @@ class WebglAnimationManager(AnimationManager):
                     self._web_window.send_cube_state()
                 continue
 
-            # Animatable move: apply model change FIRST, then send animation
-            # event with post-move state embedded. This ensures the client
-            # has the correct final state when the animation completes.
+            # Animatable move: apply model change, send to client, WAIT
             duration_ms = self._get_animation_duration_ms()
 
             self._apply_model_change(move)
@@ -150,25 +151,13 @@ class WebglAnimationManager(AnimationManager):
                 self._web_window.send_cube_state()
                 self._web_window.send_text()
 
-            # Schedule next move after animation duration
-            # (gives client time to animate before showing next move)
-            self._pending_timer = True
-            delay_s = duration_ms / 1000.0
-            event_loop.schedule_once(self._on_timer, delay_s)
-            return  # Wait for timer to process next
+            # Wait for client to send animation_done
+            self._waiting_for_client = True
+            return
 
         # Queue empty
         self._is_processing = False
         self._current_move = None
-        if self._playing_sent:
-            self._playing_sent = False
-            if self._web_window:
-                self._web_window.send_playing(False)
-
-    def _on_timer(self, _dt: float) -> None:
-        """Timer callback — process next queued move."""
-        self._pending_timer = False
-        self._process_next()
 
     def _apply_model_change(self, move: _QueuedMove) -> None:
         """Apply a move's model change without animation."""
@@ -184,7 +173,7 @@ class WebglAnimationManager(AnimationManager):
         """
         speed_index = self._vs.get_speed_index
         cfg = self._vs._config
-        d0 = cfg.animation_speed_d0
-        dn = cfg.animation_speed_dn
+        d0 = cfg.animation_speed_config.d0
+        dn = cfg.animation_speed_config.dn
         duration = d0 * (dn / d0) ** (speed_index / 7.0)
         return max(10, round(duration))

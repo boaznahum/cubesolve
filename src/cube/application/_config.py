@@ -97,18 +97,40 @@ SOLVER_PLL_ROTATE_WHILE_SEARCH = False
 # Only initial value, can be changed
 animation_enabled = True
 
-# Default animation speed index (0-7, higher is faster)
-# Speed presets: 0=45°/s, 1=90°/s, 2=180°/s, 3=360°/s, 4=540°/s, 5=900°/s, 6=1800°/s, 7=3000°/s
-ANIMATION_SPEED = 2
+################ WebGL
 
-# Speed dropdown step size (index increment between adjacent options)
-ANIMATION_SPEED_STEP = 0.5
+@dataclass
+class AnimationSpeedConfig:
+    """Animation speed parameters for WebGL frontend.
 
-# Duration (ms) at speed index 0 (slowest)
-ANIMATION_SPEED_D0 = 2000
+    Speed is computed as: d0 * (dn / d0) ** (index / 7.0)
+    """
+    # Default speed index (0-7, higher is faster)
+    default_index: float = 2
+    # Step size between adjacent speed dropdown options
+    step: float = 0.5
+    # Duration (ms) at speed index 0 (slowest)
+    d0: float = 2000
+    # Duration (ms) at speed index 7 (fastest)
+    dn: float = 50
 
-# Duration (ms) at speed index 7 (fastest)
-ANIMATION_SPEED_DN = 50
+
+ANIMATION_SPEED_CONFIG = AnimationSpeedConfig()
+
+
+@dataclass
+class AssistConfig:
+    """Assist mode configuration for WebGL frontend.
+
+    When enabled, shows a brief move indicator before each animation.
+    """
+    # Whether assist is enabled by default
+    enabled: bool = True
+    # Duration (ms) of the move indicator preview
+    delay_ms: int = 400
+
+
+ASSIST_CONFIG = AssistConfig()
 
 # Single-step mode codes - enable specific breakpoints for debugging
 # Import SSCode here to avoid circular imports (config is loaded early)

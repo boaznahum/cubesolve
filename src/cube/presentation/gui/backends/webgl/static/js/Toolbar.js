@@ -11,6 +11,8 @@ export class Toolbar {
         this._animOverlay = document.getElementById('anim-overlay');
         this._statusOverlay = document.getElementById('status-overlay');
         this._statusEl = document.getElementById('status');
+        this._assistDelayMs = 400;  // default, overridden by server config
+        this._pendingSolveAndPlay = false;  // waiting for solve to finish before auto-play
     }
 
     bind() {
@@ -23,9 +25,16 @@ export class Toolbar {
         switch (msg.type) {
             case 'playing': {
                 const btn = document.getElementById('btn-stop');
-                if (btn) btn.disabled = !msg.value;
+                if (btn) {
+                    btn.disabled = !msg.value;
+                }
                 break;
             }
+
+            case 'play_empty':
+                // Server has no more moves — stop playback mode
+                this._animQueue.stopPlayback();
+                break;
 
             case 'text_update':
                 this._updateTextOverlays(msg);
@@ -173,6 +182,16 @@ export class Toolbar {
             }
         }
 
+        // Assist config from server
+        if (msg.assist_delay_ms !== undefined) {
+            this._assistDelayMs = msg.assist_delay_ms;
+        }
+        const chkAssist = document.getElementById('chk-assist');
+        if (chkAssist && msg.assist_enabled !== undefined) {
+            chkAssist.checked = msg.assist_enabled;
+            this._animQueue.assistDelayMs = msg.assist_enabled ? this._assistDelayMs : 0;
+        }
+
         // Slice selection display
         const sliceStart = msg.slice_start || 0;
         const sliceStop = msg.slice_stop || 0;
@@ -198,15 +217,45 @@ export class Toolbar {
         // Command buttons
         document.querySelectorAll('[data-cmd]').forEach(btn => {
             btn.addEventListener('click', () => {
-                if (btn.dataset.cmd === 'stop') {
-                    // Graceful stop: remember stop, let current animation finish
-                    this._animQueue.requestStop();
+                const cmd = btn.dataset.cmd;
+
+                if (cmd === 'fast_play') {
+                    // Client-initiated playback: start forward mode, request first move
+                    this._animQueue.startPlayback('forward');
+                    this._send({ type: 'play_next_redo' });
+                    return;
                 }
+
+                if (cmd === 'fast_rewind') {
+                    // Client-initiated rewind: start backward mode, request first move
+                    this._animQueue.startPlayback('backward');
+                    this._send({ type: 'play_next_undo' });
+                    return;
+                }
+
+                if (cmd === 'solve_and_play') {
+                    // Solve first, then start playback when history_state arrives
+                    document.body.style.cursor = 'progress';
+                    this._send({ type: 'command', name: 'solve_and_play' });
+                    // After solve completes, server sends history_state with redo queue.
+                    // Start playback from the play_empty/history_state callback.
+                    this._pendingSolveAndPlay = true;
+                    return;
+                }
+
+                if (cmd === 'stop') {
+                    // Graceful stop: let current animation finish, stop requesting more
+                    this._animQueue.stopPlayback();
+                    this._animQueue.requestStop();
+                    this._send({ type: 'command', name: 'stop' });
+                    return;
+                }
+
                 // Show wait cursor for long operations
-                if (btn.dataset.cmd === 'scramble' || btn.dataset.cmd === 'solve') {
+                if (cmd === 'scramble' || cmd === 'solve') {
                     document.body.style.cursor = 'progress';
                 }
-                this._send({ type: 'command', name: btn.dataset.cmd });
+                this._send({ type: 'command', name: cmd });
             });
         });
 
@@ -218,11 +267,11 @@ export class Toolbar {
             });
         }
 
-        // Assist checkbox (client-side only, controls AnimationQueue preview delay)
+        // Assist checkbox (controls AnimationQueue preview delay)
         const chkAssist = document.getElementById('chk-assist');
         if (chkAssist) {
             chkAssist.addEventListener('change', () => {
-                this._animQueue.assistDelayMs = chkAssist.checked ? 400 : 0;
+                this._animQueue.assistDelayMs = chkAssist.checked ? (this._assistDelayMs || 400) : 0;
             });
         }
 
