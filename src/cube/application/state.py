@@ -81,7 +81,7 @@ class ApplicationAndViewState:
 
         # Logger handles debug/quiet flags with env var override
         self._logger = Logger(debug_all=debug_all, quiet_all=quiet_all)
-        self._speed: float = config.animation_speed
+        self._speed: float = config.animation_speed_config.default_index
 
         # self._alpha_x_0: float = 0.3
         # self._alpha_y_0: float = -0.4
@@ -237,11 +237,11 @@ class ApplicationAndViewState:
         return self._speed
 
     def inc_speed(self):
-        step = self._config.animation_speed_step
+        step = self._config.animation_speed_config.step
         self._speed = min(7.0, self._speed + step)
 
     def dec_speed(self):
-        step = self._config.animation_speed_step
+        step = self._config.animation_speed_config.step
         self._speed = max(0.0, self._speed - step)
 
     @property

@@ -184,7 +184,7 @@ class WebglAnimationManager(AnimationManager):
         """
         speed_index = self._vs.get_speed_index
         cfg = self._vs._config
-        d0 = cfg.animation_speed_d0
-        dn = cfg.animation_speed_dn
+        d0 = cfg.animation_speed_config.d0
+        dn = cfg.animation_speed_config.dn
         duration = d0 * (dn / d0) ** (speed_index / 7.0)
         return max(10, round(duration))

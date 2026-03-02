@@ -11,6 +11,7 @@ export class Toolbar {
         this._animOverlay = document.getElementById('anim-overlay');
         this._statusOverlay = document.getElementById('status-overlay');
         this._statusEl = document.getElementById('status');
+        this._assistDelayMs = 400;  // default, overridden by server config
     }
 
     bind() {
@@ -173,6 +174,16 @@ export class Toolbar {
             }
         }
 
+        // Assist config from server
+        if (msg.assist_delay_ms !== undefined) {
+            this._assistDelayMs = msg.assist_delay_ms;
+        }
+        const chkAssist = document.getElementById('chk-assist');
+        if (chkAssist && msg.assist_enabled !== undefined) {
+            chkAssist.checked = msg.assist_enabled;
+            this._animQueue.assistDelayMs = msg.assist_enabled ? this._assistDelayMs : 0;
+        }
+
         // Slice selection display
         const sliceStart = msg.slice_start || 0;
         const sliceStop = msg.slice_stop || 0;
@@ -218,11 +229,11 @@ export class Toolbar {
             });
         }
 
-        // Assist checkbox (client-side only, controls AnimationQueue preview delay)
+        // Assist checkbox (controls AnimationQueue preview delay)
         const chkAssist = document.getElementById('chk-assist');
         if (chkAssist) {
             chkAssist.addEventListener('change', () => {
-                this._animQueue.assistDelayMs = chkAssist.checked ? 400 : 0;
+                this._animQueue.assistDelayMs = chkAssist.checked ? (this._assistDelayMs || 400) : 0;
             });
         }
 
