@@ -60,6 +60,21 @@ The pre-animation preview already fires for keyboard ops via `AnimationQueue._pr
 - Used `!animQueue.isBusy` in both state handler conditions in `main.js`
 - User tested all 12 basic face moves (F/F'/B/B'/U/U'/R/R'/L/L'/D/D') — all arrows correct
 
+## Red Undo Assist Arrows (v1.20.2)
+- Server tags `animation_start` with `is_undo` flag (set around undo calls in AM)
+- Client renders undo assist arrows in red (`0xcc0000`) instead of black
+- Helps user visually distinguish undo from normal moves
+
+## Fix: Mouse E-Slices Reversed on U/D (v1.20.3)
+- Bug: horizontal drag on inner rows of U and D faces produced reversed rotation
+- Root cause: `_slice_on_edge_alg()` had `inv = face_name == FaceName.D` but should be `inv = face_name == FaceName.U`
+- One-line fix in `ClientSession.py` line 899
+
+## Commits
+- `d8a0239c` — Fix assist arrows hidden during keyboard operations (v1.20.1)
+- `7e80137b` — Red assist arrows for undo operations (v1.20.2)
+- `5202f838` — Fix reversed mouse E-slices on U and D faces (v1.20.3)
+
 ## Known Bugs (to investigate)
 - User reports: "cube in startup whole gray" — could not reproduce in tests or Chrome
 - User reports: "pressing solve stuck the application" — could not reproduce
