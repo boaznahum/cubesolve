@@ -26,6 +26,25 @@ export class AnimationQueue {
         this._onAssistShow = null;   // callback(face, layers, direction)
         this._onAssistHide = null;   // callback()
         this._previewState = null;   // { startTime, event, state, face, speedMult }
+
+        // Playback mode: null = single move, 'forward' = playing redo, 'backward' = rewinding
+        this.playbackMode = null;
+    }
+
+    /**
+     * Start playback mode — after each animation finishes, request the next move.
+     * @param {'forward' | 'backward'} direction
+     */
+    startPlayback(direction) {
+        this.playbackMode = direction;
+        this._stopRequested = false;  // Clear stale stop from previous session
+    }
+
+    /**
+     * Stop playback mode — next _finishCurrent sends animation_done instead of play_next.
+     */
+    stopPlayback() {
+        this.playbackMode = null;
     }
 
     /**
@@ -239,13 +258,23 @@ export class AnimationQueue {
 
         this.currentAnim = null;
 
-        // Tell server this animation is done — server sends next move on ack
-        this._send({ type: 'animation_done' });
-
         if (this._stopRequested) {
             this._stopRequested = false;
-            return;  // Don't process next — stop was requested
+            // Send animation_done for the completed animation (server needs ack)
+            this._send({ type: 'animation_done' });
+            return;  // Don't process next or request more — stop was requested
         }
+
+        // In playback mode, request the next move from server
+        if (this.playbackMode === 'forward') {
+            this._send({ type: 'play_next_redo' });
+        } else if (this.playbackMode === 'backward') {
+            this._send({ type: 'play_next_undo' });
+        } else {
+            // Single move — tell server this animation is done
+            this._send({ type: 'animation_done' });
+        }
+
         this._processNext();
     }
 

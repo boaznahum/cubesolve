@@ -6,6 +6,10 @@
 CUBE_QUIET_ALL=1 python -m pytest tests/webgl/ -v -n0 --headed
 ```
 
+```powershell
+$env:CUBE_QUIET_ALL=1; python -m pytest tests/webgl/ -v -n0 --headed
+```
+
 ## Run headless (CI mode)
 
 ```bash

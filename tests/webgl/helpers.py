@@ -289,6 +289,16 @@ class WebGLPageHelper:
             timeout=timeout_ms,
         )
 
+    def wait_for_queue_idle(self, timeout_ms: int = 10_000) -> None:
+        """Wait until the AnimationQueue is truly idle (no animation, no queue, no preview)."""
+        self._page.wait_for_function(
+            """() => {
+                const aq = window._testAnimQueue;
+                return aq && !aq.currentAnim && aq.queue.length === 0 && !aq._previewState;
+            }""",
+            timeout=timeout_ms,
+        )
+
     # ── Query helpers ──
 
     def get_redo_count(self) -> int:
