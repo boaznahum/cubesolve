@@ -130,11 +130,15 @@ export class HistoryPanel {
 
         this._updateButtons();
 
-        // Scroll to NOW marker
+        // Scroll to NOW marker (use scrollTop instead of scrollIntoView
+        // to avoid scrolling the entire page on mobile Safari)
         requestAnimationFrame(() => {
             const marker = this._list.querySelector('.hp-marker');
             if (marker) {
-                marker.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                const list = this._list;
+                const targetTop = marker.offsetTop - list.offsetTop
+                    - list.clientHeight / 2 + marker.offsetHeight / 2;
+                list.scrollTo({ top: targetTop, behavior: 'smooth' });
             }
         });
     }
