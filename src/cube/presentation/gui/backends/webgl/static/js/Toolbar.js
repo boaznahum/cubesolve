@@ -24,7 +24,17 @@ export class Toolbar {
         switch (msg.type) {
             case 'playing': {
                 const btn = document.getElementById('btn-stop');
-                if (btn) btn.disabled = !msg.value;
+                if (btn) {
+                    if (msg.value) {
+                        // Playing started — enable Stop immediately
+                        btn.disabled = false;
+                    } else {
+                        // Server says playing stopped — but client may still
+                        // be animating. Defer disabling Stop until the
+                        // AnimationQueue is truly idle (issue #24).
+                        this._deferStopDisable(btn);
+                    }
+                }
                 break;
             }
 
@@ -80,6 +90,23 @@ export class Toolbar {
                 <span class="seg-value">${count}</span>
             </span>
         `;
+    }
+
+    /**
+     * Defer disabling the Stop button until the client AnimationQueue
+     * is truly idle (no currentAnim, no queued items, no assist preview).
+     * Polls at 60fps via requestAnimationFrame to avoid missing the moment.
+     */
+    _deferStopDisable(btn) {
+        const aq = this._animQueue;
+        const check = () => {
+            if (!aq.currentAnim && aq.queue.length === 0 && !aq._previewState) {
+                btn.disabled = true;
+            } else {
+                requestAnimationFrame(check);
+            }
+        };
+        check();
     }
 
     // ── Text overlays ──
