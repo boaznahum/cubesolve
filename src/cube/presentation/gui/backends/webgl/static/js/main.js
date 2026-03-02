@@ -72,7 +72,7 @@ const toolbar = new Toolbar(state, send, controls, animQueue);
 toolbar.bind();
 
 // ── History panel ──
-const historyPanel = new HistoryPanel(send);
+const historyPanel = new HistoryPanel(send, animQueue);
 
 // ── Move indicator (next-move arrows) ──
 const moveIndicator = new MoveIndicator(cubeModel, scene);
@@ -144,6 +144,18 @@ function handleMessage(msg) {
             }
             break;
 
+        case 'play_empty': {
+            // No more moves — stop playback, update UI
+            animQueue.stopPlayback();
+            state.isPlaying = false;
+            historyPanel.setPlaying(false);
+            const stopBtn = document.getElementById('btn-stop');
+            if (stopBtn) stopBtn.disabled = true;
+            // Toolbar also handles play_empty
+            toolbar.handleMessage(msg);
+            break;
+        }
+
         case 'flush_queue':
             animQueue.flush(state.latestState);
             break;
@@ -158,6 +170,12 @@ function handleMessage(msg) {
             // Show next-move indicators if not animating and not in autoplay
             if (!state.isPlaying && !animQueue.currentAnim && animQueue.queue.length === 0) {
                 moveIndicator.show(msg.next_move || null);
+            }
+            // solve_and_play: auto-start playback once solver fills the redo queue
+            if (toolbar._pendingSolveAndPlay && msg.redo && msg.redo.length > 0) {
+                toolbar._pendingSolveAndPlay = false;
+                animQueue.startPlayback('forward');
+                send({ type: 'play_next_redo' });
             }
             break;
 

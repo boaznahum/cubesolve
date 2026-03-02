@@ -135,11 +135,10 @@ class TestStepThrough:
         total_moves = helper.get_redo_count()
         assert total_moves > 0, "Solution should produce redo moves"
 
-        # Step through each move
+        # Step through each move, waiting for each animation to complete
         for _ in range(total_moves):
             helper.click_redo()
-            # Wait for the animation of this single move to finish
-            helper._page.wait_for_timeout(200)
+            helper.wait_for_queue_idle(timeout_ms=5_000)
 
         # All redo moves consumed
         helper.wait_for_no_redo(timeout_ms=30_000)

@@ -96,9 +96,8 @@ class ClientSession:
         am.set_web_window(self)
         self._animation_manager: WebglAnimationManager = am
 
-        # Fast-play/rewind state — step-by-step so stop can interrupt
+        # Client-initiated playback state
         self._fast_playing: bool = False
-        self._fast_forward: bool = True
 
         # Track whether redo queue was filled by solver (for UI labels)
         self._redo_is_solver: bool = False
@@ -299,6 +298,10 @@ class ClientSession:
     def send_playing(self, playing: bool) -> None:
         self._send(json.dumps({"type": "playing", "value": playing}))
 
+    def send_play_empty(self) -> None:
+        """Tell client there are no more moves to play."""
+        self._send(json.dumps({"type": "play_empty"}))
+
     def send_history_state(self) -> None:
         """Send current operation history and redo queue to the client."""
         op = self._app.op
@@ -476,12 +479,14 @@ class ClientSession:
                 data.get("on_left_to_right", 0.0), data.get("on_left_to_top", 0.0),
             )
 
+        elif msg_type == "play_next_redo":
+            self._handle_play_next(forward=True)
+
+        elif msg_type == "play_next_undo":
+            self._handle_play_next(forward=False)
+
         elif msg_type == "animation_done":
             self._animation_manager.on_client_animation_done()
-            # Pull model: AM processed its queue. If fast-playing and AM
-            # is idle, feed the next redo/undo step.
-            if self._fast_playing and self._animation_manager.is_idle:
-                self._fast_play_next()
 
         elif msg_type == "resize":
             pass
@@ -536,8 +541,8 @@ class ClientSession:
             return
 
         if command_name == "solve_and_play":
+            # Solve only — client will initiate playback via play_next_redo
             self._two_phase_solve()
-            self._fast_play_redo()
             return
 
         if command_name == "scramble":
@@ -579,11 +584,11 @@ class ClientSession:
             return
 
         if command_name == "fast_play":
-            self._fast_play_redo()
+            # Client-initiated: client sends play_next_redo directly
             return
 
         if command_name == "fast_rewind":
-            self._fast_rewind()
+            # Client-initiated: client sends play_next_undo directly
             return
 
         command_map: dict[str, Command] = {
@@ -939,59 +944,72 @@ class ClientSession:
             self._app.set_error(f"Solve error: {e}")
             self.update_gui_elements()
 
-    def _fast_play_redo(self) -> None:
-        """Play redo queue one move at a time via pull model."""
-        op = self._app.op
-        if not op.redo_queue() or self._fast_playing:
-            return
-        self._fast_playing = True
-        self._fast_forward = True
-        self.send_playing(True)
-        self._fast_play_next()
+    def _handle_play_next(self, forward: bool) -> None:
+        """Handle client request for the next move in playback.
 
-    def _fast_rewind(self) -> None:
-        """Undo all moves one at a time via pull model."""
-        op = self._app.op
-        if not op.history() or self._fast_playing:
-            return
-        self._fast_playing = True
-        self._fast_forward = False
-        self.send_playing(True)
-        self._fast_play_next()
+        Client-initiated pull model: the client requests each move one at a
+        time. The play_next message also serves as an ack for the previous
+        animation (like animation_done).
 
-    def _fast_play_next(self) -> None:
-        """Feed one move to AM. Called on start and after each animation_done."""
+        A single op.redo() can produce multiple AM-queued moves (when the alg
+        flattens into several simple algs). The AM sends one animation_start
+        at a time. Only when the AM is fully idle do we pop the next redo item.
+        """
+        am = self._animation_manager
         op = self._app.op
-        if not self._fast_playing:
+
+        # Ack the previous animation — let AM process its remaining queue
+        am.on_client_animation_done()
+
+        # If AM still has queued work (from a multi-step redo), it already
+        # sent the next animation_start to the client. Just update history.
+        if not am.is_idle:
+            self.send_history_state()
             return
 
-        has_more = op.redo_queue() if self._fast_forward else op.history()
+        # AM is idle — pop next redo/undo item from the operator queue
+        has_more: bool = bool(op.redo_queue()) if forward else bool(op.history())
         if not has_more:
-            self._finish_fast_play()
+            self._fast_playing = False
+            self.send_play_empty()
+            self.send_playing(False)
+            self.update_gui_elements()
+            self.send_toolbar_state()
+            self.send_history_state()
             return
 
+        if not self._fast_playing:
+            self._fast_playing = True
+            self.send_playing(True)
+
+        # Handle animation disabled: apply all moves instantly
         if not op.animation_enabled:
-            if self._fast_forward:
-                while self._fast_playing and op.redo_queue():
+            if forward:
+                while op.redo_queue():
                     op.redo(animation=False)
             else:
-                while self._fast_playing and op.history():
+                while op.history():
                     op.undo(animation=False)
-            self._finish_fast_play()
+            self._fast_playing = False
+            self.send_play_empty()
+            self.send_playing(False)
+            self.update_gui_elements()
+            self.send_toolbar_state()
+            self.send_history_state()
             return
 
-        if self._fast_forward:
+        # Pop one move with animation — may queue multiple items in AM
+        if forward:
             op.redo(animation=True)
         else:
             op.undo(animation=True)
-        self.send_history_state()
 
-    def _finish_fast_play(self) -> None:
-        """End fast-play/rewind."""
-        self._fast_playing = False
-        self.send_playing(False)
-        self.update_gui_elements()
-        self.send_toolbar_state()
+        # If AM is idle after the move (non-animatable was processed instantly),
+        # recurse to get the next animatable move or reach empty
+        if am.is_idle:
+            self._handle_play_next(forward)
+            return
+
         self.send_history_state()
     # -- Command injection --
 
@@ -1004,8 +1022,8 @@ class ClientSession:
 
         if command is Commands.STOP_ANIMATION:
             self._fast_playing = False
-            self.send_flush_queue()
             self._animation_manager.cancel_animation()
+            self.send_play_empty()
             self.send_playing(False)
             self.update_gui_elements()
             self.send_toolbar_state()

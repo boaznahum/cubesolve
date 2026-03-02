@@ -12,6 +12,7 @@ export class Toolbar {
         this._statusOverlay = document.getElementById('status-overlay');
         this._statusEl = document.getElementById('status');
         this._assistDelayMs = 400;  // default, overridden by server config
+        this._pendingSolveAndPlay = false;  // waiting for solve to finish before auto-play
     }
 
     bind() {
@@ -25,18 +26,15 @@ export class Toolbar {
             case 'playing': {
                 const btn = document.getElementById('btn-stop');
                 if (btn) {
-                    if (msg.value) {
-                        // Playing started — enable Stop immediately
-                        btn.disabled = false;
-                    } else {
-                        // Server says playing stopped — but client may still
-                        // be animating. Defer disabling Stop until the
-                        // AnimationQueue is truly idle (issue #24).
-                        this._deferStopDisable(btn);
-                    }
+                    btn.disabled = !msg.value;
                 }
                 break;
             }
+
+            case 'play_empty':
+                // Server has no more moves — stop playback mode
+                this._animQueue.stopPlayback();
+                break;
 
             case 'text_update':
                 this._updateTextOverlays(msg);
@@ -90,23 +88,6 @@ export class Toolbar {
                 <span class="seg-value">${count}</span>
             </span>
         `;
-    }
-
-    /**
-     * Defer disabling the Stop button until the client AnimationQueue
-     * is truly idle (no currentAnim, no queued items, no assist preview).
-     * Polls at 60fps via requestAnimationFrame to avoid missing the moment.
-     */
-    _deferStopDisable(btn) {
-        const aq = this._animQueue;
-        const check = () => {
-            if (!aq.currentAnim && aq.queue.length === 0 && !aq._previewState) {
-                btn.disabled = true;
-            } else {
-                requestAnimationFrame(check);
-            }
-        };
-        check();
     }
 
     // ── Text overlays ──
@@ -236,15 +217,45 @@ export class Toolbar {
         // Command buttons
         document.querySelectorAll('[data-cmd]').forEach(btn => {
             btn.addEventListener('click', () => {
-                if (btn.dataset.cmd === 'stop') {
-                    // Graceful stop: remember stop, let current animation finish
-                    this._animQueue.requestStop();
+                const cmd = btn.dataset.cmd;
+
+                if (cmd === 'fast_play') {
+                    // Client-initiated playback: start forward mode, request first move
+                    this._animQueue.startPlayback('forward');
+                    this._send({ type: 'play_next_redo' });
+                    return;
                 }
+
+                if (cmd === 'fast_rewind') {
+                    // Client-initiated rewind: start backward mode, request first move
+                    this._animQueue.startPlayback('backward');
+                    this._send({ type: 'play_next_undo' });
+                    return;
+                }
+
+                if (cmd === 'solve_and_play') {
+                    // Solve first, then start playback when history_state arrives
+                    document.body.style.cursor = 'progress';
+                    this._send({ type: 'command', name: 'solve_and_play' });
+                    // After solve completes, server sends history_state with redo queue.
+                    // Start playback from the play_empty/history_state callback.
+                    this._pendingSolveAndPlay = true;
+                    return;
+                }
+
+                if (cmd === 'stop') {
+                    // Graceful stop: let current animation finish, stop requesting more
+                    this._animQueue.stopPlayback();
+                    this._animQueue.requestStop();
+                    this._send({ type: 'command', name: 'stop' });
+                    return;
+                }
+
                 // Show wait cursor for long operations
-                if (btn.dataset.cmd === 'scramble' || btn.dataset.cmd === 'solve') {
+                if (cmd === 'scramble' || cmd === 'solve') {
                     document.body.style.cursor = 'progress';
                 }
-                this._send({ type: 'command', name: btn.dataset.cmd });
+                this._send({ type: 'command', name: cmd });
             });
         });
 
