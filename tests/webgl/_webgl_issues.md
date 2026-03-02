@@ -9,6 +9,6 @@ scramble should be entred to queue not as one log, it should be fanout first !!!
 
 # mouse e slices on U and D are reveresed, all other slices/faces are OK
 
-# on web queue cintrols are gain in to on queue need to check phone
+# ❓Need to check queue control on phone 
 
-# some of the assist are in the worng idrection !!!
+# ✅some of the assist are in the worng idrection !!!

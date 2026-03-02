@@ -32,6 +32,34 @@ Replace fragmented state management (~10 individual `send_*()` calls) with a sin
 - All 9 WebGL tests pass
 - Added `tests/webgl/test_startup_state.py` — 3 tests for startup state
 
+## Current Task: Assist Arrows for Keyboard Operations
+
+### Goal
+When assist is ON, show gesture/assist arrows for user keyboard operations too (not just queue playback). This helps debug the "some assists are in the wrong direction" issue by letting the user see arrow directions for every operation, independent of queue/undo/redo logic.
+
+### Context
+Currently the assist system has two modes:
+1. **Static next-move indicators** — chevrons shown when idle, based on `state.nextMove` (peek at redo queue)
+2. **Pre-animation assist preview** — brief arrow flash before each queued animation (`assistDelayMs`)
+
+The pre-animation preview already fires for keyboard ops via `AnimationQueue._processNext()`, but the user wants to ensure arrows are clearly visible for all keyboard-initiated moves to verify direction correctness.
+
+### Key Files
+- `static/js/MoveIndicator.js` — renders chevron arrows on affected stickers
+- `static/js/AnimationQueue.js` — manages assist preview delay before animations
+- `static/js/main.js` — wires assist show/hide callbacks
+- `ClientSession.py` — server-side command handling, `animation_start` message
+- `WebglAnimationManager.py` — sends animation events with face/layers/direction
+
+### What Was Done
+- Found bug: `state` message arriving during assist preview phase overwrites arrows
+  - `main.js` state handler checked `!animQueue.currentAnim && queue.length === 0` but missed `_previewState`
+  - During preview: `currentAnim` is null, queue is empty (item dequeued into preview), so condition was true
+  - `moveIndicator.show(state.nextMove)` with null nextMove → hid the assist arrows
+- Fix: Added `get isBusy()` getter to `AnimationQueue` (includes `_previewState`)
+- Used `!animQueue.isBusy` in both state handler conditions in `main.js`
+- User tested all 12 basic face moves (F/F'/B/B'/U/U'/R/R'/L/L'/D/D') — all arrows correct
+
 ## Known Bugs (to investigate)
 - User reports: "cube in startup whole gray" — could not reproduce in tests or Chrome
 - User reports: "pressing solve stuck the application" — could not reproduce

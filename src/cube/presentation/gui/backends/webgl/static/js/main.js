@@ -128,8 +128,8 @@ function handleMessage(msg) {
             // Apply snapshot to AppState (updates all fields)
             state.applyServerSnapshot(msg);
 
-            // Update cube model if not animating
-            if (state.latestState && !animQueue.currentAnim && animQueue.queue.length === 0) {
+            // Update cube model if not animating (including assist preview phase)
+            if (state.latestState && !animQueue.isBusy) {
                 cubeModel.updateFromState(state.latestState);
             } else if (state.latestState) {
                 animQueue.pendingState = state.latestState;
@@ -148,7 +148,7 @@ function handleMessage(msg) {
             }
 
             // Show next-move indicators if not animating and not in autoplay
-            if (!state.isPlaying && !animQueue.currentAnim && animQueue.queue.length === 0) {
+            if (!state.isPlaying && !animQueue.isBusy) {
                 moveIndicator.show(state.nextMove);
             }
             if (state.isPlaying && !wasPlaying) {
