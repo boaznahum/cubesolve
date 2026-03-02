@@ -155,6 +155,25 @@ class DualOperator(OperatorProtocol):
         """
         return self._real_op.undo(animation)
 
+    def redo(self, animation: bool = True) -> Alg | None:
+        """Redo the last undone operation on the real cube only.
+
+        Same rationale as undo() — delegate to real operator.
+        """
+        return self._real_op.redo(animation)
+
+    def redo_queue(self) -> Sequence[Alg]:
+        """Get the redo queue from the real operator."""
+        return self._real_op.redo_queue()
+
+    def clear_redo(self) -> None:
+        """Clear the redo queue on the real operator."""
+        self._real_op.clear_redo()
+
+    def enqueue_redo(self, algs: Sequence[Alg]) -> None:
+        """Replace the redo queue on the real operator."""
+        self._real_op.enqueue_redo(algs)
+
     @contextmanager
     def with_animation(self, animation: bool | None = None) -> Generator[None, None, None]:
         """

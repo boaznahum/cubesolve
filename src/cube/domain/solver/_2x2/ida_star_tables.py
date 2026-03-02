@@ -229,12 +229,45 @@ class Tables:
 _tables: Tables | None = None
 
 
+def _load_precomputed() -> Tables:
+    """Load tables from pre-computed data (zlib-compressed, base85-encoded).
+
+    This is much faster than building via BFS (~50ms vs ~3 seconds).
+    """
+    import base64
+    import zlib
+
+    from cube.domain.solver._2x2._precomputed import (
+        PERM_MOVE_Z85,
+        PRUNING_Z85,
+        TWIST_MOVE_Z85,
+    )
+
+    twist_move = array("H")
+    twist_move.frombytes(zlib.decompress(base64.b85decode(TWIST_MOVE_Z85)))
+
+    perm_move = array("H")
+    perm_move.frombytes(zlib.decompress(base64.b85decode(PERM_MOVE_Z85)))
+
+    pruning = bytearray(zlib.decompress(base64.b85decode(PRUNING_Z85)))
+
+    return Tables(twist_move=twist_move, perm_move=perm_move, pruning=pruning)
+
+
 def get_tables() -> Tables:
-    """Get (or build) the precomputed tables. Cached as module-level singleton."""
+    """Get the precomputed tables. Cached as module-level singleton.
+
+    Loads from pre-computed data file on first call (~50ms).
+    Falls back to building tables from scratch if pre-computed data is missing.
+    """
     global _tables  # noqa: PLW0603
     if _tables is None:
-        twist_move: array[int] = _build_twist_move_table()
-        perm_move: array[int] = _build_perm_move_table()
-        pruning: bytearray = _build_pruning_table(twist_move, perm_move)
-        _tables = Tables(twist_move=twist_move, perm_move=perm_move, pruning=pruning)
+        try:
+            _tables = _load_precomputed()
+        except ImportError:
+            # Fallback: build from scratch (slow, ~3 seconds)
+            twist_move: array[int] = _build_twist_move_table()
+            perm_move: array[int] = _build_perm_move_table()
+            pruning: bytearray = _build_pruning_table(twist_move, perm_move)
+            _tables = Tables(twist_move=twist_move, perm_move=perm_move, pruning=pruning)
     return _tables

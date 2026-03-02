@@ -82,6 +82,7 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         self._modern_renderer: ModernGLRenderer | None = None
         self._renderer_adapter: ModernGLRendererAdapter | None = None
         self._toolbar: GUIToolbar | None = None
+        self._popup: TextPopup = TextPopup(width, height)
 
         # Create the pyglet window (composition pattern)
         # Pass self as parent so events are delegated back to us
@@ -152,9 +153,6 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         # Native GUI toolbar (replaces ImGui complexity)
         # All button setup is centralized in create_toolbar() in GUIToolbar.py
         self._toolbar = create_toolbar(self)
-
-        # Text popup overlay (for Help, etc.)
-        self._popup: TextPopup = TextPopup(width, height)
 
         # Initial GUI update
         self.update_gui_elements()
@@ -588,6 +586,11 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
 
         self._vs.debug(False, f"on_key_press: symbol={symbol}, modifiers={modifiers}")
 
+        # Close dropdown on Escape before key bindings process it
+        if self._toolbar and symbol == pyglet_key.ESCAPE:
+            if self._toolbar.handle_key_escape():
+                return  # Dropdown consumed the Escape key
+
         # Track Shift key for toolbar button label updates
         if self._toolbar and (modifiers & pyglet_key.MOD_SHIFT):
             self._toolbar.set_shift_state(True)
@@ -637,11 +640,18 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         if self._toolbar:
             if self._vs.full_mode:
                 cmd = self._toolbar.handle_exit_click(x, y)
+                if cmd:
+                    self.inject_command(cmd)
+                    return
             else:
+                # Check if dropdown or toolbar will consume this click
+                consumed: bool = self._toolbar.handle_click_consumed(x, y)
                 cmd = self._toolbar.handle_click(x, y)
-            if cmd:
-                self.inject_command(cmd)
-                return  # Don't pass to cube rotation handler
+                if cmd:
+                    self.inject_command(cmd)
+                    return  # Don't pass to cube rotation handler
+                if consumed:
+                    return  # Click was on toolbar/dropdown — don't rotate cube
 
         abstract_mods = _convert_modifiers(modifiers)
         return main_g_mouse.on_mouse_press(self, self._app.vs, x, y, abstract_mods)

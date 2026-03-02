@@ -35,7 +35,7 @@ DEFAULT_SOLVER = "Kociemba"
 # Solver used by tests (must be implemented - raises error if not)
 # Tests use this instead of DEFAULT_SOLVER to avoid failures when DEFAULT_SOLVER
 # is set to a work-in-progress solver
-SOLVER_FOR_TESTS = "LBL"
+SOLVER_FOR_TESTS = "Beginner Reducer"
 
 # 3x3 solver used by cage method for corner solving (Phase 1b)
 # Options: "beginner", "cfop", "kociemba"

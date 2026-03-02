@@ -242,10 +242,6 @@ class ClientSession:
 
         alg_str: str = str(alg)
         alg_type: str = type(alg).__name__
-        vs = self._app.vs
-        print(f"  anim: {alg_str} type={alg_type} face={face_name} "
-              f"layers={layers} dir={direction} size={size} "
-              f"slice=[{vs.slice_start}:{vs.slice_stop}]", flush=True)
 
         # Embed post-move state so the client has correct colors at animation end
         state = extract_cube_state(self._app.cube)
@@ -483,9 +479,13 @@ class ClientSession:
     # -- Input handlers --
 
     def _handle_key(self, symbol: int, modifiers: int) -> None:
+        from cube.presentation.gui.commands.concrete import NewSessionCommand, QuitCommand
         from cube.presentation.gui.key_bindings import lookup_command
         command = lookup_command(symbol, modifiers, self.animation_running)
         if command:
+            # Web sessions can't quit — restart as a new session instead
+            if isinstance(command, QuitCommand):
+                command = NewSessionCommand()
             self.inject_command(command)
 
     def _handle_speed(self, speed_index: float) -> None:
@@ -523,6 +523,11 @@ class ClientSession:
 
         if command_name == "solve":
             self._two_phase_solve()
+            return
+
+        if command_name == "solve_and_play":
+            self._two_phase_solve()
+            self._fast_play_redo()
             return
 
         if command_name == "scramble":
@@ -910,8 +915,6 @@ class ClientSession:
             app = self._app
             slv = app.slv
             solution_alg = slv.solution()
-            if solution_alg.count() == 0:
-                return
             solution_alg = solution_alg.simplify()
             # Flatten into atomic steps and enqueue as redo
             steps = list(solution_alg.flatten())
@@ -1025,11 +1028,19 @@ class ClientSession:
             return
 
         try:
+            from cube.presentation.gui.commands.concrete import NewSessionCommand
+
             speed_before = self._app.vs.get_speed_index
             size_before = self._app.vs.cube_size
             history_len_before = len(self._app.op.history())
             ctx = CommandContext.from_window(self)  # type: ignore[arg-type]
             result = command.execute(ctx)
+
+            if isinstance(command, NewSessionCommand):
+                # Full state refresh — reuse the single source of truth
+                self.on_client_connected()
+                return
+
             # Detect manual move while solver redo queue exists → tainted
             if (self._redo_is_solver and self._app.op.redo_queue()
                     and len(self._app.op.history()) > history_len_before):
@@ -1133,6 +1144,10 @@ class ClientSession:
         pass
 
     # -- Cleanup --
+
+    def close(self) -> None:
+        """No-op for web sessions — use NewSessionCommand to restart instead."""
+        pass
 
     def cleanup(self) -> None:
         self._renderer.cleanup()

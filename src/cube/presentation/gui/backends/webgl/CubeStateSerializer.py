@@ -32,6 +32,7 @@ def extract_cube_state(cube: "Cube") -> dict:
         {
             "type": "cube_state",
             "size": N,
+            "solved": bool,
             "faces": {
                 "U": [[r,g,b], ...],  # N*N colors, row-major (top-left first)
                 "D": [...], "F": [...], "B": [...], "L": [...], "R": [...]
@@ -52,6 +53,7 @@ def extract_cube_state(cube: "Cube") -> dict:
     return {
         "type": "cube_state",
         "size": n,
+        "solved": cube.solved,
         "faces": faces,
     }
 

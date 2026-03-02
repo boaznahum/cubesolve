@@ -148,9 +148,6 @@ class _FaceBoard:
 
         center_size = face_size - 2 * corner_size
 
-        x0: float
-        y0: float
-
         if isinstance(part, Corner):
             # cx = 0 | 2
             # cy = 0 | 2
