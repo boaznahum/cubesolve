@@ -47,20 +47,20 @@ class _AnimationSpeed:
 
         :return:  Degree/S "Deg/S"
         """
-        return str(90 / self._number_of_steps / self._delay_between_steps) + " Deg/S"
+        return str(round(90 / self._number_of_steps / self._delay_between_steps)) + " Deg/S"
 
+    @staticmethod
+    def from_config(d0: float, dn: float, index: float) -> '_AnimationSpeed':
+        """Compute steps and delay from AnimationSpeedConfig parameters.
 
-speeds = [
-    # delay in seconds, number of steps
-    _AnimationSpeed(1 / 10, 20),
-    _AnimationSpeed(1 / 20, 20),
-    _AnimationSpeed(1 / 40, 20),  # default
-    _AnimationSpeed(1 / 40, 10),
-    _AnimationSpeed(1 / 60, 10),
-    _AnimationSpeed(1 / 100, 10),
-    _AnimationSpeed(1 / 100, 5),
-    _AnimationSpeed(1 / 100, 3)  # 3000 d/s
-]
+        Uses same exponential formula as WebGL: duration = d0 * (dn/d0)^(i/7)
+        Then derives discrete steps suitable for pyglet frame-based animation.
+        """
+        duration_s = (d0 * (dn / d0) ** (index / 7.0)) / 1000.0
+        min_delay = 1 / 60  # frame floor
+        steps = max(3, round(duration_s / min_delay))
+        delay = duration_s / steps
+        return _AnimationSpeed(delay, steps)
 
 
 class ApplicationAndViewState:
@@ -246,18 +246,8 @@ class ApplicationAndViewState:
 
     @property
     def get_speed(self) -> _AnimationSpeed:
-        idx = self._speed
-        int_idx = int(idx)
-        # For integer indices, return directly
-        if idx == int_idx:
-            return speeds[int_idx]
-        # For fractional indices, interpolate between adjacent speeds
-        lo = speeds[int_idx]
-        hi = speeds[min(int_idx + 1, len(speeds) - 1)]
-        frac = idx - int_idx
-        delay = lo.delay_between_steps * (1 - frac) + hi.delay_between_steps * frac
-        steps = lo.number_of_steps * (1 - frac) + hi.number_of_steps * frac
-        return _AnimationSpeed(delay, round(steps))
+        sc = self._config.animation_speed_config
+        return _AnimationSpeed.from_config(sc.d0, sc.dn, self._speed)
 
     def get_draw_shadows_mode(self, face: FaceName) -> bool:
 
