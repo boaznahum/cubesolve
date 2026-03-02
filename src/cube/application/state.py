@@ -16,51 +16,40 @@ from cube.utils.config_protocol import ConfigProtocol
 
 
 class _AnimationSpeed:
+    """Animation speed computed from config, storing total duration in seconds.
+
+    Uses same exponential formula as WebGL: duration = d0 * (dn/d0)^(i/7).
+    Animation progress is time-based (elapsed/duration) with cubic ease-in-out.
     """
 
-    """
-
-    def __init__(self, delay_between_steps: float, number_of_steps_in_90_degree: int) -> None:
+    def __init__(self, duration_s: float) -> None:
         super().__init__()
-        self._delay_between_steps: float = delay_between_steps  # 1 / 25  # 1/50
-        self._number_of_steps = number_of_steps_in_90_degree
+        self._duration_s: float = duration_s
 
     @property
-    def number_of_steps(self):
-        """
-        Number of steps in 90 degree
-        Speed is 90 / animation_speed_number_of_steps / animation_speed_delay_between_steps
-        :return:
-        """
-        return self._number_of_steps
+    def duration_s(self) -> float:
+        """Total animation duration in seconds for a 90-degree rotation."""
+        return self._duration_s
 
     @property
     def delay_between_steps(self) -> float:
-        """
-
-        :return: delay (seconds) between steps
-        """
-        return self._delay_between_steps
+        """Fixed frame interval (~60 FPS) for event loop scheduling."""
+        return 1.0 / 60.0
 
     def get_speed(self) -> str:
-        """
-
-        :return:  Degree/S "Deg/S"
-        """
-        return str(round(90 / self._number_of_steps / self._delay_between_steps)) + " Deg/S"
+        """Return speed as degrees per second string."""
+        if self._duration_s > 0:
+            return str(round(90 / self._duration_s)) + " Deg/S"
+        return "Instant"
 
     @staticmethod
     def from_config(d0: float, dn: float, index: float) -> '_AnimationSpeed':
-        """Compute steps and delay from AnimationSpeedConfig parameters.
+        """Compute animation duration from AnimationSpeedConfig parameters.
 
         Uses same exponential formula as WebGL: duration = d0 * (dn/d0)^(i/7)
-        Then derives discrete steps suitable for pyglet frame-based animation.
         """
         duration_s = (d0 * (dn / d0) ** (index / 7.0)) / 1000.0
-        min_delay = 1 / 60  # frame floor
-        steps = max(3, round(duration_s / min_delay))
-        delay = duration_s / steps
-        return _AnimationSpeed(delay, steps)
+        return _AnimationSpeed(duration_s)
 
 
 class ApplicationAndViewState:
