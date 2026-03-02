@@ -53,6 +53,7 @@ class WebglAnimationManager(AnimationManager):
         "_operator",
         "_current_move",
         "_waiting_for_client",
+        "_is_undo",
     ]
 
     def __init__(self, vs: "ApplicationAndViewState", operator: "Operator") -> None:
@@ -63,6 +64,7 @@ class WebglAnimationManager(AnimationManager):
         self._operator: Operator = operator
         self._current_move: _QueuedMove | None = None
         self._waiting_for_client: bool = False
+        self._is_undo: bool = False
 
     @property
     def is_idle(self) -> bool:
@@ -146,7 +148,7 @@ class WebglAnimationManager(AnimationManager):
             self._apply_model_change(move)
 
             if self._web_window:
-                self._web_window.send_animation_start(alg, duration_ms)
+                self._web_window.send_animation_start(alg, duration_ms, is_undo=self._is_undo)
                 self._web_window.send_state()
 
             # Wait for client to send animation_done

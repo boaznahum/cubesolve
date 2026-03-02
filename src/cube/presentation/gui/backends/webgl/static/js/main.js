@@ -95,8 +95,8 @@ animQueue._onAllDone = () => {
 };
 
 // Wire assist preview callbacks from AnimationQueue → MoveIndicator
-animQueue._onAssistShow = (face, layers, direction) => {
-    moveIndicator.show({ face, layers, direction });
+animQueue._onAssistShow = (face, layers, direction, isUndo) => {
+    moveIndicator.show({ face, layers, direction }, { isUndo });
 };
 animQueue._onAssistHide = () => {
     moveIndicator.hide();

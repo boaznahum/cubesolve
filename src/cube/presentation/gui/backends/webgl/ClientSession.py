@@ -307,7 +307,7 @@ class ClientSession:
         state = extract_cube_state(self._app.cube)
         self._send(json.dumps(state))
 
-    def send_animation_start(self, alg: "Alg", duration_ms: int) -> None:
+    def send_animation_start(self, alg: "Alg", duration_ms: int, *, is_undo: bool = False) -> None:
         """Send animation start event with post-move state embedded.
 
         The model change has already been applied before this is called,
@@ -356,6 +356,7 @@ class ClientSession:
             "duration_ms": duration_ms,
             "alg": alg_str,
             "alg_type": alg_type,
+            "is_undo": is_undo,
             "state": state,
         }))
 
@@ -648,11 +649,14 @@ class ClientSession:
 
         if command_name == "undo":
             self._redo_is_solver = False  # Manual undo → redo items are not solver
+            self._animation_manager._is_undo = True
             self._app.op.undo(animation=True)
+            self._animation_manager._is_undo = False
             self.send_state()
             return
 
         if command_name == "redo":
+            self._animation_manager._is_undo = False
             self._app.op.redo(animation=True)
             self.send_state()
             return
@@ -1067,10 +1071,12 @@ class ClientSession:
             return
 
         # Pop one move with animation — may queue multiple items in AM
+        am._is_undo = not forward
         if forward:
             op.redo(animation=True)
         else:
             op.undo(animation=True)
+        am._is_undo = False
 
         # If AM is idle after the move (non-animatable was processed instantly),
         # recurse to get the next animatable move or reach empty

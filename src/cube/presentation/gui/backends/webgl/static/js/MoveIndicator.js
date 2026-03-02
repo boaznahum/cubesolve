@@ -68,13 +68,14 @@ export class MoveIndicator {
         this._currentMoveKey = null;
     }
 
-    show(moveData) {
+    show(moveData, opts) {
         if (!moveData) {
             this.hide();
             return;
         }
 
-        const key = `${moveData.face}|${moveData.direction}|${JSON.stringify(moveData.layers)}`;
+        const isUndo = opts?.isUndo || false;
+        const key = `${moveData.face}|${moveData.direction}|${JSON.stringify(moveData.layers)}|${isUndo}`;
         if (this._visible && this._currentMoveKey === key) {
             return;
         }
@@ -114,7 +115,7 @@ export class MoveIndicator {
         });
 
         const mat = new THREE.MeshBasicMaterial({
-            color: 0x000000,
+            color: isUndo ? 0xcc0000 : 0x000000,
             transparent: true,
             opacity: 0.92,
             depthTest: true,
