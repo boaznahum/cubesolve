@@ -20,3 +20,6 @@ scalene-*.json
 /.idea/modules.xml
 /Claude Conversations/claude-conversation-2026-02-27-f43f59ee.md
 node_modules/**
+
+# Test fixture temp dir (conftest renames dist/ during webgl tests)
+_dist_hidden_by_test/
