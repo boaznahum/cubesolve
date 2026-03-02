@@ -77,18 +77,20 @@ const historyPanel = new HistoryPanel(send, animQueue);
 // ── Move indicator (next-move arrows) ──
 const moveIndicator = new MoveIndicator(cubeModel, scene);
 
-// Track latest history_state for re-showing indicators after animation
-let _latestHistoryMsg = null;
-
 // Wire debug overlay callback from AnimationQueue → Toolbar
 animQueue._onDebugUpdate = (alg, layers, count) => toolbar.updateDebug(alg, layers, count);
 
-// When all animations finish, re-show move indicators from latest history_state
-// (but not during autoplay — indicators would just flash between batches)
+// When all animations finish, update stop button and re-show move indicators
 animQueue._onAllDone = () => {
+    // Update stop button: client is no longer busy
+    const stopBtn = document.getElementById('btn-stop');
+    if (stopBtn && !state.isPlaying) {
+        stopBtn.disabled = true;
+    }
+    // Re-show move indicators (but not during autoplay)
     if (state.isPlaying) return;
-    if (_latestHistoryMsg && _latestHistoryMsg.next_move) {
-        moveIndicator.show(_latestHistoryMsg.next_move);
+    if (state.nextMove) {
+        moveIndicator.show(state.nextMove);
     }
 };
 
@@ -117,15 +119,50 @@ window.addEventListener('resize', resize);
 // ── Message handler ──
 function handleMessage(msg) {
     switch (msg.type) {
-        case 'cube_state':
+        case 'state': {
+            // Unified state snapshot — single source of truth
             document.body.style.cursor = '';
-            state.latestState = msg;
-            if (!animQueue.currentAnim && animQueue.queue.length === 0) {
-                cubeModel.updateFromState(msg);
-            } else {
-                animQueue.pendingState = msg;
+
+            const wasPlaying = state.isPlaying;
+
+            // Apply snapshot to AppState (updates all fields)
+            state.applyServerSnapshot(msg);
+
+            // Update cube model if not animating
+            if (state.latestState && !animQueue.currentAnim && animQueue.queue.length === 0) {
+                cubeModel.updateFromState(state.latestState);
+            } else if (state.latestState) {
+                animQueue.pendingState = state.latestState;
+            }
+
+            // Update all UI components from the single state
+            toolbar.updateFromState(state);
+            historyPanel.updateFromState(state);
+
+            // Update assist delay from state
+            animQueue.assistDelayMs = state.assistEnabled ? state.assistDelayMs : 0;
+
+            // Save session ID
+            if (state.sessionId) {
+                localStorage.setItem('cube_session_id', state.sessionId);
+            }
+
+            // Show next-move indicators if not animating and not in autoplay
+            if (!state.isPlaying && !animQueue.currentAnim && animQueue.queue.length === 0) {
+                moveIndicator.show(state.nextMove);
+            }
+            if (state.isPlaying && !wasPlaying) {
+                moveIndicator.hide();
+            }
+
+            // solve_and_play: auto-start playback once solver fills the redo queue
+            if (toolbar._pendingSolveAndPlay && state.historyRedo.length > 0) {
+                toolbar._pendingSolveAndPlay = false;
+                animQueue.startPlayback('forward');
+                send({ type: 'play_next_redo' });
             }
             break;
+        }
 
         case 'animation_start': {
             if (moveIndicator.isVisible) moveIndicator.hide();
@@ -144,17 +181,10 @@ function handleMessage(msg) {
             }
             break;
 
-        case 'play_empty': {
-            // No more moves — stop playback, update UI
+        case 'play_empty':
+            // No more moves — stop playback
             animQueue.stopPlayback();
-            state.isPlaying = false;
-            historyPanel.setPlaying(false);
-            const stopBtn = document.getElementById('btn-stop');
-            if (stopBtn) stopBtn.disabled = true;
-            // Toolbar also handles play_empty
-            toolbar.handleMessage(msg);
             break;
-        }
 
         case 'flush_queue':
             animQueue.flush(state.latestState);
@@ -164,26 +194,9 @@ function handleMessage(msg) {
             cubeModel.buildColorCorrections(msg.colors);
             break;
 
-        case 'history_state':
-            historyPanel.updateFromServer(msg);
-            _latestHistoryMsg = msg;
-            // Show next-move indicators if not animating and not in autoplay
-            if (!state.isPlaying && !animQueue.currentAnim && animQueue.queue.length === 0) {
-                moveIndicator.show(msg.next_move || null);
-            }
-            // solve_and_play: auto-start playback once solver fills the redo queue
-            if (toolbar._pendingSolveAndPlay && msg.redo && msg.redo.length > 0) {
-                toolbar._pendingSolveAndPlay = false;
-                animQueue.startPlayback('forward');
-                send({ type: 'play_next_redo' });
-            }
-            break;
-
         default:
-            // Toolbar handles: playing, text_update, version, client_count,
-            // speed_update, size_update, toolbar_state, session_id
+            // Legacy message types (kept for backward compatibility during migration)
             toolbar.handleMessage(msg);
-            // Forward playing state to history panel + app state
             if (msg.type === 'playing') {
                 state.isPlaying = msg.value;
                 if (msg.value) moveIndicator.hide();

@@ -125,20 +125,19 @@ class WebglAnimationManager(AnimationManager):
             if isinstance(alg, algs.AnnotationAlg):
                 self._apply_model_change(move)
                 if self._web_window:
-                    self._web_window.send_cube_state()
-                    self._web_window.send_text()
+                    self._web_window.send_state()
                 continue
 
             if not isinstance(alg, algs.AnimationAbleAlg):
                 self._apply_model_change(move)
                 if self._web_window:
-                    self._web_window.send_cube_state()
+                    self._web_window.send_state()
                 continue
 
             if alg.n % 4 == 0:
                 self._apply_model_change(move)
                 if self._web_window:
-                    self._web_window.send_cube_state()
+                    self._web_window.send_state()
                 continue
 
             # Animatable move: apply model change, send to client, WAIT
@@ -148,8 +147,7 @@ class WebglAnimationManager(AnimationManager):
 
             if self._web_window:
                 self._web_window.send_animation_start(alg, duration_ms)
-                self._web_window.send_cube_state()
-                self._web_window.send_text()
+                self._web_window.send_state()
 
             # Wait for client to send animation_done
             self._waiting_for_client = True

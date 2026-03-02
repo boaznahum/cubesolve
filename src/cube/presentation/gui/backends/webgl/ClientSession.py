@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING
 
 from cube.application.exceptions.ExceptionAppExit import AppExit
 from cube.presentation.gui.backends.webgl.CubeStateSerializer import extract_cube_state
+from cube.presentation.gui.backends.webgl.SessionState import SessionStateSnapshot
 from cube.presentation.gui.commands import Command, CommandContext
 from cube.version import get_version
 
@@ -105,6 +106,9 @@ class ClientSession:
         # (playing the queue won't solve the cube anymore)
         self._redo_tainted: bool = False
 
+        # Client count — set externally by SessionManager
+        self._client_count: int = 0
+
     @property
     def app(self) -> "AbstractApp":
         return self._app
@@ -151,11 +155,107 @@ class ClientSession:
     def _send(self, message: str) -> None:
         self._event_loop.send_to(self._ws, message)
 
+    # -- Unified state snapshot --
+
+    def _build_state_snapshot(self) -> SessionStateSnapshot:
+        """Build a complete state snapshot from all server-side sources.
+
+        This is the SINGLE place where all state is gathered. No other
+        method needs to know which fields exist — just call send_state().
+        """
+        from cube.domain.solver.SolverName import SolverName
+
+        app = self._app
+        vs = app.vs
+        op = app.op
+        cfg = app.config
+
+        # Cube state
+        cube_state = extract_cube_state(app.cube)
+
+        # History
+        done: list[dict[str, str]] = [
+            {"alg": str(a), "type": self._classify_alg(a)}
+            for a in op.history()
+        ]
+        redo_list = list(reversed(op.redo_queue()))
+        redo: list[dict[str, str]] = [
+            {"alg": str(a), "type": self._classify_alg(a)}
+            for a in redo_list
+        ]
+
+        # Text overlays
+        at = vs.animation_text
+        anim_lines: list[dict[str, object]] = []
+        animation_text_props = cfg.animation_text
+        for i in range(3):
+            line = at.get_line(i)
+            if line:
+                prop = animation_text_props[i]
+                color: tuple[int, int, int, int] = prop[3]
+                anim_lines.append({
+                    "text": line,
+                    "size": prop[2],
+                    "color": f"rgba({color[0]},{color[1]},{color[2]},{color[3] / 255:.2f})",
+                    "bold": prop[4],
+                })
+
+        return SessionStateSnapshot(
+            # Cube
+            cube_size=cube_state["size"],
+            cube_solved=cube_state["solved"],
+            cube_faces=cube_state["faces"],
+            # Playback
+            is_playing=self._fast_playing,
+            # History
+            history_done=done,
+            history_redo=redo,
+            redo_source="solver" if self._redo_is_solver and redo else "undo",
+            redo_tainted=self._redo_tainted and bool(redo),
+            next_move=self._compute_next_move(redo_list),
+            # Speed
+            speed_index=vs.get_speed_index,
+            speed_step=cfg.animation_speed_config.step,
+            speed_d0=cfg.animation_speed_config.d0,
+            speed_dn=cfg.animation_speed_config.dn,
+            # Toolbar / Config
+            debug=cfg.solver_debug,
+            animation_enabled=op.animation_enabled,
+            solver_name=app.slv.name,
+            solver_list=[s.display_name for s in SolverName.user_visible()],
+            slice_start=vs.slice_start,
+            slice_stop=vs.slice_stop,
+            assist_enabled=cfg.assist_config.enabled,
+            assist_delay_ms=cfg.assist_config.delay_ms,
+            # Text
+            animation_text=anim_lines,
+            status_text=app.slv.status,
+            solver_text=app.slv.name,
+            move_count=op.count,
+            # Meta
+            version=get_version(),
+            client_count=self._client_count,
+            session_id=self.client_info.session_id,
+        )
+
+    def send_state(self) -> None:
+        """Send a complete state snapshot to the client.
+
+        This is the ONLY method that should be called after any state
+        change. Replaces all individual send_*() calls.
+        """
+        snapshot = self._build_state_snapshot()
+        self._send(snapshot.to_json())
+
+    # -- Legacy send helpers (kept for event messages + backward compat) --
+
     def send_version(self) -> None:
         self._send(json.dumps({"type": "version", "version": get_version()}))
 
     def send_client_count(self, count: int) -> None:
-        self._send(json.dumps({"type": "client_count", "count": count}))
+        """Update client count and send full state snapshot."""
+        self._client_count = count
+        self.send_state()
 
     def send_speed(self) -> None:
         speed_index = self._app.vs.get_speed_index
@@ -416,9 +516,8 @@ class ClientSession:
     # -- Update --
 
     def update_gui_elements(self) -> None:
-        """Send updated cube state and text to client."""
-        self.send_cube_state()
-        self.send_text()
+        """Send updated state to client (unified snapshot)."""
+        self.send_state()
 
     # -- Client connected --
 
@@ -427,13 +526,7 @@ class ClientSession:
         print(f"Session {self.client_info.session_id[:8]} - sending initial state", flush=True)
         self.send_session_id()
         self.send_color_map()
-        self.send_version()
-        self.send_speed()
-        self.send_size()
-        self.send_toolbar_state()
-        self.send_cube_state()
-        self.send_text()
-        self.send_history_state()
+        self.send_state()
 
     # -- Message handling --
 
@@ -513,9 +606,7 @@ class ClientSession:
         if clamped != vs.cube_size:
             vs.cube_size = clamped
             self._app.reset(clamped)
-            self.send_cube_state()
-            self.send_text()
-            self.send_history_state()
+            self.send_state()
 
     def _handle_solver(self, name: str) -> None:
         from cube.domain.solver.SolverName import SolverName
@@ -528,10 +619,7 @@ class ClientSession:
             return
         self._app.switch_to_solver(solver_name)
         self._app.op.reset()
-        self.send_cube_state()
-        self.send_text()
-        self.send_toolbar_state()
-        self.send_history_state()
+        self.send_state()
 
     def _handle_command(self, command_name: str) -> None:
         from cube.presentation.gui.commands import Commands
@@ -555,32 +643,25 @@ class ClientSession:
             with op.with_animation(animation=False):
                 ctx = CommandContext.from_window(self)  # type: ignore[arg-type]
                 Commands.SCRAMBLE_1.execute(ctx)
-            self.update_gui_elements()
-            self.send_toolbar_state()
-            self.send_history_state()
+            self.send_state()
             return
 
         if command_name == "undo":
             self._redo_is_solver = False  # Manual undo → redo items are not solver
             self._app.op.undo(animation=True)
-            if not self._app.op.animation_enabled:
-                self.update_gui_elements()
-            self.send_history_state()
+            self.send_state()
             return
 
         if command_name == "redo":
             self._app.op.redo(animation=True)
-            if not self._app.op.animation_enabled:
-                self.update_gui_elements()
-            self.send_history_state()
+            self.send_state()
             return
 
         if command_name == "clear_history":
             self._redo_is_solver = False
             self._redo_tainted = False
             self._app.op.reset()
-            self.update_gui_elements()
-            self.send_history_state()
+            self.send_state()
             return
 
         if command_name == "fast_play":
@@ -623,8 +704,6 @@ class ClientSession:
         command = command_map.get(command_name)
         if command:
             self.inject_command(command)
-            self.send_toolbar_state()
-            self.send_history_state()
 
     def _handle_mouse_rotate(self, dx: float, dy: float) -> None:
         # Client handles orbit camera locally — no server round-trip needed
@@ -748,9 +827,7 @@ class ClientSession:
             if self._redo_is_solver and op.redo_queue():
                 self._redo_tainted = True
             op.play(alg, animation=True)
-            if not op.animation_enabled:
-                self.update_gui_elements()
-            self.send_history_state()
+            self.send_state()
 
     @staticmethod
     def _grid_to_part(face: "Face", row: int, col: int) -> "Part | None":
@@ -936,13 +1013,11 @@ class ClientSession:
             app.op.enqueue_redo(steps)
             self._redo_is_solver = True
             self._redo_tainted = False
-            self.update_gui_elements()
-            self.send_toolbar_state()
-            self.send_history_state()
+            self.send_state()
         except Exception as e:
             traceback.print_exc()
             self._app.set_error(f"Solve error: {e}")
-            self.update_gui_elements()
+            self.send_state()
 
     def _handle_play_next(self, forward: bool) -> None:
         """Handle client request for the next move in playback.
@@ -964,7 +1039,7 @@ class ClientSession:
         # If AM still has queued work (from a multi-step redo), it already
         # sent the next animation_start to the client. Just update history.
         if not am.is_idle:
-            self.send_history_state()
+            self.send_state()
             return
 
         # AM is idle — pop next redo/undo item from the operator queue
@@ -972,15 +1047,11 @@ class ClientSession:
         if not has_more:
             self._fast_playing = False
             self.send_play_empty()
-            self.send_playing(False)
-            self.update_gui_elements()
-            self.send_toolbar_state()
-            self.send_history_state()
+            self.send_state()
             return
 
         if not self._fast_playing:
             self._fast_playing = True
-            self.send_playing(True)
 
         # Handle animation disabled: apply all moves instantly
         if not op.animation_enabled:
@@ -992,10 +1063,7 @@ class ClientSession:
                     op.undo(animation=False)
             self._fast_playing = False
             self.send_play_empty()
-            self.send_playing(False)
-            self.update_gui_elements()
-            self.send_toolbar_state()
-            self.send_history_state()
+            self.send_state()
             return
 
         # Pop one move with animation — may queue multiple items in AM
@@ -1010,7 +1078,7 @@ class ClientSession:
             self._handle_play_next(forward)
             return
 
-        self.send_history_state()
+        self.send_state()
     # -- Command injection --
 
     def inject_command(self, command: Command) -> None:
@@ -1024,23 +1092,18 @@ class ClientSession:
             self._fast_playing = False
             self._animation_manager.cancel_animation()
             self.send_play_empty()
-            self.send_playing(False)
-            self.update_gui_elements()
-            self.send_toolbar_state()
-            self.send_history_state()
+            self.send_state()
             return
 
         try:
             from cube.presentation.gui.commands.concrete import NewSessionCommand
 
-            speed_before = self._app.vs.get_speed_index
-            size_before = self._app.vs.cube_size
             history_len_before = len(self._app.op.history())
             ctx = CommandContext.from_window(self)  # type: ignore[arg-type]
-            result = command.execute(ctx)
+            command.execute(ctx)
 
             if isinstance(command, NewSessionCommand):
-                # Full state refresh — reuse the single source of truth
+                # Full state refresh
                 self.on_client_connected()
                 return
 
@@ -1048,14 +1111,8 @@ class ClientSession:
             if (self._redo_is_solver and self._app.op.redo_queue()
                     and len(self._app.op.history()) > history_len_before):
                 self._redo_tainted = True
-            if self._app.vs.get_speed_index != speed_before:
-                self.send_speed()
-            if self._app.vs.cube_size != size_before:
-                self.send_size()
-            self.send_toolbar_state()
-            if not result.no_gui_update and not self.animation_running:
-                self.update_gui_elements()
-            self.send_history_state()
+
+            self.send_state()
         except AppExit:
             print(f"Session {self.client_info.session_id[:8]} closing...", flush=True)
         except Exception as e:
@@ -1069,7 +1126,7 @@ class ClientSession:
                 if msg:
                     error_text += msg
                 self._app.set_error(error_text)
-                self.update_gui_elements()
+                self.send_state()
 
     def inject_key(self, key: int, modifiers: int = 0) -> None:
         self._handle_key(key, modifiers)
@@ -1157,5 +1214,5 @@ class ClientSession:
 
     # Alias used by WebglAnimationManager
     def _on_draw(self) -> None:
-        """Send cube state (alias for compatibility)."""
-        self.send_cube_state()
+        """Send state (alias for compatibility)."""
+        self.send_state()
