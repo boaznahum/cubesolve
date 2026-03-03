@@ -115,7 +115,7 @@ export class MoveIndicator {
         const mat = new THREE.MeshBasicMaterial({
             color: color,
             transparent: true,
-            opacity: 0.55,
+            opacity: 0.92,
             depthTest: true,
             side: THREE.DoubleSide,
             polygonOffset: true,

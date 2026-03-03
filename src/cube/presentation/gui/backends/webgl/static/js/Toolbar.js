@@ -299,6 +299,13 @@ export class Toolbar {
                 return;
             }
 
+            // Backspace → undo
+            if (e.key === 'Backspace') {
+                e.preventDefault();
+                this._send({ type: 'command', name: 'undo' });
+                return;
+            }
+
             // Camera reset: Alt+C (view reset) or Ctrl+C (cube + view reset)
             // Camera is client-side (OrbitControls), so handle here
             if (e.key.toLowerCase() === 'c' && (e.altKey || e.ctrlKey)) {
