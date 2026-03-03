@@ -18,7 +18,7 @@ export class OrbitControls {
         this._defaultPhi = Math.PI / 4;
         this._defaultTheta = Math.PI / 6;
         const isMobile = window.matchMedia('(max-width: 768px)').matches;
-        this._defaultRadius = isMobile ? 12 : 8;
+        this._defaultRadius = isMobile ? 18 : 8;
 
         this.spherical = new THREE.Spherical(this._defaultRadius, this._defaultPhi, this._defaultTheta);
         this.target = new THREE.Vector3(0, 0, 0);
