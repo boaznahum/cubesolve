@@ -159,14 +159,20 @@ export class Toolbar {
     }
 
     _updateStatusBar() {
-        const parts = ['Connected'];
-        if (this._state.version) parts[0] += ` v${this._state.version}`;
-        if (this._state.clientCount > 0) parts[0] += ` #${this._state.clientCount}`;
         // Preserve the status dot if present
         const dot = this._statusEl.querySelector('.status-dot');
         this._statusEl.textContent = '';
         if (dot) this._statusEl.appendChild(dot);
-        this._statusEl.appendChild(document.createTextNode(parts[0]));
+        this._statusEl.appendChild(document.createTextNode('Connected'));
+        if (this._state.version) {
+            const vSpan = document.createElement('span');
+            vSpan.className = 'status-version';
+            vSpan.textContent = ` v${this._state.version}`;
+            this._statusEl.appendChild(vSpan);
+        }
+        if (this._state.clientCount > 0) {
+            this._statusEl.appendChild(document.createTextNode(` #${this._state.clientCount}`));
+        }
         this._statusEl.className = 'connected';
     }
 
