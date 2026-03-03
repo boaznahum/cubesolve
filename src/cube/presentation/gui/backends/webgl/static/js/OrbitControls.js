@@ -230,7 +230,8 @@ export class OrbitControls {
      * Adjust camera distance for different cube sizes.
      */
     setForCubeSize(size) {
-        this.spherical.radius = size * 2.5;
+        this._defaultRadius = size * 2.5;
+        this.spherical.radius = this._defaultRadius;
         this.update();
     }
 }
