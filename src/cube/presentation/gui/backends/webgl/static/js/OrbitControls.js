@@ -44,6 +44,7 @@ export class OrbitControls {
     reset() {
         this.spherical.phi = this._defaultPhi;
         this.spherical.theta = this._defaultTheta;
+        this.spherical.radius = this._defaultRadius;
         this.panOffset.set(0, 0, 0);
         this.update();
     }
@@ -229,7 +230,8 @@ export class OrbitControls {
      * Adjust camera distance for different cube sizes.
      */
     setForCubeSize(size) {
-        this.spherical.radius = size * 2.5;
+        this._defaultRadius = size * 2.5;
+        this.spherical.radius = this._defaultRadius;
         this.update();
     }
 }
