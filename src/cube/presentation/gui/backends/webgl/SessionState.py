@@ -74,6 +74,7 @@ class SessionStateSnapshot:
     slice_stop: int = 0
     assist_enabled: bool = True
     assist_delay_ms: int = 400
+    sound_enabled: bool = False
 
     # -- Text overlays --
     animation_text: list[dict[str, object]] = field(default_factory=list)
@@ -129,6 +130,7 @@ class SessionStateSnapshot:
                 "slice_stop": self.slice_stop,
                 "assist_enabled": self.assist_enabled,
                 "assist_delay_ms": self.assist_delay_ms,
+                "sound_enabled": self.sound_enabled,
             },
 
             "text": {

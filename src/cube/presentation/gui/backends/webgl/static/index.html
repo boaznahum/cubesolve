@@ -1,650 +1,103 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Boaz NxN Rubik Solver</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            background: #2a2a2a;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            overflow: hidden;
-        }
-        #app-layout {
-            display: flex;
-            gap: 8px;
-            align-items: flex-start;
-            max-width: calc(100vw - 16px);
-            width: 100%;
-            padding: 0 8px;
-        }
-        #container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            flex: 1;
-            min-width: 0;
-        }
-
-        /* ── History Panel ── */
-        #history-panel {
-            width: 220px;
-            flex-shrink: 0;
-            display: flex;
-            flex-direction: column;
-            max-height: calc(100vh - 40px);
-            background: rgba(30, 30, 34, 0.95);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 10px;
-            backdrop-filter: blur(12px);
-            overflow: hidden;
-        }
-        .hp-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 10px 14px 8px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-        }
-        .hp-title {
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1.2px;
-        }
-        .hp-header-btn {
-            background: none;
-            border: none;
-            color: rgba(255, 255, 255, 0.3);
-            cursor: pointer;
-            font-size: 13px;
-            padding: 2px 6px;
-            border-radius: 4px;
-            transition: all 0.15s;
-        }
-        .hp-header-btn:hover {
-            color: rgba(255, 255, 255, 0.7);
-            background: rgba(255, 255, 255, 0.06);
-        }
-
-        #history-list {
-            flex: 1;
-            overflow-y: auto;
-            padding: 6px 8px;
-            scrollbar-width: thin;
-            scrollbar-color: rgba(255,255,255,0.1) transparent;
-        }
-        #history-list::-webkit-scrollbar { width: 4px; }
-        #history-list::-webkit-scrollbar-track { background: transparent; }
-        #history-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
-
-        /* History items */
-        .hp-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 5px 10px;
-            margin: 2px 0;
-            border-radius: 6px;
-            font-size: 12px;
-            transition: all 0.15s;
-            cursor: default;
-        }
-        .hp-item:hover {
-            background: rgba(255, 255, 255, 0.04);
-        }
-
-        /* Done items — solid */
-        .hp-done {
-            background: rgba(70, 130, 180, 0.12);
-            border: 1px solid rgba(70, 130, 180, 0.15);
-        }
-        /* Last done item — highlighted (next to be undone) */
-        .hp-done.hp-last-done {
-            background: rgba(70, 130, 180, 0.25);
-            border: 1px solid rgba(70, 130, 180, 0.35);
-            box-shadow: 0 0 8px rgba(70, 130, 180, 0.15);
-        }
-        .hp-done .hp-item-num {
-            color: rgba(130, 180, 220, 0.5);
-            font-size: 10px;
-            font-weight: 600;
-            min-width: 18px;
-            text-align: right;
-            font-variant-numeric: tabular-nums;
-        }
-        .hp-done .hp-item-alg {
-            color: rgba(255, 255, 255, 0.85);
-            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-            font-weight: 500;
-            flex: 1;
-        }
-
-        /* Redo items — faded, dashed */
-        .hp-redo {
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px dashed rgba(255, 255, 255, 0.08);
-        }
-        /* Next redo item — highlighted (next to be played/redone) */
-        .hp-redo.hp-next-redo {
-            background: rgba(255, 160, 50, 0.25);
-            border: 1px solid rgba(255, 160, 50, 0.6);
-            box-shadow: 0 0 10px rgba(255, 160, 50, 0.2);
-        }
-        .hp-redo.hp-next-redo .hp-item-num { color: rgba(255, 160, 50, 0.9); }
-        .hp-redo.hp-next-redo .hp-item-alg { color: rgba(255, 255, 255, 0.8); }
-        .hp-redo .hp-item-num {
-            color: rgba(255, 255, 255, 0.2);
-            font-size: 10px;
-            font-weight: 600;
-            min-width: 18px;
-            text-align: right;
-            font-variant-numeric: tabular-nums;
-        }
-        .hp-redo .hp-item-alg {
-            color: rgba(255, 255, 255, 0.35);
-            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-            font-weight: 500;
-            flex: 1;
-        }
-
-        /* Type badges */
-        .hp-item-badge {
-            font-size: 9px;
-            font-weight: 700;
-            padding: 1px 5px;
-            border-radius: 3px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .hp-badge-face { background: rgba(70, 130, 180, 0.25); color: rgba(130, 180, 220, 0.8); }
-        .hp-badge-slice { background: rgba(180, 130, 70, 0.25); color: rgba(220, 180, 130, 0.8); }
-        .hp-badge-rotation { background: rgba(130, 70, 180, 0.25); color: rgba(180, 140, 220, 0.8); }
-        .hp-badge-scramble { background: rgba(180, 70, 70, 0.25); color: rgba(220, 130, 130, 0.8); }
-        .hp-badge-solve { background: rgba(70, 180, 100, 0.25); color: rgba(130, 220, 150, 0.8); }
-        .hp-badge-move { display: none; }
-
-        /* NOW marker */
-        .hp-marker {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 6px 4px;
-            margin: 4px 0;
-        }
-        .hp-marker-line {
-            flex: 1;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(255, 160, 50, 0.6), transparent);
-        }
-        .hp-marker-text {
-            color: rgba(255, 160, 50, 0.8);
-            font-size: 9px;
-            font-weight: 700;
-            letter-spacing: 1.5px;
-            text-transform: uppercase;
-        }
-        .hp-marker-warn {
-            color: #e44;
-            font-size: 13px;
-            cursor: help;
-        }
-
-        /* Footer — undo/redo/play buttons */
-        .hp-footer {
-            display: flex;
-            gap: 4px;
-            padding: 8px 10px 10px;
-            border-top: 1px solid rgba(255, 255, 255, 0.06);
-        }
-        .hp-action-btn {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 4px;
-            padding: 7px 0;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 6px;
-            background: rgba(255, 255, 255, 0.04);
-            color: rgba(255, 255, 255, 0.75);
-            font-size: 11px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.15s;
-        }
-        .hp-action-btn:hover:not(:disabled) {
-            background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(255, 255, 255, 0.18);
-            color: rgba(255, 255, 255, 0.95);
-        }
-        .hp-action-btn:active:not(:disabled) {
-            background: rgba(255, 255, 255, 0.12);
-            transform: scale(0.97);
-        }
-        .hp-action-btn:disabled {
-            opacity: 0.3;
-            cursor: default;
-        }
-        .hp-action-btn .icon {
-            font-size: 14px;
-            line-height: 1;
-        }
-        .hp-btn-play {
-            background: rgba(70, 180, 100, 0.15);
-            border-color: rgba(70, 180, 100, 0.2);
-            color: rgba(130, 220, 150, 0.9);
-        }
-        .hp-btn-play:hover:not(:disabled) {
-            background: rgba(70, 180, 100, 0.25);
-            border-color: rgba(70, 180, 100, 0.35);
-        }
-
-        /* Toolbar */
-        #toolbar {
-            width: 100%;
-            background: rgba(40, 40, 40, 0.95);
-            border: 2px solid #444;
-            border-bottom: none;
-            border-radius: 6px 6px 0 0;
-            padding: 6px 10px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            flex-wrap: wrap;
-        }
-        .tb-group {
-            display: flex;
-            align-items: center;
-            gap: 3px;
-        }
-        .tb-sep {
-            width: 1px;
-            height: 22px;
-            background: #555;
-            margin: 0 4px;
-        }
-        .tb-label {
-            color: #aaa;
-            font-size: 11px;
-            font-family: monospace;
-            padding: 0 3px;
-            white-space: nowrap;
-        }
-        .tb-btn {
-            background: rgb(70, 130, 180);
-            color: #fff;
-            border: none;
-            border-radius: 3px;
-            padding: 3px 8px;
-            font-size: 11px;
-            font-family: Arial, sans-serif;
-            cursor: pointer;
-            white-space: nowrap;
-        }
-        .tb-btn:hover { background: rgb(100, 160, 210); }
-        .tb-btn:active { background: rgb(50, 100, 150); }
-        .tb-btn.tb-on { background: rgb(60, 160, 60); }
-        .tb-btn.tb-on:hover { background: rgb(80, 180, 80); }
-        .tb-btn.tb-off { background: rgb(100, 100, 100); }
-        .tb-btn.tb-off:hover { background: rgb(120, 120, 120); }
-        .tb-btn:disabled {
-            background: rgb(60, 60, 60);
-            color: rgba(255, 255, 255, 0.35);
-            cursor: default;
-            pointer-events: none;
-        }
-        .tb-compass {
-            padding: 2px 5px;
-            display: inline-flex;
-            align-items: center;
-            vertical-align: middle;
-        }
-
-        #solver-select {
-            background: #333;
-            color: #ddd;
-            border: 1px solid #555;
-            border-radius: 3px;
-            padding: 2px 4px;
-            font-size: 11px;
-            font-family: monospace;
-            cursor: pointer;
-            outline: none;
-        }
-        #solver-select:hover { border-color: #777; }
-        #solver-select:focus { border-color: rgb(70, 130, 180); }
-
-        #speed-select {
-            background: #333;
-            color: #ddd;
-            border: 1px solid #555;
-            border-radius: 3px;
-            padding: 2px 4px;
-            font-size: 11px;
-            font-family: monospace;
-            cursor: pointer;
-            outline: none;
-        }
-        #speed-select:hover { border-color: #777; }
-        #speed-select:focus { border-color: rgb(70, 130, 180); }
-        #size-select {
-            background: #333;
-            color: #ddd;
-            border: 1px solid #555;
-            border-radius: 3px;
-            padding: 2px 4px;
-            font-size: 11px;
-            font-family: monospace;
-            cursor: pointer;
-            outline: none;
-            max-height: 200px;
-        }
-        #size-select:hover { border-color: #777; }
-        #size-select:focus { border-color: rgb(70, 130, 180); }
-
-        /* Canvas wrapper */
-        #canvas-wrapper {
-            position: relative;
-            width: 100%;
-        }
-        #canvas {
-            display: block;
-            width: 100%;
-            height: auto;
-            border-left: 2px solid #444;
-            border-right: 2px solid #444;
-            border-top: none;
-            border-bottom: 2px solid #444;
-            border-radius: 0 0 6px 6px;
-            background: #2a2a2a;
-        }
-
-        /* Animation text overlay */
-        #anim-overlay {
-            position: absolute;
-            top: 8px;
-            left: 12px;
-            pointer-events: none;
-            z-index: 10;
-        }
-        .anim-line {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            text-shadow: 1px 1px 3px rgba(0,0,0,0.7);
-            line-height: 1.3;
-            white-space: nowrap;
-        }
-
-        /* Status overlay */
-        #status-overlay {
-            position: absolute;
-            bottom: 8px;
-            left: 12px;
-            pointer-events: none;
-            z-index: 10;
-            display: flex;
-            gap: 6px;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            font-size: 12px;
-            font-weight: 500;
-            letter-spacing: 0.2px;
-        }
-        #status-overlay .seg {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            padding: 3px 10px;
-            border-radius: 100px;
-            background: rgba(0, 0, 0, 0.72);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            white-space: nowrap;
-        }
-        #status-overlay .seg-label {
-            color: rgba(255, 255, 255, 0.5);
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-weight: 500;
-        }
-        #status-overlay .seg-value {
-            color: rgba(255, 255, 255, 0.95);
-            font-weight: 600;
-        }
-        #status-overlay .seg-solver .seg-label { color: rgba(130, 190, 255, 0.6); }
-        #status-overlay .seg-status .seg-label { color: rgba(140, 220, 140, 0.6); }
-        #status-overlay .seg-moves .seg-label { color: rgba(255, 200, 120, 0.6); }
-
-        /* Debug overlay — animation info */
-        #debug-overlay {
-            position: absolute;
-            bottom: 8px;
-            right: 12px;
-            pointer-events: none;
-            z-index: 10;
-            display: flex;
-            gap: 6px;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            font-size: 12px;
-            font-weight: 500;
-            letter-spacing: 0.2px;
-        }
-        #debug-overlay .seg {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            padding: 3px 10px;
-            border-radius: 100px;
-            background: rgba(0, 0, 0, 0.72);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            white-space: nowrap;
-        }
-        #debug-overlay .seg-label {
-            color: rgba(130, 190, 255, 0.6);
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-weight: 500;
-        }
-        #debug-overlay .seg-value {
-            color: rgba(255, 255, 255, 0.95);
-            font-weight: 600;
-        }
-
-        /* ── Mobile / tablet ── */
-        @media (max-width: 768px) {
-            html {
-                /* Prevent iOS bounce/overscroll */
-                overflow: hidden;
-                overscroll-behavior: none;
-            }
-            body {
-                /* position: fixed prevents iOS WebKit from scrolling the viewport
-                   when child elements call scrollTo() or when content reflows */
-                position: fixed;
-                inset: 0;
-                align-items: flex-start;
-                overflow: hidden;
-                height: 100%;
-                overscroll-behavior: none;
-                touch-action: manipulation;
-            }
-            #app-layout {
-                /* Keep horizontal layout: narrow history LEFT, cube RIGHT */
-                padding: 2px 2px;
-                gap: 4px;
-                height: 100%;
-                align-items: stretch;
-                overflow: hidden;
-            }
-
-            /* ── Very narrow history panel on the left ── */
-            #history-panel {
-                width: 58px;
-                max-height: none;
-                border-radius: 8px;
-            }
-            .hp-header { order: 0; padding: 2px 4px 1px; }
-            .hp-title { display: none; }
-            .hp-header-btn { font-size: 11px; padding: 1px 3px; }
-
-            /* Buttons ABOVE the scrollable list */
-            .hp-footer {
-                order: 1;
-                border-top: none;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-                padding: 3px 4px;
-                gap: 3px;
-                flex-wrap: wrap;
-            }
-            .hp-action-btn {
-                flex: 0 0 calc(50% - 2px);
-                padding: 5px 0;
-                font-size: 9px;
-            }
-            .hp-action-btn .icon { font-size: 11px; }
-            #history-list {
-                order: 2;
-                padding: 2px 3px;
-            }
-
-            /* Compact items — no badges, no numbers */
-            .hp-item-badge { display: none; }
-            .hp-item-num { display: none; }
-            .hp-item {
-                padding: 2px 4px;
-                margin: 1px 0;
-                gap: 2px;
-                font-size: 10px;
-            }
-            .hp-done .hp-item-alg, .hp-redo .hp-item-alg { font-size: 10px; }
-            .hp-marker { padding: 2px 1px; margin: 1px 0; gap: 3px; }
-            .hp-marker-text { font-size: 7px; letter-spacing: 0.8px; }
-
-            /* Container fills remaining space, clips overflow so canvas doesn't push layout */
-            #container { flex: 1; min-width: 0; overflow: hidden; }
-            #canvas-wrapper { flex: 1; min-height: 0; overflow: hidden; }
-
-            /* Compact status bar on mobile (version info only visible here) */
-            #status { font-size: 9px; margin-top: 2px; text-align: center; opacity: 0.6; }
-
-            /* ── Toolbar: multi-row wrapping ── */
-            #toolbar {
-                padding: 4px 6px;
-                gap: 3px;
-                flex-wrap: wrap;
-                justify-content: center;
-            }
-            .tb-sep { display: none; }
-            .tb-group { flex-shrink: 0; }
-            .tb-btn { padding: 4px 6px; font-size: 11px; }
-            .tb-label { font-size: 10px; padding: 0 1px; }
-            #solver-select, #size-select, #speed-select {
-                font-size: 11px;
-                padding: 3px 4px;
-            }
-        }
-
-        /* Connection status */
-        #status {
-            margin-top: 8px;
-            color: #888;
-            font-size: 12px;
-        }
-        #status.connected { color: #4a4; }
-        #status.error { color: #a44; }
-    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
     <div id="app-layout">
-    <!-- History Panel -->
-    <div id="history-panel">
-        <div class="hp-header">
-            <span class="hp-title">History</span>
-            <button class="hp-header-btn" id="btn-history-clear" title="Clear history">&#x2715;</button>
-        </div>
-        <div id="history-list"></div>
-        <div class="hp-footer">
-            <button class="hp-action-btn" id="btn-fastrewind" title="Undo all" disabled>
-                <span class="icon">&#x25C0;&#x25C0;</span>
-            </button>
-            <button class="hp-action-btn" id="btn-undo" title="Undo" disabled>
-                <span class="icon">&#x25C0;</span>
-            </button>
-            <button class="hp-action-btn" id="btn-redo" title="Redo" disabled>
-                <span class="icon">&#x25B6;</span>
-            </button>
-            <button class="hp-action-btn hp-btn-play" id="btn-fastplay" title="Play all" disabled>
-                <span class="icon">&#x25B6;&#x25B6;</span>
-            </button>
-        </div>
-    </div>
-    <!-- Cube area -->
-    <div id="container">
-        <div id="toolbar">
-            <div class="tb-group">
-                <button class="tb-btn" data-cmd="scramble">Scramble</button>
-                <button class="tb-btn" data-cmd="solve_and_play">Solve</button>
-                <button class="tb-btn" data-cmd="solve">Solution</button>
-                <button class="tb-btn" id="btn-stop" data-cmd="stop" disabled>Stop</button>
-                <button class="tb-btn" data-cmd="reset">Reset</button>
-                <button class="tb-btn tb-icon" data-cmd="reset_session" title="Reset session — start completely fresh">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z" fill="#ccc"/>
-                    </svg>
+        <!-- History Panel -->
+        <div id="history-panel">
+            <div class="hp-header">
+                <span class="hp-title">History</span>
+                <button class="hp-header-btn" id="btn-history-clear" title="Clear history">&#x2715;</button>
+            </div>
+            <div id="history-list"></div>
+            <div class="hp-footer">
+                <button class="hp-action-btn" id="btn-fastrewind" title="Undo all" disabled>
+                    <span class="icon">&#x25C0;&#x25C0;</span>
                 </button>
-                <button class="tb-btn tb-compass" id="btn-view-reset" title="Reset view to default camera position">
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="12" cy="12" r="9.5" stroke="#4dd" stroke-width="1.8"/>
-                        <line x1="12" y1="1" x2="12" y2="5.5" stroke="#4dd" stroke-width="1.5"/>
-                        <line x1="12" y1="18.5" x2="12" y2="23" stroke="#4dd" stroke-width="1.5"/>
-                        <line x1="1" y1="12" x2="5.5" y2="12" stroke="#4dd" stroke-width="1.5"/>
-                        <line x1="18.5" y1="12" x2="23" y2="12" stroke="#4dd" stroke-width="1.5"/>
-                        <polygon points="12,5 9.5,13 12,11.5 14.5,13" fill="#e33"/>
-                        <polygon points="12,19 9.5,13 12,14.5 14.5,13" fill="#fff" opacity="0.7"/>
-                        <text x="12" y="3.5" text-anchor="middle" fill="#e33" font-size="4" font-weight="bold">N</text>
-                    </svg>
+                <button class="hp-action-btn" id="btn-undo" title="Undo" disabled>
+                    <span class="icon">&#x25C0;</span>
+                </button>
+                <button class="hp-action-btn" id="btn-redo" title="Redo" disabled>
+                    <span class="icon">&#x25B6;</span>
+                </button>
+                <button class="hp-action-btn hp-btn-play" id="btn-fastplay" title="Play all" disabled>
+                    <span class="icon">&#x25B6;&#x25B6;</span>
                 </button>
             </div>
-            <div class="tb-sep"></div>
-            <div class="tb-group">
-                <button class="tb-btn tb-on" id="btn-debug" data-cmd="toggle_debug">Dbg:ON</button>
-                <button class="tb-btn tb-on" id="btn-anim" data-cmd="toggle_animation">Anim:ON</button>
-                <label class="tb-label" style="cursor:pointer"><input type="checkbox" id="chk-assist" checked> Assist</label>
-            </div>
-            <div class="tb-sep"></div>
-            <div class="tb-group">
-                <span class="tb-label">Solver</span>
-                <select id="solver-select" title="Solver"></select>
-            </div>
-            <div class="tb-sep"></div>
-            <div class="tb-group">
-                <span class="tb-label">Size</span>
-                <select id="size-select" title="Cube size"></select>
-            </div>
-            <div class="tb-sep"></div>
-            <div class="tb-group">
-                <span class="tb-label">Spd</span>
-                <select id="speed-select" title="Animation speed"></select>
-            </div>
         </div>
-        <div id="canvas-wrapper">
-            <canvas id="canvas"></canvas>
-            <div id="anim-overlay"></div>
-            <div id="status-overlay"></div>
-            <div id="debug-overlay"></div>
+        <!-- Cube area -->
+        <div id="container">
+            <div id="toolbar">
+                <div class="tb-group">
+                    <button class="tb-btn" data-cmd="scramble">Scramble</button>
+                    <button class="tb-btn" data-cmd="solve_and_play">Solve</button>
+                    <button class="tb-btn" data-cmd="solve">Solution</button>
+                    <button class="tb-btn" id="btn-stop" data-cmd="stop" disabled>Stop</button>
+                    <button class="tb-btn" data-cmd="reset">Reset</button>
+                    <button class="tb-btn tb-icon" data-cmd="reset_session"
+                        title="Reset session — start completely fresh">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path
+                                d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"
+                                fill="#ccc" />
+                        </svg>
+                    </button>
+                    <button class="tb-btn tb-compass" id="btn-view-reset" title="Reset view to default camera position">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="12" cy="12" r="9.5" stroke="#4dd" stroke-width="1.8" />
+                            <line x1="12" y1="1" x2="12" y2="5.5" stroke="#4dd" stroke-width="1.5" />
+                            <line x1="12" y1="18.5" x2="12" y2="23" stroke="#4dd" stroke-width="1.5" />
+                            <line x1="1" y1="12" x2="5.5" y2="12" stroke="#4dd" stroke-width="1.5" />
+                            <line x1="18.5" y1="12" x2="23" y2="12" stroke="#4dd" stroke-width="1.5" />
+                            <polygon points="12,5 9.5,13 12,11.5 14.5,13" fill="#e33" />
+                            <polygon points="12,19 9.5,13 12,14.5 14.5,13" fill="#fff" opacity="0.7" />
+                            <text x="12" y="3.5" text-anchor="middle" fill="#e33" font-size="4"
+                                font-weight="bold">N</text>
+                        </svg>
+                    </button>
+                </div>
+                <div class="tb-sep"></div>
+                <div class="tb-group">
+                    <button class="tb-btn tb-on" id="btn-debug" data-cmd="toggle_debug">Dbg:ON</button>
+                    <button class="tb-btn tb-on" id="btn-anim" data-cmd="toggle_animation">Anim:ON</button>
+                    <label class="tb-label" style="cursor:pointer"><input type="checkbox" id="chk-assist" checked>
+                        Assist</label>
+                    <button class="tb-btn tb-on" id="btn-sound" title="Toggle sound effects">🔊</button>
+                </div>
+                <div class="tb-sep"></div>
+                <div class="tb-group">
+                    <span class="tb-label">Solver</span>
+                    <select id="solver-select" title="Solver"></select>
+                </div>
+                <div class="tb-sep"></div>
+                <div class="tb-group">
+                    <span class="tb-label">Size</span>
+                    <select id="size-select" title="Cube size"></select>
+                </div>
+                <div class="tb-sep"></div>
+                <div class="tb-group">
+                    <span class="tb-label">Spd</span>
+                    <select id="speed-select" title="Animation speed"></select>
+                </div>
+            </div>
+            <div id="canvas-wrapper">
+                <canvas id="canvas"></canvas>
+                <div id="anim-overlay"></div>
+                <div id="status-overlay"></div>
+                <div id="debug-overlay"></div>
+            </div>
+            <div id="status"><span class="status-dot"></span>Connecting...</div>
         </div>
-        <div id="status">Connecting...</div>
-    </div>
     </div><!-- /app-layout -->
     <script type="importmap">
     {
@@ -655,4 +108,5 @@
     </script>
     <script type="module" src="js/main.js"></script>
 </body>
+
 </html>

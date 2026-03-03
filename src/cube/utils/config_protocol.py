@@ -45,6 +45,14 @@ class AssistConfigProtocol(Protocol):
 
 
 @runtime_checkable
+class SoundConfigProtocol(Protocol):
+    """Protocol for sound effects configuration."""
+
+    @property
+    def enabled(self) -> bool: ...
+
+
+@runtime_checkable
 class ArrowConfigProtocol(Protocol):
     """Protocol for 3D arrow configuration.
 
@@ -343,6 +351,11 @@ class ConfigProtocol(Protocol):
     @property
     def assist_config(self) -> AssistConfigProtocol:
         """Assist mode configuration for WebGL frontend."""
+        ...
+
+    @property
+    def sound_config(self) -> "SoundConfigProtocol":
+        """Sound effects configuration for WebGL frontend."""
         ...
 
     @property

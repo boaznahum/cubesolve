@@ -132,6 +132,19 @@ class AssistConfig:
 
 ASSIST_CONFIG = AssistConfig()
 
+
+@dataclass
+class SoundConfig:
+    """Sound effects configuration for WebGL frontend.
+
+    When enabled, plays a procedural click/whir sound on each cube rotation.
+    """
+    # Whether sound is enabled by default
+    enabled: bool = False
+
+
+SOUND_CONFIG = SoundConfig()
+
 # Single-step mode codes - enable specific breakpoints for debugging
 # Import SSCode here to avoid circular imports (config is loaded early)
 from cube.utils.SSCode import SSCode  # noqa: E402

@@ -14,7 +14,7 @@ from cube.config.face_tracer_config import FaceTrackerConfig, TrackerIndicatorCo
 from cube.domain.model.Color import Color
 from cube.utils.config_protocol import (
     AnimationSpeedConfigProtocol, AnimationTextDef, ArrowConfigProtocol,
-    AssistConfigProtocol, ConfigProtocol, MarkerDef,
+    AssistConfigProtocol, ConfigProtocol, MarkerDef, SoundConfigProtocol,
 )
 from cube.utils.markers_config import MarkersConfig
 from cube.utils.SSCode import SSCode
@@ -274,6 +274,11 @@ class AppConfig(ConfigProtocol):
     def assist_config(self) -> AssistConfigProtocol:
         """Assist mode configuration for WebGL frontend."""
         return cfg.ASSIST_CONFIG
+
+    @property
+    def sound_config(self) -> SoundConfigProtocol:
+        """Sound effects configuration for WebGL frontend."""
+        return cfg.SOUND_CONFIG
 
     @property
     def show_file_algs(self) -> bool:
