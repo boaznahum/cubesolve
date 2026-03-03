@@ -122,8 +122,8 @@ function resize() {
     const isMobile = window.matchMedia('(max-width: 768px)').matches;
 
     if (isMobile) {
-        // On mobile, use the full wrapper area (non-square) so the cube
-        // fills the screen instead of being constrained to a tiny square.
+        // On mobile, use the full wrapper area so the cube fills the screen.
+        // wrapper is flex:1 so it stretches to all available space.
         const w = wrapper.clientWidth;
         const h = wrapper.clientHeight;
         renderer.setSize(w, h);
