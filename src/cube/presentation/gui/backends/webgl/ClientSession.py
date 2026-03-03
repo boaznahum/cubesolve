@@ -170,8 +170,15 @@ class ClientSession:
         self._animation_manager.cancel_animation()
         # FSM RECONNECT: transitions to IDLE or READY based on queue
         has_redo = bool(self._app.op.redo_queue())
+        has_history = bool(self._app.op.history())
         self._fsm.send_reconnect(has_redo=has_redo)
-        print(f"Session reattached: {self.client_info.session_id[:8]} → {self._fsm.state.value}", flush=True)
+        actions = self._fsm.allowed_actions(has_redo=has_redo, has_history=has_history)
+        print(
+            f"Session reattached: {self.client_info.session_id[:8]} → {self._fsm.state.value} "
+            f"redo={len(self._app.op.redo_queue())} history={len(self._app.op.history())} "
+            f"play_all={actions.get('play_all')}",
+            flush=True,
+        )
         self.on_client_connected()
 
     # -- Send helpers (unicast to this session's WebSocket) --
@@ -447,7 +454,15 @@ class ClientSession:
 
     def on_client_connected(self) -> None:
         """Send initial state to newly connected client."""
-        print(f"Session {self.client_info.session_id[:8]} - sending initial state", flush=True)
+        has_redo = bool(self._app.op.redo_queue())
+        has_history = bool(self._app.op.history())
+        print(
+            f"Session {self.client_info.session_id[:8]} - sending initial state: "
+            f"fsm={self._fsm.state.value} redo={len(self._app.op.redo_queue())} "
+            f"history={len(self._app.op.history())} "
+            f"play_all={self._fsm.allowed_actions(has_redo=has_redo, has_history=has_history).get('play_all')}",
+            flush=True,
+        )
         self.send_color_map()
         self.send_state()
 
