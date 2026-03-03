@@ -44,6 +44,7 @@ export class OrbitControls {
     reset() {
         this.spherical.phi = this._defaultPhi;
         this.spherical.theta = this._defaultTheta;
+        this.spherical.radius = this._defaultRadius;
         this.panOffset.set(0, 0, 0);
         this.update();
     }
