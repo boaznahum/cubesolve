@@ -120,20 +120,21 @@ animQueue._onAssistHide = () => {
 function resize() {
     const wrapper = canvas.parentElement;
     const isMobile = window.matchMedia('(max-width: 768px)').matches;
-    let availH;
+
     if (isMobile) {
-        // On mobile, #canvas-wrapper is flex:1 with min-height:0, so its
-        // clientHeight is the actual available space from the flex layout.
-        availH = wrapper.clientHeight;
+        // On mobile, use the full wrapper area (non-square) so the cube
+        // fills the screen instead of being constrained to a tiny square.
+        const w = wrapper.clientWidth;
+        const h = wrapper.clientHeight;
+        renderer.setSize(w, h);
+        camera.aspect = w / h;
     } else {
-        // On desktop, wrapper sizes from its content (no flex height constraint),
-        // so we calculate available height from the viewport.
         const toolbarH = document.getElementById('toolbar')?.offsetHeight || 40;
-        availH = window.innerHeight - toolbarH - 40;
+        const availH = window.innerHeight - toolbarH - 40;
+        const size = Math.min(wrapper.clientWidth, availH);
+        renderer.setSize(size, size);
+        camera.aspect = 1;
     }
-    const size = Math.min(wrapper.clientWidth, availH);
-    renderer.setSize(size, size);
-    camera.aspect = 1;
     camera.updateProjectionMatrix();
 }
 resize();
