@@ -72,6 +72,45 @@ Replace fragmented state management (~10 individual `send_*()` calls) with a sin
 - Delete legacy `case` branches from main.js `default:` handler
 - Server-side: remove any `send_*()` methods that only sent legacy individual messages
 
+## Flow State Machine (v1.21)
+
+### Goal
+Replace scattered boolean flags (`_fast_playing`, `_redo_is_solver`, `_redo_tainted`, `playbackMode`,
+`_pendingSolveAndPlay`, `_stopRequested`) across 6+ files with a single explicit state machine owned
+by the server. The client reads `machine_state` and `allowedActions` from the snapshot — no reasoning,
+no conditions, no bugs.
+
+### States (7)
+IDLE, READY, SOLVING, PLAYING, REWINDING, ANIMATING, STOPPING
+
+### What Was Done
+- **FlowStateMachine.py** (NEW): Pure-logic FSM with FlowState/FlowEvent enums, static transition table,
+  static button enable table, guard conditions, metadata (redo_source, redo_tainted, auto_play)
+- **SessionState.py**: Added `machine_state`, `allowed_actions` fields
+- **ClientSession.py**: Major refactoring — replaced all boolean flags with `_fsm: FlowStateMachine`,
+  all commands route through FSM, `reattach()` uses `send_reconnect()` (fixes reconnect bug),
+  wired `_on_queue_drained` callback for single-move ANIM_DONE transitions
+- **WebglAnimationManager.py**: Added `_on_queue_drained` callback, updated stale comments
+- **AppState.js**: Added `machineState`, `allowedActions`
+- **HistoryPanel.js**: Replaced button logic with `allowedActions` lookup, removed `_isPlaying`
+- **Toolbar.js**: Removed `_pendingSolveAndPlay`, stop button uses `allowedActions`
+- **main.js**: Removed auto-play logic, added state-machine-driven playback sync
+- **index.html**: Added reset-session button with refresh icon
+- **test_flow_state_machine.py** (NEW): 53 unit tests for FSM
+
+### Bugs Fixed
+1. **Reconnect play button disabled**: `reattach()` → `send_reconnect()` → always IDLE/READY
+2. **Stop button timing**: enabled iff state in {ANIMATING, PLAYING, REWINDING}
+3. **Solve-and-play flag stuck**: FSM auto-transitions SOLVING → PLAYING
+4. **Single redo/undo stuck in ANIMATING**: `_on_queue_drained` callback fires ANIM_DONE
+5. **Reset session**: works from ANY state → IDLE
+
+### Tests
+- 53 FSM unit tests pass
+- 65 WebGL E2E tests pass (including previously failing `test_scramble_solution_step_through`)
+- 11,401 non-GUI tests pass
+- All static checks pass (ruff, mypy, pyright)
+
 ## Known Bugs (to investigate)
 - User reports: "cube in startup whole gray" — could not reproduce
 - User reports: "pressing solve stuck the application" — could not reproduce

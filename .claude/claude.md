@@ -249,6 +249,18 @@ The script uses Windows Text-to-Speech to say "Hey Friend! Claude needs your att
 
 ---
 
+## WebGL Backend — Server Restart Notifications
+
+**CRITICAL:** When working on the WebGL backend, ALWAYS tell the user when they need to restart the Python server.
+
+- **Python changes** (anything under `src/cube/`): **Server restart required.** Always tell the user: "You need to restart the Python server to pick up these changes."
+- **JS/HTML/CSS changes** (anything under `static/`): **Browser refresh only.** Tell the user: "Just refresh the browser — no server restart needed."
+- **Mixed changes** (both Python and JS): Tell the user: "Restart the server and refresh the browser."
+
+Never assume the user knows which changes require a restart. Always be explicit.
+
+---
+
 ## Version Management - MANDATORY
 
 **CRITICAL:** On ANY code change, increment the version number before committing.

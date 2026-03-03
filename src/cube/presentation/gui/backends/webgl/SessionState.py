@@ -45,7 +45,11 @@ class SessionStateSnapshot:
     cube_solved: bool = False
     cube_faces: dict[str, list[list[int]]] = field(default_factory=dict)
 
-    # -- Playback --
+    # -- Flow state machine --
+    machine_state: str = "idle"
+    allowed_actions: dict[str, bool] = field(default_factory=dict)
+
+    # -- Playback (derived from machine_state for backward compat) --
     is_playing: bool = False
 
     # -- History --
@@ -96,6 +100,9 @@ class SessionStateSnapshot:
                 "solved": self.cube_solved,
                 "faces": self.cube_faces,
             },
+
+            "machine_state": self.machine_state,
+            "allowed_actions": self.allowed_actions,
 
             "is_playing": self.is_playing,
 
