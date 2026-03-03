@@ -259,6 +259,7 @@ class ClientSession:
             slice_stop=vs.slice_stop,
             assist_enabled=cfg.assist_config.enabled,
             assist_delay_ms=cfg.assist_config.delay_ms,
+            sound_enabled=cfg.sound_config.enabled,
             # Text
             animation_text=anim_lines,
             status_text=app.slv.status,

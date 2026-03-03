@@ -3,11 +3,12 @@
  */
 
 export class Toolbar {
-    constructor(appState, sendFn, controls, animQueue) {
+    constructor(appState, sendFn, controls, animQueue, soundManager) {
         this._state = appState;
         this._send = sendFn;
         this._controls = controls;
         this._animQueue = animQueue;
+        this._sound = soundManager || null;
         this._animOverlay = document.getElementById('anim-overlay');
         this._statusOverlay = document.getElementById('status-overlay');
         this._statusEl = document.getElementById('status');
@@ -108,6 +109,14 @@ export class Toolbar {
             chkAssist.checked = appState.assistEnabled;
         }
 
+        // Sound toggle — sync from server config on initial load
+        const btnSound = document.getElementById('btn-sound');
+        if (btnSound && this._sound && this._soundLocalOverride === undefined) {
+            this._sound.enabled = appState.soundEnabled;
+            btnSound.textContent = appState.soundEnabled ? '🔊' : '🔇';
+            btnSound.className = 'tb-btn ' + (appState.soundEnabled ? 'tb-on' : 'tb-off');
+        }
+
         // Slice selection display
         this._updateSliceOverlay(appState.sliceStart, appState.sliceStop);
     }
@@ -153,7 +162,11 @@ export class Toolbar {
         const parts = ['Connected'];
         if (this._state.version) parts[0] += ` v${this._state.version}`;
         if (this._state.clientCount > 0) parts[0] += ` #${this._state.clientCount}`;
-        this._statusEl.textContent = parts[0];
+        // Preserve the status dot if present
+        const dot = this._statusEl.querySelector('.status-dot');
+        this._statusEl.textContent = '';
+        if (dot) this._statusEl.appendChild(dot);
+        this._statusEl.appendChild(document.createTextNode(parts[0]));
         this._statusEl.className = 'connected';
     }
 
@@ -236,6 +249,17 @@ export class Toolbar {
                 this._assistLocalOverride = chkAssist.checked;
                 this._animQueue.assistDelayMs = chkAssist.checked ? (this._assistDelayMs || 400) : 0;
                 chkAssist.blur();  // Release focus so keyboard handler works
+            });
+        }
+
+        // Sound toggle (client-side only — no server message)
+        const btnSound = document.getElementById('btn-sound');
+        if (btnSound && this._sound) {
+            btnSound.addEventListener('click', () => {
+                this._soundLocalOverride = true;
+                this._sound.enabled = !this._sound.enabled;
+                btnSound.textContent = this._sound.enabled ? '🔊' : '🔇';
+                btnSound.className = 'tb-btn ' + (this._sound.enabled ? 'tb-on' : 'tb-off');
             });
         }
 

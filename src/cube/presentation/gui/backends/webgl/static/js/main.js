@@ -16,6 +16,7 @@ import { WsClient } from './WsClient.js';
 import { Toolbar } from './Toolbar.js';
 import { HistoryPanel } from './HistoryPanel.js';
 import { MoveIndicator } from './MoveIndicator.js';
+import { SoundManager } from './SoundManager.js';
 
 // ── Application state ──
 const state = new AppState();
@@ -55,8 +56,11 @@ const cubeModel = new CubeModel(scene);
 const wsClient = new WsClient(handleMessage);
 const send = (msg) => wsClient.send(msg);
 
+// ── Sound manager ──
+const soundManager = new SoundManager();
+
 // ── Animation queue ──
-const animQueue = new AnimationQueue(cubeModel, send);
+const animQueue = new AnimationQueue(cubeModel, send, soundManager);
 window._testAnimQueue = animQueue;  // Expose for E2E test assertions
 
 // ── Face turn handler ──
@@ -68,7 +72,7 @@ const faceTurnHandler = new FaceTurnHandler(
 const controls = new OrbitControls(camera, canvas, faceTurnHandler, send);
 
 // ── Toolbar ──
-const toolbar = new Toolbar(state, send, controls, animQueue);
+const toolbar = new Toolbar(state, send, controls, animQueue, soundManager);
 toolbar.bind();
 
 // ── History panel ──

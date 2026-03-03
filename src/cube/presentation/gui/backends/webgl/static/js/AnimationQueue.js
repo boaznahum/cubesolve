@@ -11,9 +11,10 @@
 import * as THREE from 'three';
 
 export class AnimationQueue {
-    constructor(cubeModel, sendFn) {
+    constructor(cubeModel, sendFn, soundManager) {
         this.cubeModel = cubeModel;
-        this._send = sendFn || (() => {});  // WebSocket send function
+        this._send = sendFn || (() => { });  // WebSocket send function
+        this._sound = soundManager || null;  // optional SoundManager
         this.queue = [];
         this.currentAnim = null;
         this.pendingState = null;  // State to apply after all animations
@@ -166,7 +167,7 @@ export class AnimationQueue {
 
         // Normalize face name: server may send uppercase X/Y/Z or bracket-prefixed "[2:2]M"
         let face = event.face;
-        const caseMap = {'X':'x', 'Y':'y', 'Z':'z'};
+        const caseMap = { 'X': 'x', 'Y': 'y', 'Z': 'z' };
         if (caseMap[face]) {
             face = caseMap[face];
         } else if (face && face.length > 1) {
@@ -193,6 +194,12 @@ export class AnimationQueue {
     _startRotation(event, state, face, speedMult) {
         const duration = (event.duration_ms || 300) * speedMult;
         const direction = event.direction || 1;
+
+        // Play rotation sound (quieter when queue is long)
+        if (this._sound) {
+            const vol = speedMult < 0.5 ? 0.12 : (speedMult < 0.8 ? 0.22 : 0.35);
+            this._sound.play(vol);
+        }
 
         // Determine rotation axis and angle
         const axisInfo = this._getRotationAxis(face, direction);

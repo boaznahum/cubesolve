@@ -153,13 +153,8 @@ export class HistoryPanel {
         alg.className = 'hp-item-alg';
         alg.textContent = item.alg;
 
-        const badge = document.createElement('span');
-        badge.className = `hp-item-badge hp-badge-${item.type}`;
-        badge.textContent = this._badgeLabel(item.type);
-
         el.appendChild(num);
         el.appendChild(alg);
-        el.appendChild(badge);
 
         return el;
     }

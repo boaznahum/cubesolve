@@ -47,6 +47,7 @@ export class AppState extends EventTarget {
         this.sliceStop = 0;
         this.assistEnabled = true;
         this.assistDelayMs = 400;
+        this.soundEnabled = false;
 
         // -- Text overlays --
         this.animationText = [];
@@ -127,6 +128,9 @@ export class AppState extends EventTarget {
             patch.sliceStop = msg.toolbar.slice_stop;
             patch.assistEnabled = msg.toolbar.assist_enabled;
             patch.assistDelayMs = msg.toolbar.assist_delay_ms;
+            if (msg.toolbar.sound_enabled !== undefined) {
+                patch.soundEnabled = msg.toolbar.sound_enabled;
+            }
         }
 
         // Text

@@ -1,22 +1,19 @@
 /**
- * Visual move indicators — per-sticker chevrons on ALL affected stickers.
+ * Visual move indicators — per-sticker chevrons flush ON sticker faces.
  *
- * Places a dark chevron on every sticker that will move during the next
- * rotation, pointing in the direction that sticker will travel.
+ * Places a semi-transparent chevron on every sticker that will move
+ * during the next rotation, pointing in the direction of travel.
+ * Chevrons sit directly on the sticker surface (not floating above)
+ * using polygonOffset to prevent z-fighting.
+ *
  * Works for face moves, slice moves, multi-layer, and non-contiguous layers.
- *
- * Inspired by cube-solver.com's approach.
  */
 
 import * as THREE from 'three';
 import { FACE_DEFS } from './constants.js';
 
 // Rotation axis and angle sign (matching AnimationQueue._getRotationAxis)
-// For direction=1 (CW looking from outside), returns the actual rotation
-// axis direction and whether the angle is negative (CW) or positive (CCW).
 function getAxisAndSign(face) {
-    // angle = -PI/2 for CW → sign = -1
-    // angle = +PI/2 for CCW → sign = +1
     const map = {
         R: { axis: [1, 0, 0], sign: -1 },
         L: { axis: [1, 0, 0], sign: +1 },
@@ -31,7 +28,6 @@ function getAxisAndSign(face) {
     return map[face] || null;
 }
 
-// Map face/slice to axis component name
 const FACE_TO_AXIS_COMPONENT = {
     R: 'x', L: 'x', M: 'x',
     U: 'y', D: 'y', E: 'y',
@@ -39,18 +35,21 @@ const FACE_TO_AXIS_COMPONENT = {
 };
 
 /**
- * Create a chevron ">" outline shape pointing along +X.
+ * Create a clean arrow/chevron shape pointing along +X.
+ * Smaller, sleeker design that looks engraved on the sticker.
  */
 function createChevronShape(size) {
-    const s = size / 2;
-    const t = s * 0.65;
+    const s = size * 0.42;
+    const w = s * 0.32;   // stroke width
     const shape = new THREE.Shape();
-    shape.moveTo(-s * 0.6, s);
-    shape.lineTo(s * 0.6, 0);
-    shape.lineTo(-s * 0.6, -s);
-    shape.lineTo(-s * 0.6 + t, -s + t * 0.75);
-    shape.lineTo(s * 0.6 - t, 0);
-    shape.lineTo(-s * 0.6 + t, s - t * 0.75);
+    // Outer chevron
+    shape.moveTo(-s * 0.5, s * 0.8);
+    shape.lineTo(s * 0.5, 0);
+    shape.lineTo(-s * 0.5, -s * 0.8);
+    // Inner cutout (makes it an outline)
+    shape.lineTo(-s * 0.5 + w, -s * 0.8 + w * 0.85);
+    shape.lineTo(s * 0.5 - w * 1.1, 0);
+    shape.lineTo(-s * 0.5 + w, s * 0.8 - w * 0.85);
     shape.closePath();
     return shape;
 }
@@ -64,6 +63,7 @@ export class MoveIndicator {
 
         this._phase = 0;
         this._materials = [];
+        this._highlightedStickers = [];  // stickers whose color we dimmed
         this._visible = false;
         this._currentMoveKey = null;
     }
@@ -91,43 +91,43 @@ export class MoveIndicator {
         const axisComp = FACE_TO_AXIS_COMPONENT[face];
         if (!axisComp) return;
 
-        // Direction sign: info.sign is for direction=1
+        // Direction sign
         let sign = info.sign;
         if (direction === -1) sign = -sign;
-        // direction=2 (180): pick one direction
         const axisVec = new THREE.Vector3(...info.axis);
 
         const size = this.cubeModel.size;
         const cellSize = this.cubeModel.cellSize;
         const half = size * cellSize / 2;
         const tol = cellSize * 0.45;
+        const stickerDepth = cellSize * 0.45;
 
         // Target positions along the rotation axis
         const targets = layers.map(col => (col + 0.5) * cellSize - half);
 
-        // Chevron geometry + material (extruded for 3D depth/visibility)
-        const chevronSize = cellSize * 0.85;
+        // Flat chevron geometry — sits ON the sticker face
+        const chevronSize = cellSize;
         const shape = createChevronShape(chevronSize);
-        const extrudeDepth = cellSize * 0.06;
-        const geo = new THREE.ExtrudeGeometry(shape, {
-            depth: extrudeDepth,
-            bevelEnabled: false,
-        });
+        const geo = new THREE.ShapeGeometry(shape);
 
+        // Semi-transparent overlay with polygon offset to avoid z-fight
+        const color = isUndo ? 0x200000 : 0x000000;
         const mat = new THREE.MeshBasicMaterial({
-            color: isUndo ? 0xcc0000 : 0x000000,
+            color: color,
             transparent: true,
-            opacity: 0.92,
+            opacity: 0.55,
             depthTest: true,
             side: THREE.DoubleSide,
+            polygonOffset: true,
+            polygonOffsetFactor: -1,
+            polygonOffsetUnits: -4,
         });
         this._materials.push(mat);
 
-        // For face moves (R,L,U,D,F,B), skip the face's own stickers —
-        // only show on perpendicular faces' side edges (like cube-solver.com).
+        // For face moves, skip the face's own stickers
         const skipFace = ['R', 'L', 'U', 'D', 'F', 'B'].includes(face) ? face : null;
 
-        // Find all affected stickers and place chevrons
+        // Place chevrons flush on sticker faces
         for (const [faceName, meshes] of Object.entries(this.cubeModel.stickers)) {
             if (skipFace && faceName === skipFace) continue;
             const def = FACE_DEFS[faceName];
@@ -138,13 +138,14 @@ export class MoveIndicator {
             else if (def.axis === 'y') faceNormal.set(0, def.sign, 0);
             else faceNormal.set(0, 0, def.sign);
 
-            const lift = half + 0.005;
+            // Place at the sticker cap surface (flush, not floating)
+            const surfaceOffset = half + 0.005 + 0.001;
 
             for (const stickerMesh of meshes) {
                 const pos = stickerMesh.position;
                 const v = pos[axisComp];
 
-                // Check if this sticker is in an affected layer
+                // Check if in affected layer
                 let affected = false;
                 for (const target of targets) {
                     if (Math.abs(v - target) < tol) {
@@ -154,14 +155,27 @@ export class MoveIndicator {
                 }
                 if (!affected) continue;
 
-                // Compute rotation tangent at this sticker's position
-                // velocity = sign * cross(axis, position)
+                // Dim the sticker to create a highlight band effect
+                const stickerMat = Array.isArray(stickerMesh.material)
+                    ? stickerMesh.material[0] : stickerMesh.material;
+                if (stickerMat && stickerMat.color) {
+                    // Save original color HSL
+                    const hsl = {};
+                    stickerMat.color.getHSL(hsl);
+                    this._highlightedStickers.push({
+                        mesh: stickerMesh,
+                        origH: hsl.h, origS: hsl.s, origL: hsl.l,
+                    });
+                    // Slightly darken + desaturate to show "selected" state
+                    stickerMat.color.setHSL(hsl.h, hsl.s * 0.7, hsl.l * 0.75);
+                }
+
+                // Compute tangent direction at sticker position
                 const tangent = new THREE.Vector3().crossVectors(axisVec, pos).normalize();
                 tangent.multiplyScalar(sign);
-
                 if (tangent.length() < 0.01) continue;
 
-                // Position the chevron on the face surface at this sticker
+                // Position chevron on the face surface
                 const row = stickerMesh.userData.row;
                 const col = stickerMesh.userData.col;
                 const right = new THREE.Vector3(...def.right);
@@ -172,9 +186,9 @@ export class MoveIndicator {
                 const chevronPos = new THREE.Vector3();
                 chevronPos.addScaledVector(right, cx);
                 chevronPos.addScaledVector(up, cy);
-                chevronPos.addScaledVector(faceNormal, lift);
+                chevronPos.addScaledVector(faceNormal, surfaceOffset);
 
-                // Project tangent onto the face plane (remove normal component)
+                // Project tangent onto face plane
                 const projTangent = tangent.clone();
                 projTangent.addScaledVector(faceNormal, -projTangent.dot(faceNormal));
                 if (projTangent.length() < 0.01) continue;
@@ -198,6 +212,16 @@ export class MoveIndicator {
     }
 
     hide() {
+        // Restore dimmed sticker colors
+        for (const entry of this._highlightedStickers) {
+            const stickerMat = Array.isArray(entry.mesh.material)
+                ? entry.mesh.material[0] : entry.mesh.material;
+            if (stickerMat && stickerMat.color) {
+                stickerMat.color.setHSL(entry.origH, entry.origS, entry.origL);
+            }
+        }
+        this._highlightedStickers = [];
+
         while (this.group.children.length > 0) {
             const child = this.group.children[0];
             this.group.remove(child);
@@ -216,8 +240,9 @@ export class MoveIndicator {
 
     updatePulse(dt) {
         if (!this._visible) return;
-        this._phase += dt * 2.0;
-        const opacity = 0.75 + 0.17 * (0.5 + 0.5 * Math.sin(this._phase));
+        this._phase += dt * 2.5;
+        // Subtle pulse on the chevron opacity
+        const opacity = 0.45 + 0.15 * (0.5 + 0.5 * Math.sin(this._phase));
         for (const mat of this._materials) {
             mat.opacity = opacity;
         }
