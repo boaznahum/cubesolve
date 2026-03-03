@@ -18,7 +18,11 @@ export class AppState extends EventTarget {
         this.cubeSolved = false;
         this.cubeFaces = {};
 
-        // -- Playback --
+        // -- Flow state machine --
+        this.machineState = 'idle';
+        this.allowedActions = {};
+
+        // -- Playback (derived from machineState for backward compat) --
         this.isPlaying = false;
 
         // -- History --
@@ -83,7 +87,15 @@ export class AppState extends EventTarget {
             };
         }
 
-        // Playback
+        // Flow state machine
+        if (msg.machine_state !== undefined) {
+            patch.machineState = msg.machine_state;
+        }
+        if (msg.allowed_actions !== undefined) {
+            patch.allowedActions = msg.allowed_actions;
+        }
+
+        // Playback (derived from machine_state for backward compat)
         if (msg.is_playing !== undefined) {
             patch.isPlaying = msg.is_playing;
         }

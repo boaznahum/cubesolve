@@ -72,7 +72,7 @@ const toolbar = new Toolbar(state, send, controls, animQueue);
 toolbar.bind();
 
 // ── History panel ──
-const historyPanel = new HistoryPanel(send, animQueue);
+const historyPanel = new HistoryPanel(send, animQueue, state);
 
 // ── Move indicator (next-move arrows) ──
 const moveIndicator = new MoveIndicator(cubeModel, scene);
@@ -90,10 +90,11 @@ animQueue._onDebugUpdate = (alg, layers, count) => toolbar.updateDebug(alg, laye
 
 // When all animations finish, update stop button and re-show move indicators
 animQueue._onAllDone = () => {
-    // Update stop button: client is no longer busy
+    // Update stop button from state machine
     const stopBtn = document.getElementById('btn-stop');
-    if (stopBtn && !state.isPlaying) {
-        stopBtn.disabled = true;
+    const a = state.allowedActions || {};
+    if (stopBtn) {
+        stopBtn.disabled = !a.stop;
     }
     // Re-show move indicators (but not during autoplay, and only if assist is on)
     if (state.isPlaying) return;
@@ -166,11 +167,23 @@ function handleMessage(msg) {
                 moveIndicator.hide();
             }
 
-            // solve_and_play: auto-start playback once solver fills the redo queue
-            if (toolbar._pendingSolveAndPlay && state.historyRedo.length > 0) {
-                toolbar._pendingSolveAndPlay = false;
+            // Sync client playback mode from server state machine
+            const ms = state.machineState;
+            if (ms === 'playing' && animQueue.playbackMode !== 'forward') {
                 animQueue.startPlayback('forward');
-                send({ type: 'play_next_redo' });
+                // If transitioning to PLAYING (e.g., solve_and_play), request first move
+                if (!wasPlaying) {
+                    send({ type: 'play_next_redo' });
+                }
+            } else if (ms === 'rewinding' && animQueue.playbackMode !== 'backward') {
+                animQueue.startPlayback('backward');
+                if (!wasPlaying) {
+                    send({ type: 'play_next_undo' });
+                }
+            } else if (ms !== 'playing' && ms !== 'rewinding' && ms !== 'animating' && ms !== 'stopping') {
+                if (animQueue.playbackMode !== null) {
+                    animQueue.stopPlayback();
+                }
             }
             break;
         }

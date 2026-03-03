@@ -8,9 +8,10 @@
  */
 
 export class HistoryPanel {
-    constructor(sendFn, animQueue) {
+    constructor(sendFn, animQueue, appState) {
         this._send = sendFn;
         this._animQueue = animQueue;
+        this._appState = appState;
         this._panel = document.getElementById('history-panel');
         this._list = document.getElementById('history-list');
         this._btnUndo = document.getElementById('btn-undo');
@@ -23,7 +24,6 @@ export class HistoryPanel {
         this._doneItems = [];    // [{alg, type, index}, ...]
         this._redoItems = [];    // [{alg, type, index}, ...]
         this._redoSource = 'undo';  // 'solver' | 'undo'
-        this._isPlaying = false;
 
         this._bind();
     }
@@ -76,7 +76,6 @@ export class HistoryPanel {
         }));
         this._redoSource = appState.redoSource || 'undo';
         this._redoTainted = appState.redoTainted || false;
-        this._isPlaying = appState.isPlaying;
         this._render();
     }
 
@@ -178,13 +177,14 @@ export class HistoryPanel {
     }
 
     _updateButtons() {
-        const hasDone = this._doneItems.length > 0;
+        // Button state comes from the server's state machine — no client-side reasoning
+        const a = this._appState?.allowedActions || {};
         const hasRedo = this._redoItems.length > 0;
 
-        if (this._btnUndo) this._btnUndo.disabled = !hasDone || this._isPlaying;
-        if (this._btnRedo) this._btnRedo.disabled = !hasRedo || this._isPlaying;
-        if (this._btnPlay) this._btnPlay.disabled = !hasRedo || this._isPlaying;
-        if (this._btnRewind) this._btnRewind.disabled = !hasDone || this._isPlaying;
+        if (this._btnUndo) this._btnUndo.disabled = !a.undo;
+        if (this._btnRedo) this._btnRedo.disabled = !a.play_next;
+        if (this._btnPlay) this._btnPlay.disabled = !a.play_all;
+        if (this._btnRewind) this._btnRewind.disabled = !a.rewind_all;
 
         // Context-aware labels: solver steps → Play/Play All, manual → Redo/Redo All
         const isSolver = this._redoSource === 'solver';

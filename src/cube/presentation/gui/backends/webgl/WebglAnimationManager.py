@@ -22,6 +22,8 @@ from cube.application.animation.AnimationManager import AnimationManager
 from cube.domain import algs
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from cube.application.animation.AnimationManager import OpProtocol
     from cube.application.commands.Operator import Operator
     from cube.application.state import ApplicationAndViewState
@@ -54,6 +56,7 @@ class WebglAnimationManager(AnimationManager):
         "_current_move",
         "_waiting_for_client",
         "_is_undo",
+        "_on_queue_drained",
     ]
 
     def __init__(self, vs: "ApplicationAndViewState", operator: "Operator") -> None:
@@ -65,6 +68,7 @@ class WebglAnimationManager(AnimationManager):
         self._current_move: _QueuedMove | None = None
         self._waiting_for_client: bool = False
         self._is_undo: bool = False
+        self._on_queue_drained: Callable[[], None] | None = None
 
     @property
     def is_idle(self) -> bool:
@@ -75,12 +79,19 @@ class WebglAnimationManager(AnimationManager):
         """Set the client session reference for sending state."""
         self._web_window = window
 
+    def set_on_queue_drained(self, callback: "Callable[[], None] | None") -> None:
+        """Set callback for when the animation queue becomes empty.
+
+        Used by ClientSession to notify the FSM when animations complete
+        (e.g., after a single redo/undo animation finishes).
+        """
+        self._on_queue_drained = callback
+
     def cancel_animation(self) -> None:
         """Cancel all pending animations (graceful — client finishes current).
 
-        Playing state is managed exclusively by ClientSession
-        (via _fast_playing flag). This method only clears the AM's
-        internal queue — the caller is responsible for send_playing().
+        Playing state is managed by ClientSession's FlowStateMachine.
+        This method only clears the AM's internal queue.
         """
         self._move_queue.clear()
         self._current_move = None
@@ -158,6 +169,8 @@ class WebglAnimationManager(AnimationManager):
         # Queue empty
         self._is_processing = False
         self._current_move = None
+        if self._on_queue_drained:
+            self._on_queue_drained()
 
     def _apply_model_change(self, move: _QueuedMove) -> None:
         """Apply a move's model change without animation."""

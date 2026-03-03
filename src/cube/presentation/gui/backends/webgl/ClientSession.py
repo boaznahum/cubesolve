@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING
 
 from cube.application.exceptions.ExceptionAppExit import AppExit
 from cube.presentation.gui.backends.webgl.CubeStateSerializer import extract_cube_state
+from cube.presentation.gui.backends.webgl.FlowStateMachine import FlowEvent, FlowState, FlowStateMachine
 from cube.presentation.gui.backends.webgl.SessionState import SessionStateSnapshot
 from cube.presentation.gui.commands import Command, CommandContext
 from cube.version import get_version
@@ -109,14 +110,19 @@ class ClientSession:
 
         self._app.op.undo = _undo_with_flag  # type: ignore[assignment]
 
-        # Client-initiated playback state
-        self._fast_playing: bool = False
+        # Flow state machine — single source of truth for all flow control
+        self._fsm: FlowStateMachine = FlowStateMachine()
 
-        # Track whether redo queue was filled by solver (for UI labels)
-        self._redo_is_solver: bool = False
-        # True when user made manual moves while solver redo queue exists
-        # (playing the queue won't solve the cube anymore)
-        self._redo_tainted: bool = False
+        # Wire queue-drained callback: when AM finishes all animations for a
+        # single redo/undo/face-turn, transition FSM from ANIMATING → READY/IDLE
+        def _on_am_queue_drained() -> None:
+            if self._fsm.state == FlowState.ANIMATING:
+                has_redo = bool(self._app.op.redo_queue())
+                has_history = bool(self._app.op.history())
+                self._fsm.send(FlowEvent.ANIM_DONE, has_redo=has_redo, has_history=has_history)
+                self.send_state()
+
+        am.set_on_queue_drained(_on_am_queue_drained)
 
         # Client count — set externally by SessionManager
         self._client_count: int = 0
@@ -155,11 +161,17 @@ class ClientSession:
     def reattach(self, ws: "WebSocketResponse") -> None:
         """Reattach this session to a new WebSocket after reconnect.
 
-        Swaps the underlying WebSocket and resends the full state so the
-        client is immediately up-to-date with the server's cube state.
+        Swaps the underlying WebSocket, resets flow state via FSM RECONNECT
+        event, and resends the full state. This fixes the bug where
+        _fast_playing stayed True after reconnect (play button disabled).
         """
         self._ws = ws
-        print(f"Session reattached: {self.client_info.session_id[:8]}", flush=True)
+        # Cancel any in-flight animation state
+        self._animation_manager.cancel_animation()
+        # FSM RECONNECT: transitions to IDLE or READY based on queue
+        has_redo = bool(self._app.op.redo_queue())
+        self._fsm.send_reconnect(has_redo=has_redo)
+        print(f"Session reattached: {self.client_info.session_id[:8]} → {self._fsm.state.value}", flush=True)
         self.on_client_connected()
 
     # -- Send helpers (unicast to this session's WebSocket) --
@@ -212,18 +224,26 @@ class ClientSession:
                     "bold": prop[4],
                 })
 
+        # Flow state machine
+        has_redo = bool(redo)
+        has_history = bool(done)
+        fsm = self._fsm
+
         return SessionStateSnapshot(
             # Cube
             cube_size=cube_state["size"],
             cube_solved=cube_state["solved"],
             cube_faces=cube_state["faces"],
-            # Playback
-            is_playing=self._fast_playing,
+            # Flow state machine
+            machine_state=fsm.state.value,
+            allowed_actions=fsm.allowed_actions(has_redo=has_redo, has_history=has_history),
+            # Playback (derived from FSM for backward compat)
+            is_playing=fsm.state in (FlowState.PLAYING, FlowState.REWINDING),
             # History
             history_done=done,
             history_redo=redo,
-            redo_source="solver" if self._redo_is_solver and redo else "undo",
-            redo_tainted=self._redo_tainted and bool(redo),
+            redo_source="solver" if fsm.redo_source == "solver" and has_redo else "undo",
+            redo_tainted=fsm.redo_tainted and has_redo,
             next_move=self._compute_next_move(redo_list),
             # Speed
             speed_index=vs.get_speed_index,
@@ -506,6 +526,8 @@ class ClientSession:
         clamped = max(2, min(20, size))
         vs = self._app.vs
         if clamped != vs.cube_size:
+            if not self._fsm.send(FlowEvent.SIZE_CHANGE):
+                return  # Not allowed in current state
             vs.cube_size = clamped
             self._app.reset(clamped)
             self.send_state()
@@ -527,43 +549,64 @@ class ClientSession:
         from cube.presentation.gui.commands import Commands
 
         if command_name == "solve":
+            if not self._fsm.send(FlowEvent.SOLVE):
+                return
             self._two_phase_solve()
             return
 
         if command_name == "solve_and_play":
-            # Solve only — client will initiate playback via play_next_redo
+            if not self._fsm.send(FlowEvent.SOLVE_AND_PLAY):
+                return
             self._two_phase_solve()
             return
 
         if command_name == "scramble":
+            if not self._fsm.send(FlowEvent.SCRAMBLE):
+                return
             # Scramble applies instantly (no animation).
-            # User can replay via fast-rewind + fast-play later.
             op = self._app.op
-            op.clear_redo()  # New scramble invalidates any existing redo queue
-            self._redo_is_solver = False
-            self._redo_tainted = False
+            op.clear_redo()
+            self._fsm.redo_source = "undo"
+            self._fsm.redo_tainted = False
             with op.with_animation(animation=False):
                 ctx = CommandContext.from_window(self)  # type: ignore[arg-type]
                 Commands.SCRAMBLE_1.execute(ctx)
+            # Scramble done — transition back based on queue state
+            has_redo = bool(op.redo_queue())
+            has_history = bool(op.history())
+            self._fsm.send(FlowEvent.ANIM_DONE, has_redo=has_redo, has_history=has_history)
             self.send_state()
             return
 
         if command_name == "undo":
-            self._redo_is_solver = False  # Manual undo → redo items are not solver
+            if not self._fsm.send(FlowEvent.UNDO):
+                return
+            self._fsm.redo_source = "undo"
             self._app.op.undo(animation=True)
             self.send_state()
             return
 
         if command_name == "redo":
+            if not self._fsm.send(FlowEvent.PLAY_NEXT):
+                return
             self._app.op.redo(animation=True)
             self.send_state()
             return
 
         if command_name == "clear_history":
-            self._redo_is_solver = False
-            self._redo_tainted = False
+            self._fsm.redo_source = "undo"
+            self._fsm.redo_tainted = False
             self._app.op.reset()
+            # After clearing, we're idle
+            self._fsm.send(FlowEvent.RESET, has_redo=False, has_history=False)
             self.send_state()
+            return
+
+        if command_name == "reset_session":
+            self._fsm.send(FlowEvent.RESET_SESSION)
+            self._animation_manager.cancel_animation()
+            self._app.reset(self._app.config.cube_size)  # Reset to config default
+            self.on_client_connected()
             return
 
         if command_name == "fast_play":
@@ -722,12 +765,14 @@ class ClientSession:
                 inv = on_left_to_top < 0
 
         if alg:
+            if not self._fsm.send(FlowEvent.FACE_TURN):
+                return  # Not allowed in current state (e.g., during playback)
             if inv:
                 alg = alg.inv()
             op = self._app.op
             # Detect manual move while solver redo queue exists → tainted
-            if self._redo_is_solver and op.redo_queue():
-                self._redo_tainted = True
+            if self._fsm.redo_source == "solver" and op.redo_queue():
+                self._fsm.redo_tainted = True
             op.play(alg, animation=True)
             self.send_state()
 
@@ -905,6 +950,7 @@ class ClientSession:
         """Solve the cube by placing solution steps into the redo queue.
 
         The user can then step through with redo/next or fast-play.
+        FSM must already be in SOLVING state before this is called.
         """
         try:
             app = self._app
@@ -914,12 +960,20 @@ class ClientSession:
             # Flatten into atomic steps and enqueue as redo
             steps = list(solution_alg.flatten())
             app.op.enqueue_redo(steps)
-            self._redo_is_solver = True
-            self._redo_tainted = False
+            self._fsm.redo_source = "solver"
+            self._fsm.redo_tainted = False
+            # SOLVE_DONE: transitions to READY (or PLAYING if auto_play)
+            has_redo = bool(app.op.redo_queue())
+            has_history = bool(app.op.history())
+            self._fsm.send(FlowEvent.SOLVE_DONE, has_redo=has_redo, has_history=has_history)
             self.send_state()
         except Exception as e:
             traceback.print_exc()
             self._app.set_error(f"Solve error: {e}")
+            # On error, go back to IDLE/READY
+            has_redo = bool(self._app.op.redo_queue())
+            has_history = bool(self._app.op.history())
+            self._fsm.send(FlowEvent.SOLVE_DONE, has_redo=has_redo, has_history=has_history)
             self.send_state()
 
     def _handle_play_next(self, forward: bool) -> None:
@@ -932,9 +986,18 @@ class ClientSession:
         A single op.redo() can produce multiple AM-queued moves (when the alg
         flattens into several simple algs). The AM sends one animation_start
         at a time. Only when the AM is fully idle do we pop the next redo item.
+
+        The first call also transitions the FSM to PLAYING/REWINDING if needed.
         """
         am = self._animation_manager
         op = self._app.op
+        fsm = self._fsm
+
+        # If FSM isn't in a playback state yet, transition now
+        if fsm.state not in (FlowState.PLAYING, FlowState.REWINDING):
+            event = FlowEvent.PLAY_ALL if forward else FlowEvent.REWIND_ALL
+            if not fsm.send(event):
+                return  # Not allowed in current state
 
         # Ack the previous animation — let AM process its remaining queue
         am.on_client_animation_done()
@@ -948,13 +1011,12 @@ class ClientSession:
         # AM is idle — pop next redo/undo item from the operator queue
         has_more: bool = bool(op.redo_queue()) if forward else bool(op.history())
         if not has_more:
-            self._fast_playing = False
+            has_redo = bool(op.redo_queue())
+            has_history = bool(op.history())
+            fsm.send(FlowEvent.QUEUE_EMPTY, has_redo=has_redo, has_history=has_history)
             self.send_play_empty()
             self.send_state()
             return
-
-        if not self._fast_playing:
-            self._fast_playing = True
 
         # Handle animation disabled: apply all moves instantly
         if not op.animation_enabled:
@@ -964,7 +1026,9 @@ class ClientSession:
             else:
                 while op.history():
                     op.undo(animation=False)
-            self._fast_playing = False
+            has_redo = bool(op.redo_queue())
+            has_history = bool(op.history())
+            fsm.send(FlowEvent.QUEUE_EMPTY, has_redo=has_redo, has_history=has_history)
             self.send_play_empty()
             self.send_state()
             return
@@ -988,15 +1052,24 @@ class ClientSession:
         from cube.presentation.gui.commands import Commands
 
         if command is Commands.SOLVE_ALL:
-            self._two_phase_solve()
+            if self._fsm.send(FlowEvent.SOLVE):
+                self._two_phase_solve()
             return
 
         if command is Commands.STOP_ANIMATION:
-            self._fast_playing = False
-            self._animation_manager.cancel_animation()
-            self.send_play_empty()
+            if self._fsm.send(FlowEvent.STOP):
+                self._animation_manager.cancel_animation()
+                # STOP → STOPPING. Animation cancelled, so immediately done.
+                has_redo = bool(self._app.op.redo_queue())
+                has_history = bool(self._app.op.history())
+                self._fsm.send(FlowEvent.ANIM_DONE, has_redo=has_redo, has_history=has_history)
+                self.send_play_empty()
             self.send_state()
             return
+
+        if command is Commands.RESET_CUBE:
+            self._fsm.send(FlowEvent.RESET)
+            # fall through to execute
 
         try:
             from cube.presentation.gui.commands.concrete import NewSessionCommand
@@ -1006,14 +1079,15 @@ class ClientSession:
             command.execute(ctx)
 
             if isinstance(command, NewSessionCommand):
-                # Full state refresh
+                # Full state refresh — treat as reset_session
+                self._fsm.send(FlowEvent.RESET_SESSION)
                 self.on_client_connected()
                 return
 
             # Detect manual move while solver redo queue exists → tainted
-            if (self._redo_is_solver and self._app.op.redo_queue()
+            if (self._fsm.redo_source == "solver" and self._app.op.redo_queue()
                     and len(self._app.op.history()) > history_len_before):
-                self._redo_tainted = True
+                self._fsm.redo_tainted = True
 
             self.send_state()
         except AppExit:

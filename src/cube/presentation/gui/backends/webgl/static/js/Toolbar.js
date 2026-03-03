@@ -12,7 +12,6 @@ export class Toolbar {
         this._statusOverlay = document.getElementById('status-overlay');
         this._statusEl = document.getElementById('status');
         this._assistDelayMs = 400;  // default, overridden by server config
-        this._pendingSolveAndPlay = false;  // waiting for solve to finish before auto-play
     }
 
     bind() {
@@ -22,13 +21,11 @@ export class Toolbar {
 
     /** Update all toolbar UI from the unified AppState snapshot. */
     updateFromState(appState) {
-        // Stop button: enabled if server says playing OR client has active animation
+        // Stop button: controlled by server state machine
         const stopBtn = document.getElementById('btn-stop');
         if (stopBtn) {
-            const clientBusy = this._animQueue.playbackMode !== null
-                || this._animQueue.currentAnim !== null
-                || this._animQueue.queue.length > 0;
-            stopBtn.disabled = !(appState.isPlaying || clientBusy);
+            const a = appState.allowedActions || {};
+            stopBtn.disabled = !a.stop;
         }
 
         // Text overlays
@@ -202,12 +199,9 @@ export class Toolbar {
                 }
 
                 if (cmd === 'solve_and_play') {
-                    // Solve first, then start playback when history_state arrives
+                    // Server FSM handles SOLVE_AND_PLAY → SOLVING → PLAYING transition
                     document.body.style.cursor = 'progress';
                     this._send({ type: 'command', name: 'solve_and_play' });
-                    // After solve completes, server sends history_state with redo queue.
-                    // Start playback from the play_empty/history_state callback.
-                    this._pendingSolveAndPlay = true;
                     return;
                 }
 
