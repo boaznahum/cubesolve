@@ -462,19 +462,29 @@
 
         /* ── Mobile / tablet ── */
         @media (max-width: 768px) {
+            html {
+                /* Prevent iOS bounce/overscroll */
+                overflow: hidden;
+                overscroll-behavior: none;
+            }
             body {
+                /* position: fixed prevents iOS WebKit from scrolling the viewport
+                   when child elements call scrollTo() or when content reflows */
+                position: fixed;
+                inset: 0;
                 align-items: flex-start;
                 overflow: hidden;
-                height: 100vh;
-                height: 100dvh;
+                height: 100%;
+                overscroll-behavior: none;
+                touch-action: manipulation;
             }
             #app-layout {
                 /* Keep horizontal layout: narrow history LEFT, cube RIGHT */
                 padding: 2px 2px;
                 gap: 4px;
-                height: 100vh;
-                height: 100dvh;
+                height: 100%;
                 align-items: stretch;
+                overflow: hidden;
             }
 
             /* ── Very narrow history panel on the left ── */
@@ -520,8 +530,9 @@
             .hp-marker { padding: 2px 1px; margin: 1px 0; gap: 3px; }
             .hp-marker-text { font-size: 7px; letter-spacing: 0.8px; }
 
-            /* Container fills remaining width */
-            #container { flex: 1; min-width: 0; }
+            /* Container fills remaining space, clips overflow so canvas doesn't push layout */
+            #container { flex: 1; min-width: 0; overflow: hidden; }
+            #canvas-wrapper { flex: 1; min-height: 0; overflow: hidden; }
 
             /* Compact status bar on mobile (version info only visible here) */
             #status { font-size: 9px; margin-top: 2px; text-align: center; opacity: 0.6; }
