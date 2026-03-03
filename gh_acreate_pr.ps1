@@ -5,6 +5,9 @@ $pollInterval = 5
 $maxRetries = 12
 
 try {
+    $version = Get-Content src/cube/resources/version.txt
+    Write-Host "Deploying version: $version" -ForegroundColor Cyan
+
     # Get the latest run ID BEFORE the merge
     $beforeId = (gh run list --branch $branch -L 1 --json databaseId |
         ConvertFrom-Json)[0].databaseId
@@ -42,7 +45,7 @@ try {
     gh run watch $runId --exit-status
     if ($LASTEXITCODE -ne 0) { throw "Run $runId failed" }
 
-    Write-Host "Done!" -ForegroundColor Green
+    Write-Host "Done! Version $version deployed." -ForegroundColor Green
 
 } catch {
     Write-Host "Error: $_" -ForegroundColor Red
