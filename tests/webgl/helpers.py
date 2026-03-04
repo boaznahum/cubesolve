@@ -150,6 +150,13 @@ class WebGLPageHelper:
         )
         return result
 
+    def get_current_solver(self) -> str:
+        """Return the current solver name from appState."""
+        result: str = self._page.evaluate(
+            "() => window.appState.solverName"
+        )
+        return result
+
     def set_speed(self, index: int) -> None:
         """Select animation speed by index value (0=slowest, 7=fastest)."""
         # Wait for speed dropdown to be populated

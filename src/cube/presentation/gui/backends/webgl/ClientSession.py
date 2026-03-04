@@ -544,8 +544,10 @@ class ClientSession:
         if clamped != vs.cube_size:
             if not self._fsm.send(FlowEvent.SIZE_CHANGE):
                 return  # Not allowed in current state
+            prev_solver = self._app.slv.get_code
             vs.cube_size = clamped
             self._app.reset(clamped)
+            self._app.switch_to_solver(prev_solver)
             self.send_state()
 
     def _handle_solver(self, name: str) -> None:
