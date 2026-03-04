@@ -69,7 +69,12 @@ class SolverName(Enum):
     CAGE = SolverMeta("Cage")  # Cage method: edges first, then corners, then centers
     DWALTON = SolverMeta("Dwalton")  # Table-based Kociemba (dwalton76-inspired)
     LBL_BIG = SolverMeta("Big LBL")  # Layer-by-layer for big cubes
-    TWO_BY_TWO = SolverMeta("2x2", user_visible=False, only_2x2="2x2 solver only supports 2x2 cubes")
+    TWO_BY_TWO_IDA = SolverMeta("2x2 IDA*", user_visible=False, only_2x2="2x2 IDA* solver only supports 2x2 cubes")
+    TWO_BY_TWO_BEGINNER = SolverMeta(
+        "2x2 Beginner",
+        implemented=False,
+        only_2x2="2x2 Beginner solver only supports 2x2 cubes",
+    )
 
     @property
     def display_name(self) -> str:

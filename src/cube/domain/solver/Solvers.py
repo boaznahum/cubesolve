@@ -33,17 +33,25 @@ class Solvers:
         return cls.by_name(solver_name, op)
 
     @staticmethod
-    def two_by_two(op: OperatorProtocol, display_as: SolverName | None = None) -> Solver:
-        """Get the dedicated 2x2 cube solver.
+    def two_by_two_ida(op: OperatorProtocol, display_as: SolverName | None = None) -> Solver:
+        """Get the IDA* optimal 2x2 cube solver.
 
         Args:
-            display_as: If set, the solver reports this name instead of TWO_BY_TWO.
+            display_as: If set, the solver reports this name instead of TWO_BY_TWO_IDA.
                 Used when delegating from user-visible solvers (e.g. LBL on a 2x2 cube).
         """
-        from ._2x2.Solver2x2 import Solver2x2
+        from ._2x2_ida_optimal.Solver2x2 import Solver2x2
 
         parent_logger = op.cube.sp.logger
         return Solver2x2(op, parent_logger, display_as=display_as)
+
+    @staticmethod
+    def two_by_two_beginner(op: OperatorProtocol) -> Solver:
+        """Get the beginner layer-by-layer 2x2 cube solver."""
+        from ._2x2_beginner.Solver2x2Beginner import Solver2x2Beginner
+
+        parent_logger = op.cube.sp.logger
+        return Solver2x2Beginner(op, parent_logger)
 
     @staticmethod
     def beginner(op: OperatorProtocol) -> Solver:
@@ -187,12 +195,15 @@ class Solvers:
     def by_name(cls, solver_id: SolverName, op: OperatorProtocol) -> Solver:
         """Get a solver by its name.
 
-        For 2x2 cubes, all solvers delegate to the dedicated 2x2 solver.
+        For 2x2 cubes, non-2x2 solvers delegate to the IDA* optimal solver.
+        The beginner 2x2 solver is used when explicitly selected.
         """
-        # For 2x2 cubes, delegate to the 2x2 solver
-        # but preserve the original solver name for the UI
+        # For 2x2 cubes, use the beginner solver if selected,
+        # otherwise delegate to the IDA* optimal solver
         if op.cube.size == 2:
-            return cls.two_by_two(op, display_as=solver_id)
+            if solver_id is SolverName.TWO_BY_TWO_BEGINNER:
+                return cls.two_by_two_beginner(op)
+            return cls.two_by_two_ida(op, display_as=solver_id)
 
         match solver_id:
 

@@ -21,9 +21,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from cube.domain.algs import Alg, Algs
-from cube.domain.solver._2x2.cube_to_coordinates import cube_to_coords
-from cube.domain.solver._2x2.ida_star_search import solve as ida_solve
-from cube.domain.solver._2x2.ida_star_tables import get_tables
+from cube.domain.solver._2x2_ida_optimal.cube_to_coordinates import cube_to_coords
+from cube.domain.solver._2x2_ida_optimal.ida_star_search import solve as ida_solve
+from cube.domain.solver._2x2_ida_optimal.ida_star_tables import get_tables
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.solver import SolverResults, SolveStep
@@ -143,7 +143,7 @@ class Solver2x2(BaseSolver):
         display_as: SolverName | None = None,
     ) -> None:
         super().__init__(op, parent_logger, logger_prefix="Solver2x2")
-        self._display_as: SolverName = display_as or SolverName.TWO_BY_TWO
+        self._display_as: SolverName = display_as or SolverName.TWO_BY_TWO_IDA
 
     @property
     def get_code(self) -> SolverName:

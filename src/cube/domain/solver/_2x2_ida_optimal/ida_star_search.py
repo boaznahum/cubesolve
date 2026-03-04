@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from array import array
 
-from cube.domain.solver._2x2.ida_star_tables import N_MOVE, N_TWIST, Tables
+from cube.domain.solver._2x2_ida_optimal.ida_star_tables import N_MOVE, N_TWIST, Tables
 
 
 def solve(perm: int, twist: int, tables: Tables) -> list[int]:

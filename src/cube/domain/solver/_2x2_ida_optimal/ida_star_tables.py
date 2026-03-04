@@ -237,7 +237,7 @@ def _load_precomputed() -> Tables:
     import base64
     import zlib
 
-    from cube.domain.solver._2x2._precomputed import (
+    from cube.domain.solver._2x2_ida_optimal._precomputed import (
         PERM_MOVE_Z85,
         PRUNING_Z85,
         TWIST_MOVE_Z85,
