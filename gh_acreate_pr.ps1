@@ -1,6 +1,9 @@
+param(
+    [string]$branch = "webgl-dev"
+)
+
 $ErrorActionPreference = "Stop"
 
-$branch = "webgl-dev"
 $pollInterval = 5
 $maxRetries = 12
 

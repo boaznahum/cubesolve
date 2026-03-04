@@ -200,9 +200,10 @@ class WebglAnimationManager(AnimationManager):
             self._web_window.send_animation_start(alg, duration_ms, is_undo=self._is_undo)
             self._web_window.send_state()
 
-        # Block solver thread until client signals animation_done
+        # Block solver thread until client signals animation_done.
+        # Timeout prevents permanent hang if WebSocket dies without reconnect.
         self._blocking_event.clear()
-        self._blocking_event.wait()
+        self._blocking_event.wait(timeout=60.0)
 
     def _process_next(self) -> None:
         """Process queued moves, sending animation events to client."""

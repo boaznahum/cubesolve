@@ -174,11 +174,14 @@ class ClientSession:
         am = self._animation_manager
 
         if am._blocking_mode:
-            # One-phase solve in progress — don't cancel, just resend state.
-            # The solver thread continues; its next send_state() will use
-            # the new WebSocket automatically.
+            # One-phase solve in progress — don't cancel, just swap WS.
+            # The solver thread is blocked on _blocking_event.wait() for
+            # animation_done from the OLD (now dead) WebSocket. Unblock it
+            # so it can continue — the next move will send animation_start
+            # via the new WebSocket and the cycle resumes normally.
+            am._blocking_event.set()
             print(
-                f"Session reattached (solve in progress): "
+                f"Session reattached (solve in progress, unblocked): "
                 f"{self.client_info.session_id[:8]}",
                 flush=True,
             )
