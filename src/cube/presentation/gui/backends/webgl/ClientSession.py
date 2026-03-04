@@ -591,6 +591,9 @@ class ClientSession:
             with op.with_animation(animation=False):
                 ctx = CommandContext.from_window(self)  # type: ignore[arg-type]
                 Commands.SCRAMBLE_1.execute(ctx)
+            # Clear history so scramble moves don't appear in redo queue.
+            # Scramble is a starting point, not an undoable operation.
+            op._history.clear()
             # Scramble done — transition back based on queue state
             has_redo = bool(op.redo_queue())
             has_history = bool(op.history())
@@ -993,6 +996,10 @@ class ClientSession:
             self._app.set_error(f"Solve error: {e}")
         finally:
             am.set_blocking_mode(False)
+        # Yield to event loop so any queued call_soon_threadsafe callbacks
+        # from the solver thread (e.g., annotate __exit__ removing markers)
+        # are processed before we send the final state.
+        await asyncio.sleep(0)
         # One-phase solve: moves are in history, not redo queue.
         # Clear auto_play since the solve IS the play.
         self._fsm._auto_play = False

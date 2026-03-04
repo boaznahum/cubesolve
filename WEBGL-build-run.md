@@ -12,11 +12,11 @@ npm install          # installs Vite, Three.js, and other dependencies
 
 ## Development (two terminals)
 
-```bash
-# Terminal 1: Python backend (WebSocket + cube logic)
-python -m cube.main_webgl
+```powershell
+# Terminal 1: Python backend with auto-reload on .py changes
+$env:PYTHONIOENCODING="utf-8"; watchfiles ".venv\Scripts\python.exe -m cube.main_webgl" src/cube/
 
-# Terminal 2: Vite dev server (HMR + auto-reload)
+# Terminal 2: Vite dev server (HMR for JS changes)
 cd src/cube/presentation/gui/backends/webgl
 npm run dev
 ```
@@ -24,40 +24,29 @@ npm run dev
 **Open http://localhost:5173** (Vite) — NOT the Python port.
 Vite proxies `/ws` to Python automatically, plus gives you HMR (instant reload on JS changes).
 
+`watchfiles` monitors `src/cube/` and auto-restarts the Python server when `.py` files change.
+Install once: `uv add --dev watchfiles`.
+
 | URL | When to use |
 |-----|-------------|
 | http://localhost:5173 | Development with Vite (recommended) |
 | http://localhost:8766 | Python-only, no Node.js needed |
 
-### Alternative: Python-only (no Vite, no Node.js needed)
+### Python-only (no Vite, no Node.js needed)
 
-```bash
-python -m cube.main_webgl --open-browser
+```powershell
+$env:PYTHONIOENCODING="utf-8"; watchfiles ".venv\Scripts\python.exe -m cube.main_webgl --open-browser" src/cube/
 ```
 
-Opens http://localhost:8766 — serves source files directly via import maps. No HMR, no npm packages.
-
-**How it works without a build step:** The browser loads the raw `.js` source files and
-resolves `import 'three'` using the import map in `index.html` (fetches Three.js from CDN).
-No bundling — the browser does all module resolution natively.
-
-**Limitation:** Once we add npm UI widgets (queue panel, undo/redo), Python-only mode
-won't have those features — npm packages aren't available via CDN. At that point,
-Vite becomes required for development.
+Opens http://localhost:8766 — serves source files directly via import maps. No bundling needed.
 
 ### Options
 
-```bash
+```powershell
 python -m cube.main_webgl --open-browser    # auto-open browser
 python -m cube.main_webgl --debug-all       # verbose logging
 python -m cube.main_webgl --quiet           # minimal output
 python -m cube.main_webgl --cube-size 5     # 5×5 cube
-```
-
-### Windows (PowerShell) — UTF-8 fix
-
-```powershell
-$env:PYTHONIOENCODING="utf-8"; python -m cube.main_webgl --open-browser
 ```
 
 ## Production Build
