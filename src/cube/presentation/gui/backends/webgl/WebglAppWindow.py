@@ -53,7 +53,8 @@ class WebglAppWindow(AppWindow):
 
         # Create session manager and wire to event loop
         self._session_manager = SessionManager(
-            self._event_loop, gui_test_mode=app.config.gui_test_mode
+            self._event_loop, config=app.config,
+            gui_test_mode=app.config.gui_test_mode,
         )
         self._event_loop.set_session_manager(self._session_manager)
 

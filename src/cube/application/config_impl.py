@@ -14,7 +14,8 @@ from cube.config.face_tracer_config import FaceTrackerConfig, TrackerIndicatorCo
 from cube.domain.model.Color import Color
 from cube.utils.config_protocol import (
     AnimationSpeedConfigProtocol, AnimationTextDef, ArrowConfigProtocol,
-    AssistConfigProtocol, ConfigProtocol, MarkerDef, SoundConfigProtocol,
+    AssistConfigProtocol, ConfigProtocol, MarkerDef, SessionConfigProtocol,
+    SoundConfigProtocol,
 )
 from cube.utils.markers_config import MarkersConfig
 from cube.utils.SSCode import SSCode
@@ -80,6 +81,11 @@ class AppConfig(ConfigProtocol):
         if env_disable is not None:
             return not env_disable  # DISABLE_CACHE=1 → enable=False
         return cfg.ENABLE_CUBE_CACHE
+
+    @property
+    def prevent_random_face_pick_up_in_geometry(self) -> bool:
+        """Prevent random face selection in geometry walking (debug flag)."""
+        return cfg.PREVENT_RANDOM_FACE_PICK_UP_IN_GEOMETRY
 
     # ==========================================================================
     # Solver settings
@@ -279,6 +285,11 @@ class AppConfig(ConfigProtocol):
     def sound_config(self) -> SoundConfigProtocol:
         """Sound effects configuration for WebGL frontend."""
         return cfg.SOUND_CONFIG
+
+    @property
+    def session_config(self) -> SessionConfigProtocol:
+        """WebGL session configuration (keepalive timeout, etc.)."""
+        return cfg.SESSION_CONFIG
 
     @property
     def show_file_algs(self) -> bool:

@@ -4,7 +4,7 @@ Manages all active client sessions. Handles session lifecycle (create, remove,
 lookup) and GeoIP resolution for connected clients.
 
 Supports dormant sessions: when a WebSocket disconnects, the session is kept
-alive for a configurable timeout (DEPLOY_SESSION_KEEPALIVE_TIMEOUT). If the
+alive for a configurable timeout (session_config.keepalive_timeout). If the
 client reconnects with the same session_id, the old session is restored.
 """
 
@@ -14,7 +14,6 @@ import time
 import uuid
 from typing import TYPE_CHECKING
 
-from cube.application import _config as config
 from cube.presentation.gui.backends.webgl.ClientSession import ClientInfo, ClientSession
 
 if TYPE_CHECKING:
@@ -23,12 +22,14 @@ if TYPE_CHECKING:
     from aiohttp.web import BaseRequest, WebSocketResponse
 
     from cube.presentation.gui.backends.webgl.WebglEventLoop import WebglEventLoop
+    from cube.utils.config_protocol import ConfigProtocol
 
 
 class SessionManager:
     """Manages all active client sessions."""
 
-    def __init__(self, event_loop: "WebglEventLoop", gui_test_mode: bool = False) -> None:
+    def __init__(self, event_loop: "WebglEventLoop", config: "ConfigProtocol",
+                 gui_test_mode: bool = False) -> None:
         self._event_loop = event_loop
         self._gui_test_mode = gui_test_mode
         self._sessions: dict[str, ClientSession] = {}
@@ -38,7 +39,7 @@ class SessionManager:
         # Expiry callbacks per dormant session (so we can cancel on restore)
         self._dormant_timers: dict[str, Callable[[float], None]] = {}
         # How long to keep disconnected sessions alive (seconds)
-        self._keepalive_timeout: int = config.DEPLOY_SESSION_KEEPALIVE_TIMEOUT
+        self._keepalive_timeout: int = config.session_config.keepalive_timeout
         # GeoIP cache: ip -> (city, country, timestamp)
         self._geo_cache: dict[str, tuple[str, str, float]] = {}
         self._geo_cache_ttl: float = 3600.0  # 1 hour
