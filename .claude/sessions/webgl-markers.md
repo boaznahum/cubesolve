@@ -262,23 +262,54 @@ Solver Thread (asyncio.to_thread)    Main Async Thread (event loop)
 - Current markers are **flat 2D geometry** (CircleGeometry, RingGeometry, PlaneGeometry)
 - Pyglet2 renders markers as **3D cylinders** with height (using `height_offset` parameter)
 - Could upgrade to CylinderGeometry/extruded shapes for visual parity with pyglet2
+- **Performance:** Solve animation is slow (~8s/move at speed 6) due to marker rendering overhead — each `send_state()` triggers full marker rebuild in JS. Consider: debouncing, diffing markers, or lazy marker updates.
 
-## All Files Modified (uncommitted)
-- `src/cube/application/markers/_complementary_colors.py` (NEW)
-- `src/cube/application/markers/__init__.py`
-- `src/cube/presentation/gui/backends/pyglet2/_modern_gl_cell.py`
-- `src/cube/presentation/gui/backends/webgl/CubeStateSerializer.py`
-- `src/cube/presentation/gui/backends/webgl/SessionState.py`
-- `src/cube/presentation/gui/backends/webgl/static/js/MarkerRenderer.js` (NEW)
-- `src/cube/presentation/gui/backends/webgl/static/js/CubeModel.js`
-- `src/cube/presentation/gui/backends/webgl/WebglEventLoop.py`
-- `src/cube/presentation/gui/backends/webgl/WebglAnimationManager.py`
-- `src/cube/presentation/gui/backends/webgl/FlowStateMachine.py`
-- `src/cube/presentation/gui/backends/webgl/ClientSession.py`
-- `src/cube/presentation/gui/backends/webgl/dist/` (Vite build output)
-- `src/cube/resources/version.txt` (1.25)
+---
 
-## All Checks Pass
+## Bug Fixes (Post-Phase 3)
+
+### v1.25.1 — Markers persist after solve/stop + scramble in redo queue
+**Markers persist:** Race condition where `send_state()` fires before solver thread callbacks drain (annotate `__exit__` removing markers). Fix: `await asyncio.sleep(0)` in `_one_phase_solve` before final `send_state()`.
+
+**Scramble in redo queue:** Scramble moves were recorded in history, then appeared in redo queue on undo. Fix: `op._history.clear()` after scramble in the WebGL `_handle_command()` handler. (`op.history()` returns a copy, so `.clear()` on it doesn't work — must access `op._history` directly.)
+
+### v1.25.2 — "Solve" behaves like "Solve and Play"
+Both "solve" and "solve_and_play" commands were routed to `_start_one_phase_solve()`. Fix: restored `_two_phase_solve()` for "solve" command (enqueues to redo queue), kept one-phase only for "solve_and_play" (animates with markers). Also fixed `inject_command` for `SOLVE_ALL`.
+
+### v1.25.3 — Reset resets solver type
+`app.reset()` recreates solver with `Solvers.default()`, losing user's solver selection. Fix: save `prev_solver = app.slv.get_code` before reset, restore with `app.switch_to_solver(prev_solver)` after. Applied to both `reset_session` and `RESET_CUBE` handlers.
+
+### v1.25.4 — iPhone reconnect aborts solve (INCOMPLETE FIX)
+iOS Safari suspends tab → WebSocket dies → `reattach()` was calling `cancel_animation()` which aborts the one-phase solve. Fix: skip cancel when `am._blocking_mode` is active. **Problem:** Didn't unblock the solver thread which stays stuck on `_blocking_event.wait()`.
+
+### v1.25.5 — Fix reconnect: unblock solver thread
+Root cause: `reattach()` swapped the WebSocket but left the solver thread blocked on `_blocking_event.wait()` for `animation_done` from the dead WebSocket. Fix: `am._blocking_event.set()` in reattach to unblock solver. Also added `timeout=60.0` to `_blocking_event.wait()` as safety net.
+
+### Deploy script improvements
+- `gh_acreate_pr.ps1` now accepts `-branch` parameter (default `webgl-dev`). Use `-branch main` for production.
+- `.claude/skills/deploy/SKILL.md` updated with environment table.
+
+---
+
+## Commits
+| Hash | Version | Description |
+|------|---------|-------------|
+| `fda82af5` | 1.25 | feat: WebGL marker rendering with one-phase solve |
+| `f531124d` | 1.25.1 | fix: markers persist after solve/stop, scramble in redo queue |
+| `8e83e70f` | 1.25.2 | fix: restore two-phase solve for "solve" command |
+| `707ba059` | 1.25.3 | fix: preserve solver type on reset and reset_session |
+| `6f40a39a` | 1.25.4 | fix: don't abort solve on WebSocket reconnect |
+| `5cc24162` | 1.25.5 | fix: unblock solver thread on reconnect during solve |
+
+---
+
+## Known Issues
+- **Slow solve animation:** ~8s per move even at speed 6. Marker rendering overhead in JS (10,000+ MARKERS console logs). Each `send_state()` rebuilds all marker Three.js objects.
+- **Operator self-annotation overhead:** `operator_show_alg_annotation` wraps each compound alg with `annotate(h3=str(alg))`, sending extra state updates.
+
+---
+
+## All Checks Status
 - Ruff: ✅
 - Mypy: ✅ (356 files)
 - Pyright: ✅ (0 errors)
