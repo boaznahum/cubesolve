@@ -58,9 +58,9 @@ The implementation was done across 3 commits:
 |-----------------|--------------|-----------|
 | Corners         | 8            | 8         |
 | Edges           | 12           | 0         |
-| Centers         | 6            | 0 (virtual) |
+| Centers         | 6            | 0 (none)    |
 | `n_slices`      | 1            | 0         |
-| Slice moves (M/E/S) | Physical | Virtual   |
+| Slice moves (M/E/S) | Physical | No-op     |
 
 On a 3x3, `face.color` is derived from the physical center sticker on that
 face. On a 2x2, there is no center sticker, yet the system still needs
@@ -68,75 +68,31 @@ face. On a 2x2, there is no center sticker, yet the system still needs
 for `match_face`, `in_position`, `position_id`, `color_2_face`, and the
 solver's concept of "white face" / "yellow face".
 
-### Virtual Center Colors
+### Face Color on 2x2 — Fixed Original Color
 
 **File:** `src/cube/domain/model/Center.py`
 
-Each `Center` object gains a `_virtual_color` attribute. On construction, if
-the center has no slices (2x2), it stores the face's `original_color`:
-
-```python
-class Center(Part):
-    __slots__ = ("_slices", "_face_ref", "_virtual_color")
-
-    def __init__(self, center_slices, face=None):
-        self._virtual_color: "Color | None" = None
-        if not center_slices or not center_slices[0]:
-            if face is not None:
-                self._virtual_color = face.original_color
-```
-
-The `color` property returns `_virtual_color` when there are no slices:
+A 2x2 has no physical centers. The `Center` object holds a `_face_ref` back to
+its owning face. The `color` property returns `face.original_color` — the fixed
+color the face was born with:
 
 ```python
 @property
 def color(self):
     if not self._slices:
-        return self._virtual_color
+        return self._face_ref.original_color  # 2x2: fixed face color
     return self.edg().color
 ```
 
-### Why Virtual Colors Need Slice Move Mappings
-
-This is the key insight of the 2x2 model support.
-
-On a 3x3, a whole-cube rotation like **X** is decomposed into face moves:
-
-```
-X = R + M' + L'
-```
-
-The M slice move physically moves the center sticker from U to F (for example),
-so `face.color` updates automatically because the sticker moved.
-
-On a 2x2, `n_slices = 0`, so the M slice has **nothing to move**. After a
-whole-cube X rotation, the corners rotate correctly (via R and L'), but the
-virtual center colors are never updated — `face.color` becomes stale.
-
-The fix is in `Slice.rotate()`:
+**Why this works:** A real 2x2 cube has no reference frame — there is no
+"white face." The solver works entirely with corner-relative coordinates
+(permutation + orientation). The face color is only needed for GUI display
+and `match_face`/`color_2_face` lookups, where a fixed mapping is correct.
 
 **File:** `src/cube/domain/model/Slice.py`
 
-```python
-# For 2x2 cubes, rotate virtual center colors to track whole-cube rotations
-if self.n_slices == 0:
-    self._rotate_virtual_center_colors(n)
-    return
-```
-
-The mapping table defines which faces each slice axis cycles:
-
-```python
-_VIRTUAL_COLOR_CYCLES: dict[SliceName, tuple[FaceName, ...]] = {
-    SliceName.M: (FaceName.U, FaceName.F, FaceName.D, FaceName.B),
-    SliceName.E: (FaceName.F, FaceName.R, FaceName.B, FaceName.L),
-    SliceName.S: (FaceName.L, FaceName.U, FaceName.R, FaceName.D),
-}
-```
-
-When M rotates by 1 quarter turn: U's virtual color goes to F, F's to D,
-D's to B, B's to U. This exactly mirrors what the physical M slice would do
-on a 3x3 — keeping `face.color` consistent after whole-cube rotations.
+Slice rotation is a no-op for 2x2 (`n_slices == 0`) — early return, nothing
+to rotate. No virtual color tracking needed.
 
 ### Part Model Guards
 
@@ -429,8 +385,8 @@ commands by name.
 
 | File | Change |
 |------|--------|
-| `Center.py` | `_virtual_color` attribute, virtual color property |
-| `Slice.py` | `_VIRTUAL_COLOR_CYCLES` table, `_rotate_virtual_center_colors()` |
+| `Center.py` | `_face_ref` back-reference, `color` returns `face.original_color` for 2x2 |
+| `Slice.py` | Early return (no-op) for `n_slices == 0` |
 | `Part.py` | `has_slices` property, `fixed_id` assert fix, empty-edge guards |
 | `Edge.py` | Empty-slice handling in `color`, `get_slice_by_ltr_index` |
 | `Face.py` | 0 center slices support, skip marker setup |

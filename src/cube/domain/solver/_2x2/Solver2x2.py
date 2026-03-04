@@ -185,18 +185,6 @@ class Solver2x2(BaseSolver):
         for alg in _ORIENT_TABLE[(slot, co)]:
             self.op.play(alg)
 
-    @staticmethod
-    def _fix_centers(cube: Cube) -> None:
-        """Reset virtual center pieces to match original face colors.
-
-        On a 2x2, the domain model has virtual center pieces that move with
-        whole-cube rotations but not with face moves. After pre-orientation
-        (whole-cube rotations) and solving (face moves only), the centers
-        may be displaced while corners are correct. This resets them.
-        """
-        for face in cube.faces:
-            face.center._virtual_color = face.original_color  # type: ignore[attr-defined]
-
     def _solve_optimal(self) -> None:
         """Solve the 2x2 cube optimally using IDA*."""
         # Orient cube so DBL piece is at position 7 with co=0 (required by IDA*)
@@ -218,5 +206,3 @@ class Solver2x2(BaseSolver):
         for move_idx in solution:
             self.op.play(_MOVE_TO_ALG[move_idx])
 
-        # Fix virtual center pieces that were displaced by pre-orientation
-        self._fix_centers(self._cube)
