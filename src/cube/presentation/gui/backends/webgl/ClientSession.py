@@ -628,7 +628,9 @@ class ClientSession:
         if command_name == "reset_session":
             self._fsm.send(FlowEvent.RESET_SESSION)
             self._animation_manager.cancel_animation()
+            prev_solver = self._app.slv.get_code
             self._app.reset(self._app.config.cube_size)  # Reset to config default
+            self._app.switch_to_solver(prev_solver)
             self.on_client_connected()
             return
 
@@ -1137,7 +1139,11 @@ class ClientSession:
 
         if command is Commands.RESET_CUBE:
             self._fsm.send(FlowEvent.RESET)
-            # fall through to execute
+            prev_solver = self._app.slv.get_code
+            command.execute(CommandContext.from_window(self))  # type: ignore[arg-type]
+            self._app.switch_to_solver(prev_solver)
+            self.send_state()
+            return
 
         try:
             from cube.presentation.gui.commands.concrete import NewSessionCommand
