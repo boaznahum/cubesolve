@@ -8,19 +8,22 @@ try {
     $version = Get-Content src/cube/resources/version.txt
     Write-Host "Deploying version: $version" -ForegroundColor Cyan
 
-    # Get the latest run ID BEFORE the merge
+    # Get the latest run ID BEFORE the push
     $beforeId = (gh run list --branch $branch -L 1 --json databaseId |
         ConvertFrom-Json)[0].databaseId
 
-    # Push current branch and create PR with auto-merge
+    # Push current branch to origin
     git push -u origin HEAD
     if ($LASTEXITCODE -ne 0) { throw "Failed to push branch" }
 
-    gh pr create --base $branch --fill
-    if ($LASTEXITCODE -ne 0) { throw "Failed to create PR" }
+    # Pull webgl-dev into current branch (no-op if already up to date), then push
+    git pull origin $branch --no-edit
+    if ($LASTEXITCODE -ne 0) { throw "Failed to pull origin/$branch" }
 
-    gh pr merge --auto --merge
-    if ($LASTEXITCODE -ne 0) { throw "Failed to set auto-merge" }
+    git push origin HEAD:$branch
+    if ($LASTEXITCODE -ne 0) { throw "Push to $branch failed" }
+
+    Write-Host "Pushed to $branch (fast-forward)" -ForegroundColor Green
 
     # Poll until a NEW run appears
     Write-Host "Waiting for new run to start..." -ForegroundColor Yellow
