@@ -571,7 +571,7 @@ class ClientSession:
         if command_name == "solve":
             if not self._fsm.send(FlowEvent.SOLVE):
                 return
-            self._start_one_phase_solve()
+            self._two_phase_solve()
             return
 
         if command_name == "solve_and_play":
@@ -969,6 +969,36 @@ class ClientSession:
 
     # -- Solve --
 
+    def _two_phase_solve(self) -> None:
+        """Solve the cube by placing solution steps into the redo queue.
+
+        The user can then step through with redo/next or fast-play.
+        FSM must already be in SOLVING state before this is called.
+        """
+        try:
+            app = self._app
+            slv = app.slv
+            solution_alg = slv.solution()
+            solution_alg = solution_alg.simplify()
+            # Flatten into atomic steps and enqueue as redo
+            steps = list(solution_alg.flatten())
+            app.op.enqueue_redo(steps)
+            self._fsm.redo_source = "solver"
+            self._fsm.redo_tainted = False
+            # SOLVE_DONE: transitions to READY (or PLAYING if auto_play)
+            has_redo = bool(app.op.redo_queue())
+            has_history = bool(app.op.history())
+            self._fsm.send(FlowEvent.SOLVE_DONE, has_redo=has_redo, has_history=has_history)
+            self.send_state()
+        except Exception as e:
+            traceback.print_exc()
+            self._app.set_error(f"Solve error: {e}")
+            # On error, go back to IDLE/READY
+            has_redo = bool(self._app.op.redo_queue())
+            has_history = bool(self._app.op.history())
+            self._fsm.send(FlowEvent.SOLVE_DONE, has_redo=has_redo, has_history=has_history)
+            self.send_state()
+
     def _start_one_phase_solve(self) -> None:
         """Launch the solver in a background thread with blocking animation.
 
@@ -1089,7 +1119,7 @@ class ClientSession:
 
         if command is Commands.SOLVE_ALL:
             if self._fsm.send(FlowEvent.SOLVE):
-                self._start_one_phase_solve()
+                self._two_phase_solve()
             return
 
         if command is Commands.STOP_ANIMATION:
