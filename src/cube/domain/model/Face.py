@@ -418,7 +418,7 @@ class Face(SuperElement, Hashable):
 
     # for constructing only, valid only after ctor
     def create_part(self) -> PartEdge:
-        e: PartEdge = PartEdge(self, self.color)
+        e: PartEdge = PartEdge(self, self._original_color)
         return e
 
     def _get_other_face(self, e: Edge) -> _Face:
@@ -645,10 +645,12 @@ class Face(SuperElement, Hashable):
         if not self.is3x3:
             return False
 
-        c = self.color
         if self.cube.n_slices == 0:
-            # 2x2: only corners (no edges, no centers)
-            return all(corner.f_color(self) == c for corner in self._corners)
+            # 2x2: no centers — solved iff all 4 corner stickers on this face share one color
+            c = self._corners[0].f_color(self)
+            return all(corner.f_color(self) == c for corner in self._corners[1:])
+
+        c = self.color
 
         return (c ==
                 self._edge_top.f_color(self) ==

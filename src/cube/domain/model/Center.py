@@ -120,12 +120,11 @@ class Center(Part):
     def color(self) -> Color:
         """
         For 3x3+: returns the center sticker color.
-        For 2x2: returns the face's original (fixed) color — no centers exist.
+        For 2x2: returns UNCOLORED — no physical centers exist.
         :return:
         """
         if not self._slices:
-            # 2x2: no center slices, return the face's fixed original color
-            return self._face_ref.original_color  # type: ignore[union-attr]
+            return Color.UNCOLORED
         return self.edg().color
 
     def clone(self) -> "Center":
