@@ -39,14 +39,12 @@ powershell.exe -ExecutionPolicy Bypass -File gh_acreate_pr.ps1
 This script:
 - Displays the version being deployed
 - Pushes the current branch
-- Creates a PR targeting `webgl-dev`
-- Enables auto-merge
+- Pulls `webgl-dev` into current branch (no-op if up to date), then pushes to `webgl-dev`
 - Polls for and watches the GitHub Actions deploy run
 - Displays the deployed version when done
 
 ### 4. Report
 
 After deployment completes, report:
-- The PR URL
 - The deployed version
 - Success/failure status
