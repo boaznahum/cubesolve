@@ -642,13 +642,13 @@ class Face(SuperElement, Hashable):
 
     @property
     def solved(self):
-        if not self.is3x3:
-            return False
-
         if self.cube.n_slices == 0:
-            # 2x2: no centers — solved iff all 4 corner stickers on this face share one color
+            # 2x2: no centers, no edges — solved iff all 4 corner stickers share one color
             c = self._corners[0].f_color(self)
             return all(corner.f_color(self) == c for corner in self._corners[1:])
+
+        if not self.is3x3:
+            return False
 
         c = self.color
 
