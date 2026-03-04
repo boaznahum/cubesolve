@@ -113,6 +113,9 @@ class AnimationSpeedConfig:
     d0: float = 2000
     # Duration (ms) at speed index 7 (fastest)
     dn: float = 50
+    # Timeout (seconds) for blocking mode wait — prevents permanent hang
+    # if WebSocket dies without reconnect
+    blocking_timeout: float = 60.0
 
 
 ANIMATION_SPEED_CONFIG = AnimationSpeedConfig()

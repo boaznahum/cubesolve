@@ -32,6 +32,9 @@ class AnimationSpeedConfigProtocol(Protocol):
     @property
     def dn(self) -> float: ...
 
+    @property
+    def blocking_timeout(self) -> float: ...
+
 
 @runtime_checkable
 class AssistConfigProtocol(Protocol):

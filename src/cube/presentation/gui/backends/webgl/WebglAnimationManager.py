@@ -202,8 +202,14 @@ class WebglAnimationManager(AnimationManager):
 
         # Block solver thread until client signals animation_done.
         # Timeout prevents permanent hang if WebSocket dies without reconnect.
+        # On timeout: abort solver cleanly via OpAborted. The FSM transitions
+        # to IDLE/READY so the user can press Solve again on reconnect to
+        # restart the solver from the current (partially solved) cube state.
+        timeout = self._vs._config.animation_speed_config.blocking_timeout
         self._blocking_event.clear()
-        self._blocking_event.wait(timeout=60.0)
+        signaled = self._blocking_event.wait(timeout=timeout)
+        if not signaled:
+            self._operator.abort()
 
     def _process_next(self) -> None:
         """Process queued moves, sending animation events to client."""
