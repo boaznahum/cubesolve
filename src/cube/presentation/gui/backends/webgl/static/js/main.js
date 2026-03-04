@@ -117,15 +117,30 @@ animQueue._onAssistHide = () => {
 };
 
 // ── Responsive sizing ──
+let _lastAspect = 0;
+
 function resize() {
     const wrapper = canvas.parentElement;
     const isMobile = window.matchMedia('(max-width: 768px)').matches;
+    let w, h;
 
     if (isMobile) {
-        // On mobile, use the full wrapper area so the cube fills the screen.
-        // wrapper is flex:1 so it stretches to all available space.
-        const w = wrapper.clientWidth;
-        const h = wrapper.clientHeight;
+        w = wrapper.clientWidth;
+        h = wrapper.clientHeight;
+
+        // Fallback: on iOS initial load, flex layout may not have settled yet
+        // so wrapper dimensions can be 0.  Compute from viewport instead.
+        if (h < 50) {
+            const toolbarEl = document.getElementById('toolbar');
+            const statusEl = document.getElementById('status');
+            const vpH = window.visualViewport?.height ?? window.innerHeight;
+            h = vpH - (toolbarEl?.offsetHeight || 50) - (statusEl?.offsetHeight || 20) - 10;
+        }
+        if (w < 50) {
+            const histPanel = document.getElementById('history-panel');
+            w = window.innerWidth - (histPanel?.offsetWidth || 62) - 8;
+        }
+
         renderer.setSize(w, h);
         camera.aspect = w / h;
     } else {
@@ -135,10 +150,28 @@ function resize() {
         renderer.setSize(size, size);
         camera.aspect = 1;
     }
+
     camera.updateProjectionMatrix();
+
+    // Adjust camera distance when aspect ratio changes (orientation change, etc.)
+    const aspect = camera.aspect;
+    if (Math.abs(aspect - _lastAspect) > 0.01) {
+        _lastAspect = aspect;
+        controls.fitToView(aspect);
+    }
 }
+
+// Initial resize
 resize();
 window.addEventListener('resize', resize);
+
+// iOS: visualViewport fires more reliably on orientation change / keyboard show
+if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', resize);
+}
+
+// Delayed resize — catches late CSS flex layout on iOS first load
+requestAnimationFrame(() => requestAnimationFrame(resize));
 
 // ── Message handler ──
 function handleMessage(msg) {
