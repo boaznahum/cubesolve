@@ -83,6 +83,7 @@ _TRANSITIONS: dict[FlowState, dict[FlowEvent, FlowState | None]] = {
     },
     FlowState.SOLVING: {
         FlowEvent.SOLVE_DONE: None,  # guard: → READY or PLAYING (auto_play)
+        FlowEvent.STOP: FlowState.STOPPING,  # abort one-phase solve
         FlowEvent.RESET_SESSION: FlowState.IDLE,
     },
     FlowState.READY: {
@@ -118,6 +119,7 @@ _TRANSITIONS: dict[FlowState, dict[FlowEvent, FlowState | None]] = {
     FlowState.STOPPING: {
         FlowEvent.ANIM_DONE: None,  # guard: → IDLE or READY
         FlowEvent.QUEUE_EMPTY: None,  # guard: → IDLE or READY
+        FlowEvent.SOLVE_DONE: None,  # guard: one-phase solve aborted → IDLE or READY
         FlowEvent.RESET_SESSION: FlowState.IDLE,
     },
 }
@@ -136,7 +138,7 @@ _BUTTON_TABLE: dict[str, set[FlowState]] = {
     "undo":           {FlowState.READY},
     "redo":           {FlowState.READY},
     "rewind_all":     {FlowState.READY},
-    "stop":           {FlowState.ANIMATING, FlowState.PLAYING, FlowState.REWINDING},
+    "stop":           {FlowState.ANIMATING, FlowState.PLAYING, FlowState.REWINDING, FlowState.SOLVING},
     "reset":          {FlowState.IDLE, FlowState.READY},
     "reset_session":  set(FlowState),  # all states
     "face_turn":      {FlowState.IDLE, FlowState.READY},
@@ -280,6 +282,12 @@ class FlowStateMachine:
     ) -> FlowState | None:
         """Resolve a guarded transition to a concrete target state."""
         if event == FlowEvent.SOLVE_DONE:
+            if self._state == FlowState.STOPPING:
+                # Solve was aborted — don't auto-play
+                self._auto_play = False
+                if has_redo or has_history:
+                    return FlowState.READY
+                return FlowState.IDLE
             if self._auto_play:
                 self._auto_play = False
                 return FlowState.PLAYING

@@ -38,6 +38,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from cube.domain.model.PartEdge import PartEdge
 
+from ._complementary_colors import get_complementary_color
 from ._marker_creators import color_255_to_float, color_float_to_255
 from ._marker_creator_protocol import MarkerCreator
 from ._marker_toolkit import MarkerToolkit
@@ -97,5 +98,6 @@ __all__ = [
     "OutlinedCircleMarker",
     "color_255_to_float",
     "color_float_to_255",
+    "get_complementary_color",
     "get_markers_from_part_edge",
 ]

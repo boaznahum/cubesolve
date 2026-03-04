@@ -334,9 +334,16 @@ class WebglEventLoop(EventLoop):
         pass
 
     def send_to(self, ws: "WebSocketResponse", message: str) -> None:
-        """Send a message to a specific WebSocket client (unicast)."""
+        """Send a message to a specific WebSocket client (unicast).
+
+        Thread-safe: uses call_soon_threadsafe so this can be called from
+        any thread (e.g., solver worker thread in one-phase solve mode).
+        """
         if self._loop and not ws.closed:
-            self._loop.create_task(self._safe_send(ws, message))
+            self._loop.call_soon_threadsafe(
+                self._loop.create_task,
+                self._safe_send(ws, message),
+            )
 
     def broadcast(self, message: str) -> None:
         """Send message to all connected clients."""

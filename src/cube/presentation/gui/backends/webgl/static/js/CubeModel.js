@@ -7,6 +7,7 @@ import {
     BODY_COLOR, STICKER_GAP, CORNER_RADIUS,
     PBR_COLOR_OVERRIDES, FACE_DEFS, createRoundedRectShape,
 } from './constants.js';
+import { createMarkerGroup } from './MarkerRenderer.js';
 
 export class CubeModel {
     constructor(scene) {
@@ -20,6 +21,7 @@ export class CubeModel {
         this.cellSize = 1.0;
         this.stickers = {};  // {faceName: [meshes in row-major order]}
         this.faceGroups = {};
+        this.markerGroups = {};  // {faceName: [THREE.Group|null per sticker]}
 
         this.build(3);
     }
@@ -28,7 +30,8 @@ export class CubeModel {
      * Build or rebuild the cube geometry for a given size.
      */
     build(size) {
-        // Clear existing
+        // Clear existing (including markers)
+        this.clearAllMarkers();
         while (this.cubeGroup.children.length > 0) {
             const child = this.cubeGroup.children[0];
             this.cubeGroup.remove(child);
@@ -37,6 +40,7 @@ export class CubeModel {
         }
         this.stickers = {};
         this.faceGroups = {};
+        this.markerGroups = {};
 
         this.size = size;
         // Keep total physical size constant regardless of N — cube fits the same view
@@ -71,6 +75,7 @@ export class CubeModel {
             this.cubeGroup.add(faceGroup);
             this.faceGroups[faceName] = faceGroup;
             this.stickers[faceName] = [];
+            this.markerGroups[faceName] = [];
 
             const right = new THREE.Vector3(...def.right);
             const up = new THREE.Vector3(...def.up);
@@ -123,6 +128,7 @@ export class CubeModel {
 
                     faceGroup.add(mesh);
                     this.stickers[faceName].push(mesh);
+                    this.markerGroups[faceName].push(null);
                 }
             }
         }
@@ -162,15 +168,92 @@ export class CubeModel {
     }
 
     /**
-     * Update all faces from a cube_state message.
+     * Update markers for one face from server state.
+     * markers: flat array of (null | Array<markerDesc>) in row-major order
+     */
+    updateFaceMarkers(faceName, markers) {
+        const meshes = this.stickers[faceName];
+        if (!meshes || !markers) return;
+
+        for (let i = 0; i < meshes.length && i < markers.length; i++) {
+            const existing = this.markerGroups[faceName][i];
+            const newData = markers[i];
+
+            if (!newData) {
+                // No markers — remove existing if present
+                if (existing) {
+                    this._disposeMarkerGroup(existing);
+                    meshes[i].remove(existing);
+                    this.markerGroups[faceName][i] = null;
+                }
+                continue;
+            }
+
+            // Remove old marker group before creating new one
+            if (existing) {
+                this._disposeMarkerGroup(existing);
+                meshes[i].remove(existing);
+            }
+
+            // Create new marker group and add as child of sticker mesh
+            const group = createMarkerGroup(newData, this.cellSize);
+            meshes[i].add(group);
+            this.markerGroups[faceName][i] = group;
+        }
+    }
+
+    /**
+     * Update all faces from a cube state.
+     * Handles both old format (face → [colors]) and new format (face → {colors, markers}).
      */
     updateFromState(state) {
         if (state.size !== this.size) {
             this.build(state.size);
         }
-        for (const [faceName, colors] of Object.entries(state.faces)) {
-            this.updateFaceColors(faceName, colors);
+        for (const [faceName, faceData] of Object.entries(state.faces)) {
+            if (Array.isArray(faceData)) {
+                // Old format: face data is just a flat color array
+                this.updateFaceColors(faceName, faceData);
+            } else {
+                // New format: {colors: [...], markers: [...]}
+                this.updateFaceColors(faceName, faceData.colors);
+                if (faceData.markers) {
+                    this.updateFaceMarkers(faceName, faceData.markers);
+                }
+            }
         }
+    }
+
+    /**
+     * Remove and dispose all marker meshes from all faces.
+     */
+    clearAllMarkers() {
+        for (const faceName of Object.keys(this.markerGroups)) {
+            const groups = this.markerGroups[faceName];
+            const meshes = this.stickers[faceName];
+            if (!groups || !meshes) continue;
+
+            for (let i = 0; i < groups.length; i++) {
+                if (groups[i]) {
+                    this._disposeMarkerGroup(groups[i]);
+                    meshes[i].remove(groups[i]);
+                    groups[i] = null;
+                }
+            }
+        }
+    }
+
+    /**
+     * Recursively dispose geometry and materials in a marker group.
+     */
+    _disposeMarkerGroup(group) {
+        group.traverse((child) => {
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) {
+                if (child.material.map) child.material.map.dispose();
+                child.material.dispose();
+            }
+        });
     }
 
     /**

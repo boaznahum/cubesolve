@@ -15,6 +15,7 @@ this backend sends:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import traceback
 from collections.abc import Callable
@@ -286,6 +287,7 @@ class ClientSession:
         """
         snapshot = self._build_state_snapshot()
         self._send(snapshot.to_json())
+
 
     # -- Send helpers (event messages + client count) --
 
@@ -569,13 +571,13 @@ class ClientSession:
         if command_name == "solve":
             if not self._fsm.send(FlowEvent.SOLVE):
                 return
-            self._two_phase_solve()
+            self._start_one_phase_solve()
             return
 
         if command_name == "solve_and_play":
             if not self._fsm.send(FlowEvent.SOLVE_AND_PLAY):
                 return
-            self._two_phase_solve()
+            self._start_one_phase_solve()
             return
 
         if command_name == "scramble":
@@ -964,35 +966,44 @@ class ClientSession:
 
     # -- Solve --
 
-    def _two_phase_solve(self) -> None:
-        """Solve the cube by placing solution steps into the redo queue.
+    def _start_one_phase_solve(self) -> None:
+        """Launch the solver in a background thread with blocking animation.
 
-        The user can then step through with redo/next or fast-play.
         FSM must already be in SOLVING state before this is called.
+        Creates an asyncio task that runs the solver via asyncio.to_thread().
         """
+        loop = self._event_loop._loop
+        if loop:
+            loop.create_task(self._one_phase_solve())
+
+    async def _one_phase_solve(self) -> None:
+        """Run solver in worker thread with blocking animation mode.
+
+        The solver calls op.play() which triggers AM.run_animation() in
+        blocking mode — each animated move blocks the solver thread until
+        the client signals animation_done. This keeps solver annotations
+        (markers from annotate() blocks) visible during animation.
+        """
+        am = self._animation_manager
+        am.set_blocking_mode(True)
         try:
-            app = self._app
-            slv = app.slv
-            solution_alg = slv.solution()
-            solution_alg = solution_alg.simplify()
-            # Flatten into atomic steps and enqueue as redo
-            steps = list(solution_alg.flatten())
-            app.op.enqueue_redo(steps)
-            self._fsm.redo_source = "solver"
-            self._fsm.redo_tainted = False
-            # SOLVE_DONE: transitions to READY (or PLAYING if auto_play)
-            has_redo = bool(app.op.redo_queue())
-            has_history = bool(app.op.history())
-            self._fsm.send(FlowEvent.SOLVE_DONE, has_redo=has_redo, has_history=has_history)
-            self.send_state()
+            await asyncio.to_thread(self._run_solver_blocking)
         except Exception as e:
             traceback.print_exc()
             self._app.set_error(f"Solve error: {e}")
-            # On error, go back to IDLE/READY
-            has_redo = bool(self._app.op.redo_queue())
-            has_history = bool(self._app.op.history())
-            self._fsm.send(FlowEvent.SOLVE_DONE, has_redo=has_redo, has_history=has_history)
-            self.send_state()
+        finally:
+            am.set_blocking_mode(False)
+        # One-phase solve: moves are in history, not redo queue.
+        # Clear auto_play since the solve IS the play.
+        self._fsm._auto_play = False
+        has_redo = bool(self._app.op.redo_queue())
+        has_history = bool(self._app.op.history())
+        self._fsm.send(FlowEvent.SOLVE_DONE, has_redo=has_redo, has_history=has_history)
+        self.send_state()
+
+    def _run_solver_blocking(self) -> None:
+        """Run the solver — called from worker thread via asyncio.to_thread()."""
+        self._app.slv.solve(animation=True)
 
     def _handle_play_next(self, forward: bool) -> None:
         """Handle client request for the next move in playback.
@@ -1071,17 +1082,19 @@ class ClientSession:
 
         if command is Commands.SOLVE_ALL:
             if self._fsm.send(FlowEvent.SOLVE):
-                self._two_phase_solve()
+                self._start_one_phase_solve()
             return
 
         if command is Commands.STOP_ANIMATION:
             if self._fsm.send(FlowEvent.STOP):
                 self._animation_manager.cancel_animation()
-                # STOP → STOPPING. Animation cancelled, so immediately done.
-                has_redo = bool(self._app.op.redo_queue())
-                has_history = bool(self._app.op.history())
-                self._fsm.send(FlowEvent.ANIM_DONE, has_redo=has_redo, has_history=has_history)
-                self.send_play_empty()
+                if not self._animation_manager._blocking_mode:
+                    # Queue mode: animation cancelled, immediately done.
+                    has_redo = bool(self._app.op.redo_queue())
+                    has_history = bool(self._app.op.history())
+                    self._fsm.send(FlowEvent.ANIM_DONE, has_redo=has_redo, has_history=has_history)
+                    self.send_play_empty()
+                # Blocking mode: solver thread cleanup sends SOLVE_DONE
             self.send_state()
             return
 
