@@ -165,10 +165,28 @@ class ClientSession:
         Swaps the underlying WebSocket, resets flow state via FSM RECONNECT
         event, and resends the full state. This fixes the bug where
         _fast_playing stayed True after reconnect (play button disabled).
+
+        During one-phase solve (blocking mode), the solver thread is still
+        running. We just swap the WebSocket and resend state — the solve
+        continues on the new connection without interruption.
         """
         self._ws = ws
+        am = self._animation_manager
+
+        if am._blocking_mode:
+            # One-phase solve in progress — don't cancel, just resend state.
+            # The solver thread continues; its next send_state() will use
+            # the new WebSocket automatically.
+            print(
+                f"Session reattached (solve in progress): "
+                f"{self.client_info.session_id[:8]}",
+                flush=True,
+            )
+            self.on_client_connected()
+            return
+
         # Cancel any in-flight animation state
-        self._animation_manager.cancel_animation()
+        am.cancel_animation()
         # FSM RECONNECT: transitions to IDLE or READY based on queue
         has_redo = bool(self._app.op.redo_queue())
         has_history = bool(self._app.op.history())
