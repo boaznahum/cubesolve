@@ -43,8 +43,7 @@ class Center(Part):
 
     @property
     def is3x3(self) -> bool:
-        if not self._slices:
-            return True  # 2x2: no slices, trivially reduced
+        assert self._slices, f"is3x3 should not be called on 2x2 center with no slices"
 
         slices: Iterator[CenterSlice] = self.all_slices
 

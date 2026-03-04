@@ -100,8 +100,7 @@ class Edge(Part):
 
         See: design2/model-id-system.md section "Evolution: Big Cube → 3x3 Reduction"
         """
-        if not self._slices:
-            return True  # 2x2: no slices, trivially reduced
+        assert self._slices, f"is3x3 should not be called on 2x2 edge {self._name} with no slices"
 
         slices = self.all_slices
 

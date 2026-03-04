@@ -284,8 +284,7 @@ class Part(ABC, CubeElement):
         See: design2/model-id-system.md section "Key State Check Properties"
         """
         rep_edges = self._3x3_representative_edges
-        if not rep_edges:
-            return True  # 2x2: empty parts are trivially matched
+        assert rep_edges, f"match_faces should not be called on 2x2 part {self} with no slices"
 
         for p in rep_edges:
             if p.color != p.face.color:
@@ -346,10 +345,8 @@ class Part(ABC, CubeElement):
 
         if not by_pos or (self.config.dont_optimized_part_id):
             rep_edges = self._3x3_representative_edges
-            if not rep_edges:
-                by_pos = frozenset()  # 2x2: empty part has empty position_id
-            else:
-                by_pos = frozenset(e.face.color for e in rep_edges)
+            assert rep_edges, f"position_id should not be called on 2x2 part {self} with no slices"
+            by_pos = frozenset(e.face.color for e in rep_edges)
             self._colors_id_by_pos = by_pos
 
         return by_pos
@@ -395,10 +392,7 @@ class Part(ABC, CubeElement):
         if not colors_id or self.config.dont_optimized_part_id:
 
             rep_edges = self._3x3_representative_edges
-            if not rep_edges:
-                colors_id = frozenset()  # 2x2: empty part
-                self._colors_id_by_colors = colors_id
-                return colors_id
+            assert rep_edges, f"colors_id should not be called on 2x2 part {self} with no slices"
 
             new_colors_id = frozenset(e.color for e in rep_edges)
 
