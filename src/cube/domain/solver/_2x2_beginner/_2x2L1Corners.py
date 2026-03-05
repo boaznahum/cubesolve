@@ -1,7 +1,6 @@
-from typing import Sequence
-
-from cube.domain.algs import Algs
+from cube.domain.algs import Algs, Alg, WholeCubeAlg
 from cube.domain.exceptions import InternalSWError
+from cube.domain.geometric.Face2FaceTranslator import Face2FaceTranslator
 from cube.domain.model import Corner, Part, PartColorsID, Color
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
@@ -90,10 +89,10 @@ class _2x2L1Corners(SolverHelper):
             first_color_id: PartColorsID = first_corner.colors_id
 
             # ok now we need to bring it
+            self.debug(lambda : f"Bringing {first_color_id} to FLU")
+            self._bring_corner_face_to_flu_color_up(first_color_id, white_color)
 
-            self._bring_corner_face_to_FLU_color_up(first_color_id, white_color)
-
-
+            assert False, "That all I know for now"
 
 
             # # the colors ID of 4 corners
@@ -156,13 +155,13 @@ class _2x2L1Corners(SolverHelper):
         assert self.cube.front.corner_bottom_right is sc()
 
         # is the white is on the down
-        if sc().f_color(wf.opposite) == wf.color:
+        if sc().face_color(wf.opposite) == wf.color:
             self.debug(f"{wf.color} is on bottom")
             self.op.play(Algs.R.prime + Algs.D.prime * 2 + Algs.R + Algs.D)
             assert self.cube.front.corner_bottom_right is sc()
-            assert sc().f_color(wf.opposite) != wf.color
+            assert sc().face_color(wf.opposite) != wf.color
 
-        if sc().f_color(wf.cube.front) == wf.color:
+        if sc().face_color(wf.cube.front) == wf.color:
             self.op.play(Algs.D.prime + Algs.R.prime + Algs.D + Algs.R)
         else:
             self.op.play(Algs.D + Algs.F + Algs.D.prime + Algs.F.prime)
@@ -256,44 +255,82 @@ class _2x2L1Corners(SolverHelper):
         else:
             raise ValueError(f"{c} is not on {f}")
 
-    def _bring_corner_face_to_FLU_color_up(self, corner_id: PartColorsID, required_color: Color):
+    def _bring_corner_face_to_flu_color_up(self, corner_id: PartColorsID, required_color: Color):
 
         """
-        Given a corner, bring it up to FLU such that color is up
+        Position a corner at FLU with the required color facing up.
+
+        Uses whole-cube rotations to orient the cube so that the face currently
+        holding ``required_color`` becomes the Up face, then rotates U to place
+        the corner at FLU. Verifies the result with assertions before returning.
+
+        Algorithm (iterative, max 3 attempts):
+          1. Find the corner by its color-id (position may change between iterations
+             due to whole-cube rotations).
+          2. If ``required_color`` is already on the Up face:
+             - Rotate U to move the corner to FLU (U', U2, or U depending on position).
+             - Assert the corner is at FLU with the correct color facing up.
+             - Return.
+          3. Otherwise, determine which face ``required_color`` is currently on,
+             use ``Face2FaceTranslator`` to derive a whole-cube rotation that maps
+             that face to Up, apply the simplified alg, and retry from step 1.
+
+        :param corner_id: The color-id that uniquely identifies the corner.
+        :param required_color: The color that must end up on the Up face.
+        :raises InternalSWError: If the corner cannot be positioned within 3 iterations.
         """
 
         cube = self.cube
         target_face: Face = cube.up
 
-        corner: Corner = cube.find_corner_by_colors(corner_id)
-
         assert required_color in corner_id
 
-        # if it is already on up, just make sure color is up
-        if corner.is_face_color(target_face) is required_color:
-            # now just need to rotate
-            # on which corner it ?
 
-            if corner is cube.flu:
-                return None # done
-            elif corner is cube.blu:
-                return self.op.play(Algs.U*2)
-            elif corner is cube.bru:
-                return self.op.play(Algs.U.prime)
-            elif corner is cube.fru:
-                return self.op.play(Algs.U)
+        iteration = 0
+        while iteration < 3:
+            iteration += 1
+
+
+            corner: Corner = cube.find_corner_by_colors(corner_id)
+
+
+            # if it is already on up, just make sure color is up
+            if corner.is_face_color(target_face) is required_color:
+                # now just need to rotate
+                # on which corner it ?
+
+                if corner is cube.flu:
+                    pass
+                elif corner is cube.blu:
+                    self.op.play(Algs.U.prime)
+                elif corner is cube.bru:
+                    self.op.play(Algs.U*2)
+                elif corner is cube.fru:
+                    self.op.play(Algs.U)
+                else:
+                    raise InternalSWError(f"How can it be ? {corner} is not on {target_face}")
+
+                corner: Corner = cube.find_corner_by_colors(corner_id)
+                assert corner is cube.flu
+                assert corner.is_face_color(target_face) is required_color
+
+                return None
+
             else:
-                raise InternalSWError(f"How can it be ? {corner} is not on {target_face}")
 
+                # must find see assert above
+                on_face = corner.face_of_actual_color(required_color)
 
-        elif corner.is_face_color(target_face.opposite) is required_color:
-            # if color is down, all we need is two rotation to bring it up, and it will be handled easily by first case above
-            self.op.play(Algs.Y * 2)
-            return self._bring_corner_face_to_FLU_color_up(corner_id, required_color)
+                # it is on different face
+                result: list[tuple[WholeCubeAlg, int, Alg]] = Face2FaceTranslator.derive_whole_cube_alg_source_to_target(self.cube.layout, on_face.name, target_face.name)
 
-        else:
-            # it is on side face L, R, B, U
-            assert False
+                assert result
+                alg: Alg = result[0][2].simplify()
+                self.op.play(alg)
+                continue # try again
+
+        raise InternalSWError("Too many iterations")
+
 
 
 

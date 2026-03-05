@@ -135,13 +135,13 @@ class L1Corners(SolverHelper):
         assert self.cube.front.corner_bottom_right is sc()
 
         # is the white is on the down
-        if sc().f_color(wf.opposite) == wf.color:
+        if sc().face_color(wf.opposite) == wf.color:
             self.debug(f"LO-Corners C3.  {wf.color} is on bottom")
             self.op.play(Algs.R.prime + Algs.D.prime * 2 + Algs.R + Algs.D)
             assert self.cube.front.corner_bottom_right is sc()
-            assert sc().f_color(wf.opposite) != wf.color
+            assert sc().face_color(wf.opposite) != wf.color
 
-        if sc().f_color(wf.cube.front) == wf.color:
+        if sc().face_color(wf.cube.front) == wf.color:
             self.op.play(Algs.D.prime + Algs.R.prime + Algs.D + Algs.R)
         else:
             self.op.play(Algs.D + Algs.F + Algs.D.prime + Algs.F.prime)

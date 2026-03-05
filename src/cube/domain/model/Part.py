@@ -1,10 +1,14 @@
+from __future__ import annotations
+
 import sys
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator, Sequence
-from typing import Self, Tuple, TypeVar
+from typing import TYPE_CHECKING, Self, Tuple, TypeVar
 from warnings import deprecated
 
-from cube.domain.model import Color, PartEdge
+if TYPE_CHECKING:
+    from cube.domain.model.Face import Face
+
 from cube.domain.model._elements import (
     CubeElement,
     PartColorsID,
@@ -466,7 +470,7 @@ class Part(ABC, CubeElement):
 
         return None
 
-    def face_of_actual_color(self, c: Color):
+    def face_of_actual_color(self, c: Color) -> Face:
 
         """
         Not the color the edge is on !!!
