@@ -120,7 +120,7 @@ class CageNxNSolver(BaseSolver):
         return SolverName.CAGE
 
     @property
-    def status(self) -> str:
+    def _status_impl(self) -> str:
         """Return current solving status.
 
         Shows cage (edges + corners) status and center status separately.
@@ -545,7 +545,7 @@ class CageNxNSolver(BaseSolver):
         # SS breakpoint AFTER - inspect result
         self._op.enter_single_step_mode(SSCode.CAGE_CENTERS_DONE)
 
-    def supported_steps(self) -> list[SolveStep]:
+    def _supported_steps_impl(self) -> list[SolveStep]:
         """Return list of solve steps this solver supports.
 
         Cage method solves edges first, then corners (via shadow 3x3),

@@ -19,7 +19,7 @@ from cube.utils.markers_config import MarkersConfig
 
 ########## Some top important
 # Only initial value, can be changed
-CUBE_SIZE = 3
+CUBE_SIZE = 2
 
 # Enable cube caching for performance optimization
 # Env override: CUBE_DISABLE_CACHE=1 to disable
@@ -36,6 +36,11 @@ DEFAULT_SOLVER = "Kociemba"
 # Tests use this instead of DEFAULT_SOLVER to avoid failures when DEFAULT_SOLVER
 # is set to a work-in-progress solver
 SOLVER_FOR_TESTS = "Beginner Reducer"
+
+# Default 2x2 solver — used when any 3x3+ solver is asked to solve a 2x2 cube
+# Options: "2x2 Beginner", "2x2 IDA*"
+# Note: Keep in sync with SolverName enum in src/cube/domain/solver/SolverName.py
+DEFAULT_2X2_SOLVER = "2x2 Beginner" # "2x2 IDA*"
 
 # 3x3 solver used by cage method for corner solving (Phase 1b)
 # Options: "beginner", "cfop", "kociemba"

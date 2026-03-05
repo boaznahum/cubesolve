@@ -195,7 +195,7 @@ class Kociemba3x3(AbstractSolver, Solver3x3Protocol):
         return "Unsolved (Kociemba)"
 
     @property
-    def status(self) -> str:
+    def _status_impl(self) -> str:
         return self.status_3x3
 
     @property
@@ -344,7 +344,7 @@ class Kociemba3x3(AbstractSolver, Solver3x3Protocol):
         # Convert colors to Kociemba characters using dynamic mapping
         return "".join(color_to_face[c] for c in colors)
 
-    def supported_steps(self) -> list[SolveStep]:
+    def _supported_steps_impl(self) -> list[SolveStep]:
         """Return list of solve steps this solver supports.
 
         Kociemba always solves the entire cube at once - no partial solving.

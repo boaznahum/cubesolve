@@ -26,24 +26,19 @@ class Solvers:
     def default(cls, op: OperatorProtocol) -> Solver:
         """Get the default solver based on config setting.
 
-        For 2x2 cubes, by_name() delegates to the dedicated 2x2 solver
-        automatically, so no special case is needed here.
+        Note: 2x2 delegation is handled at solve-time by AbstractSolver.solve(),
+        not at construction time. The factory creates whatever solver is configured.
         """
         solver_name = SolverName.lookup(op.app_state.config.default_solver)
         return cls.by_name(solver_name, op)
 
     @staticmethod
-    def two_by_two_ida(op: OperatorProtocol, display_as: SolverName | None = None) -> Solver:
-        """Get the IDA* optimal 2x2 cube solver.
-
-        Args:
-            display_as: If set, the solver reports this name instead of TWO_BY_TWO_IDA.
-                Used when delegating from user-visible solvers (e.g. LBL on a 2x2 cube).
-        """
-        from ._2x2_ida_optimal.Solver2x2 import Solver2x2
+    def two_by_two_ida(op: OperatorProtocol) -> Solver:
+        """Get the IDA* optimal 2x2 cube solver."""
+        from ._2x2_ida_optimal.Solver2x2IDA import Solver2x2IDA
 
         parent_logger = op.cube.sp.logger
-        return Solver2x2(op, parent_logger, display_as=display_as)
+        return Solver2x2IDA(op, parent_logger)
 
     @staticmethod
     def two_by_two_beginner(op: OperatorProtocol) -> Solver:
@@ -52,6 +47,15 @@ class Solvers:
 
         parent_logger = op.cube.sp.logger
         return Solver2x2Beginner(op, parent_logger)
+
+    @classmethod
+    def default_2x2(cls, op: OperatorProtocol) -> Solver:
+        """Get the configured default 2x2 solver.
+
+        Reads `default_2x2_solver` from config and creates the appropriate solver.
+        """
+        solver_name = SolverName.lookup(op.app_state.config.default_2x2_solver)
+        return cls.by_name(solver_name, op)
 
     @staticmethod
     def beginner(op: OperatorProtocol) -> Solver:
@@ -195,17 +199,16 @@ class Solvers:
     def by_name(cls, solver_id: SolverName, op: OperatorProtocol) -> Solver:
         """Get a solver by its name.
 
-        For 2x2 cubes, non-2x2 solvers delegate to the IDA* optimal solver.
-        The beginner 2x2 solver is used when explicitly selected.
+        Note: 2x2 delegation is handled by AbstractSolver.solve(), not here.
+        This factory simply creates the requested solver.
         """
-        # For 2x2 cubes, use the beginner solver if selected,
-        # otherwise delegate to the IDA* optimal solver
-        if op.cube.size == 2:
-            if solver_id is SolverName.TWO_BY_TWO_BEGINNER:
-                return cls.two_by_two_beginner(op)
-            return cls.two_by_two_ida(op, display_as=solver_id)
-
         match solver_id:
+
+            case SolverName.TWO_BY_TWO_IDA:
+                return cls.two_by_two_ida(op)
+
+            case SolverName.TWO_BY_TWO_BEGINNER:
+                return cls.two_by_two_beginner(op)
 
             case SolverName.LBL:
                 return cls.beginner(op)

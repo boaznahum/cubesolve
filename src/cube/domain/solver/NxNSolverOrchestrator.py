@@ -95,7 +95,7 @@ class NxNSolverOrchestrator(AbstractSolver):
         return self._solver_name
 
     @property
-    def status(self) -> str:
+    def _status_impl(self) -> str:
         """Human-readable solver status."""
         cube = self._cube
 
@@ -320,7 +320,7 @@ class NxNSolverOrchestrator(AbstractSolver):
         """Aggregate block statistics from reducer."""
         return self._reducer.get_block_statistics()
 
-    def supported_steps(self) -> list[SolveStep]:
+    def _supported_steps_impl(self) -> list[SolveStep]:
         """Return list of solve steps this solver supports.
 
         Combines NxN reduction steps with the 3x3 solver's steps.

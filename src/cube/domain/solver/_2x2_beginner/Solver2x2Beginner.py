@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from cube.domain.solver.common.BaseSolver import BaseSolver
+from cube.domain.solver.common.Solver2x2Base import Solver2x2Base
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.solver import SolverResults, SolveStep
 from cube.domain.solver.SolverName import SolverName
@@ -34,7 +34,7 @@ from ._L3Orient import L3Orient
 from ._L3Permute import L3Permute
 
 
-class Solver2x2Beginner(BaseSolver):
+class Solver2x2Beginner(Solver2x2Base):
     """Beginner 2x2 cube solver using human layer-by-layer method.
 
     Solves in 3 phases:
@@ -61,7 +61,7 @@ class Solver2x2Beginner(BaseSolver):
         return SolverName.TWO_BY_TWO_BEGINNER
 
     @property
-    def status(self) -> str:
+    def _status_impl(self) -> str:
         if self._cube.solved:
             return "Solved"
 
@@ -95,5 +95,5 @@ class Solver2x2Beginner(BaseSolver):
 
         return sr
 
-    def supported_steps(self) -> list[SolveStep]:
+    def _supported_steps_impl(self) -> list[SolveStep]:
         return [SolveStep.L1, SolveStep.L3]

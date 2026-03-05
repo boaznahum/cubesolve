@@ -173,7 +173,7 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
 
     # Required by Solver ABC - delegate to status_3x3
     @property
-    def status(self) -> str:
+    def _status_impl(self) -> str:
         """Human-readable solver status."""
         return self.status_3x3
 
@@ -190,7 +190,7 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
         """
         return self.solve_3x3(self._is_debug_enabled, what)
 
-    def supported_steps(self) -> list[SolveStep]:
+    def _supported_steps_impl(self) -> list[SolveStep]:
         """Return list of solve steps this solver supports.
 
         BeginnerSolver3x3 uses layer-by-layer method with these steps:

@@ -112,7 +112,7 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
         return SolverName.LBL_BIG
 
     @property
-    def status(self) -> str:
+    def _status_impl(self) -> str:
         """Return current solving status."""
         if self.is_solved:
             return "Solved"
@@ -147,7 +147,7 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
 
             return f"L1:Done|Sl:{solved_slices}/{n_slices}"
 
-    def diagnostic(self) -> None:
+    def _diagnostic_impl(self) -> None:
         """Print current state of tracker holder and cube."""
         with FacesTrackerHolder(self, is_for_status_querying=True) as th:
                 # Print formatted state table
@@ -220,7 +220,7 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
             case _:
                 raise ValueError(f"Unsupported step for is_solved_phase: {what}")
 
-    def supported_steps(self) -> list[SolveStep]:
+    def _supported_steps_impl(self) -> list[SolveStep]:
         """Return list of solve steps this solver supports.
 
         Note: SolveStep.ALL is implicit for all solvers (not listed here).
