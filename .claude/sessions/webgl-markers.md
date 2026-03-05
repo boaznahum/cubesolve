@@ -285,9 +285,25 @@ iOS Safari suspends tab → WebSocket dies → `reattach()` was calling `cancel_
 ### v1.25.5 — Fix reconnect: unblock solver thread
 Root cause: `reattach()` swapped the WebSocket but left the solver thread blocked on `_blocking_event.wait()` for `animation_done` from the dead WebSocket. Fix: `am._blocking_event.set()` in reattach to unblock solver. Also added `timeout=60.0` to `_blocking_event.wait()` as safety net.
 
+### v1.25.5 (second commit) — Configurable blocking timeout + abort on timeout
+- `blocking_timeout` (60s) added to `AnimationSpeedConfig` dataclass and `AnimationSpeedConfigProtocol`
+- On timeout: `self._operator.abort()` — prevents solver grinding through all moves at 60s each
+- User can press Solve again on reconnect to restart from partially-solved state
+
+### v1.25.7 — Config protocol cleanup
+- Added `SessionConfigProtocol` + `session_config` to `ConfigProtocol` (session keepalive timeout)
+- Added `prevent_random_face_pick_up_in_geometry` to `ConfigProtocol`
+- `SessionManager.py` no longer imports `_config` directly — receives config via constructor
+- `slice_layout.py` no longer imports `_config` — uses `IServiceProvider.config`
+- Only `config_impl.py` imports `_config` now (as intended by architecture)
+- Removed legacy `DEPLOY_SESSION_KEEPALIVE_TIMEOUT` alias
+
 ### Deploy script improvements
 - `gh_acreate_pr.ps1` now accepts `-branch` parameter (default `webgl-dev`). Use `-branch main` for production.
 - `.claude/skills/deploy/SKILL.md` updated with environment table.
+
+### GitHub Actions — Version display
+- `.github/workflows/fly-deploy.yml` reads `version.txt`, shows `::notice::` annotation, prints version before/after deploy.
 
 ---
 
@@ -300,6 +316,11 @@ Root cause: `reattach()` swapped the WebSocket but left the solver thread blocke
 | `707ba059` | 1.25.3 | fix: preserve solver type on reset and reset_session |
 | `6f40a39a` | 1.25.4 | fix: don't abort solve on WebSocket reconnect |
 | `5cc24162` | 1.25.5 | fix: unblock solver thread on reconnect during solve |
+| `a88503d9` | — | docs: add WebGL backend section to gui_abstraction.md |
+| `22deba4d` | — | feat: make blocking timeout configurable, abort solver on timeout |
+| `f1c2940a` | — | chore: show version in GitHub Actions deploy logs |
+| `6cdf4c23` | 1.25.6 | chore: bump version to test workflow version display |
+| `e8a47f20` | 1.25.7 | feat: add session keepalive timeout to config protocol, clean _config violations |
 
 ---
 
