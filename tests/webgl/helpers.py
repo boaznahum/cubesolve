@@ -211,17 +211,25 @@ class WebGLPageHelper:
         self._page.wait_for_selector(".hp-redo", timeout=30_000)
 
     def click_solve_and_play(self) -> None:
-        """Click Solve (solve_and_play) which solves and auto-plays.
+        """Click Solve & Play (one-phase solve).
 
-        Waits for redo items to appear (server has generated solution and
-        started playback) before returning, so callers can reliably wait
-        for completion with wait_for_no_redo() or wait_for_playing_done().
+        One-phase solve animates moves as the solver runs — moves go
+        directly to history (hp-done), not to the redo queue. We wait
+        for either done items to appear (solve in progress) or the cube
+        to already be solved (solve finished before we could observe).
         """
         self._page.click('[data-cmd="solve_and_play"]')
-        # Wait for redo items to appear — the server sends history_state
-        # with redo items before starting playback. Without this sync point,
-        # wait_for_no_redo() would return immediately (0 redo = done).
-        self._page.wait_for_selector(".hp-redo", timeout=60_000)
+        # One-phase: moves stream into history as hp-done, no redo queue.
+        self._page.wait_for_function(
+            """() => {
+                // Moves being animated — done items appearing
+                if (document.querySelectorAll('.hp-done').length > 0) return true;
+                // Solve already finished
+                const state = window.appState && window.appState.latestState;
+                return !!(state && state.solved);
+            }""",
+            timeout=60_000,
+        )
 
     def click_fast_play(self) -> None:
         """Click Play All (fast-forward) button."""
@@ -264,15 +272,27 @@ class WebGLPageHelper:
     # ── Waiting helpers ──
 
     def wait_for_playing_done(self, timeout_ms: int = 120_000) -> None:
-        """Wait until autoplay is complete: fastplay disabled AND no redo items.
+        """Wait until solve/playback is complete.
 
-        This means all moves have been played out.
+        Works for both flows:
+        - Two-phase (solution + play): redo queue drains to zero, fastplay disabled
+        - One-phase (solve_and_play): FSM leaves 'solving', cube is solved
         """
         self._page.wait_for_function(
             """() => {
-                const btn = document.getElementById('btn-fastplay');
+                const as = window.appState;
+                if (!as) return false;
+                const ms = as.machineState;
+                // Still solving — not done yet
+                if (ms === 'solving') return false;
                 const redos = document.querySelectorAll('.hp-redo');
-                return btn && btn.disabled && redos.length === 0;
+                if (redos.length > 0) return false;
+                // Two-phase: fastplay disabled and no redo items
+                const btn = document.getElementById('btn-fastplay');
+                if (btn && btn.disabled) return true;
+                // One-phase: cube solved, no longer solving
+                const state = as.latestState;
+                return !!(state && state.solved);
             }""",
             timeout=timeout_ms,
         )
