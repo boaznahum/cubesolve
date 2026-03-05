@@ -24,7 +24,7 @@ from cube.domain.model.FaceName import FaceName
 from cube.domain.model.Face import Face
 from cube.domain.model.FacesColorsProvider import FacesColorsProvider
 from cube.domain.model.Part import Part
-from cube.domain.solver._3x3.beginner._L1Corners import L1Corners
+from cube.domain.solver._2x2_beginner._2x2L1Corners import _2x2L1Corners
 from cube.domain.solver.common.SolverHelper import StepSolver
 from cube.domain.solver.protocols import SolverElementsProvider
 
@@ -72,7 +72,7 @@ class L1(StepSolver):
         l1_face, face_colors = self.find_best_l1()
 
         # Bring L1 face to UP (L1Corners hardcodes self.cube.up as white face).
-        self.cmn.bring_face_up(l1_face)
+        #self.cmn.bring_face_up(l1_face)
 
         # After rotation, stickers moved but original_color is fixed.
         # Compute the rotated mapping so that start_color sits on UP.
@@ -83,8 +83,8 @@ class L1(StepSolver):
         )
 
         with self.apply_provider(rotated.mapping):
-            l1_corners = L1Corners(self)
-            l1_corners._do_corners()
+            l1_corners = _2x2L1Corners(self)
+            l1_corners.solve() # claude fix this call solve !!!
 
     def find_best_l1(self) -> tuple[Face, Mapping[FaceName, Color]]:
         """Choose which face to solve as L1 and assign colors to all faces.

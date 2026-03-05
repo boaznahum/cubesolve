@@ -14,7 +14,7 @@ from cube.domain.exceptions import InternalSWError
 from cube.domain.geometric.geometry_types import Point
 
 from ..algs import Alg, Algs, NSimpleAlg
-from . import Edge, Part, PartEdge
+from . import Edge, Part, PartEdge, Corner
 from ._elements import CubeState, PartColorsID
 from .PartSlice import CenterSlice, CornerSlice, EdgeWing, PartSlice
 from .Cube import Cube
@@ -52,6 +52,25 @@ class CubeQueries2:
             return face
 
         raise InternalSWError(f"Can't find face with pred {pred}")
+
+    def is_corner(self, pred: Pred[Corner]) -> Corner | None:
+
+        cube = self._cube
+
+        for c in cube.corners:
+            if pred(c):
+                return c
+
+        return None
+
+    def find_corner(self, pred: Pred[Corner]) -> Corner:
+
+        corner = self.is_corner(pred)
+
+        if corner:
+            return corner
+
+        raise InternalSWError(f"Can't find corner with pred {pred}")
 
     def find_slice_in_cube_edges(self, pred: Pred[EdgeWing]) -> EdgeWing | None:
 

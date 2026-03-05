@@ -1,25 +1,25 @@
 from typing import Sequence
 
 from cube.domain.algs import Algs
-from cube.domain.model import Corner, Part, PartColorsID
+from cube.domain.exceptions import InternalSWError
+from cube.domain.model import Corner, Part, PartColorsID, Color
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
-from cube.domain.solver._3x3.shared import L1Cross
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.protocols import SolverElementsProvider
 
 
-class L1Corners(SolverHelper):
+class _2x2L1Corners(SolverHelper):
     __slots__: list[str] = []
 
     def __init__(self, slv: SolverElementsProvider) -> None:
-        super().__init__(slv, "L1Corners")
+        super().__init__(slv, "_2x2L1Corners")
 
 
     def _is_corners(self) -> bool:
         return Part.all_match_faces(self.white_face.corners)
 
-    def is_corners(self, l1_cross: L1Cross) -> bool:
+    def is_corners(self) -> bool:
         """Check if Layer 1 corners are solved, accounting for whole-layer rotation.
 
         This method handles a rare edge case (~1 in 5000 solves) where the four
@@ -33,9 +33,6 @@ class L1Corners(SolverHelper):
         solved but the layer needs rotation to align the cross with middle layer.
 
         Args:
-            l1_cross: The Layer 1 cross solver. Required to check cross alignment
-                      alongside corner positions, ensuring the entire layer is
-                      correctly oriented, not just the corners.
 
         Returns:
             True if corners are solved (possibly after layer rotation to align cross).
@@ -49,45 +46,64 @@ class L1Corners(SolverHelper):
 
         wf: Face = self.white_face
 
-        return self.cqr.rotate_face_and_check(wf, lambda: self._is_corners() and l1_cross.is_cross()) >= 0
+        return self.cqr.rotate_face_and_check(wf, lambda: self._is_corners()) >= 0
 
-    def solve(self, l1_cross: L1Cross) -> None:
+    def solve(self) -> None:
         """Solve Layer 1 corners using the beginner method.
 
         Positions and orients all four Layer 1 corners correctly. Must be called
         AFTER the Layer 1 cross is solved, as corner solving preserves the cross.
 
         Args:
-            l1_cross: The Layer 1 cross solver. Passed to is_corners() to handle
-                      the rare case where corners are positioned correctly but the
-                      entire layer needs rotation. See is_corners() docstring for
-                      detailed explanation.
 
         Note:
             If corners are already solved (checked via is_corners()), this method
             returns immediately without making any moves.
         """
 
-        if self.is_corners(l1_cross):
+        if self.is_corners():
             return
 
+
         with self.ann.annotate(h1="Doing L1 Corners"):
-            self.cmn.bring_face_up(self.white_face)
+
+            # in 2x2 we dont have faces colors so we just bring all up
+            # we will optimize it to first bring the most solved face up
+            #self.cmn.bring_face_up(self.white_face)
 
             self._do_corners()
 
     def _do_corners(self) -> None:
 
-        wf: Face = self.white_face
+        white_color: Color = self.cmn.white
 
-        # the colors ID of 4 corners
-        # the ids of where the corner are , not the color of the corners, so all must have some l1 on them
-        # we use codes because maybe position will be changed during the algorithm
-        color_codes: Sequence[PartColorsID] = Part.parts_id_by_pos(wf.corners)
+        with self._logger.tab(lambda : f"Doing L1 {white_color}  Corners"):
 
-        for code in color_codes:
-            with self._logger.tab(lambda : f"Corner:{code}"):
-                self._solve_corner(code)
+
+            # In 2x2 we don't have face colors, so what we have to do is to pick reference corenr and
+            # solve all according to it
+            # this is very not efficiency, but is a start
+
+            # in optimization, we will try to find one that already face up on top
+            first_corner = self.cube.cqr.find_corner(lambda c: white_color in c.colors_id)
+
+            first_color_id: PartColorsID = first_corner.colors_id
+
+            # ok now we need to bring it
+
+            self._bring_corner_face_to_FLU_color_up(first_color_id, white_color)
+
+
+
+
+            # # the colors ID of 4 corners
+            # # the ids of where the corner are , not the color of the corners, so all must have some l1 on them
+            # # we use codes because maybe position will be changed during the algorithm
+            # color_codes: Sequence[PartColorsID] = Part.parts_id_by_pos(wf.corners)
+            #
+            # for code in color_codes:
+            #     with self._logger.tab(lambda : f"Corner:{code}"):
+            #         self._solve_corner(code)
 
     def _solve_corner(self, corner_id: PartColorsID):
 
@@ -123,7 +139,11 @@ class L1Corners(SolverHelper):
 
         wf: Face = self.cube.up
 
+
+        # Bring the target position FRU - Where
         self._bring_l1_target_corner_to_front_right_up(tc())
+
+        # now bring source cornet into under it  FRD
 
         if sc().on_face(wf):
             self.debug(f"LO-Corners C1. source {sc()} is on top")
@@ -132,11 +152,12 @@ class L1Corners(SolverHelper):
             self.debug(f"LO-Corners C2. source {sc()} is on bottom")
             self._bring_bottom_corner_to_f_r_d(sc())
 
+        # Now source is on FRD
         assert self.cube.front.corner_bottom_right is sc()
 
         # is the white is on the down
         if sc().f_color(wf.opposite) == wf.color:
-            self.debug(f"LO-Corners C3.  {wf.color} is on bottom")
+            self.debug(f"{wf.color} is on bottom")
             self.op.play(Algs.R.prime + Algs.D.prime * 2 + Algs.R + Algs.D)
             assert self.cube.front.corner_bottom_right is sc()
             assert sc().f_color(wf.opposite) != wf.color
@@ -177,6 +198,7 @@ class L1Corners(SolverHelper):
         """
         Preservers top layer cross
         doesn't preserve bottom layer
+        we assume corner is on top
 
         :param c:
         :return:
@@ -203,11 +225,14 @@ class L1Corners(SolverHelper):
             raise ValueError(f"{c} is not on {wf}")
 
         c = self.cube.find_corner_by_colors(saved_id)
+        # now it is on button
         self._bring_bottom_corner_to_f_r_d(c)
 
     def _bring_bottom_corner_to_f_r_d(self, c: Corner):
         """
         doesn't preserve bottom layer
+
+        Corner is on button need some D rotations to bring it to FRD position
 
         :param c:
         :return:
@@ -230,3 +255,47 @@ class L1Corners(SolverHelper):
 
         else:
             raise ValueError(f"{c} is not on {f}")
+
+    def _bring_corner_face_to_FLU_color_up(self, corner_id: PartColorsID, required_color: Color):
+
+        """
+        Given a corner, bring it up to FLU such that color is up
+        """
+
+        cube = self.cube
+        target_face: Face = cube.up
+
+        corner: Corner = cube.find_corner_by_colors(corner_id)
+
+        assert required_color in corner_id
+
+        # if it is already on up, just make sure color is up
+        if corner.is_face_color(target_face) is required_color:
+            # now just need to rotate
+            # on which corner it ?
+
+            if corner is cube.flu:
+                return None # done
+            elif corner is cube.blu:
+                return self.op.play(Algs.U*2)
+            elif corner is cube.bru:
+                return self.op.play(Algs.U.prime)
+            elif corner is cube.fru:
+                return self.op.play(Algs.U)
+            else:
+                raise InternalSWError(f"How can it be ? {corner} is not on {target_face}")
+
+
+        elif corner.is_face_color(target_face.opposite) is required_color:
+            # if color is down, all we need is two rotation to bring it up, and it will be handled easily by first case above
+            self.op.play(Algs.Y * 2)
+            return self._bring_corner_face_to_FLU_color_up(corner_id, required_color)
+
+        else:
+            # it is on side face L, R, B, U
+            assert False
+
+
+
+
+
