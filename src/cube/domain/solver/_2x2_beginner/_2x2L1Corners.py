@@ -1,21 +1,34 @@
 from cube.domain.algs import Algs, Alg, WholeCubeAlg
 from cube.domain.exceptions import InternalSWError
 from cube.domain.geometric.Face2FaceTranslator import Face2FaceTranslator
-from cube.domain.model import Corner, Part, PartColorsID, Color
+from cube.domain.model import Corner, PartColorsID, Color
 from cube.domain.model.Face import Face
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.protocols import SolverElementsProvider
 
 
 class _2x2L1Corners(SolverHelper):
+    """Layer 1 corner solver for 2x2 cubes (beginner method).
+
+    IMPORTANT — No face colors:
+        A 2x2 cube has no center pieces, so faces have no inherent color.
+        This solver must NEVER access ``Face.color``, ``self.white_face``,
+        ``cube.color_2_face()``, or any other API that reads face colors
+        (even through a ``FacesColorsProvider``).
+
+        Instead, the solver works entirely with *corner sticker colors*
+        (``Part.face_color``, ``Part.is_face_color``, ``Part.colors_id``)
+        and the configured start color (``self.cmn.white``).
+
+        The caller (``_L1``) sets up a ``FacesColorsProvider`` for its own
+        bookkeeping, but this class does not rely on it.
+    """
+
     __slots__: list[str] = []
 
     def __init__(self, slv: SolverElementsProvider) -> None:
         super().__init__(slv, "_2x2L1Corners")
 
-
-    def _is_corners(self) -> bool:
-        return Part.all_match_faces(self.white_face.corners)
 
     def is_corners(self) -> bool:
         """Check if Layer 1 corners are solved, accounting for whole-layer rotation.
@@ -225,13 +238,13 @@ class _2x2L1Corners(SolverHelper):
             assert self.cube.frd is sc()
 
             # is the white is on the down
-            if sc().face_color(wf.opposite) == wf.color:
-                self.debug(f"{wf.color} is on bottom")
+            if sc().face_color(wf.opposite) == white_color:
+                self.debug(f"{white_color} is on bottom")
                 self.op.play(Algs.R.prime + Algs.D.prime * 2 + Algs.R + Algs.D)
                 assert self.cube.front.corner_bottom_right is sc()
-                assert sc().face_color(wf.opposite) != wf.color
+                assert sc().face_color(wf.opposite) != white_color
 
-            if sc().face_color(wf.cube.front) == wf.color:
+            if sc().face_color(wf.cube.front) == white_color:
                 self.op.play(Algs.D.prime + Algs.R.prime + Algs.D + Algs.R)
             else:
                 self.op.play(Algs.D + Algs.F + Algs.D.prime + Algs.F.prime)
