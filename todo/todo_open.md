@@ -30,3 +30,4 @@
 | [#38](https://github.com/boaznahum/cubesolve/issues/38) | open | solver | advanced_edge_parity flag evaluation |
 | [#39](https://github.com/boaznahum/cubesolve/issues/39) | open | solver | Cage face creation duplication |
 | [#45](https://github.com/boaznahum/cubesolve/issues/45) | open | solver | Unify tracker cleanup code |
+| - | open | refactor | Replace _BRING_TO_UP hardcoded table in cube_color_scheme.py with SchematicCube-derived rotation permutations |

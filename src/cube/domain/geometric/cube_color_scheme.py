@@ -45,9 +45,42 @@ from __future__ import annotations
 from collections.abc import Collection, Mapping
 
 from cube.domain.exceptions import InternalSWError
+from cube.domain.geometric.cube_face_colors import CubeFaceColors
 from cube.domain.geometric.schematic_cube import SchematicCube
 from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
+
+# ---------------------------------------------------------------------------
+# Whole-cube rotation permutations (forward: old_face → new_face)
+# ---------------------------------------------------------------------------
+# For each source face, the permutation that brings it to UP.
+# These are the 6 single/double rotations around X/Y/Z axes.
+#
+#   From U: identity
+#   From D: X2  (U↔D, F↔B)
+#   From F: X'  (F→U, U→B, B→D, D→F)
+#   From B: X   (B→U, U→F, F→D, D→B)
+#   From L: Z   (L→U, U→R, R→D, D→L)
+#   From R: Z'  (R→U, U→L, L→D, D→R)
+
+_U, _D, _F, _B, _L, _R = (
+    FaceName.U, FaceName.D, FaceName.F, FaceName.B, FaceName.L, FaceName.R,
+)
+
+_BRING_TO_UP: dict[FaceName, dict[FaceName, FaceName]] = {
+    _U: {_U: _U, _D: _D, _F: _F, _B: _B, _L: _L, _R: _R},
+    _D: {_U: _D, _D: _U, _F: _B, _B: _F, _L: _L, _R: _R},
+    _F: {_F: _U, _U: _B, _B: _D, _D: _F, _L: _L, _R: _R},
+    _B: {_B: _U, _U: _F, _F: _D, _D: _B, _L: _L, _R: _R},
+    _L: {_L: _U, _U: _R, _R: _D, _D: _L, _F: _F, _B: _B},
+    _R: {_R: _U, _U: _L, _L: _D, _D: _R, _F: _F, _B: _B},
+}
+
+# Inverse permutations: bring UP to target face.
+_BRING_FROM_UP: dict[FaceName, dict[FaceName, FaceName]] = {
+    target: {new: old for old, new in perm.items()}
+    for target, perm in _BRING_TO_UP.items()
+}
 
 
 def _is_cyclic_rotation(a: tuple[Color, ...], b: tuple[Color, ...]) -> bool:
@@ -225,6 +258,47 @@ class CubeColorScheme:
         )
         self._neighbor_colors_cache[face] = result
         return result
+
+    # ------------------------------------------------------------------
+    # Rotation
+    # ------------------------------------------------------------------
+
+    def bring_color_to_face(
+        self, colors: CubeFaceColors, color: Color, target: FaceName,
+    ) -> CubeFaceColors:
+        """Return a new CubeFaceColors with *color* on *target* face.
+
+        Simulates the whole-cube rotation that moves the face currently
+        holding *color* to *target*, preserving all face relationships
+        (opposites stay opposite, neighbors stay neighbors).
+
+        The *colors* mapping must represent the same color scheme as
+        ``self`` (verified via ``same()``).
+
+        Args:
+            colors: The current face-color assignment (must match self).
+            color:  The color to move.
+            target: The face where *color* should end up.
+
+        Returns:
+            A new CubeFaceColors reflecting the rotation.
+        """
+        assert self.same(CubeColorScheme(colors.mapping)), (
+            f"colors {colors} is not the same scheme as {self}"
+        )
+
+        source: FaceName = colors.find_face(color)
+        if source == target:
+            return colors
+
+        # Compose: bring source→UP, then UP→target.
+        perm1: dict[FaceName, FaceName] = _BRING_TO_UP[source]
+        perm2: dict[FaceName, FaceName] = _BRING_FROM_UP[target]
+        # Forward composition: composed[old] = perm2[perm1[old]]
+        new_mapping: dict[FaceName, Color] = {
+            perm2[perm1[f]]: colors[f] for f in FaceName
+        }
+        return CubeFaceColors(new_mapping)
 
     # ------------------------------------------------------------------
     # Display

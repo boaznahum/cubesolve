@@ -18,6 +18,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 from typing import Generator, Mapping
 
+from cube.domain.geometric.cube_face_colors import CubeFaceColors
 from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.Face import Face
@@ -68,9 +69,20 @@ class L1(StepSolver):
         if self.is_solved:
             return
 
-        _, face_colors = self.find_best_l1()
+        l1_face, face_colors = self.find_best_l1()
 
-        with self.apply_provider(face_colors):
+        # Bring L1 face to UP (L1Corners hardcodes self.cube.up as white face).
+        self.cmn.bring_face_up(l1_face)
+
+        # After rotation, stickers moved but original_color is fixed.
+        # Compute the rotated mapping so that start_color sits on UP.
+        start_color: Color = self.cmn.white
+        scheme = self.cube.original_scheme
+        rotated: CubeFaceColors = scheme.bring_color_to_face(
+            CubeFaceColors(face_colors), start_color, FaceName.U,
+        )
+
+        with self.apply_provider(rotated.mapping):
             l1_corners = L1Corners(self)
             l1_corners._do_corners()
 
