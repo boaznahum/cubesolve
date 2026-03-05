@@ -107,13 +107,18 @@ class WebGLPageHelper:
         return result
 
     def select_solver(self, name: str) -> None:
-        """Select a solver by its visible label text (or partial prefix match)."""
+        """Select a solver by its visible label text (or partial prefix match).
+
+        Waits for the server to confirm the solver change via WebSocket
+        round-trip (appState.solverName updated).
+        """
         # Wait for solver dropdown to be populated (options added by toolbar_state message)
         self._page.wait_for_function(
             "document.querySelectorAll('#solver-select option').length > 0",
         )
-        # Find the option with matching text (exact or prefix) and select by value
-        self._page.evaluate(
+        # Find the option with matching text (exact or prefix) and select by value.
+        # Returns the matched solver name so we can wait for it.
+        matched_name: str = self._page.evaluate(
             """(name) => {
                 const sel = document.getElementById('solver-select');
                 const lower = name.toLowerCase();
@@ -122,7 +127,7 @@ class WebGLPageHelper:
                     if (opt.textContent.toLowerCase() === lower) {
                         sel.value = opt.value;
                         sel.dispatchEvent(new Event('change', { bubbles: true }));
-                        return;
+                        return opt.textContent;
                     }
                 }
                 // Prefix match
@@ -130,13 +135,18 @@ class WebGLPageHelper:
                     if (opt.textContent.toLowerCase().startsWith(lower)) {
                         sel.value = opt.value;
                         sel.dispatchEvent(new Event('change', { bubbles: true }));
-                        return;
+                        return opt.textContent;
                     }
                 }
                 const avail = Array.from(sel.options).map(o => o.textContent);
                 throw new Error('Solver not found: ' + name + '. Available: ' + avail.join(', '));
             }""",
             name,
+        )
+        # Wait for the server round-trip to confirm the solver change
+        self._page.wait_for_function(
+            f"() => window.appState && window.appState.solverName === {matched_name!r}",
+            timeout=10_000,
         )
 
     def get_available_solvers(self) -> list[str]:
