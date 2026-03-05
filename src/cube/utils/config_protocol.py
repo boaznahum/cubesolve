@@ -32,6 +32,9 @@ class AnimationSpeedConfigProtocol(Protocol):
     @property
     def dn(self) -> float: ...
 
+    @property
+    def blocking_timeout(self) -> float: ...
+
 
 @runtime_checkable
 class AssistConfigProtocol(Protocol):
@@ -50,6 +53,16 @@ class SoundConfigProtocol(Protocol):
 
     @property
     def enabled(self) -> bool: ...
+
+
+@runtime_checkable
+class SessionConfigProtocol(Protocol):
+    """Protocol for WebGL session configuration."""
+
+    @property
+    def keepalive_timeout(self) -> int:
+        """How long (seconds) to keep a disconnected session alive."""
+        ...
 
 
 @runtime_checkable
@@ -166,6 +179,11 @@ class ConfigProtocol(Protocol):
     @property
     def enable_cube_cache(self) -> bool:
         """Enable cube caching for performance optimization."""
+        ...
+
+    @property
+    def prevent_random_face_pick_up_in_geometry(self) -> bool:
+        """Prevent random face selection in geometry walking (debug flag)."""
         ...
 
     # ==========================================================================
@@ -356,6 +374,11 @@ class ConfigProtocol(Protocol):
     @property
     def sound_config(self) -> "SoundConfigProtocol":
         """Sound effects configuration for WebGL frontend."""
+        ...
+
+    @property
+    def session_config(self) -> "SessionConfigProtocol":
+        """WebGL session configuration (keepalive timeout, etc.)."""
         ...
 
     @property

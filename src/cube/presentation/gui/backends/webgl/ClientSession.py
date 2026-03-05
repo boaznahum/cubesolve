@@ -15,6 +15,7 @@ this backend sends:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import traceback
 from collections.abc import Callable
@@ -164,10 +165,31 @@ class ClientSession:
         Swaps the underlying WebSocket, resets flow state via FSM RECONNECT
         event, and resends the full state. This fixes the bug where
         _fast_playing stayed True after reconnect (play button disabled).
+
+        During one-phase solve (blocking mode), the solver thread is still
+        running. We just swap the WebSocket and resend state — the solve
+        continues on the new connection without interruption.
         """
         self._ws = ws
+        am = self._animation_manager
+
+        if am._blocking_mode:
+            # One-phase solve in progress — don't cancel, just swap WS.
+            # The solver thread is blocked on _blocking_event.wait() for
+            # animation_done from the OLD (now dead) WebSocket. Unblock it
+            # so it can continue — the next move will send animation_start
+            # via the new WebSocket and the cycle resumes normally.
+            am._blocking_event.set()
+            print(
+                f"Session reattached (solve in progress, unblocked): "
+                f"{self.client_info.session_id[:8]}",
+                flush=True,
+            )
+            self.on_client_connected()
+            return
+
         # Cancel any in-flight animation state
-        self._animation_manager.cancel_animation()
+        am.cancel_animation()
         # FSM RECONNECT: transitions to IDLE or READY based on queue
         has_redo = bool(self._app.op.redo_queue())
         has_history = bool(self._app.op.history())
@@ -286,6 +308,7 @@ class ClientSession:
         """
         snapshot = self._build_state_snapshot()
         self._send(snapshot.to_json())
+
 
     # -- Send helpers (event messages + client count) --
 
@@ -544,8 +567,10 @@ class ClientSession:
         if clamped != vs.cube_size:
             if not self._fsm.send(FlowEvent.SIZE_CHANGE):
                 return  # Not allowed in current state
+            prev_solver = self._app.slv.get_code
             vs.cube_size = clamped
             self._app.reset(clamped)
+            self._app.switch_to_solver(prev_solver)
             self.send_state()
 
     def _handle_solver(self, name: str) -> None:
@@ -573,7 +598,7 @@ class ClientSession:
         if command_name == "solve_and_play":
             if not self._fsm.send(FlowEvent.SOLVE_AND_PLAY):
                 return
-            self._two_phase_solve()
+            self._start_one_phase_solve()
             return
 
         if command_name == "scramble":
@@ -587,6 +612,9 @@ class ClientSession:
             with op.with_animation(animation=False):
                 ctx = CommandContext.from_window(self)  # type: ignore[arg-type]
                 Commands.SCRAMBLE_1.execute(ctx)
+            # Clear history so scramble moves don't appear in redo queue.
+            # Scramble is a starting point, not an undoable operation.
+            op._history.clear()
             # Scramble done — transition back based on queue state
             has_redo = bool(op.redo_queue())
             has_history = bool(op.history())
@@ -621,7 +649,9 @@ class ClientSession:
         if command_name == "reset_session":
             self._fsm.send(FlowEvent.RESET_SESSION)
             self._animation_manager.cancel_animation()
+            prev_solver = self._app.slv.get_code
             self._app.reset(self._app.config.cube_size)  # Reset to config default
+            self._app.switch_to_solver(prev_solver)
             self.on_client_connected()
             return
 
@@ -992,6 +1022,49 @@ class ClientSession:
             self._fsm.send(FlowEvent.SOLVE_DONE, has_redo=has_redo, has_history=has_history)
             self.send_state()
 
+    def _start_one_phase_solve(self) -> None:
+        """Launch the solver in a background thread with blocking animation.
+
+        FSM must already be in SOLVING state before this is called.
+        Creates an asyncio task that runs the solver via asyncio.to_thread().
+        """
+        loop = self._event_loop._loop
+        if loop:
+            loop.create_task(self._one_phase_solve())
+
+    async def _one_phase_solve(self) -> None:
+        """Run solver in worker thread with blocking animation mode.
+
+        The solver calls op.play() which triggers AM.run_animation() in
+        blocking mode — each animated move blocks the solver thread until
+        the client signals animation_done. This keeps solver annotations
+        (markers from annotate() blocks) visible during animation.
+        """
+        am = self._animation_manager
+        am.set_blocking_mode(True)
+        try:
+            await asyncio.to_thread(self._run_solver_blocking)
+        except Exception as e:
+            traceback.print_exc()
+            self._app.set_error(f"Solve error: {e}")
+        finally:
+            am.set_blocking_mode(False)
+        # Yield to event loop so any queued call_soon_threadsafe callbacks
+        # from the solver thread (e.g., annotate __exit__ removing markers)
+        # are processed before we send the final state.
+        await asyncio.sleep(0)
+        # One-phase solve: moves are in history, not redo queue.
+        # Clear auto_play since the solve IS the play.
+        self._fsm._auto_play = False
+        has_redo = bool(self._app.op.redo_queue())
+        has_history = bool(self._app.op.history())
+        self._fsm.send(FlowEvent.SOLVE_DONE, has_redo=has_redo, has_history=has_history)
+        self.send_state()
+
+    def _run_solver_blocking(self) -> None:
+        """Run the solver — called from worker thread via asyncio.to_thread()."""
+        self._app.slv.solve(animation=True)
+
     def _handle_play_next(self, forward: bool) -> None:
         """Handle client request for the next move in playback.
 
@@ -1075,17 +1148,23 @@ class ClientSession:
         if command is Commands.STOP_ANIMATION:
             if self._fsm.send(FlowEvent.STOP):
                 self._animation_manager.cancel_animation()
-                # STOP → STOPPING. Animation cancelled, so immediately done.
-                has_redo = bool(self._app.op.redo_queue())
-                has_history = bool(self._app.op.history())
-                self._fsm.send(FlowEvent.ANIM_DONE, has_redo=has_redo, has_history=has_history)
-                self.send_play_empty()
+                if not self._animation_manager._blocking_mode:
+                    # Queue mode: animation cancelled, immediately done.
+                    has_redo = bool(self._app.op.redo_queue())
+                    has_history = bool(self._app.op.history())
+                    self._fsm.send(FlowEvent.ANIM_DONE, has_redo=has_redo, has_history=has_history)
+                    self.send_play_empty()
+                # Blocking mode: solver thread cleanup sends SOLVE_DONE
             self.send_state()
             return
 
         if command is Commands.RESET_CUBE:
             self._fsm.send(FlowEvent.RESET)
-            # fall through to execute
+            prev_solver = self._app.slv.get_code
+            command.execute(CommandContext.from_window(self))  # type: ignore[arg-type]
+            self._app.switch_to_solver(prev_solver)
+            self.send_state()
+            return
 
         try:
             from cube.presentation.gui.commands.concrete import NewSessionCommand

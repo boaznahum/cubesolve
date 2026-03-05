@@ -2,18 +2,90 @@
 name: fix-run-configs
 user_invocable: true
 description: |
-  Fix PyCharm run configurations to use portable interpreter paths.
-  This skill should be used when the user runs "/fix-run-configs", reports
-  "No interpreter" in PyCharm run configs, or after switching Python
-  interpreter (e.g., pip to uv). Asks user which configs to fix before
-  making changes.
+  Fix PyCharm project structure and run configurations.
+  This skill should be used when the user says "fix pycharm", "fix pycharm project",
+  "pycharm broken", "run tests doesn't appear", "no interpreter", "can't run tests",
+  or runs "/fix-run-configs". Repairs .iml file (source/test roots) and run config
+  interpreter paths.
 ---
 
-# Fix Run Configurations Skill
+# Fix PyCharm Project & Run Configurations Skill
+
+Fix PyCharm project structure (`.iml` file, source roots) and run configurations (interpreter paths). Covers the two most common PyCharm breakages in this project.
+
+## Triggers
+
+Activate this skill on any of these user requests:
+- `/fix-run-configs`
+- "fix pycharm", "fix pycharm project", "pycharm broken"
+- "no interpreter" in PyCharm
+- "run tests doesn't appear", "can't run tests in PyCharm"
+- "mark directory as" not working
+- After switching Python interpreter (pip → uv, venv recreated)
+
+## Part 1: Fix Project Module (.iml file)
+
+The `.iml` file defines source roots, test roots, and excluded directories. Without it, PyCharm can't:
+- Show "Run tests" on right-click
+- Recognize `src/` as sources or `tests/` as test sources
+- Properly resolve imports
+
+### Step 1A: Check .iml Health
+
+1. Read `.idea/modules.xml` to find which `.iml` file is expected.
+2. Check if that `.iml` file exists.
+3. If it exists, verify it contains these critical entries:
+   - `<sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />`
+   - `<sourceFolder url="file://$MODULE_DIR$/tests" isTestSource="true" />`
+
+### Step 1B: Repair .iml if Missing or Broken
+
+If the `.iml` file is missing or doesn't have the correct source/test roots, **create or overwrite it** with:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="PYTHON_MODULE" version="4">
+  <component name="NewModuleRootManager">
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/tests" isTestSource="true" />
+      <excludeFolder url="file://$MODULE_DIR$/.venv" />
+      <excludeFolder url="file://$MODULE_DIR$/.venv_pyglet_legacy" />
+      <excludeFolder url="file://$MODULE_DIR$/.venv_pyglet2" />
+      <excludeFolder url="file://$MODULE_DIR$/.pytest_cache" />
+      <excludeFolder url="file://$MODULE_DIR$/dist" />
+      <excludeFolder url="file://$MODULE_DIR$/build" />
+      <excludeFolder url="file://$MODULE_DIR$/src/cube.egg-info" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>
+```
+
+Also verify `.idea/modules.xml` points to the correct `.iml` path. If `modules.xml` is missing, create it:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/cubesolve.iml" filepath="$PROJECT_DIR$/.idea/cubesolve.iml" />
+    </modules>
+  </component>
+</project>
+```
+
+### Step 1C: Report
+
+- If repaired: "Restored .iml file — `src/` marked as Sources Root, `tests/` as Test Sources Root. **Restart PyCharm** to pick up the change."
+- If already healthy: "Project module file (.iml) is OK."
+
+## Part 2: Fix Run Configurations (Interpreter Paths)
 
 Fix PyCharm run configurations to use `$PROJECT_DIR$/.venv/Scripts/python.exe` as the interpreter, making them portable across worktrees and machines (Windows AND Linux).
 
-## Background
+### Background
 
 PyCharm run configurations can reference interpreters in fragile ways:
 - `IS_MODULE_SDK=true` — breaks when the module-to-SDK mapping is lost
@@ -21,7 +93,7 @@ PyCharm run configurations can reference interpreters in fragile ways:
 
 The portable solution: set `SDK_HOME=$PROJECT_DIR$/.venv/Scripts/python.exe` and `IS_MODULE_SDK=false`.
 
-## Cross-Platform Compatibility
+### Cross-Platform Compatibility
 
 The canonical path in run configs is always the **Windows-style** path: `$PROJECT_DIR$/.venv/Scripts/python.exe`.
 This works natively on Windows. On Linux, we create a symlink so the same path resolves:
@@ -32,9 +104,7 @@ This works natively on Windows. On Linux, we create a symlink so the same path r
 
 This way the **same** run configuration XML works on both platforms without modification.
 
-## Workflow
-
-### Step 1: Scan and Report
+### Step 2A: Scan and Report
 
 1. Glob for all `.idea/runConfigurations/*.xml` files.
 2. Read each XML file. Only consider files with `type="PythonConfigurationType"` or `type="tests"` (skip non-Python configs).
@@ -51,7 +121,7 @@ This way the **same** run configuration XML works on both platforms without modi
 | 3 | main_web                 | Python | (set)    | false         | —                   | No        |
 ```
 
-### Step 2: Ask User What to Fix
+### Step 2B: Ask User What to Fix
 
 Use `AskUserQuestion` to ask the user:
 - **"Fix all"** — fix all configs that need fixing
@@ -60,7 +130,7 @@ Use `AskUserQuestion` to ask the user:
 
 If the user picks "Let me pick", use `AskUserQuestion` with `multiSelect: true` listing only the configs that need fixing.
 
-### Step 3: Ensure Cross-Platform Symlink (Linux only)
+### Step 2C: Ensure Cross-Platform Symlink (Linux only)
 
 If running on Linux (check with `uname -s`), ensure the compatibility symlink exists:
 
@@ -75,7 +145,7 @@ If running on Linux (check with `uname -s`), ensure the compatibility symlink ex
 
 **Note:** This symlink is lost when the venv is recreated (e.g., `uv sync`). This skill re-creates it each time.
 
-### Step 4: Apply Fixes
+### Step 2D: Apply Fixes
 
 For each selected config, apply these three XML transformations:
 
@@ -99,7 +169,7 @@ For each selected config, apply these three XML transformations:
 Do NOT remove `SDK_NAME`. PyCharm auto-regenerates it on every save, so removing it just creates git noise.
 `SDK_HOME` takes priority over `SDK_NAME` for interpreter resolution, so `SDK_NAME` is harmless.
 
-### Step 5: Report Results
+### Step 2E: Report Results
 
 Show a summary of what was changed:
 - "Fixed N run configurations."

@@ -17,8 +17,7 @@ export class OrbitControls {
         // Default camera angles
         this._defaultPhi = Math.PI / 4;
         this._defaultTheta = Math.PI / 6;
-        const isMobile = window.matchMedia('(max-width: 768px)').matches;
-        this._defaultRadius = isMobile ? 18 : 8;
+        this._defaultRadius = 8; // updated dynamically by fitToView()
 
         this.spherical = new THREE.Spherical(this._defaultRadius, this._defaultPhi, this._defaultTheta);
         this.target = new THREE.Vector3(0, 0, 0);
@@ -225,6 +224,29 @@ export class OrbitControls {
         const target = this.target.clone().add(this.panOffset);
         this.camera.position.copy(pos.add(target));
         this.camera.lookAt(target);
+    }
+
+    /**
+     * Compute camera distance so the cube fits the viewport.
+     *
+     * Math: at distance d with vertical FOV, visible half-height = d * tan(fov/2).
+     * For aspect < 1 (portrait), horizontal becomes the constraint, so we scale
+     * distance by 1/aspect.  BASE_RADIUS=8 is calibrated for aspect=1, FOV=40°,
+     * cube world-size=3.0.
+     *
+     * Only changes the live radius if user hasn't manually zoomed away from default.
+     */
+    fitToView(aspect) {
+        const BASE_RADIUS = 8;   // correct for aspect=1, FOV=40°, cubeSize=3.0
+        const PADDING = 1.05;    // 5% breathing room
+        const newRadius = (BASE_RADIUS * PADDING) / Math.min(aspect, 1);
+
+        const wasAtDefault = Math.abs(this.spherical.radius - this._defaultRadius) < 0.5;
+        this._defaultRadius = newRadius;
+        if (wasAtDefault) {
+            this.spherical.radius = newRadius;
+            this.update();
+        }
     }
 
     /**

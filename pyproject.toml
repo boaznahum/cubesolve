@@ -58,6 +58,7 @@ dev = [
     "Pillow",  # For generating test face textures (resources/faces/generate_images.py)
     "tabulate",  # For formatting test failure tables
     "playwright",  # WebGL E2E browser tests
+    "watchfiles>=1.1.1",
 ]
 
 [project.urls]

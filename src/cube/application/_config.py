@@ -113,6 +113,9 @@ class AnimationSpeedConfig:
     d0: float = 2000
     # Duration (ms) at speed index 7 (fastest)
     dn: float = 50
+    # Timeout (seconds) for blocking mode wait — prevents permanent hang
+    # if WebSocket dies without reconnect
+    blocking_timeout: float = 60.0
 
 
 ANIMATION_SPEED_CONFIG = AnimationSpeedConfig()
@@ -322,7 +325,14 @@ DEBUG_TEXTURE: bool = False
 
 
 ################ Deploy
-# How long (seconds) to keep a disconnected WebSocket session alive on the server.
-# If the client reconnects within this window, their cube state is restored.
-# Set to 0 to disable server-side session keep-alive (client localStorage only).
-DEPLOY_SESSION_KEEPALIVE_TIMEOUT: int = 30 * 60  # 30 minutes
+
+@dataclass
+class SessionConfig:
+    """WebGL session configuration."""
+    # How long (seconds) to keep a disconnected WebSocket session alive.
+    # If the client reconnects within this window, their cube state is restored.
+    # Set to 0 to disable server-side session keep-alive.
+    keepalive_timeout: int = 30 * 60  # 30 minutes
+
+
+SESSION_CONFIG = SessionConfig()

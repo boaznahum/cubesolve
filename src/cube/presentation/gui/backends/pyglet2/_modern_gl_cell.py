@@ -32,6 +32,7 @@ import numpy as np
 from numpy import ndarray
 
 from cube.application.markers import MarkerToolkit, get_markers_from_part_edge
+from cube.application.markers._complementary_colors import get_complementary_color
 from cube.application.markers._marker_creator_protocol import MarkerCreator
 
 if TYPE_CHECKING:
@@ -44,26 +45,7 @@ from ._modern_gl_constants import CELL_TEXTURE_KEY
 _RING_SEGMENTS = 32  # Increased for smoother 3D rings
 
 # Marker definitions now come from MarkerCreator instances - no static definitions needed
-
-# Complementary colors for each cube face color (RGB 0.0-1.0)
-# These provide maximum contrast for visibility
-_COMPLEMENTARY_COLORS: dict[tuple[float, float, float], tuple[float, float, float]] = {
-    # Red face -> Cyan marker
-    (1.0, 0.0, 0.0): (0.0, 1.0, 1.0),
-    # Green face -> Magenta marker
-    (0.0, 1.0, 0.0): (1.0, 0.0, 1.0),
-    # Blue face -> Yellow marker
-    (0.0, 0.0, 1.0): (1.0, 1.0, 0.0),
-    # Yellow face -> Blue/Purple marker
-    (1.0, 1.0, 0.0): (0.4, 0.2, 1.0),
-    # Orange face -> Cyan marker
-    (1.0, 0.5, 0.0): (0.0, 1.0, 1.0),
-    # White face -> Dark magenta marker
-    (1.0, 1.0, 1.0): (0.6, 0.0, 0.6),
-}
-
-# Default marker color if face color not found (bright magenta)
-_DEFAULT_MARKER_COLOR = (1.0, 0.0, 1.0)
+# Complementary colors imported from shared module (see _complementary_colors.py)
 
 
 # Border line color (black)
@@ -153,18 +135,9 @@ def _get_char_segments(char: str) -> list[tuple[float, float, float, float]]:
     return _CHAR_SEGMENTS.get(char, _CHAR_SEGMENTS.get("?", []))
 
 
-def _get_complementary_color(face_color: tuple[float, float, float]) -> tuple[float, float, float]:
-    """Get a complementary marker color for maximum contrast.
-
-    Args:
-        face_color: RGB tuple (0.0-1.0) of the face color
-
-    Returns:
-        RGB tuple for the marker color
-    """
-    # Round to handle floating point imprecision
-    rounded = (round(face_color[0], 1), round(face_color[1], 1), round(face_color[2], 1))
-    return _COMPLEMENTARY_COLORS.get(rounded, _DEFAULT_MARKER_COLOR)
+# _get_complementary_color is now imported as get_complementary_color
+# from cube.application.markers._complementary_colors
+_get_complementary_color = get_complementary_color
 
 
 class ModernGLCellToolkit(MarkerToolkit):

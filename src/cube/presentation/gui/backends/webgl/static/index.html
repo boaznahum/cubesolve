@@ -4,7 +4,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Boaz NxN Rubik Solver</title>
+    <title>NxN Rubik's Cube Solver — 3D Interactive | Boaz Nahum</title>
+
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Free online NxN Rubik's Cube solver with 3D WebGL visualization. Supports 2x2 to 10x10 cubes. Scramble, solve step-by-step with animated algorithms, and learn how it works.">
+    <meta name="keywords" content="Rubik's Cube solver, NxN cube solver, 3D cube, WebGL, 2x2, 3x3, 4x4, 5x5, interactive, step-by-step, animated, online">
+    <meta name="author" content="Boaz Nahum">
+
+    <!-- Open Graph (Facebook, WhatsApp, Slack, LinkedIn) -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="NxN Rubik's Cube Solver — 3D Interactive">
+    <meta property="og:description" content="Free online Rubik's Cube solver with 3D WebGL visualization. Supports 2x2 to 10x10. Scramble, solve step-by-step with animated algorithms.">
+    <meta property="og:url" content="https://cubesolve.fly.dev/">
+    <meta property="og:image" content="https://cubesolve.fly.dev/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:site_name" content="CubeSolve">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="NxN Rubik's Cube Solver — 3D Interactive">
+    <meta name="twitter:description" content="Free online Rubik's Cube solver with 3D WebGL visualization. Supports 2x2 to 10x10 cubes.">
+    <meta name="twitter:image" content="https://cubesolve.fly.dev/og-image.png">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="favicon.png">
+
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "CubeSolve — NxN Rubik's Cube Solver",
+        "description": "Free online NxN Rubik's Cube solver with 3D WebGL visualization. Supports 2x2 to 10x10 cubes with animated step-by-step solutions.",
+        "url": "https://cubesolve.fly.dev/",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Any",
+        "browserRequirements": "WebGL 2.0 support",
+        "author": {
+            "@type": "Person",
+            "name": "Boaz Nahum"
+        },
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        }
+    }
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -97,8 +145,18 @@
                 <div id="debug-overlay"></div>
             </div>
             <div id="status"><span class="status-dot"></span>Connecting...</div>
+            <p id="seo-tagline">NxN Rubik's Cube Solver — 2x2 to 10x10 — Animated Step-by-Step</p>
         </div>
     </div><!-- /app-layout -->
+    <noscript>
+        <div style="text-align:center;padding:40px 20px;color:#ccc;font-family:sans-serif;">
+            <h1>NxN Rubik's Cube Solver</h1>
+            <p>A free online 3D Rubik's Cube solver supporting sizes from 2x2 to 10x10.
+               Scramble any cube, watch it solve step-by-step with animated algorithms,
+               and learn how each stage works. Built with WebGL for smooth 3D rendering.</p>
+            <p>Please enable JavaScript to use this application.</p>
+        </div>
+    </noscript>
     <script type="importmap">
     {
         "imports": {

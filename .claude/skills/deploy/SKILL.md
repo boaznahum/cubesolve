@@ -8,7 +8,18 @@ description: >
 
 # Deploy Skill
 
-Deploy current changes to the WebGL dev environment via GitHub Actions + Fly.io.
+Deploy current changes via GitHub Actions + Fly.io.
+
+## Environments
+
+| Branch | App | Command |
+|--------|-----|---------|
+| `webgl-dev` | `cubesolve-dev` (default) | `gh_acreate_pr.ps1` |
+| `main` | `cubesolve` (production) | `gh_acreate_pr.ps1 -branch main` |
+| `staging` | `cubesolve-staging` | `gh_acreate_pr.ps1 -branch staging` |
+
+When the user says "deploy" without specifying, deploy to **dev** (default).
+When the user says "deploy production", "deploy official", or "deploy to main", use `-branch main`.
 
 ## Workflow
 
@@ -33,20 +44,23 @@ If there are uncommitted changes:
 Push the branch and run the PowerShell deploy script:
 
 ```bash
+# Dev (default):
 powershell.exe -ExecutionPolicy Bypass -File gh_acreate_pr.ps1
+
+# Production:
+powershell.exe -ExecutionPolicy Bypass -File gh_acreate_pr.ps1 -branch main
 ```
 
 This script:
 - Displays the version being deployed
 - Pushes the current branch
-- Creates a PR targeting `webgl-dev`
-- Enables auto-merge
+- Pulls target branch into current branch (no-op if up to date), then pushes to target
 - Polls for and watches the GitHub Actions deploy run
 - Displays the deployed version when done
 
 ### 4. Report
 
 After deployment completes, report:
-- The PR URL
 - The deployed version
+- Target environment (dev/production/staging)
 - Success/failure status

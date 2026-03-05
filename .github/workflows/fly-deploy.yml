@@ -13,10 +13,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Read version
+        run: |
+          VERSION=$(cat src/cube/resources/version.txt | tr -d '[:space:]')
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "::notice::Deploying v$VERSION to production (cubesolve)"
       - uses: superfly/flyctl-actions/setup-flyctl@master
-      - run: flyctl deploy --remote-only --app cubesolve
+      - run: |
+          echo "Deploying v$VERSION to cubesolve (production)"
+          flyctl deploy --remote-only --app cubesolve
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      - run: echo "✅ v$VERSION deployed to production"
 
   deploy-dev:
     name: Deploy Dev
@@ -24,10 +32,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Read version
+        run: |
+          VERSION=$(cat src/cube/resources/version.txt | tr -d '[:space:]')
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "::notice::Deploying v$VERSION to dev (cubesolve-dev)"
       - uses: superfly/flyctl-actions/setup-flyctl@master
-      - run: flyctl deploy --remote-only --app cubesolve-dev
+      - run: |
+          echo "Deploying v$VERSION to cubesolve-dev"
+          flyctl deploy --remote-only --app cubesolve-dev
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN_DEV }}
+      - run: echo "✅ v$VERSION deployed to dev"
 
   deploy-staging:
     name: Deploy Staging
@@ -35,7 +51,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Read version
+        run: |
+          VERSION=$(cat src/cube/resources/version.txt | tr -d '[:space:]')
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "::notice::Deploying v$VERSION to staging (cubesolve-staging)"
       - uses: superfly/flyctl-actions/setup-flyctl@master
-      - run: flyctl deploy --remote-only --app cubesolve-staging
+      - run: |
+          echo "Deploying v$VERSION to cubesolve-staging"
+          flyctl deploy --remote-only --app cubesolve-staging
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      - run: echo "✅ v$VERSION deployed to staging"

@@ -9,6 +9,7 @@ Provides:
 
 from __future__ import annotations
 
+import shutil
 import threading
 import time
 from pathlib import Path
@@ -67,6 +68,10 @@ def webgl_server(request: pytest.FixtureRequest) -> Generator[str, None, None]:
     dist_hidden = webgl_dir / "_dist_hidden_by_test"
     did_hide_dist = False
     if dist_dir.exists():
+        # Remove stale leftover from a previous crashed run (Windows
+        # doesn't allow rename-over-existing-directory)
+        if dist_hidden.exists():
+            shutil.rmtree(dist_hidden)
         dist_dir.rename(dist_hidden)
         did_hide_dist = True
 

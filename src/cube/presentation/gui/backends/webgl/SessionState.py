@@ -43,7 +43,7 @@ class SessionStateSnapshot:
     # -- Cube --
     cube_size: int = 3
     cube_solved: bool = False
-    cube_faces: dict[str, list[list[int]]] = field(default_factory=dict)
+    cube_faces: dict[str, dict[str, list[object]]] = field(default_factory=dict)
 
     # -- Flow state machine --
     machine_state: str = "idle"
