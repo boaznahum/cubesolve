@@ -23,7 +23,6 @@ from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.Face import Face
 from cube.domain.model.FacesColorsProvider import FacesColorsProvider
-from cube.domain.model.Part import Part
 from cube.domain.solver._2x2_beginner._2x2L1Corners import _2x2L1Corners
 from cube.domain.solver.common.SolverHelper import StepSolver
 from cube.domain.solver.protocols import SolverElementsProvider
@@ -61,8 +60,8 @@ class L1(StepSolver):
         """Check if all 4 first-layer corners are correctly placed and oriented."""
         _, face_colors = self.find_best_l1()
         with self.apply_provider(face_colors):
-            wf: Face = self.white_face
-            return Part.all_match_faces(wf.corners)
+            l1_corners = _2x2L1Corners(self)
+            return l1_corners.is_corners()
 
     def solve(self) -> None:
         """Solve the first layer (4 corners)."""
@@ -84,7 +83,7 @@ class L1(StepSolver):
 
         with self.apply_provider(rotated.mapping):
             l1_corners = _2x2L1Corners(self)
-            l1_corners.solve() # claude fix this call solve !!!
+            l1_corners.solve()
 
     def find_best_l1(self) -> tuple[Face, Mapping[FaceName, Color]]:
         """Choose which face to solve as L1 and assign colors to all faces.

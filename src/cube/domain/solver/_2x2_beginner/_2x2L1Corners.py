@@ -3,7 +3,6 @@ from cube.domain.exceptions import InternalSWError
 from cube.domain.geometric.Face2FaceTranslator import Face2FaceTranslator
 from cube.domain.model import Corner, Part, PartColorsID, Color
 from cube.domain.model.Face import Face
-from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.protocols import SolverElementsProvider
 
@@ -43,9 +42,18 @@ class _2x2L1Corners(SolverHelper):
             to end up rotated while corners remain correctly positioned.
         """
 
-        wf: Face = self.white_face
+        # not true, maybe it is not on up face !!!
+        white_color: Color = self.cmn.white
 
-        return self.cqr.rotate_face_and_check(wf, lambda: self._is_corners()) >= 0
+        with self.op.with_query_restore_state():
+            for i in range(4):
+                if not self._is_fru_solved(white_color):
+                    return False
+                if i < 3:
+                    self.op.play(Algs.U)
+
+        return True
+
 
     def solve(self) -> None:
         """Solve Layer 1 corners using the beginner method.
@@ -73,6 +81,13 @@ class _2x2L1Corners(SolverHelper):
             self._do_corners()
 
     def _do_corners(self) -> None:
+        """Solve all four L1 corners using a reference-corner approach.
+
+        Since a 2x2 cube has no fixed centers, there are no predefined face colors.
+        Instead, this method picks an arbitrary corner containing the white color as
+        a reference, positions it at FLU with white facing up, then solves the
+        remaining three corners (FRU) one at a time by rotating U between solves.
+        """
 
         white_color: Color = self.cmn.white
 
@@ -89,109 +104,139 @@ class _2x2L1Corners(SolverHelper):
             first_color_id: PartColorsID = first_corner.colors_id
 
             # ok now we need to bring it
-            self.debug(lambda : f"Bringing {first_color_id} to FLU")
-            self._bring_corner_face_to_flu_color_up(first_color_id, white_color)
-
-            assert False, "That all I know for now"
+            with self._logger.tab(lambda : f"Bringing first reference {first_color_id} to FLU"):
+                self._bring_corner_face_to_flu_color_up(first_color_id, white_color)
 
 
-            # # the colors ID of 4 corners
-            # # the ids of where the corner are , not the color of the corners, so all must have some l1 on them
-            # # we use codes because maybe position will be changed during the algorithm
-            # color_codes: Sequence[PartColorsID] = Part.parts_id_by_pos(wf.corners)
-            #
-            # for code in color_codes:
-            #     with self._logger.tab(lambda : f"Corner:{code}"):
-            #         self._solve_corner(code)
 
-    def _solve_corner(self, corner_id: PartColorsID):
+            # so what left to be done
+            # we need three time to fix the FRU corner in which the FLU is reference
+            for _ in range(2):
+                self._solve_fru_corner(white_color)
+                self.op.play(Algs.U)
 
-        with self.ann.annotate(
-                (corner_id, AnnWhat.Moved), (self.cube.front.corner_top_right, AnnWhat.FixedPosition),
-                h2=lambda: f"Bringing {self.cube.find_corner_by_colors(corner_id).name_n_colors} to "
-                           f"{self.cube.front.corner_top_right.name} "):
-            self.__solve_corner(corner_id)
-
-    def __solve_corner(self, corner_id: PartColorsID):
-
-        _source_corner: Corner | None = None
-
-        _target_corner: Corner | None = None
-
-        # source corner
-        def sc() -> Corner:
-            nonlocal _source_corner
-            if not _source_corner or _source_corner.colors_id != corner_id:
-                _source_corner = self.cube.find_corner_by_colors(corner_id)
-            return _source_corner
-
-        # target corner
-        def tc() -> Corner:
-            nonlocal _target_corner
-            if not _target_corner or _target_corner.position_id != corner_id:
-                _target_corner = self.cube.find_corner_by_pos_colors(corner_id)
-            return _target_corner
-
-        if sc().match_faces:
-            # because we have cross, so if it matches then it is in position
-            return
-
-        wf: Face = self.cube.up
+            # third time
+            self._solve_fru_corner(white_color)
 
 
-        # Bring the target position FRU - Where
-        self._bring_l1_target_corner_to_front_right_up(tc())
+    def _is_fru_solved(self, white_color: Color) -> bool:
+        """Check whether the FRU corner is correctly solved relative to the FLU reference.
 
-        # now bring source cornet into under it  FRD
+        Determines the expected FRU corner by reading the front-face color from
+        FLU, then finds the corner that has both white and front colors (but not
+        the third FLU color). Returns True only if that corner is at FRU with
+        the correct color orientation.
 
-        if sc().on_face(wf):
-            self.debug(f"LO-Corners C1. source {sc()} is on top")
-            self._bring_top_corner_to_f_r_d(sc())
-        else:
-            self.debug(f"LO-Corners C2. source {sc()} is on bottom")
-            self._bring_bottom_corner_to_f_r_d(sc())
-
-        # Now source is on FRD
-        assert self.cube.front.corner_bottom_right is sc()
-
-        # is the white is on the down
-        if sc().face_color(wf.opposite) == wf.color:
-            self.debug(f"{wf.color} is on bottom")
-            self.op.play(Algs.R.prime + Algs.D.prime * 2 + Algs.R + Algs.D)
-            assert self.cube.front.corner_bottom_right is sc()
-            assert sc().face_color(wf.opposite) != wf.color
-
-        if sc().face_color(wf.cube.front) == wf.color:
-            self.op.play(Algs.D.prime + Algs.R.prime + Algs.D + Algs.R)
-        else:
-            self.op.play(Algs.D + Algs.F + Algs.D.prime + Algs.F.prime)
-
-        assert sc().match_faces
-
-    def _bring_l1_target_corner_to_front_right_up(self, c: Corner):
-        """
-        Preservers top layer cross
-
-        :param c:
-        :return:
+        Returns False early if FLU doesn't have exactly 3 distinct colors
+        (e.g. during initial positioning before the reference corner is set).
         """
 
-        wf: Face = self.cube.up
-        assert c.on_face(wf)
+        cube = self.cube
+        front = cube.front
+        front_color: Color = cube.flu.face_color(front)
+        flu_other_color_set = self.cube.flu.colors_id - {white_color, front_color}
 
-        if wf.corner_bottom_right is c:
+
+        if len(flu_other_color_set) > 1:
+            return False
+
+        assert len(flu_other_color_set) == 1
+
+        flu_other_color = next(iter(flu_other_color_set))
+
+        def is_fru_target(c: Corner) -> bool:
+            cid = c.colors_id
+            return white_color in cid and front_color in cid and flu_other_color not in cid
+
+        source_corner: Corner = self.cube.cqr.find_corner(is_fru_target)
+
+        if source_corner is not cube.fru:
+            return False
+
+        if source_corner.face_color(front) != front_color:
+            return False
+
+        if source_corner.face_color(cube.up) != white_color:
+            return False
+
+        return True
+
+
+
+
+    def _solve_fru_corner(self, white_color: Color) -> None:
+        """Solve the FRU corner while preserving the FLU reference corner.
+
+        Identifies which corner belongs at FRU by reading the front-face color
+        from the FLU reference corner, then finding the corner with white and
+        front colors (excluding the third FLU color).
+
+        Moves the target corner to FRD (bringing it down from top if needed),
+        then applies one of two insertion algorithms depending on whether white
+        faces front or right. If white faces down, an extra setup move flips it
+        to a side face first.
+        """
+
+        if self._is_fru_solved(white_color):
             return
 
-        if wf.corner_top_right is c:
-            return self.op.play(Algs.Y)
+        # find the right corner
+        front_color: Color = self.cube.flu.face_color(self.cube.front)
+        flu_other_color_set = self.cube.flu.colors_id - { white_color , front_color}
+        assert len(flu_other_color_set) == 1
+        flu_other_color = next(iter(flu_other_color_set))
 
-        if wf.corner_top_left is c:
-            return self.op.play(Algs.Y * 2)
+        def is_fru_target(c: Corner) -> bool:
+            cid = c.colors_id
+            return white_color in cid and front_color in cid and flu_other_color not in cid
 
-        if wf.corner_bottom_left is c:
-            return self.op.play(-Algs.Y)
+        source_corner: Corner = self.cube.cqr.find_corner(is_fru_target)
 
-        raise ValueError(f"{c} is not on {wf}")
+        # no faces so we cannot check for match
+
+        source_corner_id: PartColorsID = source_corner.colors_id
+
+        with self._logger.tab(lambda : f"Solving FRU <-- {[*source_corner_id]}"):
+
+
+            _source_corner: Corner | None = None
+
+            # source corner
+            def sc() -> Corner:
+                nonlocal _source_corner
+                if not _source_corner or _source_corner.colors_id != source_corner_id:
+                    _source_corner = self.cube.find_corner_by_colors(source_corner_id)
+                assert _source_corner
+                return _source_corner
+
+            wf: Face = self.cube.up
+
+
+            # now bring source cornet into under it  FRD
+
+            if sc().on_face(wf):
+                self.debug(f"LO-Corners C1. source {sc()} is on top")
+                self._bring_top_corner_to_f_r_d(sc())
+            else:
+                self.debug(f"LO-Corners C2. source {sc()} is on bottom")
+                self._bring_bottom_corner_to_f_r_d(sc())
+
+            # Now source is on FRD
+            assert self.cube.frd is sc()
+
+            # is the white is on the down
+            if sc().face_color(wf.opposite) == wf.color:
+                self.debug(f"{wf.color} is on bottom")
+                self.op.play(Algs.R.prime + Algs.D.prime * 2 + Algs.R + Algs.D)
+                assert self.cube.front.corner_bottom_right is sc()
+                assert sc().face_color(wf.opposite) != wf.color
+
+            if sc().face_color(wf.cube.front) == wf.color:
+                self.op.play(Algs.D.prime + Algs.R.prime + Algs.D + Algs.R)
+            else:
+                self.op.play(Algs.D + Algs.F + Algs.D.prime + Algs.F.prime)
+
+            assert self._is_fru_solved(white_color)
 
     def _bring_top_corner_to_f_r_d(self, c: Corner):
         """
@@ -310,7 +355,7 @@ class _2x2L1Corners(SolverHelper):
                 else:
                     raise InternalSWError(f"How can it be ? {corner} is not on {target_face}")
 
-                corner: Corner = cube.find_corner_by_colors(corner_id)
+                corner = cube.find_corner_by_colors(corner_id)
                 assert corner is cube.flu
                 assert corner.is_face_color(target_face) is required_color
 
@@ -330,6 +375,7 @@ class _2x2L1Corners(SolverHelper):
                 continue # try again
 
         raise InternalSWError("Too many iterations")
+
 
 
 
