@@ -65,18 +65,21 @@ class Solver2x2Beginner(Solver2x2Base):
         if self._cube.solved:
             return "Solved"
 
-        l1_done = self._l1.is_solved
-        l3o_done = self._l3_orient.is_solved
-        l3p_done = self._l3_permute.is_solved
+        _, face_colors = self._l1.find_best_l1()
+        with self._l1.apply_provider(face_colors):
+            l1_done = self._l1.is_solved
+            if not l1_done:
+                return "Unsolved"
 
-        if l1_done and l3o_done and l3p_done:
+            l3o_done = self._l3_orient.is_solved
+            l3p_done = self._l3_permute.is_solved
+
+        if l3o_done and l3p_done:
             return "Solved"
-        elif l1_done and l3o_done:
+        elif l3o_done:
             return "L1, L3-Orient"
-        elif l1_done:
-            return "L1"
         else:
-            return "Unsolved"
+            return "L1"
 
     def _solve_impl(self, what: SolveStep) -> SolverResults:
         sr = SolverResults()
@@ -90,8 +93,10 @@ class Solver2x2Beginner(Solver2x2Base):
 
             case SolveStep.ALL | SolveStep.L3:
                 self._l1.solve()
-                self._l3_orient.solve()
-                self._l3_permute.solve()
+                _, face_colors = self._l1.find_best_l1()
+                with self._l1.apply_provider(face_colors):
+                    self._l3_orient.solve()
+                    self._l3_permute.solve()
 
         return sr
 

@@ -1,40 +1,117 @@
 """Layer 1 solver for 2x2 beginner method.
 
-Solves all 4 bottom-layer corners so that:
+Solves all 4 first-layer corners so that:
 - Each corner is in its correct position
-- Each corner is correctly oriented (white sticker facing down)
+- Each corner is correctly oriented
 
-Strategy (human approach):
-1. Find a white corner in the top layer (or misplaced in bottom layer)
-2. Rotate U to position it above its target slot
-3. Use a trigger move (R U R') or variant to insert it
-4. Repeat for all 4 corners
+Since a 2x2 cube has no centers, faces have no inherent color.
+This solver:
+1. Chooses a face to start with (_find_best_l1)
+2. Assigns colors to all faces via a FacesColorsProvider
+3. Delegates to the existing L1Corners solver from the 3x3 beginner package
 
-If a white corner is stuck in the bottom layer with wrong orientation,
-first extract it to the top layer, then re-insert it correctly.
+The face_colors mapping is stored so L3 solvers can reuse it.
 """
 
 from __future__ import annotations
 
+from contextlib import contextmanager
+from typing import Generator, Mapping
+
+from cube.domain.model.Color import Color
+from cube.domain.model.FaceName import FaceName
+from cube.domain.model.Face import Face
+from cube.domain.model.FacesColorsProvider import FacesColorsProvider
+from cube.domain.model.Part import Part
+from cube.domain.solver._3x3.beginner._L1Corners import L1Corners
 from cube.domain.solver.common.SolverHelper import StepSolver
 from cube.domain.solver.protocols import SolverElementsProvider
 
 
+class _SimpleFacesColorsProvider:
+    """FacesColorsProvider backed by a static mapping."""
+
+    __slots__ = ["_mapping"]
+
+    def __init__(self, mapping: Mapping[FaceName, Color]) -> None:
+        self._mapping = mapping
+
+    def get_face_color(self, face_name: FaceName) -> Color:
+        return self._mapping[face_name]
+
+
 class L1(StepSolver):
-    """First layer corner solver for 2x2."""
+    """First layer corner solver for 2x2.
+
+    Stateless — ``find_best_l1()`` computes fresh each time.
+    The parent solver calls it once per solve and shares the
+    mapping with L3 solvers.
+    """
+
+    __slots__: list[str] = []
+
+    _CACHE_KEY = "L1._find_best_l1"
 
     def __init__(self, slv: SolverElementsProvider) -> None:
         super().__init__(slv, "L1")
 
     @property
     def is_solved(self) -> bool:
-        """Check if all 4 bottom-layer corners are correctly placed and oriented."""
-        # TODO: implement check
-        return False
+        """Check if all 4 first-layer corners are correctly placed and oriented."""
+        _, face_colors = self.find_best_l1()
+        with self.apply_provider(face_colors):
+            wf: Face = self.white_face
+            return Part.all_match_faces(wf.corners)
 
     def solve(self) -> None:
-        """Solve the first layer (4 bottom corners)."""
+        """Solve the first layer (4 corners)."""
         if self.is_solved:
             return
-        # TODO: implement
-        raise NotImplementedError("L1 solve not yet implemented")
+
+        l1_face, face_colors = self.find_best_l1()
+
+        with self.apply_provider(face_colors):
+            self.cmn.bring_face_up(l1_face)
+
+            l1_corners = L1Corners(self)
+            l1_corners._do_corners()
+
+    def find_best_l1(self) -> tuple[Face, Mapping[FaceName, Color]]:
+        """Choose which face to solve as L1 and assign colors to all faces.
+
+        Result is cached in ``cube.mutation_cache`` — automatically
+        invalidated when the cube is modified (rotation, scramble, reset).
+
+        This caching is important because ``is_solved`` and ``status``
+        are called frequently without cube modifications in between
+        (e.g., GUI status bar refreshes, animation frame updates).
+        Without the cache, ``_compute_best_l1`` would run on every call.
+
+        Simple implementation: use the cube's original color scheme.
+
+        Returns:
+            (l1_face, face_colors) — the face to start with and
+            a mapping of all face names to their assigned colors.
+        """
+        cache = self.cube.mutation_cache.get(L1._CACHE_KEY, tuple)  # type: ignore[arg-type]
+        return cache.compute(self._compute_best_l1)
+
+    def _compute_best_l1(self) -> tuple[Face, dict[FaceName, Color]]:
+        """Compute best L1 face and color mapping (uncached)."""
+        cube = self.cube
+        mapping: dict[FaceName, Color] = {
+            f.name: f.original_color for f in cube.faces
+        }
+        # Pick the face whose original_color matches config's first_face_color
+        start_color: Color = self.cmn.white
+        l1_face: Face = next(
+            f for f in cube.faces if f.original_color == start_color
+        )
+        return l1_face, mapping
+
+    @contextmanager
+    def apply_provider(self, face_colors: Mapping[FaceName, Color]) -> Generator[None, None, None]:
+        """Activate a FacesColorsProvider on the cube."""
+        provider: FacesColorsProvider = _SimpleFacesColorsProvider(face_colors)
+        with self.cube.with_faces_color_provider(provider):
+            yield
