@@ -144,11 +144,17 @@ class Face(SuperElement, Hashable):
         }
 
 
-        self.set_parts(self._center, *self._edges, *self._corners)
+        n = self.cube.n_slices
+
+        if n:
+            self.set_parts(self._center, *self._edges, *self._corners)
+        else:
+            # 2x2: no center or edges — only corners are real parts
+            self.set_parts(*self._corners)
+
         super().finish_init()
         self._init_finished = True
 
-        n = self.cube.n_slices
 
         if n == 0:
             # 2x2: no edges or centers to set markers on

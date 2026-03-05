@@ -68,11 +68,9 @@ class L1(StepSolver):
         if self.is_solved:
             return
 
-        l1_face, face_colors = self.find_best_l1()
+        _, face_colors = self.find_best_l1()
 
         with self.apply_provider(face_colors):
-            self.cmn.bring_face_up(l1_face)
-
             l1_corners = L1Corners(self)
             l1_corners._do_corners()
 
