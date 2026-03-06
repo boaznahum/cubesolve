@@ -125,13 +125,34 @@ document.addEventListener('touchmove', (e) => {
     if (e.touches.length > 1) e.preventDefault();
 }, { passive: false });
 
-// If page loaded while zoomed in (Chrome iOS persists zoom), reset it.
-if (window.visualViewport && window.visualViewport.scale > 1.05) {
-    // Re-stamp viewport meta to force scale reset
-    const meta = document.querySelector('meta[name="viewport"]');
-    if (meta) {
-        meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+// If page loaded while zoomed in (Chrome iOS persists zoom), counter-scale
+// the content so it fits the visible viewport.
+function fitToViewport() {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const scale = vv.scale;
+    const app = document.getElementById('app-layout');
+    if (!app) return;
+    if (scale > 1.05) {
+        app.style.transform = `scale(${1 / scale})`;
+        app.style.transformOrigin = '0 0';
+        app.style.width = `${scale * 100}%`;
+        app.style.height = `${scale * 100}%`;
+    } else {
+        app.style.transform = '';
+        app.style.transformOrigin = '';
+        app.style.width = '';
+        app.style.height = '';
     }
+}
+if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', fitToViewport);
+}
+// Run after DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fitToViewport);
+} else {
+    fitToViewport();
 }
 
 // ── Responsive sizing ──
