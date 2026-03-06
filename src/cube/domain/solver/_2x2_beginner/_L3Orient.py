@@ -57,8 +57,9 @@ class L3Orient(StepSolver):
         if self.is_solved:
             return
 
-        with self.ann.annotate(h1="Doing L3 Orient"):
-            self._solve()
+        with self._logger.tab("Doing L3 Orient"):
+            with self.ann.annotate(h1="Doing L3 Orient"):
+                self._solve()
 
     def _solve(self) -> None:
         white_color: Color = self.cmn.white

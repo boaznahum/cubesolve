@@ -81,8 +81,9 @@ class L3Permute(StepSolver):
             self._align_u_layer()
             return
 
-        with self.ann.annotate(h1="Doing L3 Permute"):
-            self._solve()
+        with self._logger.tab("Doing L3 Permute"):
+            with self.ann.annotate(h1="Doing L3 Permute"):
+                self._solve()
 
     def _align_u_layer(self) -> None:
         """Align top layer with bottom using U rotations."""

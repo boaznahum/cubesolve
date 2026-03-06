@@ -25,6 +25,7 @@ from cube.domain.solver.common.Solver2x2Base import Solver2x2Base
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.solver import SolverResults, SolveStep
 from cube.domain.solver.SolverName import SolverName
+from ...model import Face
 
 if TYPE_CHECKING:
     from cube.utils.logger_protocol import ILogger
@@ -96,14 +97,15 @@ class Solver2x2Beginner(Solver2x2Base):
                 self._l1.solve()
                 l1_face = self._l1.solved_face()
                 assert l1_face
-                self.cmn.bring_face_down(l1_face)
-                self._solve_l3()
+                self._solve_l3(l1_face)
 
         return sr
 
-    def _solve_l3(self) -> None:
+    def _solve_l3(self, l1_face: Face) -> None:
         """Solve L3: permute then orient."""
         with self._logger.tab("Solve L3"):
+            # because l1 solver might say it is olved but ont on down
+            self.cmn.bring_face_down(l1_face)
             self._l3_permute.solve()
             self._l3_orient.solve()
 

@@ -68,6 +68,4 @@ def bring_white_to_down(slv: SolverHelper, white_color: Color) -> None:
     if white_face is None:
         raise InternalSWError("L1 not solved — no face has all white corners")
 
-    # Bring white to UP first, then to DOWN
-    slv.cmn.bring_face_up(white_face)
-    slv.cmn.bring_face_down(cube.up)
+    slv.cmn.bring_face_down(white_face)
