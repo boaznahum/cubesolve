@@ -718,14 +718,16 @@ body {
         align-items: flex-start;
         overflow: hidden;
         overscroll-behavior: none;
-        height: var(--app-height, 100svh);
+        height: 100%;
     }
 
     #app-layout {
+        position: fixed;
+        inset: 0;
         padding: 2px 2px;
         gap: 4px;
-        height: var(--app-height, 100svh);
         align-items: stretch;
+        overflow: hidden;
     }
 
     /* Narrow history panel on left */
