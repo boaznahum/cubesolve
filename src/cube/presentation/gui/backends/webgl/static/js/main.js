@@ -116,6 +116,16 @@ animQueue._onAssistHide = () => {
     moveIndicator.hide();
 };
 
+// ── iOS viewport height fix ──
+// CSS 100dvh is unreliable on iOS reload; use visualViewport API instead.
+// Sets --app-height CSS variable consumed by mobile styles.
+function updateAppHeight() {
+    const h = window.visualViewport?.height ?? window.innerHeight;
+    document.documentElement.style.setProperty('--app-height', h + 'px');
+}
+updateAppHeight();
+window.scrollTo(0, 0);  // prevent Safari scroll restoration on reload
+
 // ── Responsive sizing ──
 let _lastAspect = 0;
 
@@ -167,14 +177,22 @@ window.addEventListener('resize', resize);
 
 // iOS: visualViewport fires more reliably on orientation change / keyboard show
 if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', resize);
+    window.visualViewport.addEventListener('resize', () => {
+        updateAppHeight();
+        resize();
+    });
 }
 
 // Delayed resize — catches late CSS flex layout on iOS first load
-requestAnimationFrame(() => requestAnimationFrame(resize));
+requestAnimationFrame(() => requestAnimationFrame(() => {
+    updateAppHeight();
+    resize();
+}));
 
 // Reset camera and resize on every WebSocket (re)connection
 wsClient.onConnected = () => {
+    updateAppHeight();
+    window.scrollTo(0, 0);
     controls.reset();
     _lastAspect = 0;  // force fitToView recalc
     resize();
