@@ -128,19 +128,21 @@ function resize() {
     let w, h;
 
     if (isMobile) {
-        // Always compute from viewport — never trust wrapper dimensions on mobile.
-        // Flex layout can report stale/wrong values on iOS/Chrome reload.
-        const vpW = window.visualViewport?.width ?? window.innerWidth;
-        const vpH = window.visualViewport?.height ?? window.innerHeight;
-        const toolbarEl = document.getElementById('toolbar');
-        const statusEl = document.getElementById('status');
-        const histPanel = document.getElementById('history-panel');
-        const toolbarH = toolbarEl?.offsetHeight || 50;
-        const statusH = statusEl?.offsetHeight || 20;
-        const histW = histPanel?.offsetWidth || 62;
+        w = wrapper.clientWidth;
+        h = wrapper.clientHeight;
 
-        w = vpW - histW - 8;
-        h = vpH - toolbarH - statusH - 10;
+        // Fallback: on iOS initial load, flex layout may not have settled yet
+        // so wrapper dimensions can be 0.  Compute from viewport instead.
+        if (h < 50) {
+            const toolbarEl = document.getElementById('toolbar');
+            const statusEl = document.getElementById('status');
+            const vpH = window.visualViewport?.height ?? window.innerHeight;
+            h = vpH - (toolbarEl?.offsetHeight || 50) - (statusEl?.offsetHeight || 20) - 10;
+        }
+        if (w < 50) {
+            const histPanel = document.getElementById('history-panel');
+            w = window.innerWidth - (histPanel?.offsetWidth || 62) - 8;
+        }
 
         renderer.setSize(w, h);
         camera.aspect = w / h;
