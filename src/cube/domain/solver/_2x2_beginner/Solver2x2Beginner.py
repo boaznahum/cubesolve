@@ -25,7 +25,7 @@ from cube.domain.solver.common.Solver2x2Base import Solver2x2Base
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.solver import SolverResults, SolveStep
 from cube.domain.solver.SolverName import SolverName
-from ...model import Face
+from ...model import Color, Face
 
 if TYPE_CHECKING:
     from cube.utils.logger_protocol import ILogger
@@ -66,15 +66,17 @@ class Solver2x2Beginner(Solver2x2Base):
         if self._cube.solved:
             return "Solved"
 
-        l1_face = self._l1.solved_face()
-        if not l1_face:
+        l1_result = self._l1.solved_face_and_color()
+        if not l1_result:
             return "Unsolved"
+
+        l1_face, l1_color = l1_result
 
         with self.op.with_query_restore_state():
             self.cmn.bring_face_down(l1_face)
 
-            l3o_done = self._l3_orient.is_solved
-            l3p_done = self._l3_permute.is_solved
+            l3o_done = self._l3_orient.is_solved_with(l1_color)
+            l3p_done = self._l3_permute.is_solved_with(l1_color)
 
             if l3o_done and l3p_done:
                 return "L1, L3"
@@ -95,19 +97,19 @@ class Solver2x2Beginner(Solver2x2Base):
 
             case SolveStep.ALL | SolveStep.L3:
                 self._l1.solve()
-                l1_face = self._l1.solved_face()
-                assert l1_face
-                self._solve_l3(l1_face)
+                l1_result = self._l1.solved_face_and_color()
+                assert l1_result
+                l1_face, l1_color = l1_result
+                self._solve_l3(l1_face, l1_color)
 
         return sr
 
-    def _solve_l3(self, l1_face: Face) -> None:
+    def _solve_l3(self, l1_face: Face, l1_color: Color) -> None:
         """Solve L3: permute then orient."""
         with self._logger.tab("Solve L3"):
-            # because l1 solver might say it is olved but ont on down
             self.cmn.bring_face_down(l1_face)
-            self._l3_permute.solve()
-            self._l3_orient.solve()
+            self._l3_permute.solve(l1_color)
+            self._l3_orient.solve(l1_color)
 
     def _supported_steps_impl(self) -> list[SolveStep]:
         return [SolveStep.L1, SolveStep.L3]

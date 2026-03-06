@@ -57,13 +57,16 @@ class L3Permute(StepSolver):
 
     @property
     def is_solved(self) -> bool:
+        """Check using default white color."""
+        return self.is_solved_with(self.cmn.white)
+
+    def is_solved_with(self, white_color: Color) -> bool:
         """Check if all 4 top-layer corners are in correct positions.
 
         Ignores orientation — only checks that each top corner's
         non-yellow colors match the bottom corner below it.
         Uses query mode so no moves are visible.
         """
-        white_color: Color = self.cmn.white
         yellow_color: Color = find_yellow_color(self.cube, white_color)
 
         white_face: Face | None = find_white_face(self.cube, white_color)
@@ -74,32 +77,28 @@ class L3Permute(StepSolver):
 
         return self._is_u_aligned(yellow_face, white_face, white_color, yellow_color) >= 0
 
-    def solve(self) -> None:
+    def solve(self, white_color: Color | None = None) -> None:
         """Permute last-layer corners into correct positions."""
-        if self.is_solved:
-            # Corners are in position but may need U-alignment
-            self._align_u_layer()
+        wc: Color = white_color or self.cmn.white
+        if self.is_solved_with(wc):
+            self._align_u_layer(wc)
             return
 
         with self._logger.tab("Doing L3 Permute"):
             with self.ann.annotate(h1="Doing L3 Permute"):
-                self._solve()
+                self._solve(wc)
 
-    def _align_u_layer(self) -> None:
+    def _align_u_layer(self, white_color: Color) -> None:
         """Align top layer with bottom using U rotations."""
-        white_color: Color = self.cmn.white
-        white_face: Face | None = find_white_face(self.cube, white_color)
-
         yellow_color: Color = find_yellow_color(self.cube, white_color)
-
+        white_face: Face | None = find_white_face(self.cube, white_color)
 
         assert white_face is not None  # we must reach here after L1 is solved
 
         yellow_face: Face = white_face.opposite
         self._try_u_alignment(yellow_face, white_face, white_color, yellow_color)
 
-    def _solve(self) -> None:
-        white_color: Color = self.cmn.white
+    def _solve(self, white_color: Color) -> None:
         yellow_color: Color = find_yellow_color(self.cube, white_color)
 
         bring_white_to_down(self, white_color)

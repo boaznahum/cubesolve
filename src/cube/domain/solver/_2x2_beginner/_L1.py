@@ -12,7 +12,7 @@ is needed.
 
 from __future__ import annotations
 
-from cube.domain.model import Face
+from cube.domain.model import Color, Face
 from cube.domain.solver._2x2_beginner._2x2L1Corners import _2x2L1Corners
 from cube.domain.solver.common.SolverHelper import StepSolver
 from cube.domain.solver.protocols import SolverElementsProvider
@@ -37,8 +37,8 @@ class L1(StepSolver):
         """Check if all 4 first-layer corners are correctly placed and oriented."""
         return self._l1_corners.is_corners() is not None
 
-    def solved_face(self) -> Face | None:
-
+    def solved_face_and_color(self) -> tuple[Face, Color] | None:
+        """Return the solved face and its color, or None."""
         return self._l1_corners.is_corners()
 
 

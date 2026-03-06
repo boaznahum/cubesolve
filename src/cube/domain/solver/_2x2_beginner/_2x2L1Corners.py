@@ -36,46 +36,52 @@ class _2x2L1Corners(SolverHelper):
         super().__init__(slv, "_2x2L1Corners")
 
 
-    def is_corners(self) -> Face | None:
-        """Check if Layer 1 corners are solved.
+    def is_corners(self) -> tuple[Face, Color] | None:
+        """Check if Layer 1 corners are solved for any color.
 
         Checks directly — no U rotations or cube moves needed:
-        1. All 4 top-layer corners have white facing up
+        1. All 4 corners on a face have the same color facing it
         2. Adjacent corners share the same side color
 
-        We start with white but later we will search for any color, the best color
+        Prefers white (cmn.white). If white isn't solved, checks all other colors.
 
-        :return the solved Face
+        :return (solved_face, solved_color) or None
         """
 
         white_color: Color = self.cmn.white
         cube = self.cube
 
+        # Check white first (preferred), then any other color
+        result: tuple[Face, Color] | None = None
+
         for face in cube.faces:
-
-            # All 4 corners on up face must have white facing up
             face_corners = face.corners
-            if not all(c.face_color(face) == white_color
-                       for c in face_corners):
 
-                continue # this face is not solved
+            # All 4 corners must have the same color facing this face
+            face_color: Color = face_corners[0].face_color(face)
+            if not all(c.face_color(face) == face_color for c in face_corners[1:]):
+                continue
 
-            adjusted_faces = face.adjusted_faces()
-
-            for adjust in adjusted_faces:
-
-                corners_on_adjusted = [ c for c in adjust.corners if c.on_face(face) ]
-
+            # Adjacent corners on each side face must share colors
+            solved: bool = True
+            for adjust in face.adjusted_faces():
+                corners_on_adjusted = [c for c in adjust.corners if c.on_face(face)]
                 assert len(corners_on_adjusted) == 2
-
-
-                # all colors on adjusted face must be the same
                 if corners_on_adjusted[0].face_color(adjust) != corners_on_adjusted[1].face_color(adjust):
-                    continue
+                    solved = False
+                    break
 
-            # this is solved face !!!
-            return face
-        return None  # no solved Face
+            if not solved:
+                continue
+
+            # This face is solved with face_color
+            if face_color == white_color:
+                return face, face_color  # white is preferred, return immediately
+
+            if result is None:
+                result = (face, face_color)
+
+        return result
 
 
     def solve(self) -> None:
@@ -93,20 +99,20 @@ class _2x2L1Corners(SolverHelper):
         """Solve all four L1 corners using a reference-corner approach.
 
         Algorithm:
-          1. Find the face with the most white stickers facing it (prefer up).
+          1. Find the best (face, color) — most stickers of that color facing it.
+             Prefers white, then up face on ties.
           2. Bring that face to up via whole-cube rotation.
-          3. Pick a corner on up that already has white facing up as reference.
+          3. Pick a corner on up that already has the color facing up as reference.
           4. U-rotate the reference corner to FLU.
           5. Fix FRU three times, rotating U between fixes.
         """
 
-        white_color: Color = self.cmn.white
         cube = self.cube
 
-        with self._logger.tab(lambda: f"Doing L1 {white_color} Corners"):
+        # Step 1: Find best face and color
+        best_face, white_color = self._find_best_face_and_color()
 
-            # Step 1: Find face with most white stickers facing it
-            best_face: Face = self._find_best_white_face(white_color)
+        with self._logger.tab(lambda: f"Doing L1 {white_color} Corners"):
 
             # Step 2: Bring to up if not already
             if best_face is not cube.up:
@@ -133,25 +139,51 @@ class _2x2L1Corners(SolverHelper):
             # third time
             self._solve_fru_corner(white_color)
 
-    def _find_best_white_face(self, white_color: Color) -> Face:
-        """Find the face with the most corners having white facing it.
+    def _find_best_face_and_color(self) -> tuple[Face, Color]:
+        """Find the best (face, color) pair for L1.
 
-        On ties, prefers the current up face (avoids whole-cube rotation).
+        For each face, finds the most common color among its 4 corner stickers.
+        Returns the (face, color) with the highest count.
+
+        Tie-breaking priority:
+          1. White color (cmn.white) — always preferred
+          2. Current up face — avoids whole-cube rotation
+          3. First found
         """
         cube = self.cube
+        white_color: Color = self.cmn.white
         best_face: Face = cube.up
+        best_color: Color = white_color
         best_count: int = 0
 
         for face in cube.faces:
-            corners: list[Corner] = [face.corner_top_left, face.corner_top_right,
-                                     face.corner_bottom_left, face.corner_bottom_right]
-            count: int = sum(1 for c in corners if c.face_color(face) == white_color)
-            # Prefer up face on ties (no rotation needed)
-            if count > best_count or (count == best_count and face is cube.up):
-                best_count = count
-                best_face = face
+            # Count occurrences of each color facing this face
+            color_counts: dict[Color, int] = {}
+            for corner in face.corners:
+                c: Color = corner.face_color(face)
+                color_counts[c] = color_counts.get(c, 0) + 1
 
-        return best_face
+            for color, count in color_counts.items():
+                # Is this better than current best?
+                if count > best_count:
+                    better = True
+                elif count == best_count:
+                    # Tie-break: prefer white, then prefer up face
+                    if color == white_color and best_color != white_color:
+                        better = True
+                    elif best_color != white_color and face is cube.up:
+                        better = True
+                    else:
+                        better = False
+                else:
+                    better = False
+
+                if better:
+                    best_count = count
+                    best_face = face
+                    best_color = color
+
+        return best_face, best_color
 
     def _find_reference_corner_on_up(self, white_color: Color) -> Corner:
         """Find a corner on up face with white facing up."""

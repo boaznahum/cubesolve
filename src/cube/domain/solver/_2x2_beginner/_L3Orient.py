@@ -41,8 +41,11 @@ class L3Orient(StepSolver):
 
     @property
     def is_solved(self) -> bool:
+        """Check using default white color."""
+        return self.is_solved_with(self.cmn.white)
+
+    def is_solved_with(self, white_color: Color) -> bool:
         """Check if all 4 top-layer corners have yellow facing up."""
-        white_color: Color = self.cmn.white
         yellow_color: Color = find_yellow_color(self.cube, white_color)
 
         white_face: Face | None = find_white_face(self.cube, white_color)
@@ -52,17 +55,17 @@ class L3Orient(StepSolver):
         yellow_face: Face = white_face.opposite
         return self._all_oriented(yellow_face, yellow_color)
 
-    def solve(self) -> None:
+    def solve(self, white_color: Color | None = None) -> None:
         """Orient all last-layer corners (yellow face up)."""
-        if self.is_solved:
+        wc: Color = white_color or self.cmn.white
+        if self.is_solved_with(wc):
             return
 
         with self._logger.tab("Doing L3 Orient"):
             with self.ann.annotate(h1="Doing L3 Orient"):
-                self._solve()
+                self._solve(wc)
 
-    def _solve(self) -> None:
-        white_color: Color = self.cmn.white
+    def _solve(self, white_color: Color) -> None:
         yellow_color: Color = find_yellow_color(self.cube, white_color)
 
         bring_white_to_down(self, white_color)
