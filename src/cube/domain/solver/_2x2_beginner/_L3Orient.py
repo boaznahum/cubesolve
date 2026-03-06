@@ -20,7 +20,7 @@ Strategy (R' D' R D twist):
 from __future__ import annotations
 
 from cube.domain.algs import Algs, Alg
-from cube.domain.model import Color
+from cube.domain.model import Color, Corner
 from cube.domain.model.Face import Face
 from cube.domain.solver._2x2_beginner._l3_utils import find_yellow_color, find_white_face, bring_white_to_down
 from cube.domain.solver.AnnWhat import AnnWhat
@@ -73,18 +73,17 @@ class L3Orient(StepSolver):
     def _do_orient(self, up: Face, yellow_color: Color) -> None:
         """Twist each corner at FRU until yellow faces up, then rotate U'."""
 
-        # (R' D' R D) * 2 — twists the FRU corner in place
+        # (R' D' R D) * 2 — twists the FRU corner 120° in place
         twist: Alg = Algs.alg(
             None, Algs.R.prime, Algs.D.prime, Algs.R, Algs.D,
         ) * 2
 
         for _ in range(4):
-            # Twist FRU until yellow faces up (max 2 twists needed)
-            with self.ann.annotate((up.corner_bottom_right, AnnWhat.Both)):
-                for _ in range(3):
-                    if self.cube.fru.face_color(up) == yellow_color:
-                        break
-                    self.op.play(twist)
+            n: int = self._twist_count(up, yellow_color, self.cube.front, self.cube.right, self.cube.fru)
+
+            if n > 0:
+                with self.ann.annotate((up.corner_bottom_right, AnnWhat.Both)):
+                    self.op.play((twist * n).simplify())
 
             assert self.cube.fru.face_color(up) == yellow_color
 
@@ -92,6 +91,23 @@ class L3Orient(StepSolver):
             self.op.play(Algs.U.prime)
 
         assert self._all_oriented(up, yellow_color), "L3 Orient failed"
+
+    @staticmethod
+    def _twist_count(up: Face, yellow_color: Color, cube_front: Face, cube_right: Face,
+                     fru: Corner) -> int:
+        """Compute how many (R' D' R D)*2 twists FRU needs so yellow faces up.
+
+        The twist rotates the FRU corner 120° clockwise (viewed from corner).
+        - Yellow on UP    → 0
+        - Yellow on Right → 1  (one 120° twist brings it to UP)
+        - Yellow on Front → 2  (two 120° twists bring it to UP)
+        """
+        if fru.face_color(up) == yellow_color:
+            return 0
+        if fru.face_color(cube_right) == yellow_color:
+            return 1
+        assert fru.face_color(cube_front) == yellow_color
+        return 2
 
     def _all_oriented(self, up: Face, yellow_color: Color) -> bool:
         """Check if all 4 corners on UP have yellow facing up."""
