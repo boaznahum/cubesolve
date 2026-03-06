@@ -71,26 +71,60 @@ class L3Orient(StepSolver):
         self._do_orient(up, yellow_color)
 
     def _do_orient(self, up: Face, yellow_color: Color) -> None:
-        """Twist each corner at FRU until yellow faces up, then rotate U'."""
+        """Twist each corner at FRU until yellow faces up.
+
+        Searches CCW for the next unoriented corner, U-rotates it to FRU,
+        twists it, then repeats. Skips already-oriented corners entirely.
+        """
 
         # (R' D' R D) * 2 — twists the FRU corner 120° in place
         twist: Alg = Algs.alg(
             None, Algs.R.prime, Algs.D.prime, Algs.R, Algs.D,
         ) * 2
 
+        total_u: int = 0
+
         for _ in range(4):
-            n: int = self._twist_count(up, yellow_color, self.cube.front, self.cube.right, self.cube.fru)
+            n: int = self._find_next_unoriented_ccw(up, yellow_color)
+            if n < 0:
+                break  # all oriented
 
+            # Bring unoriented corner to FRU
             if n > 0:
-                with self.ann.annotate((up.corner_bottom_right, AnnWhat.Both)):
-                    self.op.play((twist * n).simplify())
+                self.op.play((Algs.U.prime * n).simplify())
+                total_u += n
 
-            assert self.cube.fru.face_color(up) == yellow_color
+            # Twist FRU
+            twist_n: int = self._twist_count(up, yellow_color, self.cube.front,
+                                             self.cube.right, self.cube.fru)
+            assert twist_n > 0
+            with self.ann.annotate((up.corner_bottom_right, AnnWhat.Both)):
+                self.op.play((twist * twist_n).simplify())
 
-            # Rotate to bring next corner to FRU
-            self.op.play(Algs.U.prime)
+        # Realign U layer (total U' must be multiple of 4)
+        remaining: int = (4 - total_u % 4) % 4
+        if remaining > 0:
+            self.op.play((Algs.U.prime * remaining).simplify())
 
         assert self._all_oriented(up, yellow_color), "L3 Orient failed"
+
+    @staticmethod
+    def _find_next_unoriented_ccw(up: Face, yellow_color: Color) -> int:
+        """Find the next unoriented corner searching CCW from FRU.
+
+        Returns 0-3 (number of U' rotations to bring it to FRU) or -1 if all oriented.
+        CCW order: FRU(0), FLU(1), BLU(2), BRU(3).
+        """
+        corners: list[Corner] = [
+            up.corner_bottom_right,  # FRU
+            up.corner_bottom_left,   # FLU
+            up.corner_top_left,      # BLU
+            up.corner_top_right,     # BRU
+        ]
+        for i, corner in enumerate(corners):
+            if corner.face_color(up) != yellow_color:
+                return i
+        return -1
 
     @staticmethod
     def _twist_count(up: Face, yellow_color: Color, cube_front: Face, cube_right: Face,
