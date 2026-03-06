@@ -119,6 +119,21 @@ animQueue._onAssistHide = () => {
 // ── Mobile viewport fix ──
 if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
 
+// Prevent page-level pinch-zoom (iOS ignores user-scalable=no since iOS 10).
+// Canvas 3D zoom still works — OrbitControls handles its own touch events.
+document.addEventListener('touchmove', (e) => {
+    if (e.touches.length > 1) e.preventDefault();
+}, { passive: false });
+
+// If page loaded while zoomed in (Chrome iOS persists zoom), reset it.
+if (window.visualViewport && window.visualViewport.scale > 1.05) {
+    // Re-stamp viewport meta to force scale reset
+    const meta = document.querySelector('meta[name="viewport"]');
+    if (meta) {
+        meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+    }
+}
+
 // ── Responsive sizing ──
 let _lastAspect = 0;
 
