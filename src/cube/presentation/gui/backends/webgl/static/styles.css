@@ -714,19 +714,26 @@ body {
    Mobile / Tablet
    ============================================================ */
 @media (max-width: 768px) {
+    html {
+        overflow: hidden;
+        overscroll-behavior: none;
+    }
+
     body {
+        position: fixed;
+        inset: 0;
         align-items: flex-start;
         overflow: hidden;
-        height: 100vh;
-        height: 100dvh;
+        height: 100%;
+        overscroll-behavior: none;
     }
 
     #app-layout {
         padding: 2px 2px;
         gap: 4px;
-        height: 100vh;
-        height: 100dvh;
+        height: 100%;
         align-items: stretch;
+        overflow: hidden;
     }
 
     /* Narrow history panel on left */
@@ -812,11 +819,13 @@ body {
         min-width: 0;
         display: flex;
         flex-direction: column;
+        overflow: hidden;
     }
 
     #canvas-wrapper {
         flex: 1;
         min-height: 0;
+        overflow: hidden;
     }
 
     #status {
