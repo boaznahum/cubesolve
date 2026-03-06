@@ -714,10 +714,14 @@ body {
    Mobile / Tablet
    ============================================================ */
 @media (max-width: 768px) {
-    body {
-        align-items: flex-start;
+    html, body {
         overflow: hidden;
         overscroll-behavior: none;
+        touch-action: manipulation;
+    }
+
+    body {
+        align-items: flex-start;
         height: 100%;
     }
 

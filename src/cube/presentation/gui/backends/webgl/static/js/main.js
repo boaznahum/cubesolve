@@ -121,6 +121,20 @@ animQueue._onAssistHide = () => {
 if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
 window.scrollTo(0, 0);
 
+// Force-reset browser zoom on reload — Chrome iOS preserves pinch-zoom across reloads.
+// Re-stamping the viewport meta tag forces the browser back to initial-scale=1.
+{
+    const meta = document.querySelector('meta[name="viewport"]');
+    if (meta) {
+        const content = meta.getAttribute('content');
+        meta.remove();
+        const fresh = document.createElement('meta');
+        fresh.name = 'viewport';
+        fresh.content = content;
+        document.head.prepend(fresh);
+    }
+}
+
 // ── Responsive sizing ──
 let _lastAspect = 0;
 
