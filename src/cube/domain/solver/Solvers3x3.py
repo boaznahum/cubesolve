@@ -70,21 +70,6 @@ class Solvers3x3:
         from cube.domain.solver._3x3.kociemba.Kociemba3x3 import Kociemba3x3
         return Kociemba3x3(op, parent_logger)
 
-    @staticmethod
-    def dwalton(op: OperatorProtocol, parent_logger: "ILogger") -> Solver3x3Protocol:
-        """
-        Get Dwalton table-based 3x3 solver (Kociemba two-phase, pure Python).
-
-        Args:
-            op: Operator for cube manipulation
-            parent_logger: Parent logger
-
-        Returns:
-            Dwalton3x3 instance
-        """
-        from cube.domain.solver._3x3.dwalton.Dwalton3x3 import Dwalton3x3
-        return Dwalton3x3(op, parent_logger)
-
     @classmethod
     def by_name(cls, name: str, op: OperatorProtocol, parent_logger: "ILogger") -> Solver3x3Protocol:
         """
@@ -108,8 +93,6 @@ class Solvers3x3:
                 return cls.cfop(op, parent_logger)
             case "kociemba":
                 return cls.kociemba(op, parent_logger)
-            case "dwalton":
-                return cls.dwalton(op, parent_logger)
             case _:
                 raise ValueError(f"Unknown 3x3 solver: {name}. "
                                  f"Options: beginner, cfop, kociemba")

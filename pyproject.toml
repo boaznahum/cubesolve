@@ -117,7 +117,13 @@ disable_error_code = ["import-untyped"]
 # Exclude test/experimental directories
 exclude = [
     "^__try/",
+    ".*_archive/",
 ]
+
+# Skip archived solver code entirely
+[[tool.mypy.overrides]]
+module = "cube.domain.solver._3x3._archive.*"
+follow_imports = "skip"
 
 # Ignore errors in experimental code
 [[tool.mypy.overrides]]
@@ -138,4 +144,4 @@ ignore_missing_imports = true
 pythonVersion = "3.14"
 typeCheckingMode = "standard"
 reportUnsupportedDunderAll = "error"
-exclude = ["src/cube/domain/solver/direct"]
+exclude = ["src/cube/domain/solver/direct", "**/_archive"]

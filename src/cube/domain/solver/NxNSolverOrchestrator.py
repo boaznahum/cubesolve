@@ -25,7 +25,7 @@ from cube.domain.solver.common.CenterBlockStatistics import CenterBlockStatistic
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.protocols.ReducerProtocol import ReducerProtocol
 from cube.domain.solver.protocols.Solver3x3Protocol import Solver3x3Protocol
-from cube.domain.solver.solver import SolverResults, SolveStep
+from cube.domain.solver.solver import Solver, SolverResults, SolveStep
 from cube.domain.solver.SolverName import SolverName
 from cube.utils.SSCode import SSCode
 
@@ -93,6 +93,13 @@ class NxNSolverOrchestrator(AbstractSolver):
     def get_code(self) -> SolverName:
         """Return solver identifier."""
         return self._solver_name
+
+    def _create_2x2_delegate(self) -> Solver:
+        """Fast solvers (CFOP, Kociemba) use IDA* for 2x2; others use beginner."""
+        from cube.domain.solver.Solvers import Solvers
+        if self._solver_name in (SolverName.CFOP, SolverName.KOCIEMBA):
+            return Solvers.two_by_two_ida(self._op)
+        return Solvers.two_by_two_beginner(self._op)
 
     @property
     def _status_impl(self) -> str:

@@ -151,9 +151,17 @@ class AbstractSolver(Solver, ABC):
     def _get_2x2_delegate(self) -> Solver:
         """Get or create the cached 2x2 solver delegate."""
         if self._2x2_delegate_cache is None:
-            from cube.domain.solver.Solvers import Solvers
-            self._2x2_delegate_cache = Solvers.default_2x2(self._op)
+            self._2x2_delegate_cache = self._create_2x2_delegate()
         return self._2x2_delegate_cache
+
+    def _create_2x2_delegate(self) -> Solver:
+        """Create the 2x2 solver to delegate to.
+
+        Override in subclasses to pick a specific 2x2 solver.
+        Default: uses the configured default 2x2 solver from config.
+        """
+        from cube.domain.solver.Solvers import Solvers
+        return Solvers.default_2x2(self._op)
 
     def _delegate_to_2x2(self, what: SolveStep) -> SolverResults:
         """Delegate solving to the configured 2x2 solver.

@@ -21,7 +21,7 @@ The swap algorithm is: R' F R' B2 R F' R' B2 R2 U'
 from __future__ import annotations
 
 from cube.domain.algs import Algs, Alg
-from cube.domain.model import Color
+from cube.domain.model import Color, Corner
 from cube.domain.model.Face import Face
 from cube.domain.solver._2x2_beginner._l3_utils import find_yellow_color, find_white_face, bring_white_to_down
 from cube.domain.solver.AnnWhat import AnnWhat
@@ -150,11 +150,11 @@ class L3Permute(StepSolver):
         # After 4 U rotations we're back to the original state
         return False
 
-    def _corner_in_position(self, top_corner: object, bottom_corner: object,
+    def _corner_in_position(self, top_corner: Corner, bottom_corner: Corner,
                             white_color: Color, yellow_color: Color) -> bool:
         """Check if a single top corner matches the bottom corner below it."""
-        tc_colors: frozenset[Color] = top_corner.colors_id - {yellow_color}  # type: ignore[union-attr]
-        bc_colors: frozenset[Color] = bottom_corner.colors_id - {white_color}  # type: ignore[union-attr]
+        tc_colors: frozenset[Color] = top_corner.colors_id - {yellow_color}
+        bc_colors: frozenset[Color] = bottom_corner.colors_id - {white_color}
         return tc_colors == bc_colors
 
     def _all_in_position(
