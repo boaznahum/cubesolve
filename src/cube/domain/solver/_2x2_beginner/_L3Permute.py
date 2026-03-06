@@ -72,7 +72,7 @@ class L3Permute(StepSolver):
 
         yellow_face: Face = white_face.opposite
 
-        return self._is_u_aligned(yellow_face, white_face, white_color, yellow_color)
+        return self._is_u_aligned(yellow_face, white_face, white_color, yellow_color) >= 0
 
     def solve(self) -> None:
         """Permute last-layer corners into correct positions."""
@@ -157,14 +157,21 @@ class L3Permute(StepSolver):
         raise AssertionError("No corner found in position after 4 U rotations")
 
     def _is_u_aligned(self, up: Face, down: Face,
-                      white_color: Color, yellow_color: Color) -> bool:
-        """Check if any U rotation aligns top with bottom. No moves made."""
+                      white_color: Color, yellow_color: Color) -> int:
+        """Check if any U rotation aligns top with bottom. No moves made.
+
+        :return >= 0 if is aligned the number o required rotations to align
+        """
+
+        n = 0
         with self.op.with_query_restore_state():
             for _ in range(4):
                 if self._all_in_position(up, down, white_color, yellow_color):
-                    return True
+                    return n
                 self.op.play(Algs.U)
-        return False
+                n += 1
+
+            return -1
 
     def _try_u_alignment(self, up: Face, down: Face,
                          white_color: Color, yellow_color: Color) -> bool:
@@ -184,7 +191,7 @@ class L3Permute(StepSolver):
 
 
         # After 4 U rotations we're back to the original state
-        n = _try()
+        n = self._is_u_aligned(up, down, white_color, yellow_color)
         if n < 0:
             return False
         else:
