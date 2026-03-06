@@ -173,6 +173,13 @@ if (window.visualViewport) {
 // Delayed resize — catches late CSS flex layout on iOS first load
 requestAnimationFrame(() => requestAnimationFrame(resize));
 
+// Reset camera and resize on every WebSocket (re)connection
+wsClient.onConnected = () => {
+    controls.reset();
+    _lastAspect = 0;  // force fitToView recalc
+    resize();
+};
+
 // ── Message handler ──
 function handleMessage(msg) {
     switch (msg.type) {
