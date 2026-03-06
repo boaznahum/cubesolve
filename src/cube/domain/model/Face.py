@@ -417,8 +417,10 @@ class Face(SuperElement, Hashable):
         self._color_provider = provider
 
     def __str__(self) -> str:
-        # return f"{self._center.edg().color.name}/{self._original_color.name}@{self._name.value}"
-        return f"{self.color.name}@{self._name.value}"
+        c = self.color
+        if c == Color.UNCOLORED:
+            return self._name.value
+        return f"{c.name}@{self._name.value}"
 
     def __repr__(self):
         return self.__str__()
