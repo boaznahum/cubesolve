@@ -87,10 +87,6 @@ class _2x2L1Corners(SolverHelper):
 
         with self.ann.annotate(h1="Doing L1 Corners"):
 
-            # in 2x2 we dont have faces colors so we just bring all up
-            # we will optimize it to first bring the most solved face up
-            #self.cmn.bring_face_up(self.white_face)
-
             self._do_corners()
 
     def _do_corners(self) -> None:
