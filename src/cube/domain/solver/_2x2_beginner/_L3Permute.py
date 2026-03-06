@@ -87,10 +87,13 @@ class L3Permute(StepSolver):
     def _align_u_layer(self) -> None:
         """Align top layer with bottom using U rotations."""
         white_color: Color = self.cmn.white
-        yellow_color: Color = find_yellow_color(self.cube, white_color)
         white_face: Face | None = find_white_face(self.cube, white_color)
-        if white_face is None:
-            return
+
+        yellow_color: Color = find_yellow_color(self.cube, white_color)
+
+
+        assert white_face is not None  # we must reach here after L1 is solved
+
         yellow_face: Face = white_face.opposite
         self._try_u_alignment(yellow_face, white_face, white_color, yellow_color)
 
@@ -166,12 +169,28 @@ class L3Permute(StepSolver):
     def _try_u_alignment(self, up: Face, down: Face,
                          white_color: Color, yellow_color: Color) -> bool:
         """Apply U rotations to align top layer with bottom. Returns True if aligned."""
-        for _ in range(4):
-            if self._all_in_position(up, down, white_color, yellow_color):
-                return True
-            self.op.play(Algs.U)
+
+        def _try() -> int:
+
+            n = 0
+            with self.op.with_query_restore_state():
+                for _ in range(4):
+                    if self._all_in_position(up, down, white_color, yellow_color):
+                        return n
+                    self.op.play(Algs.U)
+                    n += 1
+
+                return -1
+
+
         # After 4 U rotations we're back to the original state
-        return False
+        n = _try()
+        if n < 0:
+            return False
+        else:
+            self.op.play( (Algs.U * n).simplify())
+            return True
+
 
     def _corner_in_position(self, top_corner: Corner, bottom_corner: Corner,
                             white_color: Color, yellow_color: Color) -> bool:
