@@ -2068,6 +2068,10 @@ class Cube(CubeSupplier):
         # Validate
         assert self.is_sanity(force_check=True), "Invalid cube state after set_3x3_colors"
 
+    @property
+    def in_query_mode(self):
+        return self._in_query_mode
+
 
 def _create_edge(edges: list[Edge], f1: Face, f2: Face, right_top_left_same_direction: bool) -> Edge:
     """

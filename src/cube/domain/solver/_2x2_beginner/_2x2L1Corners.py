@@ -36,34 +36,54 @@ class _2x2L1Corners(SolverHelper):
         super().__init__(slv, "_2x2L1Corners")
 
 
-    def is_corners(self) -> bool:
+    def is_corners(self) -> Face | None:
         """Check if Layer 1 corners are solved.
 
         Checks directly — no U rotations or cube moves needed:
         1. All 4 top-layer corners have white facing up
         2. Adjacent corners share the same side color
+
+        We start with white but later we will search for any color, the best color
+
+        :return the solved Face
         """
 
         white_color: Color = self.cmn.white
         cube = self.cube
-        up: Face = cube.up
 
-        # All 4 corners on up face must have white facing up
-        if not all(c.face_color(up) == white_color
-                   for c in [cube.flu, cube.fru, cube.bru, cube.blu]):
-            return False
+        for face in cube.faces:
 
-        # Adjacent corners must share side colors
-        return (cube.flu.face_color(cube.front) == cube.fru.face_color(cube.front)
-                and cube.fru.face_color(cube.right) == cube.bru.face_color(cube.right)
-                and cube.bru.face_color(cube.back) == cube.blu.face_color(cube.back)
-                and cube.blu.face_color(cube.left) == cube.flu.face_color(cube.left))
+            # All 4 corners on up face must have white facing up
+            face_corners = face.corners
+            if not all(c.face_color(face) == white_color
+                       for c in face_corners):
+
+                continue # this face is not solved
+
+            adjusted_faces = face.adjusted_faces()
+
+            for adjust in adjusted_faces:
+
+                corners_on_adjusted = [ c for c in adjust.corners if c.on_face(face) ]
+
+                assert len(corners_on_adjusted) == 2
+
+
+                # all colors on adjusted face must be the same
+                if corners_on_adjusted[0].face_color(adjust) != corners_on_adjusted[1].face_color(adjust):
+                    continue
+
+            # this is solved face !!!
+            return face
+        return None  # no solved Face
 
 
     def solve(self) -> None:
         """Solve Layer 1 corners using the beginner method."""
 
-        if self.is_corners():
+        solved_face = self.is_corners()
+
+        if solved_face:
             return
 
         with self.ann.annotate(h1="Doing L1 Corners"):

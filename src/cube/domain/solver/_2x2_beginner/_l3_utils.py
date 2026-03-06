@@ -6,6 +6,8 @@ and positioning the cube with white on DOWN / yellow on UP.
 
 from __future__ import annotations
 
+
+
 from cube.domain.exceptions import InternalSWError
 from cube.domain.model import Color
 from cube.domain.model.Cube import Cube
@@ -19,20 +21,29 @@ def find_yellow_color(cube: Cube, white_color: Color) -> Color:
     Yellow is the only color that never shares a corner with white.
     On a standard cube there are 6 colors; 4 corners contain white,
     covering white + 4 side colors. The 6th color is yellow.
-    """
-    colors_with_white: set[Color] = set()
-    all_colors: set[Color] = set()
-    for corner in cube.corners:
-        cid = corner.colors_id
-        all_colors |= cid
-        if white_color in cid:
-            colors_with_white |= cid
 
-    yellow_candidates = all_colors - colors_with_white
-    assert len(yellow_candidates) == 1, (
-        f"Expected 1 yellow candidate, got {yellow_candidates}"
-    )
-    return next(iter(yellow_candidates))
+
+    """
+
+    scheme = cube.original_scheme
+
+    return scheme.opposite_color(white_color)
+
+    # why so complicated ?!!!
+
+    # colors_with_white: set[Color] = set()
+    # all_colors: set[Color] = set()
+    # for corner in cube.corners:
+    #     cid = corner.colors_id
+    #     all_colors |= cid
+    #     if white_color in cid:
+    #         colors_with_white |= cid
+    #
+    # yellow_candidates = all_colors - colors_with_white
+    # assert len(yellow_candidates) == 1, (
+    #     f"Expected 1 yellow candidate, got {yellow_candidates}"
+    # )
+    # return next(iter(yellow_candidates))
 
 
 def find_white_face(cube: Cube, white_color: Color) -> Face | None:
