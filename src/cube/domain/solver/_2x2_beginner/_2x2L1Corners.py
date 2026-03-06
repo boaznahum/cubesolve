@@ -8,6 +8,11 @@ from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.protocols import SolverElementsProvider
 
 
+def _cid(colors: PartColorsID) -> str:
+    """Format a corner colors_id as short color names, e.g. 'Wh,Bl,Re'."""
+    return ",".join(c.value for c in colors)
+
+
 class _2x2L1Corners(SolverHelper):
     """Layer 1 corner solver for 2x2 cubes (beginner method).
 
@@ -114,7 +119,7 @@ class _2x2L1Corners(SolverHelper):
             first_color_id: PartColorsID = first_corner.colors_id
 
             # ok now we need to bring it
-            with self._logger.tab(lambda : f"Bringing first reference {first_color_id} to FLU"):
+            with self._logger.tab(lambda : f"Bringing first reference {_cid(first_color_id)} to FLU"):
                 self._bring_corner_face_to_flu_color_up(first_color_id, white_color)
 
 
@@ -208,8 +213,8 @@ class _2x2L1Corners(SolverHelper):
 
         with self.ann.annotate(
                 (source_corner_id, AnnWhat.Moved), (self.cube.fru, AnnWhat.FixedPosition),
-                h2=lambda: f"Bringing {source_corner_id} to FRU"
-        ), self._logger.tab(lambda : f"Solving FRU <-- {[*source_corner_id]}"):
+                h2=lambda: f"Bringing {_cid(source_corner_id)} to FRU"
+        ), self._logger.tab(lambda : f"Solving FRU <-- {_cid(source_corner_id)}"):
 
 
             _source_corner: Corner | None = None
