@@ -61,6 +61,7 @@ class L3Permute(StepSolver):
 
         Ignores orientation — only checks that each top corner's
         non-yellow colors match the bottom corner below it.
+        Uses query mode so no moves are visible.
         """
         white_color: Color = self.cmn.white
         yellow_color: Color = find_yellow_color(self.cube, white_color)
@@ -71,15 +72,27 @@ class L3Permute(StepSolver):
 
         yellow_face: Face = white_face.opposite
 
-        return self._try_u_alignment(yellow_face, white_face, white_color, yellow_color)
+        return self._is_u_aligned(yellow_face, white_face, white_color, yellow_color)
 
     def solve(self) -> None:
         """Permute last-layer corners into correct positions."""
         if self.is_solved:
+            # Corners are in position but may need U-alignment
+            self._align_u_layer()
             return
 
         with self.ann.annotate(h1="Doing L3 Permute"):
             self._solve()
+
+    def _align_u_layer(self) -> None:
+        """Align top layer with bottom using U rotations."""
+        white_color: Color = self.cmn.white
+        yellow_color: Color = find_yellow_color(self.cube, white_color)
+        white_face: Face | None = find_white_face(self.cube, white_color)
+        if white_face is None:
+            return
+        yellow_face: Face = white_face.opposite
+        self._try_u_alignment(yellow_face, white_face, white_color, yellow_color)
 
     def _solve(self) -> None:
         white_color: Color = self.cmn.white
@@ -140,9 +153,19 @@ class L3Permute(StepSolver):
 
         raise AssertionError("No corner found in position after 4 U rotations")
 
+    def _is_u_aligned(self, up: Face, down: Face,
+                      white_color: Color, yellow_color: Color) -> bool:
+        """Check if any U rotation aligns top with bottom. No moves made."""
+        with self.op.with_query_restore_state():
+            for _ in range(4):
+                if self._all_in_position(up, down, white_color, yellow_color):
+                    return True
+                self.op.play(Algs.U)
+        return False
+
     def _try_u_alignment(self, up: Face, down: Face,
                          white_color: Color, yellow_color: Color) -> bool:
-        """Try U rotations to align top layer with bottom. Return True if aligned."""
+        """Apply U rotations to align top layer with bottom. Returns True if aligned."""
         for _ in range(4):
             if self._all_in_position(up, down, white_color, yellow_color):
                 return True
