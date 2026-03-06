@@ -386,7 +386,10 @@ class Face(SuperElement, Hashable):
         Returns:
             String in format "COLOR@FACE" like "WHITE@D"
         """
-        return f"{self.color}@{self.name}"
+        c = self.color
+        if c == Color.UNCOLORED:
+            return self._name.value
+        return f"{c}@{self._name.value}"
 
 
     @property
