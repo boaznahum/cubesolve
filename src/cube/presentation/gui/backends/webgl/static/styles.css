@@ -714,22 +714,19 @@ body {
    Mobile / Tablet
    ============================================================ */
 @media (max-width: 768px) {
-    html, body {
-        overflow: hidden;
-        overscroll-behavior: none;
-    }
-
     body {
         align-items: flex-start;
+        overflow: hidden;
+        height: 100vh;
         height: 100dvh;
     }
 
     #app-layout {
         padding: 2px 2px;
         gap: 4px;
+        height: 100vh;
         height: 100dvh;
         align-items: stretch;
-        overflow: hidden;
     }
 
     /* Narrow history panel on left */
@@ -815,13 +812,11 @@ body {
         min-width: 0;
         display: flex;
         flex-direction: column;
-        overflow: hidden;
     }
 
     #canvas-wrapper {
         flex: 1;
         min-height: 0;
-        overflow: hidden;
     }
 
     #status {
@@ -829,11 +824,6 @@ body {
         margin-top: 2px;
         text-align: center;
         opacity: 0.6;
-        flex-shrink: 0;
-    }
-
-    #seo-tagline {
-        flex-shrink: 0;
     }
 
     /* Toolbar: multi-row wrapping */
