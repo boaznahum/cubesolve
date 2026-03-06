@@ -722,11 +722,12 @@ body {
     }
 
     #app-layout {
-        padding: 2px 2px;
+        padding: 2px;
         gap: 4px;
         height: 100vh;
         height: 100dvh;
         align-items: stretch;
+        max-width: 100vw;
     }
 
     /* Narrow history panel on left */
@@ -828,8 +829,8 @@ body {
 
     /* Toolbar: multi-row wrapping */
     #toolbar {
-        padding: 4px 6px;
-        gap: 3px;
+        padding: 3px 2px;
+        gap: 2px;
         flex-wrap: wrap;
         justify-content: center;
     }
@@ -839,11 +840,11 @@ body {
     }
 
     .tb-group {
-        flex-shrink: 0;
+        gap: 2px;
     }
 
     .tb-btn {
-        padding: 4px 6px;
+        padding: 3px 5px;
         font-size: 11px;
     }
 
