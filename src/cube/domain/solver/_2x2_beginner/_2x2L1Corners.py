@@ -36,96 +36,96 @@ class _2x2L1Corners(SolverHelper):
         super().__init__(slv, "_2x2L1Corners")
 
 
-    def is_corners(self) -> bool:
-        """Check if Layer 1 corners are solved, accounting for whole-layer rotation.
+    def is_corners(self) -> Face | None:
+        """Check if Layer 1 corners are solved.
 
-        This method handles a rare edge case (~1 in 5000 solves) where the four
-        corners are correctly positioned and oriented relative to each other, but
-        the entire Layer 1 (including the cross) is rotated by 90°, 180°, or 270°
-        relative to the rest of the cube.
+        Checks directly — no U rotations or cube moves needed:
+        1. All 4 top-layer corners have white facing up
+        2. Adjacent corners share the same side color
 
-        The method tries all four possible rotations (0°, 90°, 180°, 270°) and
-        returns true if ANY rotation results in both corners AND cross being
-        correctly aligned. This prevents false positives where corners appear
-        solved but the layer needs rotation to align the cross with middle layer.
+        We start with white but later we will search for any color, the best color
 
-        Args:
-
-        Returns:
-            True if corners are solved (possibly after layer rotation to align cross).
-            False if corners need solving.
-
-        Note:
-            This happens during big cube Layer-by-Layer solving when centers and
-            edges are solved independently before corners, allowing the whole layer
-            to end up rotated while corners remain correctly positioned.
+        :return the solved Face
         """
 
-        # not true, maybe it is not on up face !!!
         white_color: Color = self.cmn.white
+        cube = self.cube
 
-        with self.op.with_query_restore_state():
-            for i in range(4):
-                if not self._is_fru_solved(white_color):
-                    return False
-                if i < 3:
-                    self.op.play(Algs.U)
+        for face in cube.faces:
 
-        return True
+            # All 4 corners on up face must have white facing up
+            face_corners = face.corners
+            if not all(c.face_color(face) == white_color
+                       for c in face_corners):
+
+                continue # this face is not solved
+
+            adjusted_faces = face.adjusted_faces()
+
+            for adjust in adjusted_faces:
+
+                corners_on_adjusted = [ c for c in adjust.corners if c.on_face(face) ]
+
+                assert len(corners_on_adjusted) == 2
+
+
+                # all colors on adjusted face must be the same
+                if corners_on_adjusted[0].face_color(adjust) != corners_on_adjusted[1].face_color(adjust):
+                    continue
+
+            # this is solved face !!!
+            return face
+        return None  # no solved Face
 
 
     def solve(self) -> None:
-        """Solve Layer 1 corners using the beginner method.
+        """Solve Layer 1 corners using the beginner method."""
 
-        Positions and orients all four Layer 1 corners correctly. Must be called
-        AFTER the Layer 1 cross is solved, as corner solving preserves the cross.
+        solved_face = self.is_corners()
 
-        Args:
-
-        Note:
-            If corners are already solved (checked via is_corners()), this method
-            returns immediately without making any moves.
-        """
-
-        if self.is_corners():
+        if solved_face:
             return
 
-
         with self.ann.annotate(h1="Doing L1 Corners"):
-
             self._do_corners()
 
     def _do_corners(self) -> None:
         """Solve all four L1 corners using a reference-corner approach.
 
-        Since a 2x2 cube has no fixed centers, there are no predefined face colors.
-        Instead, this method picks an arbitrary corner containing the white color as
-        a reference, positions it at FLU with white facing up, then solves the
-        remaining three corners (FRU) one at a time by rotating U between solves.
+        Algorithm:
+          1. Find the face with the most white stickers facing it (prefer up).
+          2. Bring that face to up via whole-cube rotation.
+          3. Pick a corner on up that already has white facing up as reference.
+          4. U-rotate the reference corner to FLU.
+          5. Fix FRU three times, rotating U between fixes.
         """
 
         white_color: Color = self.cmn.white
+        cube = self.cube
 
-        with self._logger.tab(lambda : f"Doing L1 {white_color}  Corners"):
+        with self._logger.tab(lambda: f"Doing L1 {white_color} Corners"):
 
+            # Step 1: Find face with most white stickers facing it
+            best_face: Face = self._find_best_white_face(white_color)
 
-            # In 2x2 we don't have face colors, so what we have to do is to pick reference corenr and
-            # solve all according to it
-            # this is very not efficiency, but is a start
+            # Step 2: Bring to up if not already
+            if best_face is not cube.up:
+                with self._logger.tab(lambda: f"Bringing {best_face} to up"):
+                    result: list[tuple[WholeCubeAlg, int, Alg]] = \
+                        Face2FaceTranslator.derive_whole_cube_alg_source_to_target(
+                            cube.layout, best_face.name, cube.up.name)
+                    assert result
+                    self.op.play(result[0][2].simplify())
 
-            # in optimization, we will try to find one that already face up on top
-            first_corner = self.cube.cqr.find_corner(lambda c: white_color in c.colors_id)
+            # Step 3: Pick reference corner — one already on up with white facing up
+            ref_corner: Corner = self._find_reference_corner_on_up(white_color)
+            ref_id: PartColorsID = ref_corner.colors_id
 
-            first_color_id: PartColorsID = first_corner.colors_id
+            # Step 4: Bring reference to FLU (just U rotation)
+            with self._logger.tab(lambda: f"Reference {_cid(ref_id)} to FLU"):
+                self._u_rotate_corner_to_flu(ref_corner)
 
-            # ok now we need to bring it
-            with self._logger.tab(lambda : f"Bringing first reference {_cid(first_color_id)} to FLU"):
-                self._bring_corner_face_to_flu_color_up(first_color_id, white_color)
-
-
-
-            # so what left to be done
-            # we need three time to fix the FRU corner in which the FLU is reference
+            # Step 5: Fix FRU 3 times with U between
             for _ in range(2):
                 self._solve_fru_corner(white_color)
                 self.op.play(Algs.U)
@@ -133,6 +133,48 @@ class _2x2L1Corners(SolverHelper):
             # third time
             self._solve_fru_corner(white_color)
 
+    def _find_best_white_face(self, white_color: Color) -> Face:
+        """Find the face with the most corners having white facing it.
+
+        On ties, prefers the current up face (avoids whole-cube rotation).
+        """
+        cube = self.cube
+        best_face: Face = cube.up
+        best_count: int = 0
+
+        for face in cube.faces:
+            corners: list[Corner] = [face.corner_top_left, face.corner_top_right,
+                                     face.corner_bottom_left, face.corner_bottom_right]
+            count: int = sum(1 for c in corners if c.face_color(face) == white_color)
+            # Prefer up face on ties (no rotation needed)
+            if count > best_count or (count == best_count and face is cube.up):
+                best_count = count
+                best_face = face
+
+        return best_face
+
+    def _find_reference_corner_on_up(self, white_color: Color) -> Corner:
+        """Find a corner on up face with white facing up."""
+        up: Face = self.cube.up
+        for corner in [up.corner_bottom_left, up.corner_bottom_right,
+                       up.corner_top_left, up.corner_top_right]:
+            if corner.face_color(up) == white_color:
+                return corner
+        raise InternalSWError("No corner with white facing up after face selection")
+
+    def _u_rotate_corner_to_flu(self, corner: Corner) -> None:
+        """Bring a corner on the up face to FLU with just a U rotation."""
+        cube = self.cube
+        if corner is cube.flu:
+            pass
+        elif corner is cube.fru:
+            self.op.play(Algs.U)
+        elif corner is cube.bru:
+            self.op.play(Algs.U * 2)
+        elif corner is cube.blu:
+            self.op.play(Algs.U.prime)
+        else:
+            raise InternalSWError(f"Corner {corner} not on up face")
 
     def _is_fru_solved(self, white_color: Color) -> bool:
         """Check whether the FRU corner is correctly solved relative to the FLU reference.
@@ -256,14 +298,11 @@ class _2x2L1Corners(SolverHelper):
 
             assert self._is_fru_solved(white_color)
 
-    def _bring_top_corner_to_f_r_d(self, c: Corner):
-        """
-        Preservers top layer cross
-        doesn't preserve bottom layer
-        we assume corner is on top
+    def _bring_top_corner_to_f_r_d(self, c: Corner) -> None:
+        """Bring a top-layer corner down to FRD.
 
-        :param c:
-        :return:
+        Preserves top layer (except FRU slot).
+        Doesn't preserve bottom layer.
         """
 
         wf: Face = self.cube.up
@@ -287,17 +326,13 @@ class _2x2L1Corners(SolverHelper):
             raise ValueError(f"{c} is not on {wf}")
 
         c = self.cube.find_corner_by_colors(saved_id)
-        # now it is on button
+        # now it is on bottom
         self._bring_bottom_corner_to_f_r_d(c)
 
-    def _bring_bottom_corner_to_f_r_d(self, c: Corner):
-        """
-        doesn't preserve bottom layer
+    def _bring_bottom_corner_to_f_r_d(self, c: Corner) -> None:
+        """Bring a bottom-layer corner to FRD via D rotations.
 
-        Corner is on button need some D rotations to bring it to FRD position
-
-        :param c:
-        :return:
+        Doesn't preserve bottom layer.
         """
 
         f: Face = self.cube.down
@@ -317,86 +352,3 @@ class _2x2L1Corners(SolverHelper):
 
         else:
             raise ValueError(f"{c} is not on {f}")
-
-    def _bring_corner_face_to_flu_color_up(self, corner_id: PartColorsID, required_color: Color):
-
-        """
-        Position a corner at FLU with the required color facing up.
-
-        Uses whole-cube rotations to orient the cube so that the face currently
-        holding ``required_color`` becomes the Up face, then rotates U to place
-        the corner at FLU. Verifies the result with assertions before returning.
-
-        Algorithm (iterative, max 3 attempts):
-          1. Find the corner by its color-id (position may change between iterations
-             due to whole-cube rotations).
-          2. If ``required_color`` is already on the Up face:
-             - Rotate U to move the corner to FLU (U', U2, or U depending on position).
-             - Assert the corner is at FLU with the correct color facing up.
-             - Return.
-          3. Otherwise, determine which face ``required_color`` is currently on,
-             use ``Face2FaceTranslator`` to derive a whole-cube rotation that maps
-             that face to Up, apply the simplified alg, and retry from step 1.
-
-        :param corner_id: The color-id that uniquely identifies the corner.
-        :param required_color: The color that must end up on the Up face.
-        :raises InternalSWError: If the corner cannot be positioned within 3 iterations.
-        """
-
-        cube = self.cube
-        target_face: Face = cube.up
-
-        assert required_color in corner_id
-
-
-        iteration = 0
-        while iteration < 3:
-            iteration += 1
-
-
-            corner: Corner = cube.find_corner_by_colors(corner_id)
-
-
-            # if it is already on up, just make sure color is up
-            if corner.is_face_color(target_face) is required_color:
-                # now just need to rotate
-                # on which corner it ?
-
-                if corner is cube.flu:
-                    pass
-                elif corner is cube.blu:
-                    self.op.play(Algs.U.prime)
-                elif corner is cube.bru:
-                    self.op.play(Algs.U*2)
-                elif corner is cube.fru:
-                    self.op.play(Algs.U)
-                else:
-                    raise InternalSWError(f"How can it be ? {corner} is not on {target_face}")
-
-                corner = cube.find_corner_by_colors(corner_id)
-                assert corner is cube.flu
-                assert corner.is_face_color(target_face) is required_color
-
-                return None
-
-            else:
-
-                # must find see assert above
-                on_face = corner.face_of_actual_color(required_color)
-
-                # it is on different face
-                result: list[tuple[WholeCubeAlg, int, Alg]] = Face2FaceTranslator.derive_whole_cube_alg_source_to_target(self.cube.layout, on_face.name, target_face.name)
-
-                assert result
-                alg: Alg = result[0][2].simplify()
-                self.op.play(alg)
-                continue # try again
-
-        raise InternalSWError("Too many iterations")
-
-
-
-
-
-
-

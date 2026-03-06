@@ -12,6 +12,7 @@ is needed.
 
 from __future__ import annotations
 
+from cube.domain.model import Face
 from cube.domain.solver._2x2_beginner._2x2L1Corners import _2x2L1Corners
 from cube.domain.solver.common.SolverHelper import StepSolver
 from cube.domain.solver.protocols import SolverElementsProvider
@@ -24,21 +25,26 @@ class L1(StepSolver):
     colors only — no face color provider required.
     """
 
-    __slots__: list[str] = []
+    __slots__: list[str] = ["_l1_corners"]
 
     def __init__(self, slv: SolverElementsProvider) -> None:
         super().__init__(slv, "L1")
 
+        self._l1_corners = _2x2L1Corners(self)
+
     @property
     def is_solved(self) -> bool:
         """Check if all 4 first-layer corners are correctly placed and oriented."""
-        l1_corners = _2x2L1Corners(self)
-        return l1_corners.is_corners()
+        return self._l1_corners.is_corners() is not None
+
+    def solved_face(self) -> Face | None:
+
+        return self._l1_corners.is_corners()
+
 
     def solve(self) -> None:
         """Solve the first layer (4 corners)."""
         if self.is_solved:
             return
 
-        l1_corners = _2x2L1Corners(self)
-        l1_corners.solve()
+        self._l1_corners.solve()
