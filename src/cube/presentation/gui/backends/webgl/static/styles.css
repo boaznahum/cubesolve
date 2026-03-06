@@ -714,24 +714,19 @@ body {
    Mobile / Tablet
    ============================================================ */
 @media (max-width: 768px) {
-    html, body {
-        overflow: hidden;
-        overscroll-behavior: none;
-        touch-action: manipulation;
-    }
-
     body {
         align-items: flex-start;
-        height: 100%;
+        overflow: hidden;
+        height: 100vh;
+        height: 100dvh;
     }
 
     #app-layout {
-        position: fixed;
-        inset: 0;
         padding: 2px 2px;
         gap: 4px;
+        height: 100vh;
+        height: 100dvh;
         align-items: stretch;
-        overflow: hidden;
     }
 
     /* Narrow history panel on left */
