@@ -24,6 +24,7 @@ from cube.domain.algs import Algs, Alg
 from cube.domain.model import Color
 from cube.domain.model.Face import Face
 from cube.domain.solver._2x2_beginner._l3_utils import find_yellow_color, find_white_face, bring_white_to_down
+from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.SolverHelper import StepSolver
 from cube.domain.solver.protocols import SolverElementsProvider
 
@@ -97,20 +98,31 @@ class L3Permute(StepSolver):
         self._bring_correct_to_flu(up, down, white_color, yellow_color)
 
         # Step 2: Apply 3-cycle until BLU is in position (max 2)
-        for _ in range(2):
-            if self._corner_in_position(up.corner_top_left, down.corner_bottom_left,
-                                        white_color, yellow_color):
-                break
-            self.op.play(self._CYCLE)
+        with self.ann.annotate(
+                (up.corner_top_right, AnnWhat.Moved),
+                (up.corner_top_left, AnnWhat.Moved),
+                (up.corner_bottom_right, AnnWhat.Moved),
+                h2="Cycling corners",
+        ):
+            for _ in range(2):
+                if self._corner_in_position(up.corner_top_left, down.corner_bottom_left,
+                                            white_color, yellow_color):
+                    break
+                self.op.play(self._CYCLE)
 
         assert self._corner_in_position(up.corner_top_left, down.corner_bottom_left,
                                         white_color, yellow_color), "BLU not in position after cycling"
 
         # Step 3: If FRU and BRU are swapped, do U swap U' to bring them to front
         if not self._all_in_position(up, down, white_color, yellow_color):
-            self.op.play(Algs.U)
-            self.op.play(self._SWAP)
-            self.op.play(Algs.U.prime)
+            with self.ann.annotate(
+                    (up.corner_bottom_right, AnnWhat.Moved),
+                    (up.corner_top_right, AnnWhat.Moved),
+                    h2="Swapping corners",
+            ):
+                self.op.play(Algs.U)
+                self.op.play(self._SWAP)
+                self.op.play(Algs.U.prime)
 
         # Step 4: U-align
         assert self._try_u_alignment(up, down, white_color, yellow_color), (

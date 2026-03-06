@@ -156,28 +156,29 @@ class Face(SuperElement, Hashable):
         self._init_finished = True
 
 
-        if n == 0:
-            # 2x2: no edges or centers to set markers on
-            return
-
         markers_cfg = self.config.markers_config
-        draw_markers = markers_cfg.GUI_DRAW_MARKERS
-        sample_markers = markers_cfg.GUI_DRAW_SAMPLE_MARKERS
         draw_ltr_cords = markers_cfg.GUI_DRAW_LTR_ORIGIN_ARROWS
         mf = self.cube.sp.marker_factory
         mm = self.cube.sp.marker_manager
 
+        if draw_ltr_cords:
+            # Origin marker on bottom-left corner (works for all cube sizes including 2x2)
+            corner_bl = self._corner_bottom_left.slice.get_face_edge(self)
+            mm.add_fixed_marker(corner_bl, "ltr_origin", mf.ltr_origin())
+
+        if n == 0:
+            # 2x2: no edges or centers — remaining markers need edges/centers
+            return
+
+        draw_markers = markers_cfg.GUI_DRAW_MARKERS
+        sample_markers = markers_cfg.GUI_DRAW_SAMPLE_MARKERS
+
         n1 = n - 1
 
         if draw_ltr_cords:
-            # LTR Coordinate System Markers:
-            # - Origin (bottom-left corner): filled black circle
+            # LTR Coordinate System Markers (edge-based — 3x3+ only):
             # - X-axis (bottom edge, pointing right): red arrow
             # - Y-axis (left edge, pointing up): blue arrow
-
-            # Origin marker on bottom-left corner
-            corner_bl = self._corner_bottom_left.slice.get_face_edge(self)
-            mm.add_fixed_marker(corner_bl, "ltr_origin", mf.ltr_origin())
 
             # X-axis arrow on bottom edge (LTR index 0 = nearest to origin)
             # Each edge has its own conversion - use the specific edge's method

@@ -23,6 +23,7 @@ from cube.domain.algs import Algs, Alg
 from cube.domain.model import Color
 from cube.domain.model.Face import Face
 from cube.domain.solver._2x2_beginner._l3_utils import find_yellow_color, find_white_face, bring_white_to_down
+from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.SolverHelper import StepSolver
 from cube.domain.solver.protocols import SolverElementsProvider
 
@@ -78,10 +79,11 @@ class L3Orient(StepSolver):
 
         for _ in range(4):
             # Twist FRU until yellow faces up (max 2 twists needed)
-            for _ in range(3):
-                if self.cube.fru.face_color(up) == yellow_color:
-                    break
-                self.op.play(twist)
+            with self.ann.annotate((up.corner_bottom_right, AnnWhat.Both)):
+                for _ in range(3):
+                    if self.cube.fru.face_color(up) == yellow_color:
+                        break
+                    self.op.play(twist)
 
             assert self.cube.fru.face_color(up) == yellow_color
 

@@ -3,6 +3,7 @@ from cube.domain.exceptions import InternalSWError
 from cube.domain.geometric.Face2FaceTranslator import Face2FaceTranslator
 from cube.domain.model import Corner, PartColorsID, Color
 from cube.domain.model.Face import Face
+from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.protocols import SolverElementsProvider
 
@@ -205,7 +206,10 @@ class _2x2L1Corners(SolverHelper):
 
         source_corner_id: PartColorsID = source_corner.colors_id
 
-        with self._logger.tab(lambda : f"Solving FRU <-- {[*source_corner_id]}"):
+        with self.ann.annotate(
+                (source_corner_id, AnnWhat.Moved), (self.cube.fru, AnnWhat.FixedPosition),
+                h2=lambda: f"Bringing {source_corner_id} to FRU"
+        ), self._logger.tab(lambda : f"Solving FRU <-- {[*source_corner_id]}"):
 
 
             _source_corner: Corner | None = None
