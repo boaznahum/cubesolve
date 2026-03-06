@@ -1,7 +1,8 @@
-"""Tests for 2x2 beginner solver — Layer 3 (orient + permute).
+"""Tests for 2x2 beginner solver — Layer 3 (permute + orient).
 
-Verifies that L3Orient and L3Permute correctly solve the last layer
+Verifies that L3Permute and L3Orient correctly solve the last layer
 after L1 is solved, across multiple scrambles.
+Order: permute first (position corners), then orient (twist yellow up).
 """
 from __future__ import annotations
 
@@ -27,8 +28,8 @@ ALL_SEEDS: list[int] = SCRAMBLE_SEEDS + ADDITIONAL_SEEDS
 )
 class TestL3:
 
-    def test_l3_orient_solves_after_l1(self, scramble_seed: int) -> None:
-        """After L1 + L3Orient, all top corners should have yellow facing up."""
+    def test_l3_permute_solves_after_l1(self, scramble_seed: int) -> None:
+        """After L1 + L3Permute, all top corners should be in correct positions."""
         app = AbstractApp.create_app(cube_size=2)
         solver = Solver2x2Beginner(app.op, app.op.sp.logger)
 
@@ -36,13 +37,13 @@ class TestL3:
         solver._l1.solve()
         assert solver._l1.is_solved, f"L1 not solved (seed={scramble_seed})"
 
-        solver._l3_orient.solve()
-        assert solver._l3_orient.is_solved, (
-            f"L3 Orient not solved (seed={scramble_seed})"
+        solver._l3_permute.solve()
+        assert solver._l3_permute.is_solved, (
+            f"L3 Permute not solved (seed={scramble_seed})"
         )
 
-    def test_l3_permute_solves_after_orient(self, scramble_seed: int) -> None:
-        """After L1 + L3Orient + L3Permute, all corners should be correct."""
+    def test_l3_orient_solves_after_permute(self, scramble_seed: int) -> None:
+        """After L1 + L3Permute + L3Orient, all corners should have yellow up."""
         app = AbstractApp.create_app(cube_size=2)
         solver = Solver2x2Beginner(app.op, app.op.sp.logger)
 
@@ -50,12 +51,12 @@ class TestL3:
         solver._l1.solve()
         assert solver._l1.is_solved
 
-        solver._l3_orient.solve()
-        assert solver._l3_orient.is_solved
-
         solver._l3_permute.solve()
-        assert solver._l3_permute.is_solved, (
-            f"L3 Permute not solved (seed={scramble_seed})"
+        assert solver._l3_permute.is_solved
+
+        solver._l3_orient.solve()
+        assert solver._l3_orient.is_solved, (
+            f"L3 Orient not solved (seed={scramble_seed})"
         )
 
     def test_full_solve(self, scramble_seed: int) -> None:
@@ -67,7 +68,7 @@ class TestL3:
         assert not app.cube.solved
 
         solver._l1.solve()
-        solver._l3_orient.solve()
         solver._l3_permute.solve()
+        solver._l3_orient.solve()
 
         assert app.cube.solved, f"Cube not solved after full solve (seed={scramble_seed})"

@@ -96,9 +96,9 @@ class Solver2x2Beginner(Solver2x2Base):
         return sr
 
     def _solve_l3(self) -> None:
-        """Solve L3: orient then permute."""
-        self._l3_orient.solve()
+        """Solve L3: permute then orient."""
         self._l3_permute.solve()
+        self._l3_orient.solve()
 
     def _supported_steps_impl(self) -> list[SolveStep]:
         return [SolveStep.L1, SolveStep.L3]

@@ -1,23 +1,21 @@
 """Layer 3 permutation solver for 2x2 beginner method.
 
 Permutes the 4 top-layer corners into their correct positions.
-At this point all corners are already oriented (yellow on top).
-This is the 2x2 equivalent of PLL (Permutation of Last Layer).
+Orientation is ignored — L3Orient runs after this step.
 
 IMPORTANT — No face colors:
     Like all 2x2 solvers, this works entirely with corner sticker colors.
     Never accesses Face.color, self.white_face, match_faces, in_position,
     or any API that reads face colors from centers.
 
-Strategy (bar + adjacent swap):
-1. Find a "bar" — two adjacent UP corners that show the same color
-   on their shared side face.
-2. Position the bar at the BACK using Y rotations.
-3. Apply the swap algorithm: R' F R' B2 R F' R' B2 R2 U'
-4. If no bar found, apply swap once from any angle — a bar will appear.
-5. At most 2 applications needed.
+Strategy (3-cycle + adjacent swap):
+1. U-rotate until FLU corner is in position (always possible on 2x2).
+2. Apply 3-cycle (U R U' L' U R' U' L) until BLU is in position.
+   The 3-cycle leaves FLU fixed, cycles FRU/BRU/BLU. Max 2 applications.
+3. If FRU and BRU are still swapped: U' swap U to fix them.
+4. U-align to match top and bottom layers.
 
-The swap algorithm preserves corner orientation (yellow stays on UP).
+The swap algorithm is: R' F R' B2 R F' R' B2 R2 U'
 """
 
 from __future__ import annotations
@@ -38,7 +36,14 @@ class L3Permute(StepSolver):
 
     __slots__: list[str] = []
 
-    # R' F R' B2 R F' R' B2 R2 U' — adjacent corner swap, preserves orientation
+    # U' L' U R U' L U R' — 3-corner cycle, leaves FLU fixed
+    _CYCLE: Alg = Algs.alg(
+        None,
+        Algs.U.prime, Algs.L.prime, Algs.U, Algs.R,
+        Algs.U.prime, Algs.L, Algs.U, Algs.R.prime,
+    )
+
+    # R' F R' B2 R F' R' B2 R2 U' — adjacent corner swap
     _SWAP: Alg = Algs.alg(
         None,
         Algs.R.prime, Algs.F, Algs.R.prime, Algs.B * 2,
@@ -53,9 +58,8 @@ class L3Permute(StepSolver):
     def is_solved(self) -> bool:
         """Check if all 4 top-layer corners are in correct positions.
 
-        Solved means every side face has all 4 corners showing the same color.
-        Equivalently: each top corner's non-yellow side colors match the
-        bottom corner directly below it.
+        Ignores orientation — only checks that each top corner's
+        non-yellow colors match the bottom corner below it.
         """
         white_color: Color = self.cmn.white
         yellow_color: Color = find_yellow_color(self.cube, white_color)
@@ -66,7 +70,7 @@ class L3Permute(StepSolver):
 
         yellow_face: Face = white_face.opposite
 
-        return self._all_in_position(yellow_face, white_face, white_color, yellow_color)
+        return self._try_u_alignment(yellow_face, white_face, white_color, yellow_color)
 
     def solve(self) -> None:
         """Permute last-layer corners into correct positions."""
@@ -87,28 +91,46 @@ class L3Permute(StepSolver):
         self._do_permute(up, down, white_color, yellow_color)
 
     def _do_permute(self, up: Face, down: Face, white_color: Color, yellow_color: Color) -> None:
-        """Position bar at back and apply swap. At most 2 iterations."""
+        """Place corners using 3-cycle + swap."""
 
-        for _ in range(3):
-            if self._try_u_alignment(up, down, white_color, yellow_color):
-                return
+        # Step 1: U-rotate until FLU is in position (always possible on 2x2)
+        self._bring_correct_to_flu(up, down, white_color, yellow_color)
 
-            # Find a bar (two adjacent UP corners with same color on shared side face)
-            bar_face: Face | None = self._find_bar(up)
+        # Step 2: Apply 3-cycle until BLU is in position (max 2)
+        for _ in range(2):
+            if self._corner_in_position(up.corner_top_left, down.corner_bottom_left,
+                                        white_color, yellow_color):
+                break
+            self.op.play(self._CYCLE)
 
-            if bar_face is not None:
-                # Position the bar at the BACK
-                self._bring_bar_to_back(bar_face)
+        assert self._corner_in_position(up.corner_top_left, down.corner_bottom_left,
+                                        white_color, yellow_color), "BLU not in position after cycling"
 
-            # Apply swap
+        # Step 3: If FRU and BRU are swapped, do U swap U' to bring them to front
+        if not self._all_in_position(up, down, white_color, yellow_color):
+            self.op.play(Algs.U)
             self.op.play(self._SWAP)
+            self.op.play(Algs.U.prime)
 
+        # Step 4: U-align
         assert self._try_u_alignment(up, down, white_color, yellow_color), (
-            "L3 Permute failed after 3 swap applications"
+            "L3 Permute failed"
         )
 
-    def _try_u_alignment(self, up: Face, down: Face, white_color: Color, yellow_color: Color) -> bool:
-        """Try U, U2, U3 rotations to align top layer with bottom. Return True if aligned."""
+    def _bring_correct_to_flu(self, up: Face, down: Face,
+                              white_color: Color, yellow_color: Color) -> None:
+        """U-rotate until FLU corner is in its correct position."""
+        for _ in range(4):
+            if self._corner_in_position(up.corner_bottom_left, down.corner_top_left,
+                                        white_color, yellow_color):
+                return
+            self.op.play(Algs.U)
+
+        raise AssertionError("No corner found in position after 4 U rotations")
+
+    def _try_u_alignment(self, up: Face, down: Face,
+                         white_color: Color, yellow_color: Color) -> bool:
+        """Try U rotations to align top layer with bottom. Return True if aligned."""
         for _ in range(4):
             if self._all_in_position(up, down, white_color, yellow_color):
                 return True
@@ -116,36 +138,12 @@ class L3Permute(StepSolver):
         # After 4 U rotations we're back to the original state
         return False
 
-    def _find_bar(self, up: Face) -> Face | None:
-        """Find a side face where both UP corners show the same color.
-
-        Returns the side face, or None if no bar exists.
-        """
-        cube = self.cube
-        # Check each side face: the two UP corners on that face should match
-        side_faces = [cube.front, cube.right, cube.back, cube.left]
-
-        for sf in side_faces:
-            # Get the two UP corners that touch this side face
-            corners_on_sf = [c for c in up.corners if c.on_face(sf)]
-            assert len(corners_on_sf) == 2
-            c1, c2 = corners_on_sf
-            if c1.face_color(sf) == c2.face_color(sf):
-                return sf
-
-        return None
-
-    def _bring_bar_to_back(self, bar_face: Face) -> None:
-        """Rotate the whole cube so the bar face is at the BACK."""
-        cube = self.cube
-        if bar_face is cube.back:
-            return
-        elif bar_face is cube.right:
-            self.op.play(Algs.Y)
-        elif bar_face is cube.front:
-            self.op.play(Algs.Y * 2)
-        elif bar_face is cube.left:
-            self.op.play(Algs.Y.prime)
+    def _corner_in_position(self, top_corner: object, bottom_corner: object,
+                            white_color: Color, yellow_color: Color) -> bool:
+        """Check if a single top corner matches the bottom corner below it."""
+        tc_colors: frozenset[Color] = top_corner.colors_id - {yellow_color}  # type: ignore[union-attr]
+        bc_colors: frozenset[Color] = bottom_corner.colors_id - {white_color}  # type: ignore[union-attr]
+        return tc_colors == bc_colors
 
     def _all_in_position(
         self, up: Face, down: Face,
@@ -159,6 +157,6 @@ class L3Permute(StepSolver):
             (up.corner_top_left, down.corner_bottom_left),     # BLU / BLD
         ]
         return all(
-            (tc.colors_id - {yellow_color}) == (bc.colors_id - {white_color})
+            self._corner_in_position(tc, bc, white_color, yellow_color)
             for tc, bc in pairs
         )
