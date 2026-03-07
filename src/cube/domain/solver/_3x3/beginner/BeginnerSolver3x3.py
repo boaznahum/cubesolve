@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from cube.domain.model import Color
+from cube.domain.model import Color, Part
+from cube.domain.model.Face import Face
 from cube.domain.solver._3x3.shared.L1Cross import L1Cross
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.protocols import OperatorProtocol
@@ -19,6 +20,58 @@ from ._L1Corners import L1Corners
 from ._L2 import L2
 from ._L3Corners import L3Corners
 from ._L3Cross import L3Cross
+
+
+def _is_cross_on_face(face: Face) -> bool:
+    """Check if L1 cross is solved on face (Co).
+
+    Cross = all 4 edge stickers on face are face color, AND the edge
+    stickers on adjacent faces follow the color scheme (possibly rotated).
+    Uses rotate_face_and_check to handle face rotation.
+    """
+    # Quick: all edge face-side stickers must be face color
+    if not all(e.match_face(face) for e in face.edges):
+        return False
+    # Full: adjacent stickers must match (with rotation)
+    return face.cube.cqr.rotate_face_and_check(
+        face, lambda: Part.all_match_faces(face.edges)
+    ) >= 0
+
+
+def _is_corners_on_face(face: Face, cross_solved: bool) -> bool:
+    """Check if L1 corners are solved on face (Cr).
+
+    Corners = all 4 corner stickers on face are face color, AND corner
+    stickers on adjacent faces match adjacent edges (color scheme).
+    If cross is solved, uses rotate_face_and_check for both cross + corners.
+    """
+    # Quick: all corner face-side stickers must be face color
+    if not all(c.match_face(face) for c in face.corners):
+        return False
+    if cross_solved:
+        # Verify corners align with cross (same rotation)
+        return face.cube.cqr.rotate_face_and_check(
+            face, lambda: Part.all_match_faces(face.edges) and Part.all_match_faces(face.corners)
+        ) >= 0
+    # Corners only (no cross) — check corners alone with rotation
+    return face.cube.cqr.rotate_face_and_check(
+        face, lambda: Part.all_match_faces(face.corners)
+    ) >= 0
+
+
+def _is_l2_solved(l1_face: Face) -> bool:
+    """Check if L2 edges are solved relative to given L1 face.
+
+    L2 edges = edges between adjacent faces that are NOT on L1 or L1.opposite.
+    Each edge must have both stickers matching their respective faces.
+    """
+    opposite = l1_face.opposite
+    for adj_face in l1_face.adjusted_faces():
+        for e in adj_face.edges:
+            if not e.on_face(l1_face) and not e.on_face(opposite):
+                if not e.match_faces:
+                    return False
+    return True
 
 
 class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
@@ -149,40 +202,57 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
     def status_3x3(self) -> str:
         """Human-readable 3x3 solving status.
 
-        Finds the best L1 face first, then checks L2/L3 relative to it.
-        All checks use face-color matching (ignoring L1 face rotation).
-        Always reports which face is L1 (e.g., "L1(W)").
+        Purely read-only — does NOT mutate solver state.
+        Finds L1 face by checking face colors + adjacent scheme order,
+        then checks L2/L3 relative to that face. All parametric.
         """
         if self._cube.solved:
             return "Solved"
 
-        # Find which face is L1 — sets _start_color for L2/L3 checks
-        self._select_best_start_color()
-        l1_label = self.cmn.white.name[0]  # Short name: W, G, R, etc.
+        # Find L1 face — no state mutation
+        l1_face: Face | None = None
+        has_cross = False
+        has_corners = False
+        for face in self._cube.faces:
+            cr = _is_cross_on_face(face)
+            co = _is_corners_on_face(face, cr)
+            if cr or co:
+                l1_face = face
+                has_cross = cr
+                has_corners = co
+                if cr and co:
+                    break  # Full L1 — no need to keep searching
 
-        cross = self.l1_cross.is_cross_rotate_and_check()
-        corners = self.l1_corners.is_corners(self.l1_cross)
-
-        if cross and corners:
-            s = f"L1({l1_label})"
-        elif cross:
-            s = f"L1x({l1_label})"
-        elif corners:
-            s = f"L1c({l1_label})"
+        if l1_face is not None:
+            label = l1_face.color.name[0]
+            if has_cross and has_corners:
+                s = f"L1({label})"
+            elif has_cross:
+                s = f"L1x({label})"
+            else:
+                s = f"L1c({label})"
         else:
             s = "No-L1"
 
-        if self.l2.solved():
+        # L2: 4 edges between adjacent faces (not on L1 or L1.opposite)
+        if l1_face is not None and _is_l2_solved(l1_face):
             s += ", L2"
         else:
             s += ", No L2"
 
-        if self.l3_cross.solved() and self.l3_corners.solved():
-            s += ", L3"
-        elif self.l3_cross.solved():
-            s += ", L3x"
-        elif self.l3_corners.solved():
-            s += ", L3c"
+        # L3: opposite face of L1
+        if l1_face is not None:
+            l3_face = l1_face.opposite
+            l3_cross = _is_cross_on_face(l3_face)
+            l3_corners = _is_corners_on_face(l3_face, l3_cross)
+            if l3_cross and l3_corners:
+                s += ", L3"
+            elif l3_cross:
+                s += ", L3x"
+            elif l3_corners:
+                s += ", L3c"
+            else:
+                s += ", No L3"
         else:
             s += ", No L3"
 
@@ -191,33 +261,14 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
     def _select_best_start_color(self) -> None:
         """Pick the best starting color for L1.
 
-        Scans all 6 face colors: if any already has a solved L1 layer,
-        uses that color. If no solved layer found, keeps the default (white).
-
-        Detection uses face-color check only: all edge/corner stickers ON
-        the face must match the face's center color. This ignores L1
-        orientation (rotation) — a rotated L1 face still has correct face
-        colors. Full position check (adjacent faces) uses rotate_face_and_check.
+        Scans all 6 faces using standalone _is_cross_on_face/_is_corners_on_face.
+        If any face has a solved L1 (cross + corners), uses that color.
+        Only called before solving — this is the ONLY place that mutates _start_color.
         """
-        from cube.domain.model import Part
-
         saved_color: Color = self.cmn.white
 
         for face in self._cube.faces:
-            # Quick check: do all face-side stickers match the face center?
-            # This catches L1 regardless of face rotation.
-            face_colors_ok = (
-                all(e.match_face(face) for e in face.edges)
-                and all(c.match_face(face) for c in face.corners)
-            )
-            if not face_colors_ok:
-                continue
-
-            # Face colors match — verify full L1 (adjacent faces) with rotation
-            def _l1_solved() -> bool:
-                return Part.all_match_faces(face.edges) and Part.all_match_faces(face.corners)
-
-            if self._cube.cqr.rotate_face_and_check(face, _l1_solved) >= 0:
+            if _is_cross_on_face(face) and _is_corners_on_face(face, True):
                 if face.color != saved_color:
                     self._logger.debug(None, f"L1 already solved on {face.color}, using as start color")
                 saved_color = face.color
