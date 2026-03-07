@@ -65,6 +65,11 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
         self.l3_cross = L3Cross(self)
         self.l3_corners = L3Corners(self)
 
+        # All sub-solvers must share parent's CommonOp so _start_color
+        # is a single source of truth (solvers must be stateless).
+        for helper in (self.l1_cross, self.l1_corners, self.l2, self.l3_cross, self.l3_corners):
+            helper._cmn = self.cmn
+
     @property
     def get_code(self) -> SolverName:
         """Return solver identifier."""
@@ -143,6 +148,8 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
     @property
     def status_3x3(self) -> str:
         """Human-readable 3x3 solving status."""
+        from cube.domain.model import Part
+
         if self._cube.solved:
             return "Solved"
 
@@ -156,7 +163,13 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
         elif corners:
             s = "L1-Corners"
         else:
-            s = "No-L1"
+            # Search all faces for a solved L1
+            for face in self._cube.faces:
+                if Part.all_match_faces(face.edges) and Part.all_match_faces(face.corners):
+                    s = f"L1({face.color.name})"
+                    break
+            else:
+                s = "No-L1"
 
         if self.l2.solved():
             s += ", L2"
@@ -178,26 +191,19 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
         """Pick the best starting color for L1.
 
         Scans all 6 face colors: if any already has a solved L1 layer
-        (cross + corners), uses that color instead of white.
+        (cross edges + corners all matching their faces), uses that color.
         If no solved layer found, keeps the default (white).
 
-        IMPORTANT: Each face check must have its own with_query_restore_state()
-        because is_cross_rotate_and_check() mutates the cube (rotates to align
-        the cross). Without per-face restore, face[1+] would see the rotated
-        state left by face[0]'s check, causing it to miss solved layers.
-
-        TODO: improve — currently uses query mode to test each color
-        via existing is_cross/is_corners. Could be done without query mode
-        by directly checking face parts.
+        Uses direct Part.all_match_faces() check instead of the solver's
+        is_cross/is_corners methods, which require bring_face_up and can
+        interfere with shadow cube state in Big LBL.
         """
+        from cube.domain.model import Part
+
         saved_color: Color = self.cmn.white
 
         for face in self._cube.faces:
-            self.cmn._start_color = face.color
-            # Per-face restore: is_cross_rotate_and_check() rotates the cube
-            with self.op.with_query_restore_state():
-                found: bool = self.l1_cross.is_cross_rotate_and_check() and self.l1_corners.is_corners(self.l1_cross)
-            if found:
+            if Part.all_match_faces(face.edges) and Part.all_match_faces(face.corners):
                 if face.color != saved_color:
                     self._logger.debug(None, f"L1 already solved on {face.color}, using as start color")
                 saved_color = face.color
