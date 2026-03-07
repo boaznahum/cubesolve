@@ -14,6 +14,9 @@ export class OrbitControls {
         this._faceTurn = faceTurnHandler;
         this._sendFn = sendFn;
 
+        /** Callback for sticker clicks in paint mode: (hit) => void */
+        this.onStickerClick = null;
+
         // Default camera angles
         this._defaultPhi = Math.PI / 4;
         this._defaultTheta = Math.PI / 6;
@@ -112,11 +115,15 @@ export class OrbitControls {
         window.addEventListener('mouseup', (e) => {
             if (ft.isActive) {
                 const clickHit = ft.end();
-                // Click-to-rotate: Shift → CW, Ctrl → CCW
-                if (clickHit && (e.shiftKey || e.ctrlKey)) {
-                    const prime = e.ctrlKey;
-                    const cmd = 'ROTATE_' + clickHit.face + (prime ? '_PRIME' : '');
-                    this._sendFn({ type: 'command', name: cmd });
+                if (clickHit) {
+                    if (this.onStickerClick) {
+                        this.onStickerClick(clickHit);
+                    } else if (e.shiftKey || e.ctrlKey) {
+                        // Click-to-rotate: Shift → CW, Ctrl → CCW
+                        const prime = e.ctrlKey;
+                        const cmd = 'ROTATE_' + clickHit.face + (prime ? '_PRIME' : '');
+                        this._sendFn({ type: 'command', name: cmd });
+                    }
                 }
             }
             this._isDragging = false;
@@ -197,7 +204,12 @@ export class OrbitControls {
         }, { passive: false });
 
         el.addEventListener('touchend', () => {
-            if (this._touchState === 'face_turn') ft.end();
+            if (this._touchState === 'face_turn') {
+                const clickHit = ft.end();
+                if (clickHit && this.onStickerClick) {
+                    this.onStickerClick(clickHit);
+                }
+            }
             this._touchState = null;
         });
         el.addEventListener('touchcancel', () => {

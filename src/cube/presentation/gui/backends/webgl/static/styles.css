@@ -687,6 +687,112 @@ body {
 }
 
 /* ============================================================
+   Paint Mode
+   ============================================================ */
+#paint-toolbar {
+    width: 100%;
+    background: rgba(28, 28, 34, 0.90);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 12px 12px 0 0;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 -2px 16px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.pt-palette {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.pt-swatch {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 2.5px solid rgba(255, 255, 255, 0.15);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    outline: none;
+    padding: 0;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.pt-swatch:hover {
+    transform: scale(1.15);
+    border-color: rgba(255, 255, 255, 0.45);
+}
+
+.pt-swatch.pt-selected {
+    border-color: #fff;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3), 0 0 14px rgba(255, 255, 255, 0.15);
+    transform: scale(1.12);
+}
+
+.pt-btn {
+    background: linear-gradient(135deg, rgba(70, 130, 180, 0.85), rgba(55, 110, 160, 0.85));
+    color: #fff;
+    border: 1px solid rgba(100, 160, 210, 0.25);
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.pt-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+}
+
+.pt-btn:active {
+    transform: scale(0.97);
+    box-shadow: none;
+}
+
+.pt-cancel-btn {
+    background: rgba(70, 70, 78, 0.7);
+    border-color: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.pt-cancel-btn:hover {
+    background: rgba(85, 85, 95, 0.8);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.pt-apply-btn {
+    background: linear-gradient(135deg, rgba(60, 170, 70, 0.85), rgba(45, 140, 55, 0.85));
+    border-color: rgba(80, 200, 90, 0.25);
+}
+
+.pt-apply-btn:hover {
+    background: linear-gradient(135deg, rgba(75, 190, 85, 0.95), rgba(60, 165, 70, 0.95));
+    box-shadow: 0 3px 10px rgba(60, 170, 70, 0.25);
+}
+
+/* Hide history panel in paint mode */
+#history-panel.hp-hidden {
+    display: none !important;
+}
+
+/* Paint mode body — cursor hint */
+body.paint-mode #canvas {
+    cursor: crosshair;
+}
+
+/* ============================================================
    Assist Checkbox
    ============================================================ */
 /* ============================================================
@@ -907,6 +1013,22 @@ body {
         font-size: 10px;
     }
 }
+
+    /* Paint mode — compact on mobile */
+    #paint-toolbar {
+        padding: 6px 8px;
+        gap: 6px;
+    }
+
+    .pt-swatch {
+        width: 30px;
+        height: 30px;
+    }
+
+    .pt-btn {
+        padding: 5px 10px;
+        font-size: 11px;
+    }
 
 /* Very small screens — hide debug overlay entirely */
 @media (max-width: 480px) {

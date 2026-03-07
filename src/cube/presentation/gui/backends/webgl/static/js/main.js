@@ -17,6 +17,7 @@ import { Toolbar } from './Toolbar.js';
 import { HistoryPanel } from './HistoryPanel.js';
 import { MoveIndicator } from './MoveIndicator.js';
 import { SoundManager } from './SoundManager.js';
+import { ColorPicker } from './ColorPicker.js';
 
 // ── Application state ──
 const state = new AppState();
@@ -80,6 +81,32 @@ const historyPanel = new HistoryPanel(send, animQueue, state);
 
 // ── Move indicator (next-move arrows) ──
 const moveIndicator = new MoveIndicator(cubeModel, scene);
+
+// ── Color picker (paint mode) ──
+const colorPicker = new ColorPicker(cubeModel, camera, canvas);
+
+colorPicker.onEnter = () => {
+    faceTurnHandler.paintMode = true;
+    controls.onStickerClick = (hit) => colorPicker.handleStickerClick(hit);
+};
+
+colorPicker.onExit = () => {
+    faceTurnHandler.paintMode = false;
+    controls.onStickerClick = null;
+};
+
+colorPicker.onApply = (faces) => {
+    send({ type: 'set_cube_colors', faces });
+};
+
+colorPicker.onCheck = (faces) => {
+    send({ type: 'check_cube_colors', faces });
+};
+
+// Paint button in toolbar
+document.getElementById('btn-paint')?.addEventListener('click', () => {
+    colorPicker.enter();
+});
 
 /** Check if assist is active (respects local user override). */
 function isAssistActive() {
@@ -185,8 +212,10 @@ function handleMessage(msg) {
             // Apply snapshot to AppState (updates all fields)
             state.applyServerSnapshot(msg);
 
-            // Update cube model if not animating (including assist preview phase)
-            if (state.latestState && !animQueue.isBusy) {
+            // Update cube model if not animating (skip during paint mode)
+            if (colorPicker.active) {
+                // Don't overwrite painted stickers with server state
+            } else if (state.latestState && !animQueue.isBusy) {
                 cubeModel.updateFromState(state.latestState);
             } else if (state.latestState) {
                 animQueue.pendingState = state.latestState;

@@ -23,6 +23,9 @@ export class FaceTurnHandler {
         this._raycaster = new THREE.Raycaster();
         this.arrowGuide = new ArrowGuide(cubeModel, scene);
 
+        // Paint mode — disables face turns but keeps hit detection
+        this.paintMode = false;
+
         // State
         this._active = false;
         this._hitSticker = null;   // { face, row, col, gridIndex }
@@ -31,8 +34,10 @@ export class FaceTurnHandler {
         this._turnSent = false;
     }
 
-    /** True when animations are playing — face turns are blocked. */
+    /** True when animations are playing — face turns are blocked.
+     *  In paint mode, hit detection is allowed (not blocked). */
     get blocked() {
+        if (this.paintMode) return false;
         return this.animQueue.currentAnim !== null || this.animQueue.queue.length > 0;
     }
 
@@ -59,6 +64,7 @@ export class FaceTurnHandler {
 
     /** Feed drag deltas while active. */
     onDrag(clientX, clientY) {
+        if (this.paintMode) return;  // no face turns in paint mode
         if (!this._active || this._turnSent) return;
 
         const dx = clientX - this._startX;
