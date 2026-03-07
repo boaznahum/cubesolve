@@ -187,14 +187,15 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
         """
         saved_color: Color = self.cmn.white
 
-        with self.op.with_query_restore_state():
-            for face in self._cube.faces:
-                self.cmn._start_color = face.color
-                if self.l1_cross.is_cross_rotate_and_check() and self.l1_corners.is_corners(self.l1_cross):
-                    if face.color != saved_color:
-                        self._logger.debug(None, f"L1 already solved on {face.color}, using as start color")
-                    saved_color = face.color
-                    break
+        for face in self._cube.faces:
+            self.cmn._start_color = face.color
+            with self.op.with_query_restore_state():
+                found: bool = self.l1_cross.is_cross_rotate_and_check() and self.l1_corners.is_corners(self.l1_cross)
+            if found:
+                if face.color != saved_color:
+                    self._logger.debug(None, f"L1 already solved on {face.color}, using as start color")
+                saved_color = face.color
+                break
 
         self.cmn._start_color = saved_color
 
