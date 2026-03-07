@@ -2,6 +2,7 @@ from collections.abc import Hashable
 from typing import TYPE_CHECKING, Any, TypeAlias
 
 from cube.domain.model.Color import Color
+from cube.domain.model.Colorable import Colorable
 
 if TYPE_CHECKING:
     from .PartSlice import PartSlice
@@ -13,7 +14,7 @@ _Cube: TypeAlias = "Cube"  # type: ignore
 _PartSlice: TypeAlias = "PartSlice"  # type: ignore
 
 
-class PartEdge:
+class PartEdge(Colorable):
     """
     The smallest unit of the cube model, representing a single colored sticker.
 

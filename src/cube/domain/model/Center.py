@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING, Self, TypeAlias
 
 from cube.domain.model._elements import CenterSliceIndex, SliceIndex
 from cube.domain.model.Color import Color
+from cube.domain.model.Colorable import Colorable
 from cube.domain.model.PartSlice import CenterSlice
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.Part import Part
@@ -15,7 +16,7 @@ if TYPE_CHECKING:
 _Face: TypeAlias = "Face"
 
 
-class Center(Part):
+class Center(Part, Colorable):
     __slots__ = ("_slices", "_face_ref")
 
     def __init__(self, center_slices: Sequence[Sequence[CenterSlice]], face: "_Face | None" = None) -> None:

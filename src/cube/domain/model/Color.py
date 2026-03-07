@@ -73,6 +73,11 @@ class Color(Enum):
         return self.name
 
     @property
+    def color(self) -> Color:
+        """Return self — a Color is its own color (implements Colorable)."""
+        return self
+
+    @property
     def long(self) -> str:
         """The long-form name of this color (e.g. Color.BLUE → ColorLong.BLUE)."""
         return self.name.capitalize()

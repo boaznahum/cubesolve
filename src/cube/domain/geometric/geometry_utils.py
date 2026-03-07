@@ -1,5 +1,5 @@
 from collections.abc import Sequence
-from typing import Tuple
+from typing import Tuple, TypeVar
 
 import numpy as np
 
@@ -106,3 +106,38 @@ def rotate_point_clockwise(rc: Tuple[int, int] | Point, n_slices: int, n_rotatio
         return Point(nm1 - r, nm1 - c)
     # rot == 3
     return Point(c, nm1 - r)
+
+
+_T = TypeVar("_T")
+
+
+def same_cycle(a: Sequence[_T], b: Sequence[_T]) -> bool:
+    """Check if two sequences are cyclic rotations of each other.
+
+    ``b`` is a rotation of ``a`` iff ``len(a) == len(b)`` and ``b``
+    appears at some offset in ``a + a``.  We find the first element
+    of ``b`` in ``a``, then verify the full match from each candidate
+    position.  O(n) on average for sequences with distinct elements.
+
+    >>> same_cycle([1, 2, 3, 4], [3, 4, 1, 2])
+    True
+    >>> same_cycle([1, 2, 3], [1, 3, 2])
+    False
+    >>> same_cycle([], [])
+    True
+    """
+    n = len(a)
+    if n != len(b):
+        return False
+    if n == 0:
+        return True
+    # Find candidate start positions (where a[start] == b[0])
+    # then verify the full match.  For sequences with mostly-distinct
+    # elements (typical in cube faces) this is O(n).
+    b0 = b[0]
+    for start in range(n):
+        if a[start] != b0:
+            continue
+        if all(a[(start + i) % n] == b[i] for i in range(1, n)):
+            return True
+    return False

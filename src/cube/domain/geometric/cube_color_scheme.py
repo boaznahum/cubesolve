@@ -46,6 +46,7 @@ from collections.abc import Collection, Mapping
 
 from cube.domain.exceptions import InternalSWError
 from cube.domain.geometric.cube_face_colors import CubeFaceColors
+from cube.domain.geometric.geometry_utils import same_cycle
 from cube.domain.geometric.schematic_cube import SchematicCube
 from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
@@ -92,8 +93,7 @@ def _is_cyclic_rotation(a: tuple[Color, ...], b: tuple[Color, ...]) -> bool:
         b = (White, Orange, Yellow, Red)   → shift by 2 → True
         c = (Orange, White, Red, Yellow)   → reversed  → False (mirror)
     """
-    n: int = len(a)
-    return n == len(b) and any(a[i:] + a[:i] == b for i in range(n))
+    return same_cycle(a, b)
 
 
 class CubeColorScheme:

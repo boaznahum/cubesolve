@@ -15,6 +15,7 @@ from .PartSlice import CenterSlice, PartSlice
 from .Center import Center
 from .Corner import Corner
 from cube.domain.model.Color import Color
+from cube.domain.model.Colorable import Colorable
 from cube.domain.model.FaceName import FaceName
 from .Edge import Edge
 from .Part import Part
@@ -26,7 +27,7 @@ _Face: TypeAlias = "Face"
 _Cube: TypeAlias = "cube.Cube"  # type: ignore  # noqa: F821
 
 
-class Face(SuperElement, Hashable):
+class Face(SuperElement, Hashable, Colorable):
     """
     Faces never chane position, only the color of the parts
     """
