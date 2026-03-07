@@ -17,6 +17,7 @@ export class Toolbar {
 
     bind() {
         this._bindToolbar();
+        this._bindMoveButtons();
         this._bindKeyboard();
     }
 
@@ -290,6 +291,15 @@ export class Toolbar {
         }
         sizeSelect.addEventListener('change', (e) => {
             this._send({ type: 'set_size', value: parseInt(e.target.value) });
+        });
+    }
+
+    _bindMoveButtons() {
+        document.querySelectorAll('.mv-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const key = btn.dataset.key;
+                this._send({ type: 'key', code: key.toUpperCase().charCodeAt(0), modifiers: 0, key });
+            });
         });
     }
 
