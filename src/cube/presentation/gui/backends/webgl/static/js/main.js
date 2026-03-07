@@ -172,8 +172,9 @@ function resize() {
         if (h < 50) {
             const toolbarEl = document.getElementById('toolbar');
             const statusEl = document.getElementById('status');
+            const moveBtns = document.getElementById('move-buttons');
             const vpH = window.visualViewport?.height ?? window.innerHeight;
-            h = vpH - (toolbarEl?.offsetHeight || 50) - (statusEl?.offsetHeight || 20) - 10;
+            h = vpH - (toolbarEl?.offsetHeight || 50) - (moveBtns?.offsetHeight || 70) - (statusEl?.offsetHeight || 20) - 10;
         }
         if (w < 50) {
             const histPanel = document.getElementById('history-panel');
