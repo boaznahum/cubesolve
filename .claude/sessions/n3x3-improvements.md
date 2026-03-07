@@ -96,9 +96,42 @@ than one with 0 cross + 4 corners.
 - `src/cube/domain/solver/_3x3/beginner/BeginnerSolver3x3.py` - Phase 4 (best color)
 - `src/cube/domain/solver/common/CommonOp.py` - Phase 4 (start color override)
 
+## Implementation Details
+
+### Phase 4: `BeginnerSolver3x3._select_best_start_color()` (commit b228c404)
+- Added to `BeginnerSolver3x3.py`
+- Called at start of `solve_3x3()` before any solve steps
+- Uses query mode (`with_query_restore_state`) to try each of 6 face colors
+- For each face color, temporarily sets `cmn._start_color`, then checks `is_cross_rotate_and_check()` + `is_corners()`
+- If a solved L1 is found, uses that color; otherwise keeps white
+- TODO in code: replace query mode with direct part checking
+- Also changed `_config.py` default `CUBE_SIZE` from 2 to 3
+
+### Phases 1+2: `L3Corners._do_orientation()` rewrite (commit 12c0f0f8)
+- Replaced `while` loop with computed `_twist_count()` static method
+- `_twist_count(yf, cube_front, cube_right)`: checks `fru.face_color(face) == yellow` for UP/Right/Front
+- Added `_find_next_unoriented_ccw(yf)`: returns 0-3 (U' count to next unoriented) or -1 (all done)
+- Main loop: search CCW, jump with `(U' * N).simplify()`, twist with `(twist * count).simplify()`
+- Tracks `total_u`, realigns at end with `(4 - total_u % 4) % 4` remaining U' rotations
+- Important: uses `face_color()` not `match_face()` for twist count — `match_face` checks if sticker matches the face's center, but we need to check where yellow IS
+
+### Phase 3: No changes needed
+- 3x3 L3 solvers use single `bring_face_up(self.white_face.opposite)` — no double rotation bug
+
+## Commits
+
+| Commit | Description |
+|--------|-------------|
+| `b228c404` | Best start color for L1 + default size 3 |
+| `12c0f0f8` | L3 orientation: compute twist + skip oriented corners |
+
+## Tests
+- 314 LBL size-3 tests pass (filtered with `-k "size_3 and LBL"`)
+- 1570 total size-3 tests pass (all solvers)
+
 ## Status
 
-- [ ] Phase 1: Compute twist count
-- [ ] Phase 2: Skip oriented corners
-- [ ] Phase 3: Check double rotation
-- [ ] Phase 4: Best color for L1
+- [x] Phase 1: Compute twist count (commit 12c0f0f8)
+- [x] Phase 2: Skip oriented corners (commit 12c0f0f8, same commit)
+- [x] Phase 3: Check double rotation — N/A, 3x3 uses single bring_face_up calls
+- [x] Phase 4: Best color for L1 (commit b228c404)
