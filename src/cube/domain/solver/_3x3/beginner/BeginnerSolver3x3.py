@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
 from cube.domain.model.Color import Color
@@ -58,6 +59,41 @@ def _is_corners_on_face(face: Face) -> bool:
         if corner.face_color(other2) != edge2.face_color(other2):
             return False
     return True
+
+
+def _face_l1_grade(face: Face) -> int:
+    """Grade how solved L1 is on this face.
+
+    Returns:
+        0 = nothing, 1 = cross only, 2 = cross + corners (full L1).
+    """
+    if not _is_cross_on_face(face):
+        return 0
+    return 2 if _is_corners_on_face(face) else 1
+
+
+def _find_best_l1_face(faces: Iterable[Face], default_color: Color) -> tuple[Face | None, int]:
+    """Find the face with the highest L1 grade, preferring default_color.
+
+    Scans all faces, picks the one with the highest grade.
+    On tie, the face matching default_color wins.
+
+    Returns:
+        (best_face, grade) or (None, 0) if no face has even a cross.
+    """
+    best_face: Face | None = None
+    best_grade: int = 0
+    for face in faces:
+        grade = _face_l1_grade(face)
+        if grade == 0:
+            continue
+        # Higher grade wins; on tie, prefer default color
+        if grade > best_grade or (grade == best_grade and face.color == default_color):
+            best_face = face
+            best_grade = grade
+        if best_grade == 2 and best_face is not None and best_face.color == default_color:
+            break  # Can't do better
+    return best_face, best_grade
 
 
 def _is_l2_solved(l1_face: Face) -> bool:
@@ -210,24 +246,12 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
         if self._cube.solved:
             return "Solved"
 
-        # Find L1 face — no state mutation
-        l1_face: Face | None = None
-        has_corners = False
-        for face in self._cube.faces:
-            cr = _is_cross_on_face(face)
-            if cr:
-                co = _is_corners_on_face(face)
-                l1_face = face
-                has_corners = co
-                if co:
-                    break  # Full L1 — no need to keep searching
+        # Find best L1 face — no state mutation
+        l1_face, grade = _find_best_l1_face(self._cube.faces, self.cmn.white)
 
         if l1_face is not None:
             label = l1_face.color.name[0]
-            if has_corners:
-                s = f"L1({label})"
-            else:
-                s = f"L1x({label})"
+            s = f"L1({label})" if grade == 2 else f"L1x({label})"
         else:
             s = "No-L1"
 
@@ -255,20 +279,17 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
     def _select_best_start_color(self) -> None:
         """Pick the best starting color for L1.
 
-        Scans all 6 faces using standalone _is_cross_on_face/_is_corners_on_face.
-        If any face has a solved L1 (cross + corners), uses that color.
-        Only called before solving — this is the ONLY place that mutates _start_color.
+        Grades all 6 faces (0=none, 1=cross, 2=full L1) and picks the highest.
+        Prefers white on tie. Only called before solving.
         """
-        saved_color: Color = self.cmn.white
+        white: Color = self.cmn.white
+        best_face, grade = _find_best_l1_face(self._cube.faces, white)
 
-        for face in self._cube.faces:
-            if _is_cross_on_face(face) and _is_corners_on_face(face):
-                if face.color != saved_color:
-                    self._logger.debug(None, f"L1 already solved on {face.color}, using as start color")
-                saved_color = face.color
-                break
-
-        self.cmn._start_color = saved_color
+        if best_face is not None and best_face.color != white:
+            self._logger.debug(None, f"L1 grade {grade} on {best_face.color}, using as start color")
+            self.cmn._start_color = best_face.color
+        else:
+            self.cmn._start_color = white
 
     # Required by Solver ABC - delegate to status_3x3
     @property
