@@ -295,10 +295,61 @@ export class Toolbar {
     }
 
     _bindMoveButtons() {
-        document.querySelectorAll('.mv-btn').forEach(btn => {
+        // Shift state machine: 'off' | 'once' | 'locked'
+        this._shiftState = 'off';
+        const shiftBtn = document.getElementById('btn-shift');
+        let longPressTimer = null;
+        let wasLongPress = false;
+
+        const updateShiftUI = () => {
+            if (!shiftBtn) return;
+            shiftBtn.classList.toggle('mv-shift-once', this._shiftState === 'once');
+            shiftBtn.classList.toggle('mv-shift-locked', this._shiftState === 'locked');
+        };
+
+        if (shiftBtn) {
+            // Pointer down — start long-press timer
+            shiftBtn.addEventListener('pointerdown', (e) => {
+                e.preventDefault();
+                wasLongPress = false;
+                longPressTimer = setTimeout(() => {
+                    wasLongPress = true;
+                    this._shiftState = 'locked';
+                    updateShiftUI();
+                }, 500);
+            });
+
+            // Pointer up — short tap logic
+            shiftBtn.addEventListener('pointerup', (e) => {
+                e.preventDefault();
+                clearTimeout(longPressTimer);
+                if (wasLongPress) return;  // already handled by timer
+                // Cycle: off → once → off, locked → off
+                if (this._shiftState === 'off') {
+                    this._shiftState = 'once';
+                } else {
+                    this._shiftState = 'off';
+                }
+                updateShiftUI();
+            });
+
+            // Cancel on pointer leave
+            shiftBtn.addEventListener('pointerleave', () => {
+                clearTimeout(longPressTimer);
+            });
+        }
+
+        // Move buttons — send key with shift modifier
+        document.querySelectorAll('.mv-btn[data-key]').forEach(btn => {
             btn.addEventListener('click', () => {
                 const key = btn.dataset.key;
-                this._send({ type: 'key', code: key.toUpperCase().charCodeAt(0), modifiers: 0, key });
+                const modifiers = (this._shiftState !== 'off') ? 1 : 0;
+                this._send({ type: 'key', code: key.toUpperCase().charCodeAt(0), modifiers, key });
+                // Consume shift-once
+                if (this._shiftState === 'once') {
+                    this._shiftState = 'off';
+                    updateShiftUI();
+                }
             });
         });
     }
