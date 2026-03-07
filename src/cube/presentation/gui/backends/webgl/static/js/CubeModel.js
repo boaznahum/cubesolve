@@ -283,6 +283,7 @@ export class CubeModel {
 
     /**
      * Build shadow stickers for one face at its offset position.
+     * Uses flat geometry (no extrusion) facing outward from the offset.
      */
     _buildShadowFace(faceName) {
         this._removeShadowFace(faceName);
@@ -296,33 +297,21 @@ export class CubeModel {
         const gap = STICKER_GAP * this.cellSize;
         const stickerSize = this.cellSize - gap;
         const cornerR = CORNER_RADIUS * this.cellSize;
-        const stickerDepth = this.cellSize * 0.45;
 
+        // Flat rounded rect (no extrusion — shadow is just a colored surface)
         const stickerShape = createRoundedRectShape(stickerSize, stickerSize, cornerR);
-        const stickerGeo = new THREE.ExtrudeGeometry(stickerShape, {
-            depth: stickerDepth,
-            bevelEnabled: false,
-        });
-
-        const sideMat = new THREE.MeshStandardMaterial({
-            color: BODY_COLOR,
-            roughness: 0.8,
-            metalness: 0.1,
-            side: THREE.DoubleSide,
-            transparent: true,
-            opacity: SHADOW_OPACITY,
-        });
+        const stickerGeo = new THREE.ShapeGeometry(stickerShape);
 
         const right = new THREE.Vector3(...def.right);
         const up = new THREE.Vector3(...def.up);
+        // Shadow normal faces OPPOSITE to real face (toward the viewer)
         const normal = new THREE.Vector3();
-        if (def.axis === 'x') normal.set(def.sign, 0, 0);
-        else if (def.axis === 'y') normal.set(0, def.sign, 0);
-        else normal.set(0, 0, def.sign);
+        if (def.axis === 'x') normal.set(-def.sign, 0, 0);
+        else if (def.axis === 'y') normal.set(0, -def.sign, 0);
+        else normal.set(0, 0, -def.sign);
 
         const meshes = [];
         const offsetVec = new THREE.Vector3(...offset);
-        const STICKER_LIFT = 0.005;
 
         for (let row = 0; row < size; row++) {
             for (let col = 0; col < size; col++) {
@@ -334,22 +323,25 @@ export class CubeModel {
                     transparent: true,
                     opacity: SHADOW_OPACITY,
                 });
-                const mesh = new THREE.Mesh(stickerGeo, [faceMat, sideMat]);
+                const mesh = new THREE.Mesh(stickerGeo, faceMat);
 
-                // Same position as real face, just offset
                 const cx = (col + 0.5) * this.cellSize - half;
                 const cy = (row + 0.5) * this.cellSize - half;
 
+                // Place on the face surface, then offset
                 const pos = new THREE.Vector3();
                 pos.addScaledVector(right, cx);
                 pos.addScaledVector(up, cy);
-                pos.addScaledVector(normal, half + STICKER_LIFT - stickerDepth);
+                pos.addScaledVector(normal, -half);  // at the face surface
                 pos.add(offsetVec);
                 mesh.position.copy(pos);
 
-                // Same orientation as real face (DoubleSide renders both sides)
+                // Orient: ShapeGeometry is in XY plane (local Z = outward)
+                // Map local X→right, local Y→up, local Z→normal (flipped)
+                // Negate right to un-mirror the face when viewed from opposite side
+                const negRight = right.clone().negate();
                 const mat4 = new THREE.Matrix4();
-                mat4.makeBasis(right, up, normal);
+                mat4.makeBasis(negRight, up, normal);
                 mesh.quaternion.setFromRotationMatrix(mat4);
 
                 mesh.userData = { face: faceName, row, col, gridIndex: row * size + col };
@@ -360,15 +352,13 @@ export class CubeModel {
 
         this.shadowStickers[faceName] = meshes;
 
-        // Apply current colors if available
+        // Apply current colors from real face
         const realMeshes = this.stickers[faceName];
         if (realMeshes) {
             for (let i = 0; i < meshes.length && i < realMeshes.length; i++) {
                 const srcMat = Array.isArray(realMeshes[i].material)
                     ? realMeshes[i].material[0] : realMeshes[i].material;
-                const dstMat = Array.isArray(meshes[i].material)
-                    ? meshes[i].material[0] : meshes[i].material;
-                dstMat.color.copy(srcMat.color);
+                meshes[i].material.color.copy(srcMat.color);
             }
         }
     }
@@ -382,11 +372,7 @@ export class CubeModel {
         for (const mesh of meshes) {
             this.shadowGroup.remove(mesh);
             if (mesh.geometry) mesh.geometry.dispose();
-            if (Array.isArray(mesh.material)) {
-                mesh.material.forEach(m => m.dispose());
-            } else if (mesh.material) {
-                mesh.material.dispose();
-            }
+            if (mesh.material) mesh.material.dispose();
         }
         delete this.shadowStickers[faceName];
     }
@@ -401,8 +387,7 @@ export class CubeModel {
             let [r, g, b] = colors[i];
             const key = `${r},${g},${b}`;
             if (this.colorCorrections[key]) [r, g, b] = this.colorCorrections[key];
-            const mat = Array.isArray(meshes[i].material) ? meshes[i].material[0] : meshes[i].material;
-            mat.color.setRGB(r / 255, g / 255, b / 255);
+            meshes[i].material.color.setRGB(r / 255, g / 255, b / 255);
         }
     }
 
