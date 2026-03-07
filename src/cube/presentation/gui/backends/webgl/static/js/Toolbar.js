@@ -271,14 +271,23 @@ export class Toolbar {
             });
         }
 
-        // Shadow face toggle buttons (client-side only)
-        document.querySelectorAll('.tb-shadow[data-shadow]').forEach(btn => {
-            btn.addEventListener('click', () => {
+        // Shadow face toggle button — toggles all L/D/B at once
+        const btnShadowAll = document.getElementById('btn-shadow-all');
+        if (btnShadowAll) {
+            btnShadowAll.addEventListener('click', () => {
                 if (!this._cubeModel) return;
-                this._cubeModel.toggleShadow(btn.dataset.shadow);
+                // Toggle: if any are on, turn all off; otherwise turn all on
+                const anyOn = ['L', 'D', 'B'].some(f => this._cubeModel.shadowVisible[f]);
+                for (const f of ['L', 'D', 'B']) {
+                    if (anyOn && this._cubeModel.shadowVisible[f]) {
+                        this._cubeModel.toggleShadow(f);
+                    } else if (!anyOn && !this._cubeModel.shadowVisible[f]) {
+                        this._cubeModel.toggleShadow(f);
+                    }
+                }
                 this._updateShadowButtons();
             });
-        });
+        }
 
         // Solver dropdown
         document.getElementById('solver-select').addEventListener('change', (e) => {
@@ -370,17 +379,21 @@ export class Toolbar {
     }
 
     _bindKeyboard() {
-        // Shadow face toggle map: F10→L, F11→D, F12 is reserved for dev tools
-        const SHADOW_KEYS = { F10: 'L', F11: 'D' };
-
         window.addEventListener('keydown', (e) => {
             // Don't capture when typing in inputs
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
 
-            // F10/F11 — toggle shadow faces (client-side only, don't send to server)
-            if (SHADOW_KEYS[e.key] && this._cubeModel) {
+            // F10 — toggle all shadow faces (client-side only)
+            if (e.key === 'F10' && this._cubeModel) {
                 e.preventDefault();
-                this._cubeModel.toggleShadow(SHADOW_KEYS[e.key]);
+                const anyOn = ['L', 'D', 'B'].some(f => this._cubeModel.shadowVisible[f]);
+                for (const f of ['L', 'D', 'B']) {
+                    if (anyOn && this._cubeModel.shadowVisible[f]) {
+                        this._cubeModel.toggleShadow(f);
+                    } else if (!anyOn && !this._cubeModel.shadowVisible[f]) {
+                        this._cubeModel.toggleShadow(f);
+                    }
+                }
                 this._updateShadowButtons();
                 return;
             }
@@ -426,15 +439,13 @@ export class Toolbar {
         });
     }
 
-    /** Update shadow toggle button styles to reflect current state. */
+    /** Update shadow toggle button style to reflect current state. */
     _updateShadowButtons() {
         if (!this._cubeModel) return;
-        for (const face of ['L', 'D', 'B']) {
-            const btn = document.getElementById(`btn-shadow-${face}`);
-            if (btn) {
-                const on = !!this._cubeModel.shadowVisible[face];
-                btn.className = 'tb-btn tb-shadow ' + (on ? 'tb-on' : 'tb-off');
-            }
+        const btn = document.getElementById('btn-shadow-all');
+        if (btn) {
+            const anyOn = ['L', 'D', 'B'].some(f => this._cubeModel.shadowVisible[f]);
+            btn.className = 'tb-btn tb-shadow ' + (anyOn ? 'tb-on' : 'tb-off');
         }
     }
 }
