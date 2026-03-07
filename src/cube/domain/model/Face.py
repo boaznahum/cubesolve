@@ -317,6 +317,20 @@ class Face(SuperElement, Hashable):
     def edge_bottom(self) -> Edge:
         return self._edge_bottom
 
+    def edge_neighbor_colors_cw(self) -> tuple[Color, ...]:
+        """Get the 4 edge adjacent-side colors in CW order (top, right, bottom, left).
+
+        For each edge on this face, returns the color of the sticker on the
+        OTHER face (the adjacent face). Useful for checking if edges follow
+        the color scheme cycle without rotating the cube.
+        """
+        return (
+            self._edge_top.face_color(self._edge_top.get_other_face(self)),
+            self._edge_right.face_color(self._edge_right.get_other_face(self)),
+            self._edge_bottom.face_color(self._edge_bottom.get_other_face(self)),
+            self._edge_left.face_color(self._edge_left.get_other_face(self)),
+        )
+
     def get_edge(self, position: EdgePosition) -> Edge:
         """
         Get the edge at the specified position on this face.
