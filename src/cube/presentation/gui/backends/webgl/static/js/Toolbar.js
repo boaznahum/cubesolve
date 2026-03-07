@@ -301,10 +301,15 @@ export class Toolbar {
         let longPressTimer = null;
         let wasLongPress = false;
 
+        const moveButtons = document.querySelectorAll('.mv-btn[data-key]');
         const updateShiftUI = () => {
             if (!shiftBtn) return;
             shiftBtn.classList.toggle('mv-shift-once', this._shiftState === 'once');
             shiftBtn.classList.toggle('mv-shift-locked', this._shiftState === 'locked');
+            const prime = this._shiftState !== 'off';
+            moveButtons.forEach(btn => {
+                btn.textContent = btn.dataset.key.toUpperCase() + (prime ? '\u2032' : '');
+            });
         };
 
         if (shiftBtn) {
