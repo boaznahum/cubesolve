@@ -32,12 +32,18 @@ export class ColorPicker {
         // Apply button state: 'red' | 'orange' | 'green'
         this._applyState = 'red';
 
+        // Generation counter — incremented on every paint to detect stale results
+        this._checkGen = 0;
+
         // Callbacks — wired by main.js
         this.onEnter = null;      // () => void
         this.onExit  = null;      // () => void
         this.onApply = null;      // (faces) => void   — faces = {face: [colorName,...]}
-        this.onQuickCheck = null; // (faces) => void
-        this.onCheck = null;      // (faces) => void
+        this.onQuickCheck = null; // (faces, gen) => void
+        this.onCheck = null;      // (faces, gen) => void
+
+        // Guard — set by main.js to check if paint mode can be entered
+        this.canEnter = null;     // () => bool
 
         this._wireButtons();
         this._wireKeyboard();
@@ -58,6 +64,7 @@ export class ColorPicker {
 
     enter() {
         if (this.active) return;
+        if (this.canEnter && !this.canEnter()) return;
         this.active = true;
 
         this._buildPalette();
@@ -112,20 +119,25 @@ export class ColorPicker {
         }
         this._paintedNames[face][gridIndex] = color.colorName;
 
+        // Bump generation — any in-flight check results for older gens will be ignored
+        this._checkGen++;
+
         // Reset to red until quick check passes, then send quick check
         this._setApplyState('red');
-        if (this.onQuickCheck) this.onQuickCheck(this._getFullState());
+        if (this.onQuickCheck) this.onQuickCheck(this._getFullState(), this._checkGen);
     }
 
     /** Handle quick check result from server. */
-    onQuickCheckResult(valid) {
+    onQuickCheckResult(valid, gen) {
         if (!this.active) return;
+        if (gen !== undefined && gen !== this._checkGen) return;  // stale
         this._setApplyState(valid ? 'orange' : 'red');
     }
 
     /** Handle full check result from server. */
-    onFullCheckResult(valid, error) {
+    onFullCheckResult(valid, error, gen) {
         if (!this.active) return;
+        if (gen !== undefined && gen !== this._checkGen) return;  // stale
         this._setApplyState(valid ? 'green' : 'red');
     }
 
@@ -268,7 +280,7 @@ export class ColorPicker {
         document.getElementById('pt-cancel')?.addEventListener('click', () => this.exit(true));
 
         document.getElementById('pt-check')?.addEventListener('click', () => {
-            if (this.onCheck) this.onCheck(this._getFullState());
+            if (this.onCheck) this.onCheck(this._getFullState(), this._checkGen);
         });
 
         document.getElementById('pt-apply')?.addEventListener('click', () => {
@@ -287,6 +299,7 @@ export class ColorPicker {
             const num = parseInt(e.key);
             if (num >= 1 && num <= 6 && num <= this.palette.length) {
                 e.preventDefault();
+                e.stopImmediatePropagation();
                 this.selectedColorIndex = num - 1;
                 this._highlightSelected();
                 return;
@@ -295,6 +308,7 @@ export class ColorPicker {
             // Escape → cancel
             if (e.key === 'Escape') {
                 e.preventDefault();
+                e.stopImmediatePropagation();
                 this.exit(true);
             }
         });

@@ -100,12 +100,17 @@ colorPicker.onApply = (faces) => {
     send({ type: 'set_cube_colors', faces });
 };
 
-colorPicker.onQuickCheck = (faces) => {
-    send({ type: 'quick_check_colors', faces });
+colorPicker.onQuickCheck = (faces, gen) => {
+    send({ type: 'quick_check_colors', faces, gen });
 };
 
-colorPicker.onCheck = (faces) => {
-    send({ type: 'full_check_colors', faces });
+colorPicker.onCheck = (faces, gen) => {
+    send({ type: 'full_check_colors', faces, gen });
+};
+
+// Guard: don't enter paint mode during animation or solving
+colorPicker.canEnter = () => {
+    return !animQueue.isBusy && !state.isPlaying && state.latestState != null;
 };
 
 // Paint button in toolbar
@@ -252,6 +257,8 @@ wsClient.onConnected = () => {
     controls.reset();
     _lastAspect = 0;  // force fitToView recalc
     resize();
+    // Force-exit paint mode on reconnect — server state may have changed
+    if (colorPicker.active) colorPicker.exit(true);
 };
 
 // ── Message handler ──
@@ -350,11 +357,11 @@ function handleMessage(msg) {
             break;
 
         case 'quick_check_result':
-            colorPicker.onQuickCheckResult(msg.valid);
+            colorPicker.onQuickCheckResult(msg.valid, msg.gen);
             break;
 
         case 'full_check_result':
-            colorPicker.onFullCheckResult(msg.valid, msg.error);
+            colorPicker.onFullCheckResult(msg.valid, msg.error, msg.gen);
             break;
     }
 }

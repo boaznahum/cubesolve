@@ -543,10 +543,10 @@ class ClientSession:
             self._animation_manager.on_client_animation_done()
 
         elif msg_type == "quick_check_colors":
-            self._handle_quick_check_colors(data.get("faces", {}))
+            self._handle_quick_check_colors(data.get("faces", {}), data.get("gen"))
 
         elif msg_type == "full_check_colors":
-            self._handle_full_check_colors(data.get("faces", {}))
+            self._handle_full_check_colors(data.get("faces", {}), data.get("gen"))
 
         elif msg_type == "set_cube_colors":
             self._handle_set_cube_colors(data.get("faces", {}))
@@ -1290,7 +1290,7 @@ class ClientSession:
 
     # -- Paint mode handlers --
 
-    def _handle_quick_check_colors(self, faces: dict[str, list[str]]) -> None:
+    def _handle_quick_check_colors(self, faces: dict[str, list[str]], gen: int | None = None) -> None:
         """Quick sanity check: validates color distribution only."""
         from cube.application.AbstractApp import AbstractApp
 
@@ -1302,10 +1302,19 @@ class ClientSession:
             print(f"Quick check error: {e}", flush=True)
             ok = False
 
-        self._send(json.dumps({"type": "quick_check_result", "valid": ok}))
+        result: dict[str, object] = {"type": "quick_check_result", "valid": ok}
+        if gen is not None:
+            result["gen"] = gen
+        self._send(json.dumps(result))
 
-    def _handle_full_check_colors(self, faces: dict[str, list[str]]) -> None:
-        """Full check: create a clone, set colors, try to solve."""
+    def _handle_full_check_colors(self, faces: dict[str, list[str]], gen: int | None = None) -> None:
+        """Full check: create a clone, set colors, try to solve (async)."""
+        loop = self._event_loop._loop
+        if loop:
+            loop.create_task(self._full_check_async(faces, gen))
+
+    async def _full_check_async(self, faces: dict[str, list[str]], gen: int | None) -> None:
+        """Run full check solver in a worker thread to avoid blocking the event loop."""
         from cube.application.AbstractApp import AbstractApp
 
         try:
@@ -1313,19 +1322,28 @@ class ClientSession:
             apply_cube_colors(test_app.cube, faces)
 
             if not test_app.cube.is_sanity(force_check=True):
-                self._send(json.dumps({"type": "full_check_result", "valid": False,
-                                       "error": "Invalid color distribution"}))
+                result: dict[str, object] = {"type": "full_check_result", "valid": False,
+                                             "error": "Invalid color distribution"}
+                if gen is not None:
+                    result["gen"] = gen
+                self._send(json.dumps(result))
                 return
 
-            # Try solving the clone
+            # Try solving the clone in a worker thread
             solver_code = self._app.slv.get_code
             test_app.switch_to_solver(solver_code)
-            test_app.slv.solve(animation=False, debug=False)
-            self._send(json.dumps({"type": "full_check_result", "valid": True}))
+            await asyncio.to_thread(test_app.slv.solve, animation=False, debug=False)
+
+            result = {"type": "full_check_result", "valid": True}
+            if gen is not None:
+                result["gen"] = gen
+            self._send(json.dumps(result))
         except Exception as e:
             print(f"Full check error: {e}", flush=True)
-            self._send(json.dumps({"type": "full_check_result", "valid": False,
-                                   "error": str(e)}))
+            result = {"type": "full_check_result", "valid": False, "error": str(e)}
+            if gen is not None:
+                result["gen"] = gen
+            self._send(json.dumps(result))
 
     def _handle_set_cube_colors(self, faces: dict[str, list[str]]) -> None:
         """Apply painted colors to the real cube."""
@@ -1333,6 +1351,8 @@ class ClientSession:
             apply_cube_colors(self._app.cube, faces)
             self._app.op.clear_redo()
             self._app.op._history.clear()
+            self._fsm.redo_source = "undo"
+            self._fsm.redo_tainted = False
             self._fsm.send(FlowEvent.RESET)
             self.send_state()
         except (ValueError, Exception) as e:

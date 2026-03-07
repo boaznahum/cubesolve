@@ -24,12 +24,25 @@ export class Toolbar {
 
     /** Update all toolbar UI from the unified AppState snapshot. */
     updateFromState(appState) {
+        const a = appState.allowedActions || {};
+
         // Stop button: controlled by server state machine
         const stopBtn = document.getElementById('btn-stop');
-        if (stopBtn) {
-            const a = appState.allowedActions || {};
-            stopBtn.disabled = !a.stop;
+        if (stopBtn) stopBtn.disabled = !a.stop;
+
+        // Disable action buttons that aren't allowed in current state
+        for (const btn of document.querySelectorAll('[data-cmd]')) {
+            const cmd = btn.dataset.cmd;
+            if (cmd === 'stop' || cmd === 'toggle_debug' || cmd === 'toggle_animation') continue;
+            if (a[cmd] !== undefined) btn.disabled = !a[cmd];
         }
+
+        // Paint button + size/solver selects: disable during solving/playing
+        const canModify = !!a.scramble;  // proxy: scramble is allowed only in IDLE/READY
+        const btnPaint = document.getElementById('btn-paint');
+        if (btnPaint) btnPaint.disabled = !canModify;
+        document.getElementById('size-select').disabled = !a.size_change;
+        document.getElementById('solver-select').disabled = !canModify;
 
         // Text overlays
         this._updateTextOverlaysFromState(appState);
