@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import {
     BODY_COLOR, STICKER_GAP, CORNER_RADIUS,
     PBR_COLOR_OVERRIDES, FACE_DEFS, createRoundedRectShape,
+    SHADOW_OFFSETS, SHADOW_OPACITY,
 } from './constants.js';
 import { createMarkerGroup } from './MarkerRenderer.js';
 
@@ -22,6 +23,12 @@ export class CubeModel {
         this.stickers = {};  // {faceName: [meshes in row-major order]}
         this.faceGroups = {};
         this.markerGroups = {};  // {faceName: [THREE.Group|null per sticker]}
+
+        // Shadow faces: duplicate L/D/B at offset positions
+        this.shadowGroup = new THREE.Group();
+        this.scene.add(this.shadowGroup);
+        this.shadowStickers = {};  // {faceName: [meshes]}
+        this.shadowVisible = {};   // {faceName: bool}
 
         this.build(3);
     }
@@ -165,6 +172,8 @@ export class CubeModel {
             const mat = Array.isArray(meshes[i].material) ? meshes[i].material[0] : meshes[i].material;
             mat.color.setRGB(r / 255, g / 255, b / 255);
         }
+        // Keep shadow face in sync
+        this._updateShadowColors(faceName, colors);
     }
 
     /**
@@ -209,6 +218,7 @@ export class CubeModel {
     updateFromState(state) {
         if (state.size !== this.size) {
             this.build(state.size);
+            this._rebuildShadows();
         }
         for (const [faceName, faceData] of Object.entries(state.faces)) {
             if (Array.isArray(faceData)) {
@@ -254,6 +264,157 @@ export class CubeModel {
                 child.material.dispose();
             }
         });
+    }
+
+    // ── Shadow faces ──
+
+    /**
+     * Toggle shadow face visibility for a given face (L, D, or B).
+     */
+    toggleShadow(faceName) {
+        if (!SHADOW_OFFSETS[faceName]) return;
+        this.shadowVisible[faceName] = !this.shadowVisible[faceName];
+        if (this.shadowVisible[faceName]) {
+            this._buildShadowFace(faceName);
+        } else {
+            this._removeShadowFace(faceName);
+        }
+    }
+
+    /**
+     * Build shadow stickers for one face at its offset position.
+     */
+    _buildShadowFace(faceName) {
+        this._removeShadowFace(faceName);
+
+        const def = FACE_DEFS[faceName];
+        if (!def) return;
+        const offset = SHADOW_OFFSETS[faceName];
+        const size = this.size;
+        const totalSize = 3.0;
+        const half = totalSize / 2;
+        const gap = STICKER_GAP * this.cellSize;
+        const stickerSize = this.cellSize - gap;
+        const cornerR = CORNER_RADIUS * this.cellSize;
+        const stickerDepth = this.cellSize * 0.45;
+
+        const stickerShape = createRoundedRectShape(stickerSize, stickerSize, cornerR);
+        const stickerGeo = new THREE.ExtrudeGeometry(stickerShape, {
+            depth: stickerDepth,
+            bevelEnabled: false,
+        });
+
+        const sideMat = new THREE.MeshStandardMaterial({
+            color: BODY_COLOR,
+            roughness: 0.8,
+            metalness: 0.1,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: SHADOW_OPACITY,
+        });
+
+        const right = new THREE.Vector3(...def.right);
+        const up = new THREE.Vector3(...def.up);
+        // Flip normal so shadow face faces the viewer
+        const normal = new THREE.Vector3();
+        if (def.axis === 'x') normal.set(-def.sign, 0, 0);
+        else if (def.axis === 'y') normal.set(0, -def.sign, 0);
+        else normal.set(0, 0, -def.sign);
+
+        const meshes = [];
+        const offsetVec = new THREE.Vector3(...offset);
+        const STICKER_LIFT = 0.005;
+
+        for (let row = 0; row < size; row++) {
+            for (let col = 0; col < size; col++) {
+                const faceMat = new THREE.MeshStandardMaterial({
+                    color: 0x888888,
+                    roughness: 0.3,
+                    metalness: 0.05,
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: SHADOW_OPACITY,
+                });
+                const mesh = new THREE.Mesh(stickerGeo, [faceMat, sideMat]);
+
+                const cx = (col + 0.5) * this.cellSize - half;
+                const cy = (row + 0.5) * this.cellSize - half;
+
+                const pos = new THREE.Vector3();
+                pos.addScaledVector(right, cx);
+                pos.addScaledVector(up, cy);
+                pos.addScaledVector(normal, -(half + STICKER_LIFT - stickerDepth));
+                pos.add(offsetVec);
+                mesh.position.copy(pos);
+
+                // Orient: flip so face cap points outward (toward viewer)
+                const mat4 = new THREE.Matrix4();
+                mat4.makeBasis(right, up, normal);
+                mesh.quaternion.setFromRotationMatrix(mat4);
+
+                mesh.userData = { face: faceName, row, col, gridIndex: row * size + col };
+                this.shadowGroup.add(mesh);
+                meshes.push(mesh);
+            }
+        }
+
+        this.shadowStickers[faceName] = meshes;
+
+        // Apply current colors if available
+        const realMeshes = this.stickers[faceName];
+        if (realMeshes) {
+            for (let i = 0; i < meshes.length && i < realMeshes.length; i++) {
+                const srcMat = Array.isArray(realMeshes[i].material)
+                    ? realMeshes[i].material[0] : realMeshes[i].material;
+                const dstMat = Array.isArray(meshes[i].material)
+                    ? meshes[i].material[0] : meshes[i].material;
+                dstMat.color.copy(srcMat.color);
+            }
+        }
+    }
+
+    /**
+     * Remove shadow stickers for one face.
+     */
+    _removeShadowFace(faceName) {
+        const meshes = this.shadowStickers[faceName];
+        if (!meshes) return;
+        for (const mesh of meshes) {
+            this.shadowGroup.remove(mesh);
+            if (mesh.geometry) mesh.geometry.dispose();
+            if (Array.isArray(mesh.material)) {
+                mesh.material.forEach(m => m.dispose());
+            } else if (mesh.material) {
+                mesh.material.dispose();
+            }
+        }
+        delete this.shadowStickers[faceName];
+    }
+
+    /**
+     * Update shadow sticker colors to match real face.
+     */
+    _updateShadowColors(faceName, colors) {
+        const meshes = this.shadowStickers[faceName];
+        if (!meshes) return;
+        for (let i = 0; i < meshes.length && i < colors.length; i++) {
+            let [r, g, b] = colors[i];
+            const key = `${r},${g},${b}`;
+            if (this.colorCorrections[key]) [r, g, b] = this.colorCorrections[key];
+            const mat = Array.isArray(meshes[i].material) ? meshes[i].material[0] : meshes[i].material;
+            mat.color.setRGB(r / 255, g / 255, b / 255);
+        }
+    }
+
+    /**
+     * Rebuild all active shadow faces (after cube size change).
+     */
+    _rebuildShadows() {
+        for (const faceName of Object.keys(SHADOW_OFFSETS)) {
+            if (this.shadowVisible[faceName]) {
+                this._buildShadowFace(faceName);
+            }
+        }
     }
 
     /**

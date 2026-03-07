@@ -13,6 +13,7 @@ export class Toolbar {
         this._statusOverlay = document.getElementById('status-overlay');
         this._statusEl = document.getElementById('status');
         this._assistDelayMs = 400;  // default, overridden by server config
+        this._cubeModel = null;  // set by main.js for shadow toggle
     }
 
     bind() {
@@ -270,6 +271,15 @@ export class Toolbar {
             });
         }
 
+        // Shadow face toggle buttons (client-side only)
+        document.querySelectorAll('.tb-shadow[data-shadow]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (!this._cubeModel) return;
+                this._cubeModel.toggleShadow(btn.dataset.shadow);
+                this._updateShadowButtons();
+            });
+        });
+
         // Solver dropdown
         document.getElementById('solver-select').addEventListener('change', (e) => {
             this._send({ type: 'set_solver', name: e.target.value });
@@ -360,9 +370,20 @@ export class Toolbar {
     }
 
     _bindKeyboard() {
+        // Shadow face toggle map: F10→L, F11→D, F12 is reserved for dev tools
+        const SHADOW_KEYS = { F10: 'L', F11: 'D' };
+
         window.addEventListener('keydown', (e) => {
             // Don't capture when typing in inputs
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+
+            // F10/F11 — toggle shadow faces (client-side only, don't send to server)
+            if (SHADOW_KEYS[e.key] && this._cubeModel) {
+                e.preventDefault();
+                this._cubeModel.toggleShadow(SHADOW_KEYS[e.key]);
+                this._updateShadowButtons();
+                return;
+            }
 
             // Space → single redo (play next move)
             if (e.key === ' ' || e.code === 'Space') {
@@ -403,5 +424,17 @@ export class Toolbar {
             if (e.ctrlKey && e.shiftKey && (e.key === 'i' || e.key === 'I' || e.key === 'j' || e.key === 'J')) return;
             e.preventDefault();
         });
+    }
+
+    /** Update shadow toggle button styles to reflect current state. */
+    _updateShadowButtons() {
+        if (!this._cubeModel) return;
+        for (const face of ['L', 'D', 'B']) {
+            const btn = document.getElementById(`btn-shadow-${face}`);
+            if (btn) {
+                const on = !!this._cubeModel.shadowVisible[face];
+                btn.className = 'tb-btn tb-shadow ' + (on ? 'tb-on' : 'tb-off');
+            }
+        }
     }
 }

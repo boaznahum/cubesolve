@@ -73,6 +73,7 @@ const controls = new OrbitControls(camera, canvas, faceTurnHandler, send);
 
 // ── Toolbar ──
 const toolbar = new Toolbar(state, send, controls, animQueue, soundManager);
+toolbar._cubeModel = cubeModel;  // For shadow face toggle
 toolbar.bind();
 
 // ── History panel ──
