@@ -163,9 +163,12 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
         elif corners:
             s = "L1-Corners"
         else:
-            # Search all faces for a solved L1
+            # Search all faces for a solved L1 (check with rotation)
             for face in self._cube.faces:
-                if Part.all_match_faces(face.edges) and Part.all_match_faces(face.corners):
+                def _l1_solved() -> bool:
+                    return Part.all_match_faces(face.edges) and Part.all_match_faces(face.corners)
+
+                if self._cube.cqr.rotate_face_and_check(face, _l1_solved) >= 0:
                     s = f"L1({face.color.name})"
                     break
             else:
@@ -194,16 +197,18 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
         (cross edges + corners all matching their faces), uses that color.
         If no solved layer found, keeps the default (white).
 
-        Uses direct Part.all_match_faces() check instead of the solver's
-        is_cross/is_corners methods, which require bring_face_up and can
-        interfere with shadow cube state in Big LBL.
+        Uses rotate_face_and_check to handle rotated faces — L1 is still
+        solved if the face just needs rotation to align edges/corners.
         """
         from cube.domain.model import Part
 
         saved_color: Color = self.cmn.white
 
         for face in self._cube.faces:
-            if Part.all_match_faces(face.edges) and Part.all_match_faces(face.corners):
+            def _l1_solved() -> bool:
+                return Part.all_match_faces(face.edges) and Part.all_match_faces(face.corners)
+
+            if self._cube.cqr.rotate_face_and_check(face, _l1_solved) >= 0:
                 if face.color != saved_color:
                     self._logger.debug(None, f"L1 already solved on {face.color}, using as start color")
                 saved_color = face.color
