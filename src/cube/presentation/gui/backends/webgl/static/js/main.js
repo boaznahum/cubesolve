@@ -100,12 +100,17 @@ colorPicker.onApply = (faces) => {
     send({ type: 'set_cube_colors', faces });
 };
 
+colorPicker.onQuickCheck = (faces) => {
+    send({ type: 'quick_check_colors', faces });
+};
+
 colorPicker.onCheck = (faces) => {
-    send({ type: 'check_cube_colors', faces });
+    send({ type: 'full_check_colors', faces });
 };
 
 // Paint button in toolbar
 document.getElementById('btn-paint')?.addEventListener('click', () => {
+    colorPicker.serverState = state.latestState;
     colorPicker.enter();
 });
 
@@ -341,6 +346,15 @@ function handleMessage(msg) {
 
         case 'color_map':
             cubeModel.buildColorCorrections(msg.colors);
+            colorPicker.setColorMap(msg.colors);
+            break;
+
+        case 'quick_check_result':
+            colorPicker.onQuickCheckResult(msg.valid);
+            break;
+
+        case 'full_check_result':
+            colorPicker.onFullCheckResult(msg.valid, msg.error);
             break;
     }
 }

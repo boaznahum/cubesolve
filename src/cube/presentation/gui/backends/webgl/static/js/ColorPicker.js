@@ -3,6 +3,15 @@
  *
  * User selects a color from the 6-face palette and taps stickers
  * to paint them.  Orbit / zoom still work; face turns are disabled.
+ *
+ * Colors are tracked by COLOR NAME (e.g., "blue", "yellow"), not RGB.
+ * The server's color_map provides the name→RGB mapping. This avoids
+ * any PBR color correction mismatch between client and server.
+ *
+ * Apply button 3 states:
+ *   - red:    sanity check failed (disabled)
+ *   - orange: sanity check passed but not solve-verified (disabled)
+ *   - green:  full solve check passed (enabled)
  */
 
 import * as THREE from 'three';
@@ -15,18 +24,34 @@ export class ColorPicker {
 
         this.active = false;
         this.selectedColorIndex = 0;
-        this.palette = [];           // [{name, rgb:[r,g,b]}]
-        this._originalColors = {};   // {face: [[r,g,b], ...]}  snapshot on enter
-        this._paintedColors = {};    // {face: [[r,g,b], ...]}  current edits
+        this.palette = [];            // [{faceName, colorName, rgb:[r,g,b]}]
+        this._originalNames = {};     // {face: [colorName, ...]}  snapshot on enter
+        this._paintedNames = {};      // {face: [colorName, ...]}  current edits
+        this._colorMap = {};          // {colorName: [r,g,b]}  from server color_map
+
+        // Apply button state: 'red' | 'orange' | 'green'
+        this._applyState = 'red';
 
         // Callbacks — wired by main.js
-        this.onEnter = null;   // () => void
-        this.onExit  = null;   // () => void
-        this.onApply = null;   // (faces) => void
-        this.onCheck = null;   // (faces) => void
+        this.onEnter = null;      // () => void
+        this.onExit  = null;      // () => void
+        this.onApply = null;      // (faces) => void   — faces = {face: [colorName,...]}
+        this.onQuickCheck = null; // (faces) => void
+        this.onCheck = null;      // (faces) => void
 
         this._wireButtons();
         this._wireKeyboard();
+    }
+
+    /** Set the server color map (called from main.js on color_map message). */
+    setColorMap(colorMap) {
+        this._colorMap = colorMap;  // {colorName: [r,g,b]}
+        // Build reverse lookup: "r,g,b" → colorName
+        this._rgbToName = {};
+        for (const [name, rgb] of Object.entries(colorMap)) {
+            const key = `${rgb[0]},${rgb[1]},${rgb[2]}`;
+            this._rgbToName[key] = name;
+        }
     }
 
     /* ── Public API ──────────────────────────────────────── */
@@ -40,6 +65,7 @@ export class ColorPicker {
         this.selectedColorIndex = 0;
         this._highlightSelected();
         this._snapshotColors();
+        this._setApplyState('red');
 
         document.getElementById('paint-toolbar').style.display = '';
         document.getElementById('toolbar').style.display = 'none';
@@ -73,39 +99,73 @@ export class ColorPicker {
         const meshes = this.cubeModel.stickers[face];
         if (!meshes || !meshes[gridIndex]) return;
 
-        // Paint the Three.js material immediately
-        const [r, g, b] = color.rgb;
+        // Paint the Three.js material immediately (using PBR-corrected color for display)
+        const displayRgb = this._toDisplayRgb(color.rgb);
         const mat = Array.isArray(meshes[gridIndex].material)
             ? meshes[gridIndex].material[0]
             : meshes[gridIndex].material;
-        mat.color.setRGB(r / 255, g / 255, b / 255);
+        mat.color.setRGB(displayRgb[0] / 255, displayRgb[1] / 255, displayRgb[2] / 255);
 
-        // Track the change
-        if (!this._paintedColors[face]) {
-            this._paintedColors[face] = this._originalColors[face].map(c => [...c]);
+        // Track the change by COLOR NAME
+        if (!this._paintedNames[face]) {
+            this._paintedNames[face] = [...this._originalNames[face]];
         }
-        this._paintedColors[face][gridIndex] = [r, g, b];
+        this._paintedNames[face][gridIndex] = color.colorName;
+
+        // Reset to red until quick check passes, then send quick check
+        this._setApplyState('red');
+        if (this.onQuickCheck) this.onQuickCheck(this._getFullState());
+    }
+
+    /** Handle quick check result from server. */
+    onQuickCheckResult(valid) {
+        if (!this.active) return;
+        this._setApplyState(valid ? 'orange' : 'red');
+    }
+
+    /** Handle full check result from server. */
+    onFullCheckResult(valid, error) {
+        if (!this.active) return;
+        this._setApplyState(valid ? 'green' : 'red');
+    }
+
+    /* ── PBR color correction ────────────────────────────── */
+
+    _toDisplayRgb(rgb) {
+        const key = `${rgb[0]},${rgb[1]},${rgb[2]}`;
+        if (this.cubeModel.colorCorrections[key]) {
+            return this.cubeModel.colorCorrections[key];
+        }
+        return rgb;
     }
 
     /* ── Palette ─────────────────────────────────────────── */
 
+    /**
+     * Build palette from server state. Each face's center sticker gives
+     * us both the color name (via reverse RGB→name lookup) and display RGB.
+     */
     _buildPalette() {
         this.palette = [];
         const size = this.cubeModel.size;
         const mid = Math.floor(size / 2);
         const centerIdx = mid * size + mid;
 
-        for (const faceName of ['U', 'D', 'F', 'B', 'R', 'L']) {
-            const meshes = this.cubeModel.stickers[faceName];
-            if (!meshes || !meshes[centerIdx]) continue;
+        // Need serverState to read original server RGB
+        if (!this.serverState) return;
 
-            const mat = Array.isArray(meshes[centerIdx].material)
-                ? meshes[centerIdx].material[0]
-                : meshes[centerIdx].material;
-            const c = mat.color;
+        for (const faceName of ['U', 'D', 'F', 'B', 'R', 'L']) {
+            const faceState = this.serverState.faces[faceName];
+            if (!faceState || !faceState.colors || !faceState.colors[centerIdx]) continue;
+
+            const serverRgb = faceState.colors[centerIdx];
+            const key = `${serverRgb[0]},${serverRgb[1]},${serverRgb[2]}`;
+            const colorName = this._rgbToName[key] || 'unknown';
+
             this.palette.push({
-                name: faceName,
-                rgb: [Math.round(c.r * 255), Math.round(c.g * 255), Math.round(c.b * 255)],
+                faceName,
+                colorName,          // e.g., "blue", "yellow"
+                rgb: [...serverRgb], // original server RGB (for display + PBR lookup)
             });
         }
     }
@@ -118,8 +178,9 @@ export class ColorPicker {
             const btn = document.createElement('button');
             btn.className = 'pt-swatch';
             btn.dataset.index = idx;
-            btn.style.backgroundColor = `rgb(${color.rgb[0]},${color.rgb[1]},${color.rgb[2]})`;
-            btn.title = `${color.name}  (${idx + 1})`;
+            const display = this._toDisplayRgb(color.rgb);
+            btn.style.backgroundColor = `rgb(${display[0]},${display[1]},${display[2]})`;
+            btn.title = `${color.faceName} — ${color.colorName} (${idx + 1})`;
             btn.addEventListener('click', () => {
                 this.selectedColorIndex = idx;
                 this._highlightSelected();
@@ -134,40 +195,69 @@ export class ColorPicker {
         });
     }
 
+    /* ── Apply button 3-state ────────────────────────────── */
+
+    _setApplyState(state) {
+        this._applyState = state;
+        const btn = document.getElementById('pt-apply');
+        if (!btn) return;
+
+        btn.classList.remove('pt-apply-red', 'pt-apply-orange', 'pt-apply-green');
+        btn.classList.add(`pt-apply-${state}`);
+        btn.disabled = state !== 'green';
+    }
+
     /* ── Snapshot / Restore ───────────────────────────────── */
 
+    /**
+     * Snapshot current sticker color NAMES from server state.
+     */
     _snapshotColors() {
-        this._originalColors = {};
-        this._paintedColors = {};
+        this._originalNames = {};
+        this._paintedNames = {};
 
-        for (const [face, meshes] of Object.entries(this.cubeModel.stickers)) {
-            this._originalColors[face] = meshes.map(mesh => {
-                const mat = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
-                const c = mat.color;
-                return [Math.round(c.r * 255), Math.round(c.g * 255), Math.round(c.b * 255)];
+        if (!this.serverState) return;
+
+        for (const faceName of Object.keys(this.cubeModel.stickers)) {
+            const faceState = this.serverState.faces[faceName];
+            if (!faceState || !faceState.colors) continue;
+
+            // Convert each server RGB → color name
+            this._originalNames[faceName] = faceState.colors.map(rgb => {
+                const key = `${rgb[0]},${rgb[1]},${rgb[2]}`;
+                return this._rgbToName[key] || 'unknown';
             });
         }
     }
 
+    /**
+     * Restore original colors to Three.js materials.
+     */
     _restoreColors() {
-        for (const [face, colors] of Object.entries(this._originalColors)) {
+        if (!this.serverState) return;
+        for (const [face, names] of Object.entries(this._originalNames)) {
             const meshes = this.cubeModel.stickers[face];
             if (!meshes) continue;
-            for (let i = 0; i < meshes.length && i < colors.length; i++) {
-                const [r, g, b] = colors[i];
+            for (let i = 0; i < meshes.length && i < names.length; i++) {
+                const serverRgb = this._colorMap[names[i]];
+                if (!serverRgb) continue;
+                const display = this._toDisplayRgb(serverRgb);
                 const mat = Array.isArray(meshes[i].material) ? meshes[i].material[0] : meshes[i].material;
-                mat.color.setRGB(r / 255, g / 255, b / 255);
+                mat.color.setRGB(display[0] / 255, display[1] / 255, display[2] / 255);
             }
         }
     }
 
-    /** Merge original + painted into a full {face: [[r,g,b],...]} map. */
+    /**
+     * Merge original + painted into a full {face: [colorName,...]} map.
+     * This is what gets sent to the server — color names, not RGB.
+     */
     _getFullState() {
         const result = {};
-        for (const face of Object.keys(this.cubeModel.stickers)) {
-            result[face] = this._paintedColors[face]
-                ? this._paintedColors[face].map(c => [...c])
-                : this._originalColors[face].map(c => [...c]);
+        for (const face of Object.keys(this._originalNames)) {
+            result[face] = this._paintedNames[face]
+                ? [...this._paintedNames[face]]
+                : [...this._originalNames[face]];
         }
         return result;
     }
@@ -182,6 +272,7 @@ export class ColorPicker {
         });
 
         document.getElementById('pt-apply')?.addEventListener('click', () => {
+            if (this._applyState !== 'green') return;
             if (this.onApply) this.onApply(this._getFullState());
             this.exit(false);
         });

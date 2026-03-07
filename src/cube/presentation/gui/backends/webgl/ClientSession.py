@@ -24,7 +24,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from cube.application.exceptions.ExceptionAppExit import AppExit
-from cube.presentation.gui.backends.webgl.CubeStateSerializer import extract_cube_state
+from cube.presentation.gui.backends.webgl.CubeStateSerializer import apply_cube_colors, extract_cube_state
 from cube.presentation.gui.backends.webgl.FlowStateMachine import FlowEvent, FlowState, FlowStateMachine
 from cube.presentation.gui.backends.webgl.SessionState import SessionStateSnapshot
 from cube.presentation.gui.commands import Command, CommandContext
@@ -541,6 +541,15 @@ class ClientSession:
 
         elif msg_type == "animation_done":
             self._animation_manager.on_client_animation_done()
+
+        elif msg_type == "quick_check_colors":
+            self._handle_quick_check_colors(data.get("faces", {}))
+
+        elif msg_type == "full_check_colors":
+            self._handle_full_check_colors(data.get("faces", {}))
+
+        elif msg_type == "set_cube_colors":
+            self._handle_set_cube_colors(data.get("faces", {}))
 
         elif msg_type == "resize":
             pass
@@ -1278,6 +1287,57 @@ class ClientSession:
     def show_popup(self, title: str, lines: list[str],
                    line_colors: list[tuple[int, int, int, int]] | None = None) -> None:
         pass
+
+    # -- Paint mode handlers --
+
+    def _handle_quick_check_colors(self, faces: dict[str, list[str]]) -> None:
+        """Quick sanity check: validates color distribution only."""
+        from cube.application.AbstractApp import AbstractApp
+
+        try:
+            test_app = AbstractApp.create_app(cube_size=self._app.cube.size)
+            apply_cube_colors(test_app.cube, faces)
+            ok = test_app.cube.is_sanity(force_check=True)
+        except (ValueError, Exception) as e:
+            print(f"Quick check error: {e}", flush=True)
+            ok = False
+
+        self._send(json.dumps({"type": "quick_check_result", "valid": ok}))
+
+    def _handle_full_check_colors(self, faces: dict[str, list[str]]) -> None:
+        """Full check: create a clone, set colors, try to solve."""
+        from cube.application.AbstractApp import AbstractApp
+
+        try:
+            test_app = AbstractApp.create_app(cube_size=self._app.cube.size)
+            apply_cube_colors(test_app.cube, faces)
+
+            if not test_app.cube.is_sanity(force_check=True):
+                self._send(json.dumps({"type": "full_check_result", "valid": False,
+                                       "error": "Invalid color distribution"}))
+                return
+
+            # Try solving the clone
+            solver_code = self._app.slv.get_code
+            test_app.switch_to_solver(solver_code)
+            test_app.slv.solve(animation=False, debug=False)
+            self._send(json.dumps({"type": "full_check_result", "valid": True}))
+        except Exception as e:
+            print(f"Full check error: {e}", flush=True)
+            self._send(json.dumps({"type": "full_check_result", "valid": False,
+                                   "error": str(e)}))
+
+    def _handle_set_cube_colors(self, faces: dict[str, list[str]]) -> None:
+        """Apply painted colors to the real cube."""
+        try:
+            apply_cube_colors(self._app.cube, faces)
+            self._app.op.clear_redo()
+            self._app.op._history.clear()
+            self._fsm.send(FlowEvent.RESET)
+            self.send_state()
+        except (ValueError, Exception) as e:
+            print(f"Set cube colors error: {e}", flush=True)
+            self._send(json.dumps({"type": "error", "message": str(e)}))
 
     # -- Cleanup --
 

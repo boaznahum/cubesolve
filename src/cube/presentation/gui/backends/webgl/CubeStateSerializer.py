@@ -327,3 +327,84 @@ def _serialize_marker(marker: MarkerCreator, face_color_float: _ColorF) -> dict[
         "type": "unknown",
         "z_order": marker.get_z_order(),
     }
+
+
+def apply_cube_colors(cube: "Cube", faces: dict[str, list[str]]) -> None:
+    """Set sticker colors on a cube from face color name data.
+
+    Args:
+        cube: The cube to modify (typically a fresh Cube(size=N)).
+        faces: Dict mapping face name ("U","D","F","B","R","L") to a flat
+               list of N*N color names (e.g., "blue", "yellow") in row-major order.
+
+    Raises:
+        ValueError: If a color name doesn't match any known Color.
+    """
+    from cube.domain.model.Color import Color
+    from cube.domain.model import Corner, Edge
+
+    # Build name → Color lookup (lowercase)
+    name_to_color: dict[str, Color] = {c.name.lower(): c for c in Color}
+
+    n = cube.size
+
+    for face in cube.faces:
+        face_name = face.name.name  # "U", "D", etc.
+        if face_name not in faces:
+            continue
+
+        name_list = faces[face_name]
+
+        def _set_edge_color(part_edge: "PartEdge", row: int, col: int) -> None:
+            idx = row * n + col
+            color_name = name_list[idx].lower()
+            color = name_to_color.get(color_name)
+            if color is None:
+                raise ValueError(f"Unknown color '{name_list[idx]}' at {face_name}[{row},{col}]")
+            part_edge._color = color
+
+        if n >= 2:
+            # Corners
+            for row, col, corner_attr in [
+                (0, 0, "corner_bottom_left"),
+                (0, n - 1, "corner_bottom_right"),
+                (n - 1, 0, "corner_top_left"),
+                (n - 1, n - 1, "corner_top_right"),
+            ]:
+                corner = getattr(face, corner_attr)
+                assert isinstance(corner, Corner)
+                edge_on_face = corner.slice.get_face_edge(face)
+                _set_edge_color(edge_on_face, row, col)
+
+        if n >= 3:
+            # Edges
+            edge_count = n - 2
+            for edge_attr, row, col_start, along_row in [
+                ("edge_bottom", 0, 1, True),
+                ("edge_top", n - 1, 1, True),
+                ("edge_left", 1, 0, False),
+                ("edge_right", 1, n - 1, False),
+            ]:
+                edge = getattr(face, edge_attr)
+                assert isinstance(edge, Edge)
+                for i in range(edge_count):
+                    edge_wing = edge.get_slice_by_ltr_index(face, i)
+                    edge_on_face = edge_wing.get_face_edge(face)
+                    if along_row:
+                        _set_edge_color(edge_on_face, row, col_start + i)
+                    else:
+                        _set_edge_color(edge_on_face, row + i, col_start)
+
+            # Centers
+            center = face.center
+            if n < 4:
+                center_slice = center.get_slice((0, 0))
+                edge_on_face = center_slice.get_face_edge(face)
+                _set_edge_color(edge_on_face, 1, 1)
+            else:
+                center_n = center.n_slices
+                for cy in range(center_n):
+                    for cx in range(center_n):
+                        center_slice = center.get_slice((cy, cx))
+                        edge_on_face = center_slice.get_face_edge(face)
+                        _set_edge_color(edge_on_face, 1 + cy, 1 + cx)
