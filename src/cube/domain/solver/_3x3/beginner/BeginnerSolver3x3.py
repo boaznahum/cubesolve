@@ -29,13 +29,18 @@ def _is_cross_on_face(face: Face) -> bool:
     Cross = all 4 edge stickers on face are face color, AND the edge
     stickers on adjacent faces follow the color scheme (cyclic rotation).
     No cube rotation — just compares color tuples.
+
+    Uses face.color (center color) to look up the scheme face, NOT face.name,
+    because whole-cube rotations move colors to different face positions.
     """
     # All edge face-side stickers must be face color
     if not all(e.match_face(face) for e in face.edges):
         return False
-    # Adjacent-side colors must be a cyclic rotation of the color scheme
-    return face.cube.original_scheme.is_valid_neighbor_cycle(
-        face.name, face.edge_neighbor_colors_cw()
+    # Look up scheme face by color, not by position name
+    scheme = face.cube.original_scheme
+    scheme_face = scheme._find_face(face.color)
+    return scheme.is_valid_neighbor_cycle(
+        scheme_face, face.edge_neighbor_colors_cw()
     )
 
 
