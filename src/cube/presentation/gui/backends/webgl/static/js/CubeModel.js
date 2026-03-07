@@ -315,11 +315,10 @@ export class CubeModel {
 
         const right = new THREE.Vector3(...def.right);
         const up = new THREE.Vector3(...def.up);
-        // Flip normal so shadow face faces the viewer
         const normal = new THREE.Vector3();
-        if (def.axis === 'x') normal.set(-def.sign, 0, 0);
-        else if (def.axis === 'y') normal.set(0, -def.sign, 0);
-        else normal.set(0, 0, -def.sign);
+        if (def.axis === 'x') normal.set(def.sign, 0, 0);
+        else if (def.axis === 'y') normal.set(0, def.sign, 0);
+        else normal.set(0, 0, def.sign);
 
         const meshes = [];
         const offsetVec = new THREE.Vector3(...offset);
@@ -337,17 +336,18 @@ export class CubeModel {
                 });
                 const mesh = new THREE.Mesh(stickerGeo, [faceMat, sideMat]);
 
+                // Same position as real face, just offset
                 const cx = (col + 0.5) * this.cellSize - half;
                 const cy = (row + 0.5) * this.cellSize - half;
 
                 const pos = new THREE.Vector3();
                 pos.addScaledVector(right, cx);
                 pos.addScaledVector(up, cy);
-                pos.addScaledVector(normal, -(half + STICKER_LIFT - stickerDepth));
+                pos.addScaledVector(normal, half + STICKER_LIFT - stickerDepth);
                 pos.add(offsetVec);
                 mesh.position.copy(pos);
 
-                // Orient: flip so face cap points outward (toward viewer)
+                // Same orientation as real face (DoubleSide renders both sides)
                 const mat4 = new THREE.Matrix4();
                 mat4.makeBasis(right, up, normal);
                 mesh.quaternion.setFromRotationMatrix(mat4);
