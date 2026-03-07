@@ -181,6 +181,11 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
         (cross + corners), uses that color instead of white.
         If no solved layer found, keeps the default (white).
 
+        IMPORTANT: Each face check must have its own with_query_restore_state()
+        because is_cross_rotate_and_check() mutates the cube (rotates to align
+        the cross). Without per-face restore, face[1+] would see the rotated
+        state left by face[0]'s check, causing it to miss solved layers.
+
         TODO: improve — currently uses query mode to test each color
         via existing is_cross/is_corners. Could be done without query mode
         by directly checking face parts.
@@ -189,6 +194,7 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
 
         for face in self._cube.faces:
             self.cmn._start_color = face.color
+            # Per-face restore: is_cross_rotate_and_check() rotates the cube
             with self.op.with_query_restore_state():
                 found: bool = self.l1_cross.is_cross_rotate_and_check() and self.l1_corners.is_corners(self.l1_cross)
             if found:
