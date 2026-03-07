@@ -48,7 +48,9 @@ class TestStartupState:
                 // Check that at least some stickers have non-zero colors
                 // A solved cube should have 6 different face colors, all non-black
                 let nonZeroCount = 0;
-                for (const [faceName, colors] of Object.entries(faces)) {
+                for (const [faceName, faceData] of Object.entries(faces)) {
+                    const colors = faceData.colors || faceData;
+                    if (!Array.isArray(colors)) continue;
                     for (const rgb of colors) {
                         if (rgb[0] !== 0 || rgb[1] !== 0 || rgb[2] !== 0) {
                             nonZeroCount++;

@@ -254,6 +254,30 @@ class Face2FaceTranslator:
     """
 
     @staticmethod
+    def derive_whole_cube_alg_source_to_target(
+            layout: "CubeLayout",
+            source: FaceName,
+            target: FaceName
+    ) -> list[Tuple[WholeCubeAlg, int, Alg]]:
+        """
+        Derive whole-cube rotation(s) that move the ``source`` face to the ``target`` position.
+
+        This is a convenience wrapper around :meth:`derive_whole_cube_alg` with
+        swapped arguments, because ``derive_whole_cube_alg`` internally brings
+        ``dest`` to ``source`` (i.e. the opposite direction from what the parameter
+        names suggest). This method provides the intuitive "source → target" semantics.
+
+        :param layout: CubeLayout for deriving rotation cycles.
+        :param source: The face whose content should be moved.
+        :param target: The face position where the content should end up.
+        :returns: List of (WholeCubeAlg, count, Alg) tuples — one entry for adjacent
+                  faces, two for opposite faces (e.g. X2 and Y2).
+        """
+
+        return Face2FaceTranslator.derive_whole_cube_alg(layout, target, source)
+
+
+    @staticmethod
     def derive_whole_cube_alg(
             layout: "CubeLayout",
             source: FaceName,

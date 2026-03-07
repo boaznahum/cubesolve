@@ -15,14 +15,13 @@ Run for 5 seconds viewing time:
 
 import pytest
 
+pytestmark = pytest.mark.gui
+
 from cube.application import _config as config
 from cube.application.exceptions.app_exceptions import AppExit
 from cube.main_any_backend import create_app_window
 from cube.presentation.gui.commands import Commands
 from tests.gui.tester.GUITestResult import GUITestResult
-
-
-pytestmark = pytest.mark.gui
 
 
 def test_checkmark_markers_on_centers(backend: str):

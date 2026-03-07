@@ -58,7 +58,8 @@ export class FaceTurnHandler {
         this._turnSent = false;
 
         // Show both arrow guides on the touched sticker
-        this.arrowGuide.show(hit.face, hit.row, hit.col);
+        if (FaceTurnHandler.SHOW_ARROW_GUIDES)
+            this.arrowGuide.show(hit.face, hit.row, hit.col);
         return true;
     }
 
@@ -99,6 +100,9 @@ export class FaceTurnHandler {
     }
 
     get isActive() { return this._active; }
+
+    /** Master switch for arrow guides — set to false to disable. */
+    static SHOW_ARROW_GUIDES = false;
 
     // ── Raycasting ──
 

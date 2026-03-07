@@ -256,7 +256,7 @@ class CommutatorNxNSolver(Solver):
         return self._cube.config.solver_debug
 
     @property
-    def status(self) -> str:
+    def _status_impl(self) -> str:
         """Human-readable solver status."""
         if self.is_solved:
             return "Solved"

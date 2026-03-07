@@ -148,6 +148,11 @@ class AppConfig(ConfigProtocol):
         return cfg.LBL_SANITY_CHECK
 
     @property
+    def default_2x2_solver(self) -> str:
+        """Default 2x2 solver used when a 3x3+ solver is asked to solve a 2x2."""
+        return cfg.DEFAULT_2X2_SOLVER
+
+    @property
     def cage_3x3_solver(self) -> str:
         """3x3 solver used by cage method for corner solving (Phase 1b)."""
         return cfg.CAGE_3X3_SOLVER

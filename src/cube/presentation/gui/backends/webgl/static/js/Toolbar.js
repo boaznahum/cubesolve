@@ -13,10 +13,12 @@ export class Toolbar {
         this._statusOverlay = document.getElementById('status-overlay');
         this._statusEl = document.getElementById('status');
         this._assistDelayMs = 400;  // default, overridden by server config
+        this._cubeModel = null;  // set by main.js for shadow toggle
     }
 
     bind() {
         this._bindToolbar();
+        this._bindMoveButtons();
         this._bindKeyboard();
     }
 
@@ -269,6 +271,24 @@ export class Toolbar {
             });
         }
 
+        // Shadow face toggle button — toggles all L/D/B at once
+        const btnShadowAll = document.getElementById('btn-shadow-all');
+        if (btnShadowAll) {
+            btnShadowAll.addEventListener('click', () => {
+                if (!this._cubeModel) return;
+                // Toggle: if any are on, turn all off; otherwise turn all on
+                const anyOn = ['L', 'D', 'B'].some(f => this._cubeModel.shadowVisible[f]);
+                for (const f of ['L', 'D', 'B']) {
+                    if (anyOn && this._cubeModel.shadowVisible[f]) {
+                        this._cubeModel.toggleShadow(f);
+                    } else if (!anyOn && !this._cubeModel.shadowVisible[f]) {
+                        this._cubeModel.toggleShadow(f);
+                    }
+                }
+                this._updateShadowButtons();
+            });
+        }
+
         // Solver dropdown
         document.getElementById('solver-select').addEventListener('change', (e) => {
             this._send({ type: 'set_solver', name: e.target.value });
@@ -293,10 +313,90 @@ export class Toolbar {
         });
     }
 
+    _bindMoveButtons() {
+        // Shift state machine: 'off' | 'once' | 'locked'
+        this._shiftState = 'off';
+        const shiftBtn = document.getElementById('btn-shift');
+        let longPressTimer = null;
+        let wasLongPress = false;
+
+        const moveButtons = document.querySelectorAll('.mv-btn[data-key]');
+        const updateShiftUI = () => {
+            if (!shiftBtn) return;
+            shiftBtn.classList.toggle('mv-shift-once', this._shiftState === 'once');
+            shiftBtn.classList.toggle('mv-shift-locked', this._shiftState === 'locked');
+            const prime = this._shiftState !== 'off';
+            moveButtons.forEach(btn => {
+                btn.textContent = btn.dataset.key.toUpperCase() + (prime ? '\u2032' : '');
+            });
+        };
+
+        if (shiftBtn) {
+            // Pointer down — start long-press timer
+            shiftBtn.addEventListener('pointerdown', (e) => {
+                e.preventDefault();
+                wasLongPress = false;
+                longPressTimer = setTimeout(() => {
+                    wasLongPress = true;
+                    this._shiftState = 'locked';
+                    updateShiftUI();
+                }, 500);
+            });
+
+            // Pointer up — short tap logic
+            shiftBtn.addEventListener('pointerup', (e) => {
+                e.preventDefault();
+                clearTimeout(longPressTimer);
+                if (wasLongPress) return;  // already handled by timer
+                // Cycle: off → once → off, locked → off
+                if (this._shiftState === 'off') {
+                    this._shiftState = 'once';
+                } else {
+                    this._shiftState = 'off';
+                }
+                updateShiftUI();
+            });
+
+            // Cancel on pointer leave
+            shiftBtn.addEventListener('pointerleave', () => {
+                clearTimeout(longPressTimer);
+            });
+        }
+
+        // Move buttons — send key with shift modifier
+        document.querySelectorAll('.mv-btn[data-key]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const key = btn.dataset.key;
+                const modifiers = (this._shiftState !== 'off') ? 1 : 0;
+                this._send({ type: 'key', code: key.toUpperCase().charCodeAt(0), modifiers, key });
+                // Consume shift-once
+                if (this._shiftState === 'once') {
+                    this._shiftState = 'off';
+                    updateShiftUI();
+                }
+            });
+        });
+    }
+
     _bindKeyboard() {
         window.addEventListener('keydown', (e) => {
             // Don't capture when typing in inputs
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+
+            // F10 — toggle all shadow faces (client-side only)
+            if (e.key === 'F10' && this._cubeModel) {
+                e.preventDefault();
+                const anyOn = ['L', 'D', 'B'].some(f => this._cubeModel.shadowVisible[f]);
+                for (const f of ['L', 'D', 'B']) {
+                    if (anyOn && this._cubeModel.shadowVisible[f]) {
+                        this._cubeModel.toggleShadow(f);
+                    } else if (!anyOn && !this._cubeModel.shadowVisible[f]) {
+                        this._cubeModel.toggleShadow(f);
+                    }
+                }
+                this._updateShadowButtons();
+                return;
+            }
 
             // Space → single redo (play next move)
             if (e.key === ' ' || e.code === 'Space') {
@@ -337,5 +437,15 @@ export class Toolbar {
             if (e.ctrlKey && e.shiftKey && (e.key === 'i' || e.key === 'I' || e.key === 'j' || e.key === 'J')) return;
             e.preventDefault();
         });
+    }
+
+    /** Update shadow toggle button style to reflect current state. */
+    _updateShadowButtons() {
+        if (!this._cubeModel) return;
+        const btn = document.getElementById('btn-shadow-all');
+        if (btn) {
+            const anyOn = ['L', 'D', 'B'].some(f => this._cubeModel.shadowVisible[f]);
+            btn.className = 'tb-btn tb-shadow ' + (anyOn ? 'tb-on' : 'tb-off');
+        }
     }
 }

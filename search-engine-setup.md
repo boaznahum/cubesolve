@@ -4,7 +4,7 @@ After deploying, follow these steps to make `cubesolve.fly.dev` discoverable by 
 
 ---
 
-## Google Search Console
+_## Google Search Console
 
 1. Go to **https://search.google.com/search-console**
 2. Click **"Add Property"** → choose **"URL prefix"** → enter `https://cubesolve.fly.dev`
@@ -28,9 +28,12 @@ After deploying, follow these steps to make `cubesolve.fly.dev` discoverable by 
    - Add it to `static/index.html` inside `<head>`
    - Rebuild with `npx vite build` and redeploy
 
+google console: https://search.google.com/search-console
+https://search.google.com/search-console/sitemaps ![img.png](img.png)
+
 ### After Verification
 
-4. Go to **"Sitemaps"** in the left menu
+4. Go to **"Sitemaps"** in the left menu_
 5. Enter `sitemap.xml` → click **Submit**
 
 ## Bing Webmaster Tools

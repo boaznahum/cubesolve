@@ -34,8 +34,6 @@ import pytest
 from cube.presentation.gui.commands import Commands
 from tests.gui.tester.GUITestRunner import GUITestRunner
 
-
-# Mark all tests in this module as GUI tests
 pytestmark = pytest.mark.gui
 
 

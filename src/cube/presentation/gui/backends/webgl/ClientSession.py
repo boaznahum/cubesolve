@@ -1171,6 +1171,7 @@ class ClientSession:
 
             history_len_before = len(self._app.op.history())
             ctx = CommandContext.from_window(self)  # type: ignore[arg-type]
+
             command.execute(ctx)
 
             if isinstance(command, NewSessionCommand):
@@ -1179,10 +1180,13 @@ class ClientSession:
                 self.on_client_connected()
                 return
 
-            # Detect manual move while solver redo queue exists → tainted
-            if (self._fsm.redo_source == "solver" and self._app.op.redo_queue()
-                    and len(self._app.op.history()) > history_len_before):
-                self._fsm.redo_tainted = True
+            # If history grew, this was a cube move — tell the FSM
+            if len(self._app.op.history()) > history_len_before:
+                self._fsm.send(FlowEvent.FACE_TURN)
+
+                # Detect manual move while solver redo queue exists → tainted
+                if self._fsm.redo_source == "solver" and self._app.op.redo_queue():
+                    self._fsm.redo_tainted = True
 
             self.send_state()
         except AppExit:

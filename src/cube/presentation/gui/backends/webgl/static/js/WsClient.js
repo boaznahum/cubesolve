@@ -12,6 +12,7 @@ export class WsClient {
         this._statusEl = document.getElementById('status');
         this._reconnectTimer = null;
         this._wakeLock = null;
+        this.onConnected = null;  // callback: reset view on (re)connect
 
         this._setupVisibilityHandler();
     }
@@ -42,6 +43,7 @@ export class WsClient {
             if (savedId) connectMsg.session_id = savedId;
             this._ws.send(JSON.stringify(connectMsg));
             this._acquireWakeLock();
+            if (this.onConnected) this.onConnected();
         };
 
         this._ws.onclose = () => {

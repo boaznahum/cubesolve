@@ -27,15 +27,21 @@ ENABLE_CUBE_CACHE = True
 PREVENT_RANDOM_FACE_PICK_UP_IN_GEOMETRY=False
 
 # Default solver name - case-insensitive, prefix matching allowed if unambiguous
-# Available solvers: Beginner Reducer, CFOP, Kociemba, Cage, Dwalton, Big LBL
+# Available solvers: Beginner Reducer, CFOP, Kociemba, Cage, Big LBL
 # Examples: "beginner", "cf" (for CFOP), "k" (for Kociemba), "big" (for Big LBL)
 # Note: Keep this list in sync with SolverName enum in src/cube/domain/solver/SolverName.py
-DEFAULT_SOLVER = "Kociemba"
+#DEFAULT_SOLVER = "Kociemba"
+DEFAULT_SOLVER = "Beginner Reducer"
 
 # Solver used by tests (must be implemented - raises error if not)
 # Tests use this instead of DEFAULT_SOLVER to avoid failures when DEFAULT_SOLVER
 # is set to a work-in-progress solver
 SOLVER_FOR_TESTS = "Beginner Reducer"
+
+# D2efault 2x2 solver — used when any 3x3+ solver is asked to solve a 2x2 cube
+# Options: "2x2 Beginner", "2x2 IDA*"
+# Note: Keep in sync with SolverName enum in src/cube/domain/solver/SolverName.py
+DEFAULT_2X2_SOLVER = "2x2 Beginner" # "2x2 IDA*"
 
 # 3x3 solver used by cage method for corner solving (Phase 1b)
 # Options: "beginner", "cfop", "kociemba"

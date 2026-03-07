@@ -27,6 +27,18 @@ export const FACE_DEFS = {
     L: { axis: 'x', sign: -1, right: [0, 0,  1], up: [0, 1,  0] },
 };
 
+// Shadow face offsets — duplicate hidden faces (L, D, B) at offset positions
+// so all 6 faces are visible without rotating the cube.
+// Values are in cube units (total cube size = 3.0).
+export const SHADOW_OFFSETS = {
+    L: [-2.4, 0, 0],
+    D: [0, -2.4, 0],
+    B: [0, 0, -2.4],
+};
+
+// Shadow face opacity (slightly transparent to distinguish from real faces)
+export const SHADOW_OPACITY = 0.88;
+
 /**
  * Create a rounded rectangle shape for sticker faces.
  */

@@ -74,6 +74,7 @@ const controls = new OrbitControls(camera, canvas, faceTurnHandler, send);
 
 // ── Toolbar ──
 const toolbar = new Toolbar(state, send, controls, animQueue, soundManager);
+toolbar._cubeModel = cubeModel;  // For shadow face toggle
 toolbar.bind();
 
 // ── History panel ──
@@ -143,6 +144,45 @@ animQueue._onAssistHide = () => {
     moveIndicator.hide();
 };
 
+// ── Mobile viewport fix ──
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+
+// Prevent page-level pinch-zoom (iOS ignores user-scalable=no since iOS 10).
+// Canvas 3D zoom still works — OrbitControls handles its own touch events.
+document.addEventListener('touchmove', (e) => {
+    if (e.touches.length > 1) e.preventDefault();
+}, { passive: false });
+
+// If page loaded while zoomed in (Chrome iOS persists zoom), counter-scale
+// the content so it fits the visible viewport.
+function fitToViewport() {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const scale = vv.scale;
+    const app = document.getElementById('app-layout');
+    if (!app) return;
+    if (scale > 1.05) {
+        app.style.transform = `scale(${1 / scale})`;
+        app.style.transformOrigin = '0 0';
+        app.style.width = `${scale * 100}%`;
+        app.style.height = `${scale * 100}%`;
+    } else {
+        app.style.transform = '';
+        app.style.transformOrigin = '';
+        app.style.width = '';
+        app.style.height = '';
+    }
+}
+if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', fitToViewport);
+}
+// Run after DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fitToViewport);
+} else {
+    fitToViewport();
+}
+
 // ── Responsive sizing ──
 let _lastAspect = 0;
 
@@ -160,8 +200,9 @@ function resize() {
         if (h < 50) {
             const toolbarEl = document.getElementById('toolbar');
             const statusEl = document.getElementById('status');
+            const moveBtns = document.getElementById('move-buttons');
             const vpH = window.visualViewport?.height ?? window.innerHeight;
-            h = vpH - (toolbarEl?.offsetHeight || 50) - (statusEl?.offsetHeight || 20) - 10;
+            h = vpH - (toolbarEl?.offsetHeight || 50) - (moveBtns?.offsetHeight || 70) - (statusEl?.offsetHeight || 20) - 10;
         }
         if (w < 50) {
             const histPanel = document.getElementById('history-panel');
@@ -192,13 +233,21 @@ function resize() {
 resize();
 window.addEventListener('resize', resize);
 
-// iOS: visualViewport fires more reliably on orientation change / keyboard show
+// Mobile: visualViewport fires more reliably on orientation change / address bar
 if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', resize);
 }
 
-// Delayed resize — catches late CSS flex layout on iOS first load
+// Delayed resize — catches late CSS flex layout on first load
 requestAnimationFrame(() => requestAnimationFrame(resize));
+
+// Reset camera and resize on every WebSocket (re)connection
+wsClient.onConnected = () => {
+    window.scrollTo(0, 0);
+    controls.reset();
+    _lastAspect = 0;  // force fitToView recalc
+    resize();
+};
 
 // ── Message handler ──
 function handleMessage(msg) {

@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from cube.domain.solver._2x2.ida_star_tables import (
+from cube.domain.solver._2x2_ida_optimal.ida_star_tables import (
     perm_from_cp,
     twist_from_co,
 )

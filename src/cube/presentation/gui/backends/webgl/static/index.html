@@ -129,6 +129,10 @@
                 </div>
                 <div class="tb-sep"></div>
                 <div class="tb-group">
+                    <button class="tb-btn tb-shadow tb-off" id="btn-shadow-all" title="Show hidden faces (L/D/B)">LDB</button>
+                </div>
+                <div class="tb-sep"></div>
+                <div class="tb-group">
                     <span class="tb-label">Solver</span>
                     <select id="solver-select" title="Solver"></select>
                 </div>
@@ -155,6 +159,25 @@
                 <div id="anim-overlay"></div>
                 <div id="status-overlay"></div>
                 <div id="debug-overlay"></div>
+            </div>
+            <div id="move-buttons">
+                <div class="mv-row">
+                    <button class="mv-btn mv-shift" id="btn-shift" title="Shift: tap=once, hold=lock">⇧</button>
+                    <button class="mv-btn" data-key="x">X</button>
+                    <button class="mv-btn" data-key="y">Y</button>
+                    <button class="mv-btn" data-key="z">Z</button>
+                    <button class="mv-btn" data-key="e">E</button>
+                    <button class="mv-btn" data-key="s">S</button>
+                    <button class="mv-btn" data-key="m">M</button>
+                </div>
+                <div class="mv-row">
+                    <button class="mv-btn" data-key="f">F</button>
+                    <button class="mv-btn" data-key="u">U</button>
+                    <button class="mv-btn" data-key="r">R</button>
+                    <button class="mv-btn" data-key="l">L</button>
+                    <button class="mv-btn" data-key="d">D</button>
+                    <button class="mv-btn" data-key="b">B</button>
+                </div>
             </div>
             <div id="status"><span class="status-dot"></span>Connecting...</div>
             <p id="seo-tagline">NxN Rubik's Cube Solver — 2x2 to 10x10 — Animated Step-by-Step</p>

@@ -29,7 +29,8 @@ class AbstractSolver(Solver, ABC):
         Each solver controls its own debug output via its own _is_debug_enabled.
         Prefix chaining provides context: "LBL:Beginner3x3:L1Cross: message"
     """
-    __slots__: list[str] = ["_common", "_op", "_cube", "_debug_override", "__logger"]
+    __slots__: list[str] = ["_common", "_op", "_cube", "_debug_override", "__logger",
+                             "_2x2_delegate_cache"]
 
     def __init__(
         self,
@@ -42,6 +43,7 @@ class AbstractSolver(Solver, ABC):
         self._op = op
         self._cube = op.cube
         self._debug_override: bool | None = None
+        self._2x2_delegate_cache: Solver | None = None
 
         # Create logger from parent with this solver's own debug_flag
         prefix = logger_prefix or "Solver"
@@ -86,6 +88,10 @@ class AbstractSolver(Solver, ABC):
         try:
             with self._op.with_animation(animation=animation):
                 try:
+                    # Delegate to 2x2 solver if this is a non-2x2 solver on a 2x2 cube
+                    if self._cube.size == 2 and not self._is_2x2_solver:
+                        return self._delegate_to_2x2(what)
+
                     self.reset_block_statistics()
                     count_before = self._op.count
                     result = self._solve_impl(what)
@@ -98,6 +104,77 @@ class AbstractSolver(Solver, ABC):
                     return SolverResults()
         finally:
             self._debug_override = None
+
+    @property
+    def _is_2x2_solver(self) -> bool:
+        """Whether this solver is a dedicated 2x2 solver.
+
+        Overridden by Solver2x2Base to return True.
+        """
+        return False
+
+    @property
+    def status(self) -> str:
+        """Solver status — delegates to 2x2 solver for 2x2 cubes."""
+        if self._cube.size == 2 and not self._is_2x2_solver:
+            return self._get_2x2_delegate().status
+        return self._status_impl
+
+    @property
+    @abstractmethod
+    def _status_impl(self) -> str:
+        """Solver-specific status. Override in subclasses."""
+        ...
+
+    def supported_steps(self) -> list[SolveStep]:
+        """Supported solve steps — delegates to 2x2 solver for 2x2 cubes."""
+        if self._cube.size == 2 and not self._is_2x2_solver:
+            return self._get_2x2_delegate().supported_steps()
+        return self._supported_steps_impl()
+
+    @abstractmethod
+    def _supported_steps_impl(self) -> list[SolveStep]:
+        """Solver-specific supported steps. Override in subclasses."""
+        ...
+
+    def diagnostic(self) -> None:
+        """Diagnostics — delegates to 2x2 solver for 2x2 cubes."""
+        if self._cube.size == 2 and not self._is_2x2_solver:
+            self._get_2x2_delegate().diagnostic()
+            return
+        self._diagnostic_impl()
+
+    def _diagnostic_impl(self) -> None:
+        """Solver-specific diagnostics. Override in subclasses."""
+        print(f"No diagnostics available for {self.name}")
+
+    def _get_2x2_delegate(self) -> Solver:
+        """Get or create the cached 2x2 solver delegate."""
+        if self._2x2_delegate_cache is None:
+            self._2x2_delegate_cache = self._create_2x2_delegate()
+        return self._2x2_delegate_cache
+
+    def _create_2x2_delegate(self) -> Solver:
+        """Create the 2x2 solver to delegate to.
+
+        Override in subclasses to pick a specific 2x2 solver.
+        Default: uses the configured default 2x2 solver from config.
+        """
+        from cube.domain.solver.Solvers import Solvers
+        return Solvers.default_2x2(self._op)
+
+    def _delegate_to_2x2(self, what: SolveStep) -> SolverResults:
+        """Delegate solving to the configured 2x2 solver.
+
+        Called by solve() when a non-2x2 solver is asked to solve a 2x2 cube.
+        """
+        solver_2x2 = self._get_2x2_delegate()
+        self.debug("Delegating to 2x2 solver")
+        return solver_2x2.solve(
+            debug=self._debug_override,
+            animation=None,  # Inherit from parent's animation context
+            what=what,
+        )
 
     @abstractmethod
     def _solve_impl(self, what: SolveStep) -> SolverResults:
@@ -152,10 +229,6 @@ class AbstractSolver(Solver, ABC):
                 self.debug(f"  [{display_topic}] (no blocks)")
         parts = [f"{size}x1:{count}" for size, count in sorted(summary.items())]
         self.debug(f"  [SUMMARY] {', '.join(parts)} (total: {total_blocks} blocks)")
-
-    def diagnostic(self) -> None:
-        """Default no-op diagnostic. Override in subclasses for detailed diagnostics."""
-        print(f"No diagnostics available for {self.name}")
 
     def _run_child_solver(self, child: Solver, what: SolveStep) -> SolverResults:
         """Run a child solver, propagating debug override if set.

@@ -116,7 +116,7 @@ class Dwalton3x3(AbstractSolver, Solver3x3Protocol):
         return "Unsolved (Dwalton)"
 
     @property
-    def status(self) -> str:
+    def _status_impl(self) -> str:
         return self.status_3x3
 
     @property
@@ -171,7 +171,7 @@ class Dwalton3x3(AbstractSolver, Solver3x3Protocol):
     def _solve_impl(self, what: SolveStep) -> SolverResults:
         return self.solve_3x3(self._is_debug_enabled, what)
 
-    def supported_steps(self) -> list[SolveStep]:
+    def _supported_steps_impl(self) -> list[SolveStep]:
         return []
 
     def _cube_to_kociemba_string(self, cube: Cube) -> str:

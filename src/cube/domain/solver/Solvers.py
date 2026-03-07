@@ -26,24 +26,36 @@ class Solvers:
     def default(cls, op: OperatorProtocol) -> Solver:
         """Get the default solver based on config setting.
 
-        For 2x2 cubes, by_name() delegates to the dedicated 2x2 solver
-        automatically, so no special case is needed here.
+        Note: 2x2 delegation is handled at solve-time by AbstractSolver.solve(),
+        not at construction time. The factory creates whatever solver is configured.
         """
         solver_name = SolverName.lookup(op.app_state.config.default_solver)
         return cls.by_name(solver_name, op)
 
     @staticmethod
-    def two_by_two(op: OperatorProtocol, display_as: SolverName | None = None) -> Solver:
-        """Get the dedicated 2x2 cube solver.
-
-        Args:
-            display_as: If set, the solver reports this name instead of TWO_BY_TWO.
-                Used when delegating from user-visible solvers (e.g. LBL on a 2x2 cube).
-        """
-        from ._2x2.Solver2x2 import Solver2x2
+    def two_by_two_ida(op: OperatorProtocol) -> Solver:
+        """Get the IDA* optimal 2x2 cube solver."""
+        from ._2x2_ida_optimal.Solver2x2IDA import Solver2x2IDA
 
         parent_logger = op.cube.sp.logger
-        return Solver2x2(op, parent_logger, display_as=display_as)
+        return Solver2x2IDA(op, parent_logger)
+
+    @staticmethod
+    def two_by_two_beginner(op: OperatorProtocol) -> Solver:
+        """Get the beginner layer-by-layer 2x2 cube solver."""
+        from ._2x2_beginner.Solver2x2Beginner import Solver2x2Beginner
+
+        parent_logger = op.cube.sp.logger
+        return Solver2x2Beginner(op, parent_logger)
+
+    @classmethod
+    def default_2x2(cls, op: OperatorProtocol) -> Solver:
+        """Get the configured default 2x2 solver.
+
+        Reads `default_2x2_solver` from config and creates the appropriate solver.
+        """
+        solver_name = SolverName.lookup(op.app_state.config.default_2x2_solver)
+        return cls.by_name(solver_name, op)
 
     @staticmethod
     def beginner(op: OperatorProtocol) -> Solver:
@@ -112,29 +124,6 @@ class Solvers:
         )
 
     @staticmethod
-    def dwalton(op: OperatorProtocol) -> Solver:
-        """
-        Get Dwalton table-based solver with NxN support.
-
-        For 3x3: Uses Kociemba two-phase with pruning tables (pure Python)
-        For NxN: Uses BeginnerReducer + Dwalton3x3
-
-        Inspired by dwalton76/rubiks-cube-NxNxN-solver.
-        Uses advanced (R/L-slice) edge parity algorithm.
-        """
-        from .NxNSolverOrchestrator import NxNSolverOrchestrator
-        from .Reducers import Reducers
-        from .Solvers3x3 import Solvers3x3
-
-        parent_logger = op.cube.sp.logger
-        solver_3x3 = Solvers3x3.dwalton(op, parent_logger)
-        reducer = Reducers.beginner(op, advanced_edge_parity=True)
-
-        return NxNSolverOrchestrator(
-            op, parent_logger, reducer, solver_3x3, SolverName.DWALTON
-        )
-
-    @staticmethod
     def cage(op: OperatorProtocol) -> Solver:
         """
         Get Cage method solver (odd cubes only).
@@ -187,14 +176,16 @@ class Solvers:
     def by_name(cls, solver_id: SolverName, op: OperatorProtocol) -> Solver:
         """Get a solver by its name.
 
-        For 2x2 cubes, all solvers delegate to the dedicated 2x2 solver.
+        Note: 2x2 delegation is handled by AbstractSolver.solve(), not here.
+        This factory simply creates the requested solver.
         """
-        # For 2x2 cubes, delegate to the 2x2 solver
-        # but preserve the original solver name for the UI
-        if op.cube.size == 2:
-            return cls.two_by_two(op, display_as=solver_id)
-
         match solver_id:
+
+            case SolverName.TWO_BY_TWO_IDA:
+                return cls.two_by_two_ida(op)
+
+            case SolverName.TWO_BY_TWO_BEGINNER:
+                return cls.two_by_two_beginner(op)
 
             case SolverName.LBL:
                 return cls.beginner(op)
@@ -204,9 +195,6 @@ class Solvers:
 
             case SolverName.KOCIEMBA:
                 return cls.kociemba(op)
-
-            case SolverName.DWALTON:
-                return cls.dwalton(op)
 
             case SolverName.CAGE:
                 return cls.cage(op)

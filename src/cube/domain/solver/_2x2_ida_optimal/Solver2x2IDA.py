@@ -21,10 +21,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from cube.domain.algs import Alg, Algs
-from cube.domain.solver._2x2.cube_to_coordinates import cube_to_coords
-from cube.domain.solver._2x2.ida_star_search import solve as ida_solve
-from cube.domain.solver._2x2.ida_star_tables import get_tables
-from cube.domain.solver.common.BaseSolver import BaseSolver
+from cube.domain.solver._2x2_ida_optimal.cube_to_coordinates import cube_to_coords
+from cube.domain.solver._2x2_ida_optimal.ida_star_search import solve as ida_solve
+from cube.domain.solver._2x2_ida_optimal.ida_star_tables import get_tables
+from cube.domain.solver.common.Solver2x2Base import Solver2x2Base
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.solver import SolverResults, SolveStep
 from cube.domain.solver.SolverName import SolverName
@@ -126,7 +126,7 @@ def _find_dbl_piece_slot_and_co(cube: Cube) -> tuple[int, int]:
     raise AssertionError("DBL piece not found in any slot")
 
 
-class Solver2x2(BaseSolver):
+class Solver2x2IDA(Solver2x2Base):
     """Optimal 2x2 cube solver using IDA* with precomputed pruning tables.
 
     Finds solutions of ≤11 moves (God's number for 2x2).
@@ -134,23 +134,21 @@ class Solver2x2(BaseSolver):
     Subsequent solves complete in sub-millisecond time.
     """
 
-    __slots__: list[str] = ["_display_as"]
+    __slots__: list[str] = []
 
     def __init__(
         self,
         op: OperatorProtocol,
         parent_logger: ILogger,
-        display_as: SolverName | None = None,
     ) -> None:
-        super().__init__(op, parent_logger, logger_prefix="Solver2x2")
-        self._display_as: SolverName = display_as or SolverName.TWO_BY_TWO
+        super().__init__(op, parent_logger, logger_prefix="Solver2x2IDA")
 
     @property
     def get_code(self) -> SolverName:
-        return self._display_as
+        return SolverName.TWO_BY_TWO_IDA
 
     @property
-    def status(self) -> str:
+    def _status_impl(self) -> str:
         if self._cube.solved:
             return "Solved"
         return "Unsolved"
@@ -166,7 +164,7 @@ class Solver2x2(BaseSolver):
 
         return sr
 
-    def supported_steps(self) -> list[SolveStep]:
+    def _supported_steps_impl(self) -> list[SolveStep]:
         return [SolveStep.L1, SolveStep.L3]
 
     def _orient_dbl(self) -> None:
@@ -184,18 +182,6 @@ class Solver2x2(BaseSolver):
         self.debug(f"DBL piece at slot {slot} co={co}, rotating to fix")
         for alg in _ORIENT_TABLE[(slot, co)]:
             self.op.play(alg)
-
-    @staticmethod
-    def _fix_centers(cube: Cube) -> None:
-        """Reset virtual center pieces to match original face colors.
-
-        On a 2x2, the domain model has virtual center pieces that move with
-        whole-cube rotations but not with face moves. After pre-orientation
-        (whole-cube rotations) and solving (face moves only), the centers
-        may be displaced while corners are correct. This resets them.
-        """
-        for face in cube.faces:
-            face.center._virtual_color = face.original_color  # type: ignore[attr-defined]
 
     def _solve_optimal(self) -> None:
         """Solve the 2x2 cube optimally using IDA*."""
@@ -218,5 +204,3 @@ class Solver2x2(BaseSolver):
         for move_idx in solution:
             self.op.play(_MOVE_TO_ALG[move_idx])
 
-        # Fix virtual center pieces that were displaced by pre-orientation
-        self._fix_centers(self._cube)
