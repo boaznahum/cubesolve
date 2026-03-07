@@ -408,3 +408,6 @@ def apply_cube_colors(cube: "Cube", faces: dict[str, list[str]]) -> None:
                         center_slice = center.get_slice((cy, cx))
                         edge_on_face = center_slice.get_face_edge(face)
                         _set_edge_color(edge_on_face, 1 + cy, 1 + cx)
+
+    # Invalidate all caches — colors changed outside normal rotation path
+    cube.reset_after_faces_changes()
