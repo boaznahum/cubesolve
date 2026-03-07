@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from cube.domain.model import Color
 from cube.domain.solver._3x3.shared.L1Cross import L1Cross
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.protocols import OperatorProtocol
@@ -101,6 +102,8 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
         if what is None:
             what = SolveStep.ALL
 
+        self._select_best_start_color()
+
         # Execute appropriate solve steps
         # Note: L3 steps may raise parity exceptions on even cubes
         match what:
@@ -170,6 +173,30 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
             s += ", No L3"
 
         return s
+
+    def _select_best_start_color(self) -> None:
+        """Pick the best starting color for L1.
+
+        Scans all 6 face colors: if any already has a solved L1 layer
+        (cross + corners), uses that color instead of white.
+        If no solved layer found, keeps the default (white).
+
+        TODO: improve — currently uses query mode to test each color
+        via existing is_cross/is_corners. Could be done without query mode
+        by directly checking face parts.
+        """
+        saved_color: Color = self.cmn.white
+
+        with self.op.with_query_restore_state():
+            for face in self._cube.faces:
+                self.cmn._start_color = face.color
+                if self.l1_cross.is_cross_rotate_and_check() and self.l1_corners.is_corners(self.l1_cross):
+                    if face.color != saved_color:
+                        self._logger.debug(None, f"L1 already solved on {face.color}, using as start color")
+                    saved_color = face.color
+                    break
+
+        self.cmn._start_color = saved_color
 
     # Required by Solver ABC - delegate to status_3x3
     @property
