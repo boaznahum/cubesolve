@@ -36,9 +36,9 @@ def _is_cross_on_face(face: Face) -> bool:
     # All edge face-side stickers must be face color
     if not all(e.match_face(face) for e in face.edges):
         return False
-    # Look up scheme face by color, not by position name
+    # Adjacent-side colors must be a cyclic rotation of the color scheme
     scheme = face.cube.original_scheme
-    scheme_face = scheme._find_face(face.color)
+    scheme_face = scheme.find_face_by_color(face.color)
     return scheme.is_valid_neighbor_cycle(
         scheme_face, face.edge_neighbor_colors_cw()
     )

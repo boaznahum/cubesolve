@@ -263,20 +263,37 @@ class CubeColorScheme:
     # Cycle checks (cheap — no cube rotation)
     # ------------------------------------------------------------------
 
+    def find_face_by_color(self, color: Color) -> FaceName:
+        """Find which face in this scheme holds the given color.
+
+        Args:
+            color: The color to look up.
+
+        Returns:
+            The face name holding that color in this scheme.
+
+        Raises:
+            InternalSWError: If color is not in this scheme.
+        """
+        return self._find_face(color)
+
     def is_valid_neighbor_cycle(
         self, face: FaceName, actual_cw_colors: tuple[Color, ...],
     ) -> bool:
         """Check if actual CW neighbor colors are a valid rotation of the scheme.
 
-        Given a face and the actual colors on the adjacent edges (in CW order:
-        top, right, bottom, left), returns True if those colors are a cyclic
-        rotation of the expected neighbor colors from the color scheme.
+        Given a face name and the actual colors on the adjacent edges (in CW
+        order: top, right, bottom, left), returns True if those colors are a
+        cyclic rotation of the expected neighbor colors from the color scheme.
 
         This is a *cheap* alternative to ``rotate_face_and_check`` — no cube
         mutation, just tuple comparison.
 
+        Note: After whole-cube rotations, use ``find_face_by_color(face.color)``
+        to get the correct scheme face name, not ``face.name``.
+
         Args:
-            face: The face whose neighbors to check.
+            face: The scheme face whose neighbors to check.
             actual_cw_colors: The 4 actual edge colors on adjacent faces,
                               in CW order (top, right, bottom, left).
 
