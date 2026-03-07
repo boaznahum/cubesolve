@@ -147,32 +147,30 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
 
     @property
     def status_3x3(self) -> str:
-        """Human-readable 3x3 solving status."""
-        from cube.domain.model import Part
+        """Human-readable 3x3 solving status.
 
+        Finds the best L1 face first, then checks L2/L3 relative to it.
+        All checks use face-color matching (ignoring L1 face rotation).
+        Always reports which face is L1 (e.g., "L1(W)").
+        """
         if self._cube.solved:
             return "Solved"
+
+        # Find which face is L1 — sets _start_color for L2/L3 checks
+        self._select_best_start_color()
+        l1_label = self.cmn.white.name[0]  # Short name: W, G, R, etc.
 
         cross = self.l1_cross.is_cross_rotate_and_check()
         corners = self.l1_corners.is_corners(self.l1_cross)
 
         if cross and corners:
-            s = "L1"
+            s = f"L1({l1_label})"
         elif cross:
-            s = "L1-Cross"
+            s = f"L1x({l1_label})"
         elif corners:
-            s = "L1-Corners"
+            s = f"L1c({l1_label})"
         else:
-            # Search all faces for a solved L1 (check with rotation)
-            for face in self._cube.faces:
-                def _l1_solved() -> bool:
-                    return Part.all_match_faces(face.edges) and Part.all_match_faces(face.corners)
-
-                if self._cube.cqr.rotate_face_and_check(face, _l1_solved) >= 0:
-                    s = f"L1({face.color.name})"
-                    break
-            else:
-                s = "No-L1"
+            s = "No-L1"
 
         if self.l2.solved():
             s += ", L2"
@@ -182,9 +180,9 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
         if self.l3_cross.solved() and self.l3_corners.solved():
             s += ", L3"
         elif self.l3_cross.solved():
-            s += ", L3-Cross"
+            s += ", L3x"
         elif self.l3_corners.solved():
-            s += ", L3-Corners"
+            s += ", L3c"
         else:
             s += ", No L3"
 
@@ -193,18 +191,29 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
     def _select_best_start_color(self) -> None:
         """Pick the best starting color for L1.
 
-        Scans all 6 face colors: if any already has a solved L1 layer
-        (cross edges + corners all matching their faces), uses that color.
-        If no solved layer found, keeps the default (white).
+        Scans all 6 face colors: if any already has a solved L1 layer,
+        uses that color. If no solved layer found, keeps the default (white).
 
-        Uses rotate_face_and_check to handle rotated faces — L1 is still
-        solved if the face just needs rotation to align edges/corners.
+        Detection uses face-color check only: all edge/corner stickers ON
+        the face must match the face's center color. This ignores L1
+        orientation (rotation) — a rotated L1 face still has correct face
+        colors. Full position check (adjacent faces) uses rotate_face_and_check.
         """
         from cube.domain.model import Part
 
         saved_color: Color = self.cmn.white
 
         for face in self._cube.faces:
+            # Quick check: do all face-side stickers match the face center?
+            # This catches L1 regardless of face rotation.
+            face_colors_ok = (
+                all(e.match_face(face) for e in face.edges)
+                and all(c.match_face(face) for c in face.corners)
+            )
+            if not face_colors_ok:
+                continue
+
+            # Face colors match — verify full L1 (adjacent faces) with rotation
             def _l1_solved() -> bool:
                 return Part.all_match_faces(face.edges) and Part.all_match_faces(face.corners)
 
