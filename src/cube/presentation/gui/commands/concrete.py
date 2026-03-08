@@ -692,7 +692,7 @@ class SwitchSolverCommand(Command):
 
     def execute(self, ctx: CommandContext) -> CommandResult:
         ctx.app.switch_to_next_solver()
-        ctx.op.reset()
+        ctx.op.clear_redo()
 
         # Rebuild toolbar solver buttons for new solver
         # Use getattr to safely access optional _toolbar attribute (pyglet2 only)
@@ -713,7 +713,7 @@ class SwitchToSolverCommand(Command):
 
     def execute(self, ctx: CommandContext) -> CommandResult:
         ctx.app.switch_to_solver(self.solver_name)
-        ctx.op.reset()
+        ctx.op.clear_redo()
 
         # Rebuild toolbar solver buttons for new solver
         toolbar = getattr(ctx.window, '_toolbar', None)

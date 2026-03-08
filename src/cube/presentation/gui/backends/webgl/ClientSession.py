@@ -592,7 +592,7 @@ class ClientSession:
         if self._app.slv.get_code is solver_name:
             return
         self._app.switch_to_solver(solver_name)
-        self._app.op.reset()
+        self._app.op.clear_redo()
         self.send_state()
 
     def _handle_command(self, command_name: str) -> None:
