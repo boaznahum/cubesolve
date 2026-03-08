@@ -18,6 +18,7 @@ import { HistoryPanel } from './HistoryPanel.js';
 import { MoveIndicator } from './MoveIndicator.js';
 import { SoundManager } from './SoundManager.js';
 import { ColorPicker } from './ColorPicker.js';
+import { InfoPopup } from './InfoPopup.js';
 
 // ── Application state ──
 const state = new AppState();
@@ -112,6 +113,12 @@ colorPicker.onCheck = (faces, gen) => {
 colorPicker.canEnter = () => {
     return !animQueue.isBusy && !state.isPlaying && state.latestState != null;
 };
+
+// ── Info popup ──
+const infoPopup = new InfoPopup();
+document.getElementById('btn-info')?.addEventListener('click', () => {
+    infoPopup.toggle();
+});
 
 // Paint button in toolbar
 document.getElementById('btn-paint')?.addEventListener('click', () => {

@@ -924,6 +924,184 @@ body.paint-mode #canvas {
 /* ============================================================
    Assist Checkbox
    ============================================================ */
+
+/* ============================================================
+   Info Popup — terminal-style modal
+   ============================================================ */
+
+/* Backdrop — dims everything behind the dialog */
+.info-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+/* Dialog container — terminal window */
+.info-dialog {
+    background: rgba(8, 12, 8, 0.96);
+    border: 1px solid rgba(0, 255, 65, 0.2);
+    border-radius: 10px;
+    width: 90%;
+    max-width: 520px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow:
+        0 0 40px rgba(0, 255, 65, 0.06),
+        0 8px 32px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(0, 255, 65, 0.08);
+    overflow: hidden;
+}
+
+/* Header — terminal title bar */
+.info-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    border-bottom: 1px solid rgba(0, 255, 65, 0.12);
+    background: rgba(0, 20, 0, 0.5);
+}
+
+.info-header-title {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(0, 255, 65, 0.8);
+    letter-spacing: 0.5px;
+}
+
+.info-header-close {
+    background: none;
+    border: 1px solid rgba(0, 255, 65, 0.2);
+    border-radius: 4px;
+    color: rgba(0, 255, 65, 0.5);
+    font-size: 14px;
+    padding: 2px 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.info-header-close:hover {
+    color: rgba(0, 255, 65, 0.9);
+    border-color: rgba(0, 255, 65, 0.5);
+    background: rgba(0, 255, 65, 0.08);
+}
+
+/* Content — scrollable area */
+.info-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 255, 65, 0.15) transparent;
+}
+
+.info-content::-webkit-scrollbar {
+    width: 4px;
+}
+
+.info-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.info-content::-webkit-scrollbar-thumb {
+    background: rgba(0, 255, 65, 0.15);
+    border-radius: 4px;
+}
+
+/* Section */
+.info-section {
+    margin-bottom: 18px;
+}
+
+.info-section:last-child {
+    margin-bottom: 0;
+}
+
+.info-section-title {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(0, 255, 65, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 10px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(0, 255, 65, 0.08);
+}
+
+/* Item row */
+.info-item {
+    padding: 5px 0 5px 12px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    border-left: 2px solid rgba(0, 255, 65, 0.08);
+    margin-bottom: 2px;
+}
+
+.info-item-name {
+    color: rgba(0, 255, 65, 0.9);
+    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-weight: 600;
+    font-size: 12px;
+}
+
+a.info-item-name {
+    text-decoration: none;
+    border-bottom: 1px dashed rgba(0, 255, 65, 0.3);
+    transition: all 0.2s ease;
+}
+
+a.info-item-name:hover {
+    color: rgba(0, 255, 65, 1);
+    border-bottom-color: rgba(0, 255, 65, 0.7);
+    text-shadow: 0 0 8px rgba(0, 255, 65, 0.3);
+}
+
+.info-item-desc {
+    color: rgba(0, 255, 65, 0.45);
+    font-size: 11.5px;
+    margin-left: 4px;
+}
+
+/* Footer — OK button */
+.info-footer {
+    padding: 10px 16px;
+    border-top: 1px solid rgba(0, 255, 65, 0.12);
+    display: flex;
+    justify-content: flex-end;
+    background: rgba(0, 20, 0, 0.3);
+}
+
+.info-ok-btn {
+    background: rgba(0, 255, 65, 0.1);
+    border: 1px solid rgba(0, 255, 65, 0.25);
+    border-radius: 5px;
+    color: rgba(0, 255, 65, 0.8);
+    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    letter-spacing: 1px;
+}
+
+.info-ok-btn:hover {
+    background: rgba(0, 255, 65, 0.18);
+    border-color: rgba(0, 255, 65, 0.5);
+    color: rgba(0, 255, 65, 1);
+    box-shadow: 0 0 12px rgba(0, 255, 65, 0.1);
+}
+
 /* ============================================================
    SEO Tagline
    ============================================================ */
@@ -1142,6 +1320,33 @@ body.paint-mode #canvas {
 
     #debug-overlay .seg-value {
         font-size: 10px;
+    }
+
+    /* Info popup — compact on mobile */
+    .info-dialog {
+        width: 95%;
+        max-height: 85vh;
+    }
+
+    .info-content {
+        padding: 12px 14px;
+    }
+
+    .info-header-title {
+        font-size: 11px;
+    }
+
+    .info-item {
+        font-size: 11.5px;
+        padding: 4px 0 4px 8px;
+    }
+
+    .info-item-name {
+        font-size: 11px;
+    }
+
+    .info-item-desc {
+        font-size: 10.5px;
     }
 }
 
