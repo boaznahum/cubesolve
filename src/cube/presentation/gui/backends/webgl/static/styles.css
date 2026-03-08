@@ -1017,6 +1017,32 @@ body.paint-mode #canvas {
     border-radius: 4px;
 }
 
+/* Project header block */
+.info-project-header {
+    text-align: center;
+    padding-bottom: 14px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid rgba(0, 255, 65, 0.12);
+}
+
+.info-project-name {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: rgba(0, 255, 65, 0.9);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    text-shadow: 0 0 12px rgba(0, 255, 65, 0.15);
+}
+
+.info-project-meta {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 11px;
+    color: rgba(0, 255, 65, 0.5);
+    margin-top: 4px;
+}
+
 /* Section */
 .info-section {
     margin-bottom: 18px;

@@ -8,6 +8,13 @@
 
 // ── Content data ──
 
+const HEADER = {
+    title: 'CubeSolve',
+    author: 'Boaz Nahum',
+    email: 'boaznahum2@gmail.com',
+    github: 'https://github.com/boaznahum/cubesolve',
+};
+
 const SECTIONS = [
     {
         title: 'Credits',
@@ -263,6 +270,42 @@ export class InfoPopup {
 
     /** Render content sections from SECTIONS data. */
     _renderContent(container) {
+        // Project header block
+        const hdr = document.createElement('div');
+        hdr.className = 'info-project-header';
+
+        const projName = document.createElement('div');
+        projName.className = 'info-project-name';
+        projName.textContent = HEADER.title;
+        hdr.appendChild(projName);
+
+        const authorLine = document.createElement('div');
+        authorLine.className = 'info-project-meta';
+        authorLine.textContent = `by ${HEADER.author}`;
+        hdr.appendChild(authorLine);
+
+        const linksLine = document.createElement('div');
+        linksLine.className = 'info-project-meta';
+
+        const ghLink = document.createElement('a');
+        ghLink.className = 'info-item-name';
+        ghLink.href = HEADER.github;
+        ghLink.target = '_blank';
+        ghLink.rel = 'noopener noreferrer';
+        ghLink.textContent = 'GitHub';
+        linksLine.appendChild(ghLink);
+
+        linksLine.appendChild(document.createTextNode('  ·  '));
+
+        const emailLink = document.createElement('a');
+        emailLink.className = 'info-item-name';
+        emailLink.href = `mailto:${HEADER.email}`;
+        emailLink.textContent = HEADER.email;
+        linksLine.appendChild(emailLink);
+
+        hdr.appendChild(linksLine);
+        container.appendChild(hdr);
+
         for (const section of SECTIONS) {
             const sectionEl = document.createElement('div');
             sectionEl.className = 'info-section';
