@@ -1,2 +1,5 @@
 * text=auto eol=lf
 *.bat text eol=crlf
+
+# Normalize SDK_NAME in PyCharm run configs so PyCharm's auto-changes don't create git diffs
+.idea/runConfigurations/*.xml filter=normalize-sdk-name
