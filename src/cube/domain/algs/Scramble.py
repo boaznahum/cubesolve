@@ -25,6 +25,7 @@ class _Scramble(SeqAlg):
 
 
 _PROB_SLICE_AN_ALG = 1.0 / 3.0
+_PROB_DISCONTINUED_SLICE = 1.0 / 3.0  # chance to use discontinued (non-contiguous) slices
 _PROB_SEQ = 1.0 / 2.0
 _PROB_INV = 1.0 / 5.0
 _PROB_MUL = 1.0 / 5.0
@@ -119,18 +120,32 @@ def __scramble(cube_size: int, rnd: Random, n: int, nest) -> list[Alg]:
                     max_slice = cube_size - 2  # see :class:`SliceAlg`
 
                 if max_slice >= 1:
-                    slice_start = rnd.randint(1, max_slice)
-                    if slice_start == max_slice:
-                        slice_stop = slice_start
+                    # Try discontinued (non-contiguous) slices when enough range
+                    if max_slice >= 3 and prob(_PROB_DISCONTINUED_SLICE):
+                        # Pick a random subset of available indices with at least one gap
+                        all_indices = list(range(1, max_slice + 1))
+                        # Pick how many indices to include (at least 2)
+                        count = rnd.randint(2, max_slice)
+                        chosen = sorted(rnd.sample(all_indices, count))
+                        # Only use if there's actually a gap (non-contiguous)
+                        is_contiguous = (chosen[-1] - chosen[0] + 1 == len(chosen))
+                        if not is_contiguous:
+                            a = a[chosen]
+                        else:
+                            a = a[chosen[0]:chosen[-1]]
                     else:
-                        left = max_slice - slice_start
-
-                        if left == 0 or rnd.random() > 0.5:
+                        slice_start = rnd.randint(1, max_slice)
+                        if slice_start == max_slice:
                             slice_stop = slice_start
                         else:
-                            slice_stop = rnd.randint(1, left) + slice_start
+                            left = max_slice - slice_start
 
-                    a = a[slice_start:slice_stop]
+                            if left == 0 or rnd.random() > 0.5:
+                                slice_stop = slice_start
+                            else:
+                                slice_stop = rnd.randint(1, left) + slice_start
+
+                        a = a[slice_start:slice_stop]
 
             # Randomly vary layer count for WideLayerAlg (e.g., Rw → 3Rw)
             from cube.domain.algs.WideLayerAlg import WideLayerAlg

@@ -191,8 +191,25 @@ def _parse_slice_prefix(t: str) -> tuple[str, slice | list[int] | None]:
         raise InternalSWError(f"No algorithm after slice in token: {t}")
 
     # Parse slice content
-    if ":" in slice_str:
-        # Range notation: [start:stop] or [start:] or [:stop]
+    if "," in slice_str:
+        # Mixed notation: [1:2,4:6] or [1,2,3] or [1:3,5,7:9]
+        # Split by comma, each part is either a range "start:stop" or a single int
+        indices: list[int] = []
+        for part in slice_str.split(","):
+            part = part.strip()
+            if ":" in part:
+                range_parts = part.split(":")
+                if len(range_parts) != 2:
+                    raise InternalSWError(f"Invalid range in slice: {part}")
+                start = int(range_parts[0])
+                stop = int(range_parts[1])
+                indices.extend(range(start, stop + 1))
+            else:
+                indices.append(int(part))
+        return base_token, sorted(indices)
+
+    elif ":" in slice_str:
+        # Pure range notation: [start:stop] or [start:] or [:stop]
         parts = slice_str.split(":")
         if len(parts) != 2:
             raise InternalSWError(f"Invalid slice format: {slice_str}")
@@ -201,11 +218,6 @@ def _parse_slice_prefix(t: str) -> tuple[str, slice | list[int] | None]:
         start = int(start_str) if start_str else None
         stop = int(stop_str) if stop_str else None
         return base_token, slice(start, stop)
-
-    elif "," in slice_str:
-        # List notation: [1,2,3]
-        indices = [int(x.strip()) for x in slice_str.split(",")]
-        return base_token, indices
 
     else:
         # Single index: [1] -> slice(1, 1)

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Collection, Iterable, Self, Sequence, Tuple
 
-from cube.domain.algs._internal_utils import _inv, n_to_str
+from cube.domain.algs._internal_utils import _format_slice_sequence, _inv, n_to_str
 from cube.domain.algs.AnimationAbleAlg import AnimationAbleAlg
 from cube.domain.exceptions import InternalSWError
 from cube.domain.model.Cube import Cube, FaceName, PartSlice
@@ -90,7 +90,7 @@ class SliceAlgBase(AnimationAbleAlg, ABC):
 
             raise InternalSWError(f"Unknown {start} {stop}")
         else:
-            return "[" + ",".join(str(i) for i in slices) + "]" + s
+            return "[" + _format_slice_sequence(slices) + "]" + s
 
     def atomic_str(self) -> str:
         return self._add_to_str(n_to_str(self._code, self._n))
