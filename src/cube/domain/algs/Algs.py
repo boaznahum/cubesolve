@@ -173,9 +173,9 @@ class Algs:
         return SeqAlg(None, *algs)
 
     Simple: Sequence[NSimpleAlg] = [L, Lw,
-                                    R, Rw, X, M, MM,
-                                    U, Uw, E, EE, Y,
-                                    F, Fw, S, Z, SS,
+                                    R, Rw, X, MM,
+                                    U, Uw, EE, Y,
+                                    F, Fw, Z, SS,
                                     B, Bw,
                                     D, Dw,
                                     # Standard wide moves (lowercase form)

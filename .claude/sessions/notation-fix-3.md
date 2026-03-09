@@ -88,5 +88,5 @@ Align algorithm notation with WCA standards. Introduce proper M/E/S notation and
 
 ## Future Tasks
 - **TODO:** Eliminate `Algs.parse()` usages in solver code - replace with programmatic alg construction
-- ~~**TODO:** Add M/E/S to scrambler~~ — done, added to `Algs.Simple` list
+- **TODO:** Add M/E/S to scrambler (MiddleSliceAlg)
 - ~~**TODO:** Document E/S notation~~ — already done, E/S use MiddleSliceAlg same as M
