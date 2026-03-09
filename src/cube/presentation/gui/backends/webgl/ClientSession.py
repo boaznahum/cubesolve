@@ -655,14 +655,24 @@ class ClientSession:
             if not self._fsm.send(FlowEvent.UNDO):
                 return
             self._fsm.redo_source = "undo"
-            self._app.op.undo(animation=True)
+            op = self._app.op
+            op.undo(animation=op.animation_enabled)
+            if not op.animation_enabled:
+                has_redo = bool(op.redo_queue())
+                has_history = bool(op.history())
+                self._fsm.send(FlowEvent.ANIM_DONE, has_redo=has_redo, has_history=has_history)
             self.send_state()
             return
 
         if command_name == "redo":
             if not self._fsm.send(FlowEvent.PLAY_NEXT):
                 return
-            self._app.op.redo(animation=True)
+            op = self._app.op
+            op.redo(animation=op.animation_enabled)
+            if not op.animation_enabled:
+                has_redo = bool(op.redo_queue())
+                has_history = bool(op.history())
+                self._fsm.send(FlowEvent.ANIM_DONE, has_redo=has_redo, has_history=has_history)
             self.send_state()
             return
 
@@ -848,7 +858,14 @@ class ClientSession:
             # Detect manual move while solver redo queue exists → tainted
             if self._fsm.redo_source == "solver" and op.redo_queue():
                 self._fsm.redo_tainted = True
-            op.play(alg, animation=True)
+            if not op.animation_enabled:
+                # Animation OFF: apply instantly, transition FSM immediately
+                op.play(alg, animation=False)
+                has_redo = bool(op.redo_queue())
+                has_history = bool(op.history())
+                self._fsm.send(FlowEvent.ANIM_DONE, has_redo=has_redo, has_history=has_history)
+            else:
+                op.play(alg, animation=True)
             self.send_state()
 
     @staticmethod
@@ -1230,6 +1247,12 @@ class ClientSession:
             # If history grew, this was a cube move — tell the FSM
             if len(self._app.op.history()) > history_len_before:
                 self._fsm.send(FlowEvent.FACE_TURN)
+
+                # Animation OFF: AM was bypassed, so manually fire ANIM_DONE
+                if not self._app.op.animation_enabled:
+                    has_redo = bool(self._app.op.redo_queue())
+                    has_history = bool(self._app.op.history())
+                    self._fsm.send(FlowEvent.ANIM_DONE, has_redo=has_redo, has_history=has_history)
 
                 # Detect manual move while solver redo queue exists → tainted
                 if self._fsm.redo_source == "solver" and self._app.op.redo_queue():
