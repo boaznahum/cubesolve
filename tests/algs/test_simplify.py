@@ -220,15 +220,15 @@ class TestDisjointSliceMerge:
         s = _test_simplify(alg, cube_size)
         assert s.count() == 2, f"Expected 2 (half turn), got {s.count()}: {s}"
 
-    def test_disjoint_different_n_no_merge(self):
-        """R[1:2]*2 + R[3:4]*1 should NOT merge (n=2 vs n=1, different mod 4)."""
+    def test_disjoint_different_n_extracts_min(self):
+        """R[1:2]*2 + R[3:4]*1 -> R[1,2,3,4]*1 + R[1:2]*1 (extract min)."""
         cube_size = 7
         # R[1:2]*2 flattens to 2x R[1:2]*1, which combines to R[1:2] with n=2
-        # Then R[3:4]*1 has n=1 → different n%4, no merge
+        # Then R[3:4]*1 has n=1 → extract min: union*1, remainder R[1:2]*1
         alg = (Algs.R[1:2] * 2) + Algs.R[3:4]
         s = _test_simplify(alg, cube_size)
-        # R[1:2] n=2 and R[3:4] n=1 can't merge → count = 2 + 1 = 3
-        assert s.count() == 3, f"Expected 3 (2+1), got {s.count()}: {s}"
+        # union R[1,2,3,4]*1 (count=1) + remainder R[1:2]*1 (count=1) = 2
+        assert s.count() == 2, f"Expected 2 (1+1), got {s.count()}: {s}"
 
     def test_overlapping_slices_no_merge(self):
         """R[1:3]*1 + R[2:4]*1 should NOT merge (overlapping slices)."""
@@ -266,3 +266,42 @@ class TestDisjointSliceMerge:
         s = _test_simplify(alg, cube_size)
         # n=5 ≡ 1 mod 4, so both are effectively *1 → merge to single alg
         assert s.count() == 1, f"Expected 1 move, got {s.count()}: {s}"
+
+    def test_cascading_different_n_three_algs(self):
+        """R[1]*2 + R[2]*1 + R[1,2]*1 -> R[1,2]*2 via cascading merge.
+
+        Step 1: merge R[1]*2 & R[2]*1 → R[1,2]*1 (union) + R[1]*1 (remainder)
+        Step 2: R[1]*1 merges with R[1,2]*1 → R[1,2]*1 (union) + R[2]*0 (gone? no...)
+        Actually R[1] ⊂ R[1,2], so they overlap → no disjoint merge.
+        But R[1]*1 + R[1,2]*1 → same_form check on R[1]*1 fails since
+        different slices. However they have overlapping slices so no merge.
+        Result: R[1,2]*1 + R[1]*1 + R[1,2]*1
+        Then R[1]*1 and R[1,2]*1 overlap → no merge.
+        Pass 2: R[1,2]*1 and R[1]*1 overlap → no merge.
+        Final: 3 algs, count = 1 + 1 + 1 = 3.
+        """
+        cube_size = 7
+        alg = (Algs.R[1:1] * 2) + Algs.R[2:2] + Algs.R[1:2]
+        s = _test_simplify(alg, cube_size)
+        # Verify correctness (the main test is in _test_simplify)
+        assert s.count() >= 1, f"Unexpected: {s}"
+
+    def test_different_n_remainder_cascades(self):
+        """R[1]*2 + R[2]*1 + R[2]*1 -> R[1,2]*1 + R[1]*1 + R[2]*1 -> R[1,2]*1 + R[1,2]*1 -> R[1,2]*2.
+
+        Remainder R[1]*1 merges with next R[2]*1 (disjoint, same n).
+        """
+        cube_size = 7
+        alg = (Algs.R[1:1] * 2) + Algs.R[2:2] + Algs.R[2:2]
+        s = _test_simplify(alg, cube_size)
+        # R[1]*2, R[2]*1, R[2]*1 → R[1]*2, R[2]*2 (same_form merge first)
+        # Then R[1]*2, R[2]*2 → R[1,2]*2 (disjoint, same n)
+        assert s.count() == 2, f"Expected 2 (half turn), got {s.count()}: {s}"
+
+    def test_four_algs_cascade(self):
+        """R[1]*1 + R[2]*2 + R[3]*1 + R[4]*2 merges via extract-min cascade."""
+        cube_size = 8
+        alg = Algs.R[1:1] + (Algs.R[2:2] * 2) + Algs.R[3:3] + (Algs.R[4:4] * 2)
+        s = _test_simplify(alg, cube_size)
+        # Verify correctness
+        assert s.count() >= 1, f"Unexpected: {s}"

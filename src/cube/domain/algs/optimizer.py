@@ -36,16 +36,33 @@ def _resolve_slices_to_set(slices: "slice | Sequence[int]") -> frozenset[int] | 
     return None
 
 
-def _try_merge_disjoint(prev: "NSimpleAlg", a: "NSimpleAlg") -> "NSimpleAlg | None":
-    """Try to merge two sliced algs with same face, disjoint slices, and same n (mod 4).
+def _create_sliced_alg(template: "NSimpleAlg", slices: list[int], n: int) -> "NSimpleAlg":
+    """Create a new sliced alg with the given slices and n, preserving face/slice-name from template."""
+    from cube.domain.algs.SlicedFaceAlg import SlicedFaceAlg
+    from cube.domain.algs.SlicedSliceAlg import SlicedSliceAlg
 
-    When two consecutive sliced algorithms operate on the same face/slice-name,
-    have disjoint slice sets, and the same rotation count mod 4, they can be
-    merged into a single algorithm operating on the union of their slices.
+    if isinstance(template, SlicedFaceAlg):
+        return SlicedFaceAlg(template._face, n, slices)
+    else:
+        assert isinstance(template, SlicedSliceAlg)
+        return SlicedSliceAlg(template._slice_name, n, slices)
 
-    For example: R[1,2]*1 + R[3,4]*1 -> R[1,2,3,4]*1
 
-    Returns the merged alg, or None if merge is not possible.
+def _try_merge_disjoint(prev: "NSimpleAlg", a: "NSimpleAlg") -> "tuple[NSimpleAlg, NSimpleAlg | None] | None":
+    """Try to merge two sliced algs with same face and disjoint slices.
+
+    When two consecutive sliced algorithms operate on the same face/slice-name
+    and have disjoint slice sets, they can be merged by extracting the common
+    minimum rotation:
+
+        S1*N1 & S2*N2 -> (S1∪S2)*N & S_larger*(N_larger - N)
+        where N = min(N1, N2)
+
+    When N1 ≡ N2 (mod 4), the remainder vanishes: 2 algs -> 1 alg.
+    When N1 ≢ N2 (mod 4), we get union + remainder: 2 algs -> 2 algs,
+    but the rearranged slices enable cascading merges with subsequent algs.
+
+    Returns (union_alg, remainder_alg_or_None), or None if merge is not possible.
     """
     from cube.domain.algs.SlicedFaceAlg import SlicedFaceAlg
     from cube.domain.algs.SlicedSliceAlg import SlicedSliceAlg
@@ -59,10 +76,6 @@ def _try_merge_disjoint(prev: "NSimpleAlg", a: "NSimpleAlg") -> "NSimpleAlg | No
     else:
         return None
 
-    # Must have same rotation mod 4
-    if prev.n % 4 != a.n % 4:
-        return None
-
     s1 = _resolve_slices_to_set(prev._slices)
     s2 = _resolve_slices_to_set(a._slices)
     if s1 is None or s2 is None:
@@ -72,13 +85,21 @@ def _try_merge_disjoint(prev: "NSimpleAlg", a: "NSimpleAlg") -> "NSimpleAlg | No
     if s1 & s2:
         return None
 
+    n1, n2 = prev.n, a.n
+    n_min = min(n1, n2)
     union = sorted(s1 | s2)
 
-    if isinstance(prev, SlicedFaceAlg):
-        return SlicedFaceAlg(prev._face, prev.n, union)
-    else:
-        assert isinstance(prev, SlicedSliceAlg)
-        return SlicedSliceAlg(prev._slice_name, prev.n, union)
+    # Union alg with the minimum n (always valid since both n1,n2 are non-zero mod 4)
+    union_alg = _create_sliced_alg(prev, union, n_min)
+
+    # Remainder: the set with larger n keeps the difference
+    n_remainder = max(n1, n2) - n_min
+    remainder_alg: NSimpleAlg | None = None
+    if n_remainder % 4:
+        remainder_slices = sorted(s1 if n1 > n2 else s2)
+        remainder_alg = _create_sliced_alg(prev, remainder_slices, n_remainder)
+
+    return union_alg, remainder_alg
 
 
 def _combine(algs: Sequence[SimpleAlg]) -> Sequence[SimpleAlg]:
@@ -111,9 +132,11 @@ def _combine(algs: Sequence[SimpleAlg]) -> Sequence[SimpleAlg]:
                     work_to_do = True  # really ?
                 else:
                     # Try merging disjoint slices of same face
-                    merged = _try_merge_disjoint(prev, a)
-                    if merged is not None:
-                        prev = merged
+                    result = _try_merge_disjoint(prev, a)
+                    if result is not None:
+                        union_alg, remainder_alg = result
+                        new_algs.append(union_alg)
+                        prev = remainder_alg  # None if no remainder
                         work_to_do = True
                     else:
                         new_algs.append(prev)
