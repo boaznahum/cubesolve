@@ -25,7 +25,7 @@ Two-layer architecture (see `GEOMETRY_LAYERS.md`):
 | `_rotate_dict_x/y/z` | _CubeLayout.py | 12 | From rotation cycles |
 | Face transform table | _supported_faces.py | 41 | From face relationships |
 | Subclass constructors | FaceAlg.py | 6 | Factory pattern |
-| Subclass constructors | WideFaceAlg.py | 6 | Factory pattern |
+| Wide move instances | WideLayerAlg.py (via Algs.py) | 12 | WCA standard + adaptive |
 | Subclass constructors | SliceAlg.py | 3 | Factory pattern |
 | Subclass constructors | WholeCubeAlg.py | 9 | Factory pattern |
 

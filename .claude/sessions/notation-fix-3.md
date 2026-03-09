@@ -1,7 +1,7 @@
 # Notation Fix 3
 
 ## Goal
-Introduce proper M notation: `Algs.M` = single middle slice (MiddleSliceAlg), `Algs.MM` = all middle slices (_M).
+Align algorithm notation with WCA standards. Introduce proper M/E/S notation and standard wide moves.
 
 ## Completed Steps
 
@@ -12,83 +12,81 @@ Introduce proper M notation: `Algs.M` = single middle slice (MiddleSliceAlg), `A
 ### Phase 2: Rename M -> MM (all middle slices)
 - `Algs.M` (type `_M`) renamed to `Algs.MM` throughout codebase
 - `_M._add_to_str` overridden to display `[:]M` instead of `M`
-- `_M.get_base_alg()` updated to return `Algs.MM`
-- All usages across solver, GUI, tests updated: `Algs.M` -> `Algs.MM`
 - Parser handles `[:]M` -> `Algs.MM` (unsliced, all middle slices)
 
 ### Phase 3: New MiddleSliceAlg class
 - Created `src/cube/domain/algs/MiddleSliceAlg.py` - single middle slice, `str()` = `"M"`
 - `Algs.M = MiddleSliceAlg()` added to `Algs.py`
-- NOT added to `Algs.Simple` list (would break seeded scrambles)
-- Parser behavior:
-  - bare `"M"` -> `MiddleSliceAlg` (single middle slice)
-  - `"[1]M"` -> `Algs.MM[1]` (SlicedSliceAlg)
-  - `"[:]M"` -> `Algs.MM` (unsliced, all middle slices)
+- Parser: bare `"M"` -> MiddleSliceAlg, `"[:]M"` -> `Algs.MM`
 
 ### Phase 4: Fix solver test failures (compat_3x3 flag)
-- **Root cause:** CFOP OLL/PLL algorithms contain "M" in parsed strings (e.g. Ua Perm: `"M2' U M U2 M' U M2'"`). On big cubes (4x4+), MiddleSliceAlg picks only 1 middle slice instead of all slices, breaking the solver.
-- **Fix:** Added `compat_3x3` flag (default `False`) to `parse_alg()` and `Algs.parse()`. When `True`, bare "M" stays as `_M` (all middle slices).
-- Applied `compat_3x3=True` to:
-  - `_OLL.py` - OLL algorithm parsing
-  - `_PLL.py` - PLL algorithm parsing (2 call sites)
-  - `Kociemba3x3.py` - kociemba solution parsing
+- Added `compat_3x3` flag to `parse_alg()` and `Algs.parse()`
+- When `True`, bare "M" stays as `_M` (all slices), bare "Rw"/"r" -> all-but-last
+
+### Phase 5A: Rename Rw -> RRw, r -> rr (all-but-last)
+- Renamed all 12 adaptive wide moves: `Algs.Rw` -> `Algs.RRw`, `Algs.r` -> `Algs.rr`, etc.
+- `str()` now outputs `[:-1]Rw` / `[:-1]r` (Python-style all-but-last notation)
+- Parser handles `[:-1]Rw` -> all-but-last, compat mode maps bare `Rw`/`r` -> all-but-last
+
+### Phase 5B: New WideLayerAlg class (WCA standard)
+- Created `src/cube/domain/algs/WideLayerAlg.py` for standard `nRw`/`nr` notation
+- `Rw`/`r` = 2 outermost layers (WCA default), `3Rw`/`3r` = 3 layers, `nRw`/`nr` = n layers
+- Added `Algs.Rw`, `Algs.r` etc. as WideLayerAlg instances (12 total)
+- Added to `Algs.Simple` list and parser
+
+### Phase 5C: Scrambler nRw support
+- Scrambler randomly varies WideLayerAlg layer count on cubes > 3x3
+- Fixed parser `[` heuristic: `re.match(r'^[\d:,\-]+$')` distinguishes slice `[1:2]M` from sequence `[3Rw ...]`
+- Fixed `_Mul.atomic_str()` digit ambiguity: `(r'3)2` not `r'32`
+
+### Phase 5D: Consolidate DoubleLayerAlg + WideFaceAlg -> WideLayerAlg
+- Added `ALL_BUT_LAST = -1` sentinel to WideLayerAlg
+- `_effective_layers()`: returns `cube.size - 1` when `layers == ALL_BUT_LAST`
+- `atomic_str()`: returns `[:-1]Rw` / `[:-1]r` when `layers == ALL_BUT_LAST`
+- Replaced all `DoubleLayerAlg` and `WideFaceAlg` instances with `WideLayerAlg`
+- Deleted `DoubleLayerAlg.py` and `WideFaceAlg.py` (8 classes eliminated)
+- `_wide_to_all_but_last()` simplified to `wide.with_layers(ALL_BUT_LAST)`
+- Updated `_F2L.py` and `ClientSession.py` to use WideLayerAlg
+
+### Phase 6: Documentation
+- Rewrote `docs/algorithm_notation.md` - comprehensive guide with all notation forms
+- Updated `README.md` - corrected wide rotation descriptions in keyboard help and command table
 
 ## Files Modified
 
-### New files
-- `src/cube/domain/algs/MiddleSliceAlg.py`
+### Deleted
+- `src/cube/domain/algs/DoubleLayerAlg.py` (replaced by WideLayerAlg)
+- `src/cube/domain/algs/WideFaceAlg.py` (replaced by WideLayerAlg)
+
+### New
+- `src/cube/domain/algs/WideLayerAlg.py` - unified wide move class
 
 ### Core alg changes
-- `src/cube/domain/algs/Algs.py` - MM field, M field, parse() flag, Simple list
-- `src/cube/domain/algs/SliceAlg.py` - _M._add_to_str override, get_base_alg
-- `src/cube/domain/algs/SlicedSliceAlg.py` - get_base_alg returns Algs.MM
-- `src/cube/domain/algs/_parser.py` - compat_3x3 flag, MiddleSliceAlg handling
+- `src/cube/domain/algs/Algs.py` - all wide move instances now WideLayerAlg
+- `src/cube/domain/algs/_parser.py` - nRw prefix, [:-1] handling, compat_3x3
+- `src/cube/domain/algs/Mul.py` - digit ambiguity fix in atomic_str()
+- `src/cube/domain/algs/Scramble.py` - nRw layer randomization
 
-### Solver changes (Algs.M -> Algs.MM rename)
-- `src/cube/domain/solver/common/big_cube/NxNCenters.py`
-- `src/cube/domain/solver/common/big_cube/NxNEdges.py`
-- `src/cube/domain/solver/common/big_cube/NxNEdgesCommon.py`
-- `src/cube/domain/solver/_3x3/cfop/_OLL.py` - compat_3x3=True
-- `src/cube/domain/solver/_3x3/cfop/_PLL.py` - compat_3x3=True
-- `src/cube/domain/solver/_3x3/kociemba/Kociemba3x3.py` - compat_3x3=True
+### Solver/GUI changes
+- `src/cube/domain/solver/_3x3/cfop/_F2L.py` - WideLayerAlg import
+- `src/cube/presentation/gui/commands/registry.py` - Algs.RRw references
+- `src/cube/presentation/gui/backends/webgl/ClientSession.py` - unified WideLayerAlg handling
 
-### GUI changes (Algs.M -> Algs.MM rename)
-- `src/cube/presentation/gui/commands/registry.py`
-- `src/cube/presentation/gui/backends/webgl/ClientSession.py`
-- `src/cube/presentation/gui/backends/pyglet2/PygletAppWindow.py`
-- `src/cube/presentation/gui/backends/pyglet2/main_g_mouse.py`
-- `src/cube/presentation/gui/protocols/AppWindowBase.py`
-- `src/cube/application/Scrambler.py`
+### Documentation
+- `docs/algorithm_notation.md` - full rewrite
+- `README.md` - updated keyboard/command descriptions
 
-### Other source changes
-- `src/cube/domain/geometric/Face2FaceTranslator.py`
-- `src/cube/domain/model/Slice.py`
-- `src/cube/domain/solver/direct/cage/DESIGN.md`
-
-### Test changes (Algs.M -> Algs.MM rename only, no test logic changed)
-- `tests/algs/test_cube.py`
-- `tests/algs/test_simplify.py`
-- `tests/backends/conftest.py`
-- `tests/backends/README.md`
-- `tests/geometry/test_commutator_blocks.py`
-- `tests/parsing/test_indexes_slices.py`
-- `tests/parsing/test_slice_notation_display.py`
-- `tests/performance/test_slice_cache_perf.py`
+### Tests
+- `tests/parsing/test_parser.py` - nRw, [:-1], default layer count tests (832 total)
 
 ## Test Status
-- Non-GUI, non-WebGL tests: **9737 passed, 64 skipped, 0 failed**
+- CFOP: 1571 passed
+- Parser: 832 passed
+- All non-GUI/WebGL: 10035 passed
+- GUI: 36 passed
+- Static checks: ruff, mypy, pyright all clean
 
 ## Future Tasks
-- **TODO:** Eliminate `Algs.parse()` usages in solver code - replace parsed algorithm strings with programmatic alg construction. This removes the need for `compat_3x3` flag.
-- **TODO:** Add MiddleSliceAlg (Algs.M) to scrambler (carefully, don't change Simple list length)
-- **TODO:** Consolidate `DoubleLayerAlg` (Rw) and `WideFaceAlg` (r) — they use different slice indexing but may produce the same cube state. Investigate whether they are truly identical, then remove one class.
-- **TODO:** Create new standard-compliant `Algs.Rw` and `Algs.r` (WCA standard: 2 outermost layers)
-  - `Rw` = `r` = 2 layers (identical per WCA standard, `Rw` is official WCA form)
-  - Support `nRw` / `nr` prefix for n layers (e.g., `3Rw` = `3r` = 3 layers)
-  - Support all slice forms: `Rw'`, `Rw2`, `3Rw'`, `3r2`, etc.
-  - Same for all 6 faces: L, U, D, F, B
-  - Add to `Algs.Simple` list and scrambler
-  - Add to parser tests (bring back `Rw`, `r`, `3Rw`, `3r` etc.)
-  - Parser: bare `Rw`/`r` → new standard 2-layer (non-compat mode)
-  - Parser: bare `Rw`/`r` → `Algs.RRw`/`Algs.rr` all-but-last (compat mode)
-  - Document everything in `algorithm_notation.md` and `README.md`
+- **TODO:** Eliminate `Algs.parse()` usages in solver code - replace with programmatic alg construction
+- **TODO:** Add M/E/S to scrambler (MiddleSliceAlg)
+- ~~**TODO:** Document E/S notation~~ — already done, E/S use MiddleSliceAlg same as M

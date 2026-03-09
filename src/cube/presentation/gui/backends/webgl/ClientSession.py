@@ -394,7 +394,7 @@ class ClientSession:
         from cube.domain.algs.FaceAlgBase import FaceAlgBase
         from cube.domain.algs.SliceAlgBase import SliceAlgBase
         from cube.domain.algs.WholeCubeAlg import WholeCubeAlg
-        from cube.domain.algs.WideFaceAlg import WideFaceAlg
+        from cube.domain.algs.WideLayerAlg import WideLayerAlg
 
         if Algs.is_scramble(alg):
             return "scramble"
@@ -402,7 +402,7 @@ class ClientSession:
             return "rotation"
         if isinstance(alg, SliceAlgBase):
             return "slice"
-        if isinstance(alg, (FaceAlgBase, WideFaceAlg)):
+        if isinstance(alg, (FaceAlgBase, WideLayerAlg)):
             return "face"
         return "move"
 
@@ -958,8 +958,7 @@ class ClientSession:
         Returns 0-based column indices from the negative side of the axis.
         """
         from cube.domain import algs as alg_types
-        from cube.domain.algs.WideFaceAlg import WideFaceAlg
-        from cube.domain.algs.DoubleLayerAlg import DoubleLayerAlg
+        from cube.domain.algs.WideLayerAlg import WideLayerAlg
 
         if isinstance(alg, alg_types.SliceAlgBase):
             # M, E, S moves: inner slices
@@ -981,18 +980,9 @@ class ClientSession:
             ))
             return self._face_indices_to_layers(indices, face_name, size)
 
-        if isinstance(alg, DoubleLayerAlg):
-            # Rw = R[1:size-1] — resolve to SlicedFaceAlg and extract
-            resolved: alg_types.FaceAlgBase = alg.compose_base_alg(cube)
-            indices = list(resolved.normalize_slice_index(
-                n_max=1 + cube.n_slices,
-                _default=[1]
-            ))
-            return self._face_indices_to_layers(indices, face_name, size)
-
-        if isinstance(alg, WideFaceAlg):
-            # Wide face: face + all inner layers = [0, 1, ..., size-2]
-            indices = list(range(size - 1))
+        if isinstance(alg, WideLayerAlg):
+            # Wide move: [0, 1, ..., effective_layers-1]
+            indices = list(range(alg._effective_layers(cube)))
             return self._face_indices_to_layers(indices, face_name, size)
 
         # Whole cube rotations or unknown: default layer [0]

@@ -283,7 +283,7 @@ def _token_to_alg(t: str, *, compat_3x3: bool = False) -> _Alg:
     # Apply slice to base algorithm FIRST (before modifiers)
     if slice_spec is not None:
         # Special case: [:-1]Rw or [:-1]r → all-but-last wide move (RRw/rr)
-        # Simple list lookup returns WideLayerAlg — swap to the DoubleLayerAlg/WideFaceAlg variant.
+        # Simple list lookup returns WideLayerAlg — swap to ALL_BUT_LAST mode.
         if isinstance(slice_spec, slice) and slice_spec.start is None and slice_spec.stop == -1:
             from cube.domain.algs.WideLayerAlg import WideLayerAlg
             if isinstance(base_alg, WideLayerAlg):
@@ -352,7 +352,7 @@ def _token_to_alg_no_slice(t: str) -> _Alg:
 
     simple = Algs.Simple
 
-    # First pass: check exact matches (including WideFaceAlg like 'r', 'u', etc.)
+    # First pass: check exact matches (including WideLayerAlg like 'r', 'u', etc.)
     for s in simple:
         if s.code == t:
             return s
@@ -365,7 +365,7 @@ def _token_to_alg_no_slice(t: str) -> _Alg:
 
     # Third pass: check if lowercase face letter should map to wide (r -> Rw)
     # This is for backward compatibility, but only if not already matched
-    # as WideFaceAlg in the first pass
+    # as WideLayerAlg in the first pass
     for s in simple:
         if isinstance(s, algs.FaceAlg):
             if s.code.lower() == t:
@@ -375,28 +375,10 @@ def _token_to_alg_no_slice(t: str) -> _Alg:
 
 
 def _wide_to_all_but_last(wide: _Alg) -> _Alg:
-    """Map a WideLayerAlg to the corresponding all-but-last alg (RRw/rr).
+    """Convert a WideLayerAlg to all-but-last mode (layers=ALL_BUT_LAST).
 
     Used for [:-1]Rw notation and compat_3x3 mode.
     """
-    from cube.domain.algs.Algs import Algs
-    from cube.domain.algs.WideLayerAlg import WideLayerAlg
+    from cube.domain.algs.WideLayerAlg import ALL_BUT_LAST, WideLayerAlg
     assert isinstance(wide, WideLayerAlg)
-    from cube.domain.model import FaceName
-
-    if wide._lowercase:
-        _map: dict[FaceName, _Alg] = {
-            FaceName.R: Algs.rr, FaceName.L: Algs.ll,
-            FaceName.U: Algs.uu, FaceName.D: Algs.dd,
-            FaceName.F: Algs.ff, FaceName.B: Algs.bb,
-        }
-    else:
-        _map = {
-            FaceName.R: Algs.RRw, FaceName.L: Algs.LLw,
-            FaceName.U: Algs.UUw, FaceName.D: Algs.DDw,
-            FaceName.F: Algs.FFw, FaceName.B: Algs.BBw,
-        }
-    result = _map.get(wide._face)
-    if result is None:
-        raise InternalSWError(f"No all-but-last alg for face {wide._face}")
-    return result
+    return wide.with_layers(ALL_BUT_LAST)

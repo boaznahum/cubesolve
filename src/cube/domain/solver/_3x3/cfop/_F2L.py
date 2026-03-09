@@ -1,7 +1,7 @@
 from enum import Enum
 
 from cube.domain.algs import Alg, Algs
-from cube.domain.algs.WideFaceAlg import WideFaceAlg
+from cube.domain.algs.WideLayerAlg import ALL_BUT_LAST, WideLayerAlg
 from cube.domain.exceptions import InternalSWError
 from cube.domain.model import Color, Corner, Edge, Part
 from cube.domain.model.CubeQueries2 import Pred0
@@ -36,9 +36,9 @@ class F2L(SolverHelper):
 
     @staticmethod
     def _contains_wide_move(alg: Alg) -> bool:
-        """Check if the algorithm contains any WideFaceAlg (d, u, r, l, f, b)."""
+        """Check if the algorithm contains any all-but-last WideLayerAlg ([:-1]Rw, [:-1]r)."""
         from cube.domain.algs.SeqAlg import SeqAlg
-        if isinstance(alg, WideFaceAlg):
+        if isinstance(alg, WideLayerAlg) and alg.layers == ALL_BUT_LAST:
             return True
         if isinstance(alg, SeqAlg):
             return any(F2L._contains_wide_move(a) for a in alg.algs)
@@ -312,7 +312,7 @@ class F2L(SolverHelper):
 
             self.debug(f"Case corner is {corner.actual.name}, edge is {edge.actual.name}, Running alg:{alg}")
 
-            # Pause before wide move so user can observe WideFaceAlg behavior
+            # Pause before wide move so user can observe WideLayerAlg behavior
             if self._contains_wide_move(alg):
                 self.op.enter_single_step_mode(SSCode.F2L_WIDE_MOVE)
 
@@ -385,7 +385,7 @@ class F2L(SolverHelper):
         # Use adaptive wide move 'd' (lowercase) - moves D + all inner layers.
         # This adapts to cube size at play time, so algorithms from shadow 3x3
         # work correctly when applied to NxN cubes without breaking edge pairing.
-        # See WideFaceAlg.py for detailed explanation.
+        # See WideLayerAlg.py for detailed explanation.
         d = Algs.dd
 
         ################################################################
