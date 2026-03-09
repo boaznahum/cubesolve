@@ -43,6 +43,7 @@ export class Toolbar {
         if (btnPaint) btnPaint.disabled = !canModify;
         document.getElementById('size-select').disabled = !a.size_change;
         document.getElementById('solver-select').disabled = !canModify;
+        document.getElementById('scramble-seed').disabled = !canModify;
 
         // Text overlays
         this._updateTextOverlaysFromState(appState);
@@ -58,6 +59,12 @@ export class Toolbar {
 
         // Size dropdown
         document.getElementById('size-select').value = appState.cubeSize;
+
+        // Scramble seed dropdown + button label
+        const ds = appState.defaultScramble || '0';
+        document.getElementById('scramble-seed').value = ds;
+        const scrambleBtn = document.querySelector('[data-cmd="scramble"]');
+        if (scrambleBtn) scrambleBtn.textContent = `Scramble ${ds}`;
 
         // Toolbar toggles + solver list
         this._updateToolbarFromState(appState);
@@ -301,6 +308,11 @@ export class Toolbar {
                 this._updateShadowButtons();
             });
         }
+
+        // Scramble seed dropdown
+        document.getElementById('scramble-seed').addEventListener('change', (e) => {
+            this._send({ type: 'set_scramble_seed', seed: e.target.value });
+        });
 
         // Solver dropdown
         document.getElementById('solver-select').addEventListener('change', (e) => {

@@ -120,7 +120,8 @@ const SECTIONS = [
         title: 'Quick Start — Both Platforms',
         text: true,
         items: [
-            { name: 'Scramble', desc: 'Tap to randomize the cube' },
+            { name: 'Scramble', desc: 'Tap to scramble — uses the seed shown on the button (0-9 for reproducible, * for random)' },
+            { name: 'Seed selector', desc: 'Dropdown next to Scramble — pick seed 0-9 (same seed = same scramble) or * for a different scramble each time' },
             { name: 'Solve', desc: 'Tap to compute and auto-play the solution' },
             { name: 'Solution', desc: 'Compute solution without auto-play — step through manually' },
             { name: 'Drag sticker', desc: 'Turn a face by dragging in the desired direction' },
