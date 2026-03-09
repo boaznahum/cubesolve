@@ -82,6 +82,18 @@ All pyglet imports now only exist in:
 - Tests (non-GUI): `python -m pytest tests/ -v --ignore=tests/gui -m "not slow"`
 - Tests (GUI): `python -m pytest tests/gui -v --speed-up 5`
 
+### Environment Setup (Headless / Claude Code on Web)
+- **Python:** Use `python3.13` (not `python` which may be 3.11). Project requires Python 3.13+ (`from warnings import deprecated`).
+- **kociemba package:** Requires `--use-pep517` flag to build correctly:
+  ```bash
+  python3.13 -m pip install kociemba --use-pep517
+  python3.13 -m pip install -e ".[dev]" --use-pep517
+  ```
+- **Non-GUI tests:** Ignore `tests/gui`, `tests/console`, `tests/webgl`, and `tests/backends` (requires display):
+  ```bash
+  python3.13 -m pytest tests/ --ignore=tests/gui --ignore=tests/console --ignore=tests/webgl --ignore=tests/backends --tb=short -q
+  ```
+
 ### All Checks (run before committing)
 
 **CRITICAL:** When user says "run all checks", run ALL FIVE of these:
