@@ -111,6 +111,9 @@ class ClientSession:
 
         self._app.op.undo = _undo_with_flag  # type: ignore[assignment]
 
+        # Default scramble seed: 0-9 or None (* = random each time)
+        self._default_scramble: int | None = 0
+
         # Flow state machine — single source of truth for all flow control
         self._fsm: FlowStateMachine = FlowStateMachine()
 
@@ -289,6 +292,7 @@ class ClientSession:
             assist_enabled=cfg.assist_config.enabled,
             assist_delay_ms=cfg.assist_config.delay_ms,
             sound_enabled=cfg.sound_config.enabled,
+            default_scramble="*" if self._default_scramble is None else str(self._default_scramble),
             # Text
             animation_text=anim_lines,
             status_text=app.slv.status,
@@ -511,6 +515,17 @@ class ClientSession:
         elif msg_type == "set_size":
             self._handle_size(data.get("value", 3))
 
+        elif msg_type == "set_scramble_seed":
+            raw = data.get("seed", "0")
+            if raw == "*":
+                self._default_scramble = None
+            else:
+                try:
+                    self._default_scramble = int(raw)
+                except (ValueError, TypeError):
+                    self._default_scramble = 0
+            self.send_state()
+
         elif msg_type == "set_solver":
             solver_name = data.get("name", "")
             if solver_name:
@@ -619,8 +634,7 @@ class ClientSession:
             self._fsm.redo_source = "undo"
             self._fsm.redo_tainted = False
             with op.with_animation(animation=False):
-                ctx = CommandContext.from_window(self)  # type: ignore[arg-type]
-                Commands.SCRAMBLE_1.execute(ctx)
+                self._app.scramble(self._default_scramble, None, animation=False, verbose=True)
             # Clear history so scramble moves don't appear in redo queue.
             # Scramble is a starting point, not an undoable operation.
             op._history.clear()

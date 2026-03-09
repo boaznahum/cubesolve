@@ -186,3 +186,149 @@ class TestSimplifyFlatten:
 
         s = _test_simplify(alg - alg, cube_size)
         _compare_two_algs(cube_size, (Algs.no_op(),), (s,))
+
+
+class TestDisjointSliceMerge:
+    """Tests for merging disjoint slices during simplification."""
+
+    def test_disjoint_face_slices_same_n(self):
+        """R[1,2]*1 + R[3,4]*1 -> R[1,2,3,4]*1 (one alg instead of two)."""
+        cube_size = 7
+        alg = Algs.R[1:2] + Algs.R[3:4]
+        s = _test_simplify(alg, cube_size)
+        # Should merge into a single alg
+        assert s.count() == 1, f"Expected 1 move, got {s.count()}: {s}"
+
+    def test_disjoint_face_slices_explicit_indices(self):
+        """R[1,3]*1 + R[2,4]*1 -> R[1,2,3,4]*1."""
+        cube_size = 7
+        alg = Algs.R[1, 3] + Algs.R[2, 4]
+        s = _test_simplify(alg, cube_size)
+        assert s.count() == 1, f"Expected 1 move, got {s.count()}: {s}"
+
+    def test_disjoint_face_slices_same_n_prime(self):
+        """R[1:2]' + R[3:4]' -> R[1,2,3,4]' (prime moves merge too)."""
+        cube_size = 7
+        alg = Algs.R[1:2].prime + Algs.R[3:4].prime
+        s = _test_simplify(alg, cube_size)
+        assert s.count() == 1, f"Expected 1 move, got {s.count()}: {s}"
+
+    def test_disjoint_face_slices_double(self):
+        """R[1:2]*2 + R[3:4]*2 -> R[1,2,3,4]*2."""
+        cube_size = 7
+        alg = (Algs.R[1:2] * 2) + (Algs.R[3:4] * 2)
+        s = _test_simplify(alg, cube_size)
+        assert s.count() == 2, f"Expected 2 (half turn), got {s.count()}: {s}"
+
+    def test_disjoint_different_n_extracts_min(self):
+        """R[1:2]*2 + R[3:4]*1 -> R[1,2,3,4]*1 + R[1:2]*1 (extract min)."""
+        cube_size = 7
+        # R[1:2]*2 flattens to 2x R[1:2]*1, which combines to R[1:2] with n=2
+        # Then R[3:4]*1 has n=1 → extract min: union*1, remainder R[1:2]*1
+        alg = (Algs.R[1:2] * 2) + Algs.R[3:4]
+        s = _test_simplify(alg, cube_size)
+        # union R[1,2,3,4]*1 (count=1) + remainder R[1:2]*1 (count=1) = 2
+        assert s.count() == 2, f"Expected 2 (1+1), got {s.count()}: {s}"
+
+    def test_overlapping_slices_no_merge(self):
+        """R[1:3]*1 + R[2:4]*1 should NOT merge (overlapping slices)."""
+        cube_size = 7
+        alg = Algs.R[1:3] + Algs.R[2:4]
+        s = _test_simplify(alg, cube_size)
+        # Overlapping - should stay as 2 algs
+        assert s.count() == 2, f"Expected 2, got {s.count()}: {s}"
+
+    def test_different_faces_no_merge(self):
+        """R[1:2]*1 + L[3:4]*1 should NOT merge (different faces)."""
+        cube_size = 7
+        alg = Algs.R[1:2] + Algs.L[3:4]
+        s = _test_simplify(alg, cube_size)
+        assert s.count() == 2, f"Expected 2, got {s.count()}: {s}"
+
+    def test_cascading_merge_three_algs(self):
+        """R[1,2]*1 + R[3,4]*1 + R[5]*1 -> R[1,2,3,4,5]*1."""
+        cube_size = 8  # need enough slices
+        alg = Algs.R[1:2] + Algs.R[3:4] + Algs.R[5:5]
+        s = _test_simplify(alg, cube_size)
+        assert s.count() == 1, f"Expected 1 move, got {s.count()}: {s}"
+
+    def test_disjoint_slice_alg_merge(self):
+        """M[1]*1 + M[2]*1 -> M[1,2]*1 for slice algs."""
+        cube_size = 7
+        alg = Algs.MM[1:1] + Algs.MM[2:2]
+        s = _test_simplify(alg, cube_size)
+        assert s.count() == 1, f"Expected 1 move, got {s.count()}: {s}"
+
+    def test_congruent_n_mod4_merge(self):
+        """R[1:2]*1 + R[3:4]*5 should merge (both ≡ 1 mod 4)."""
+        cube_size = 7
+        alg = Algs.R[1:2] + (Algs.R[3:4] * 5)
+        s = _test_simplify(alg, cube_size)
+        # n=5 ≡ 1 mod 4, so both are effectively *1 → merge to single alg
+        assert s.count() == 1, f"Expected 1 move, got {s.count()}: {s}"
+
+    def test_cascading_different_n_three_algs(self):
+        """R[1]*2 + R[2]*1 + R[1,2]*1 -> R[1,2]*2 via cascading merge.
+
+        Step 1: merge R[1]*2 & R[2]*1 → R[1,2]*1 (union) + R[1]*1 (remainder)
+        Step 2: R[1]*1 merges with R[1,2]*1 → R[1,2]*1 (union) + R[2]*0 (gone? no...)
+        Actually R[1] ⊂ R[1,2], so they overlap → no disjoint merge.
+        But R[1]*1 + R[1,2]*1 → same_form check on R[1]*1 fails since
+        different slices. However they have overlapping slices so no merge.
+        Result: R[1,2]*1 + R[1]*1 + R[1,2]*1
+        Then R[1]*1 and R[1,2]*1 overlap → no merge.
+        Pass 2: R[1,2]*1 and R[1]*1 overlap → no merge.
+        Final: 3 algs, count = 1 + 1 + 1 = 3.
+        """
+        cube_size = 7
+        alg = (Algs.R[1:1] * 2) + Algs.R[2:2] + Algs.R[1:2]
+        s = _test_simplify(alg, cube_size)
+        # Verify correctness (the main test is in _test_simplify)
+        assert s.count() >= 1, f"Unexpected: {s}"
+
+    def test_different_n_remainder_cascades(self):
+        """R[1]*2 + R[2]*1 + R[2]*1 -> R[1,2]*1 + R[1]*1 + R[2]*1 -> R[1,2]*1 + R[1,2]*1 -> R[1,2]*2.
+
+        Remainder R[1]*1 merges with next R[2]*1 (disjoint, same n).
+        """
+        cube_size = 7
+        alg = (Algs.R[1:1] * 2) + Algs.R[2:2] + Algs.R[2:2]
+        s = _test_simplify(alg, cube_size)
+        # R[1]*2, R[2]*1, R[2]*1 → R[1]*2, R[2]*2 (same_form merge first)
+        # Then R[1]*2, R[2]*2 → R[1,2]*2 (disjoint, same n)
+        assert s.count() == 2, f"Expected 2 (half turn), got {s.count()}: {s}"
+
+    def test_four_algs_cascade(self):
+        """R[1]*1 + R[2]*2 + R[3]*1 + R[4]*2 merges via extract-min cascade."""
+        cube_size = 8
+        alg = Algs.R[1:1] + (Algs.R[2:2] * 2) + Algs.R[3:3] + (Algs.R[4:4] * 2)
+        s = _test_simplify(alg, cube_size)
+        # Verify correctness
+        assert s.count() >= 1, f"Unexpected: {s}"
+
+    def test_compression_examples(self):
+        """Print before/after to show compression visually."""
+        cube_size = 8
+
+        cases = [
+            ("Same n, disjoint",
+             Algs.R[1:2] + Algs.R[3:4]),
+
+            ("3 disjoint, same n",
+             Algs.R[1:2] + Algs.R[3:4] + Algs.R[5:5]),
+
+            ("Extract min (n=2 vs n=1)",
+             (Algs.R[1:2] * 2) + Algs.R[3:4]),
+
+            ("Cascade: R[1]*2 + R[2]*1 + R[2]*1",
+             (Algs.R[1:1] * 2) + Algs.R[2:2] + Algs.R[2:2]),
+
+            ("Prime merge",
+             Algs.R[1:2].prime + Algs.R[3:4].prime + Algs.R[5:5].prime),
+        ]
+
+        for label, alg in cases:
+            s = _test_simplify(alg, cube_size)
+            print(f"  {label}:")
+            print(f"    before: {alg}  (count={alg.count()})")
+            print(f"    after:  {s}  (count={s.count()})")

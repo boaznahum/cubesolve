@@ -75,6 +75,7 @@ class SessionStateSnapshot:
     assist_enabled: bool = True
     assist_delay_ms: int = 400
     sound_enabled: bool = False
+    default_scramble: str = "0"  # "0"-"9" or "*" (random)
 
     # -- Text overlays --
     animation_text: list[dict[str, object]] = field(default_factory=list)
@@ -131,6 +132,7 @@ class SessionStateSnapshot:
                 "assist_enabled": self.assist_enabled,
                 "assist_delay_ms": self.assist_delay_ms,
                 "sound_enabled": self.sound_enabled,
+                "default_scramble": self.default_scramble,
             },
 
             "text": {

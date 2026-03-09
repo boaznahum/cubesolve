@@ -48,6 +48,7 @@ export class AppState extends EventTarget {
         this.assistEnabled = true;
         this.assistDelayMs = 400;
         this.soundEnabled = false;
+        this.defaultScramble = '0';  // '0'-'9' or '*'
 
         // -- Text overlays --
         this.animationText = [];
@@ -130,6 +131,9 @@ export class AppState extends EventTarget {
             patch.assistDelayMs = msg.toolbar.assist_delay_ms;
             if (msg.toolbar.sound_enabled !== undefined) {
                 patch.soundEnabled = msg.toolbar.sound_enabled;
+            }
+            if (msg.toolbar.default_scramble !== undefined) {
+                patch.defaultScramble = msg.toolbar.default_scramble;
             }
         }
 

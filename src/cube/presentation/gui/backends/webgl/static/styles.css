@@ -459,7 +459,8 @@ body {
 /* ── Dropdowns ── */
 #solver-select,
 #speed-select,
-#size-select {
+#size-select,
+#scramble-seed {
     background: rgba(35, 35, 42, 0.85);
     color: rgba(255, 255, 255, 0.85);
     border: 1px solid rgba(255, 255, 255, 0.10);
@@ -482,14 +483,16 @@ body {
 
 #solver-select:hover,
 #speed-select:hover,
-#size-select:hover {
+#size-select:hover,
+#scramble-seed:hover {
     border-color: rgba(255, 255, 255, 0.20);
     background-color: rgba(45, 45, 54, 0.9);
 }
 
 #solver-select:focus,
 #speed-select:focus,
-#size-select:focus {
+#size-select:focus,
+#scramble-seed:focus {
     border-color: rgba(70, 130, 180, 0.6);
     box-shadow: 0 0 0 2px rgba(70, 130, 180, 0.15);
 }
@@ -1295,7 +1298,8 @@ a.info-item-name:hover {
 
     #solver-select,
     #size-select,
-    #speed-select {
+    #speed-select,
+    #scramble-seed {
         font-size: 11px;
         padding: 3px 4px;
     }
