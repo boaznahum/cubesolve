@@ -622,6 +622,10 @@ class ClientSession:
         if command_name == "solve_and_play":
             if not self._fsm.send(FlowEvent.SOLVE_AND_PLAY):
                 return
+            if not self._app.op.animation_enabled:
+                # Animation OFF: two-phase solve + instant apply
+                self._solve_and_apply_instant()
+                return
             self._start_one_phase_solve()
             return
 
@@ -1004,6 +1008,34 @@ class ClientSession:
         return [0]
 
     # -- Solve --
+
+    def _solve_and_apply_instant(self) -> None:
+        """Solve and apply all moves instantly (animation OFF path).
+
+        Two-phase solve puts solution into redo queue, then we drain
+        it immediately. FSM must already be in SOLVING state.
+        """
+        app = self._app
+        try:
+            slv = app.slv
+            solution_alg = slv.solution()
+            solution_alg = solution_alg.simplify()
+            steps = list(solution_alg.flatten())
+            app.op.enqueue_redo(steps)
+            self._fsm.redo_source = "solver"
+            self._fsm.redo_tainted = False
+            # Apply all moves instantly
+            while app.op.redo_queue():
+                app.op.redo(animation=False)
+        except Exception as e:
+            traceback.print_exc()
+            app.set_error(f"Solve error: {e}")
+        # Clear auto_play and transition to final state
+        self._fsm._auto_play = False
+        has_redo = bool(app.op.redo_queue())
+        has_history = bool(app.op.history())
+        self._fsm.send(FlowEvent.SOLVE_DONE, has_redo=has_redo, has_history=has_history)
+        self.send_state()
 
     def _two_phase_solve(self) -> None:
         """Solve the cube by placing solution steps into the redo queue.
