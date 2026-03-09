@@ -37,21 +37,55 @@ self._app.slv.solve(animation=True)
 ```
 The solver runs **live with animation**. Each `op.play(R)` call goes directly through the Operator → AnimationManager → client animation. The solver controls the cube step-by-step. There is **no post-processing**, no `.simplify()`. Raw unoptimized moves go straight to the animation queue.
 
-## Why You CANNOT Optimize in the Animated Path
+## Proposed Solution: `op.wb()` — Buffered Play Context Manager
 
-The animated path (Path 3) cannot be optimized at the Operator or AnimationManager level because:
+### Core Design
 
-1. **Solver queries cube state between moves** — The solver calls `op.play(R)`, then inspects the cube to decide the next move. If the operator delayed or merged moves, the cube state would be wrong and the solver would make incorrect decisions → broken solution.
+```python
+with op.wb():  # "with buffer"
+    op.play(R)
+    op.play(R)
+    op.play(R')
+    op.play(L)
+# on __exit__: _flush() runs .simplify() on buffer → plays R R' cancel, R→nothing, L stays
+# after exit: cube state is correct, caller can query cube safely
+```
 
-2. **Annotation algs** (`AnnotationAlg`) — No-op moves mixed in that trigger GUI refreshes (markers, text overlays). The optimizer doesn't understand these — stripping or reordering them breaks solver visualization.
+### Rules
 
-3. **Animation algs** (`AnimationAbleAlg`) — Each carries animation metadata (which face/pieces to rotate). Merging two at the operator level loses this information.
+1. **Context manager only** — buffer mode can ONLY be entered via `with op.wb():`. No way to forget to flush. This is CRITICAL.
 
-**Bottom line:** In Path 3, the solver IS the driver. It plays moves one-by-one, reads the cube, decides next moves. You cannot batch, reorder, or merge moves mid-solve without breaking the solver's logic.
+2. **Flush on context exit** — `_flush()` is private, called by `__exit__`. Why on exit? Because the solver says: "these operations can be buffered, but AFTER this block I need to query the cube state." The flush ensures the cube is up-to-date before the next line runs.
 
-## Where Optimization IS Safe
+3. **Nestable** — `with op.wb():` can nest inside another `with op.wb():`. Inner flush pushes to outer buffer (only outermost flush actually plays).
 
-Only in Paths 1 and 2 — where `solution()` runs the solver silently (animation=False), collects the complete move list, THEN `.simplify()` optimizes it as a finished sequence before putting it in the redo queue.
+4. **Config-controlled** — buffer mode is controlled by a config/protocol flag. If disabled, `wb()` is a transparent no-op — plays happen immediately as before. This lets us disable buffering to isolate bugs ("is this a buffer bug or a solver bug?").
+
+5. **`_flush()` behavior** — takes the buffer, runs `.simplify()`, then plays each resulting move normally (with animation, respecting current mode — whatever `op.play()` would normally do).
+
+### Open Question: Query Mode Inside Buffer
+
+**Problem:** The operator has a context manager for query mode (`with op.query_mode():`), and there are other places that enter query mode (cube query, rotate-and-check, etc.). What happens when query mode is entered WHILE we're inside `with op.wb():`?
+
+The buffer hasn't been flushed yet → cube state is STALE → queries return wrong results.
+
+**Options to resolve (TBD):**
+- Auto-flush before entering query mode?
+- Flush buffer, enter query mode, then resume buffering?
+- Error/assert if query mode entered while buffer is non-empty?
+- Something else?
+
+**Awaiting user direction on this.**
+
+## Why You CANNOT Optimize at Operator/AnimationManager Level (Without Buffering)
+
+1. **Solver queries cube state between moves** — without buffering boundaries, the operator doesn't know when it's safe to delay/merge moves vs. when the solver needs current state.
+
+2. **Annotation algs** (`AnnotationAlg`) — no-op GUI refresh markers mixed into sequences. Optimizer doesn't understand these.
+
+3. **Animation algs** (`AnimationAbleAlg`) — carry animation metadata. Merging loses info.
+
+The `wb()` design solves constraint #1: the solver explicitly marks safe-to-buffer regions. The solver knows when it will query and wraps non-query sections in `with op.wb():`.
 
 ## Key Files
 
@@ -69,10 +103,12 @@ Only in Paths 1 and 2 — where `solution()` runs the solver silently (animation
 
 ## Current Status
 
-- Paths 1 and 2 are already optimized via `.simplify()`
-- Path 3 (animated solve) shows raw unoptimized moves — this is the user-visible problem
-- Path 3 CANNOT be optimized at operator/animation level due to solver state dependency
+- Paths 1 and 2 already optimized via `.simplify()`
+- Path 3 (animated solve) is the problem — raw unoptimized moves
+- Designing `op.wb()` buffered context manager to solve Path 3
+- Open question: how to handle query mode inside buffer
 
 ## Next Steps
 
-- TBD based on user direction — this is a dangerous change, proceed carefully
+- Resolve query mode interaction (awaiting user input)
+- More design questions TBD
