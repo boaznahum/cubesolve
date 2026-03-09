@@ -19,8 +19,8 @@ class TestSliceNotationDisplay:
 
     def test_all_slice_algs_show_single_slice(self):
         """E[1] and S[1] should also show the slice index."""
-        assert str(Algs.E[1]) != str(Algs.E)
-        assert str(Algs.S[1]) != str(Algs.S)
+        assert str(Algs.EE[1]) != str(Algs.EE)
+        assert str(Algs.SS[1]) != str(Algs.SS)
 
 
 class TestSliceNotationParsing:

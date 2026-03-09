@@ -45,7 +45,7 @@ SLICE DEFINITIONS:
     │  S   │  F ↔ B     │  U, R, D, L    │ Like F (clockwise when viewing F)     │
     └──────┴────────────┴────────────────┴───────────────────────────────────────┘
 
-    API: Algs.MM.get_face_name() → L, Algs.E.get_face_name() → D, Algs.S.get_face_name() → F
+    API: Algs.MM.get_face_name() → L, Algs.EE.get_face_name() → D, Algs.SS.get_face_name() → F
 
 SLICE TRAVERSAL (content movement during rotation):
     M: F → U → B → D → F  (vertical cycle, like L rotation)
@@ -777,8 +777,8 @@ class Face2FaceTranslator:
         # Map slice names to algorithm objects
         slice_name_to_alg: dict[SliceName, SliceAlg] = {
             SliceName.M: Algs.MM,
-            SliceName.E: Algs.E,
-            SliceName.S: Algs.S,
+            SliceName.E: Algs.EE,
+            SliceName.S: Algs.SS,
         }
 
         sized_layout = cube.sized_layout

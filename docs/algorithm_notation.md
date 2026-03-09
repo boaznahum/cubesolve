@@ -10,7 +10,8 @@ This document describes the algorithm notation used in this Rubik's cube solver.
 FACES:  R L U D F B    (clockwise when looking at face)
 PRIME:  R' L' U' ...   (counter-clockwise)
 DOUBLE: R2 L2 U2 ...   (180° turn)
-SLICE:  M E S          (middle layers)
+SLICE:  M E S          (single middle slice, standard notation)
+ALL:    [:]M [:]E [:]S (all middle slices)
 WIDE:   Rw Lw Uw ...   (2 layers)
 CUBE:   X Y Z          (rotate whole cube)
 ```
@@ -320,11 +321,12 @@ M[1:2]  - Both inner slices (equivalent to M on 3x3)
 
 **5x5 Cube (3 inner slices):**
 ```
-M[1]    - First inner slice (near L)
-M[2]    - Middle slice (true center)
-M[3]    - Third inner slice (near R)
-M[1:2]  - First two slices
-M       - All slices together
+M       - Middle slice (true center) = standard notation
+[:]M    - All 3 inner slices together (code: Algs.MM)
+[:]M[1] - First inner slice (near L)
+[:]M[2] - Middle slice (true center)
+[:]M[3] - Third inner slice (near R)
+[:]M[1:2] - First two slices
 ```
 
 **7x7 Cube (5 inner slices):**
@@ -446,8 +448,9 @@ Named sequences are output as: `{name}`
 | `R2` | Yes | `R2` |
 | `R U R' U'` | Yes | `[R U R' U']` |
 | `(R U)2` | Yes | `[R U]2` |
-| `M` | Yes | `M` |
-| `M[1]` | No (not supported) | - |
+| `M` | Yes | `M` (single middle slice) |
+| `[:]M` | Yes | `[:]M` (all middle slices) |
+| `[1]M` | Yes | `[1]M` (specific slice) |
 | `Rw` | Yes | `Rw` |
 | `r` | Yes | `r` (adaptive wide) |
 
@@ -457,7 +460,8 @@ Named sequences are output as: `{name}`
 
 | File | Purpose |
 |------|---------|
-| `src/cube/domain/algs/_parser.py` | `parse_alg(s)` - String to Alg |
+| `src/cube/domain/algs/_parser.py` | `parse_alg(s, compat_3x3=False)` - String to Alg |
+| `src/cube/domain/algs/MiddleSliceAlg.py` | Single middle slice (M, E, S) |
 | `src/cube/domain/algs/Alg.py` | Base class, `__str__()` |
 | `src/cube/domain/algs/Algs.py` | `Algs.parse(s)`, move constants |
 | `src/cube/domain/algs/SimpleAlg.py` | `atomic_str()` implementation |
@@ -491,8 +495,8 @@ Slices start from the **reference face** (the face whose direction the move foll
 | E | D | Like D | D face |
 | S | F | Like F | F face |
 
-- `M[2]` = center slice only = **standard M** on 5x5
-- `M[1:3]` = all 3 inner slices = **our M** on 5x5 (BUG!)
+- `M` = center slice only = **standard M** on 5x5
+- `[:]M` = all inner slices on 5x5 (code: `Algs.MM`)
 
 #### Slice Range Notation: [start:stop]
 
@@ -578,32 +582,35 @@ To get standard 2-layer wide on big cubes, use: `R[1:2]`
 |----------|---|---|---|
 | **Axis** | Between L-R | Between U-D | Between F-B |
 | **Direction** | Like L | Like D | Like F |
-| **3x3 (ours)** | 1 slice | 1 slice | 1 slice |
-| **3x3 (standard)** | 1 slice | 1 slice | 1 slice |
-| **5x5 (ours)** | 3 slices (ALL) | 3 slices (ALL) | 3 slices (ALL) |
-| **5x5 (standard)** | 1 slice (center) | 1 slice (center) | 1 slice (center) |
-| **Sliceable?** | YES | YES | YES |
+| **3x3** | 1 slice | 1 slice | 1 slice |
+| **5x5** | 1 slice (center) | 1 slice (center) | 1 slice (center) |
+| **Standard** | 1 slice (center) | 1 slice (center) | 1 slice (center) |
+| **Sliceable?** | NO (use [:]M for sliceable) | NO | NO |
 
-**Our implementation:** `M = M[1 : n_slices]` = ALL inner slices
-**Standard:** `M` = center slice only
+**Implementation:** `M`, `E`, `S` = single center slice (MiddleSliceAlg). **✓ Agrees with standard!**
 
-**⚠️ BUG: DIFFERS FROM STANDARD ON BIG CUBES**
+**All-slices variants (code / notation):**
+
+| Single slice | All slices | Code | Notation | Sliceable |
+|-------------|-----------|------|----------|-----------|
+| `M` | `[:]M` | `Algs.M` / `Algs.MM` | `"M"` / `"[:]M"` | No / Yes |
+| `E` | `[:]E` | `Algs.E` / `Algs.EE` | `"E"` / `"[:]E"` | No / Yes |
+| `S` | `[:]S` | `Algs.S` / `Algs.SS` | `"S"` / `"[:]S"` | No / Yes |
 
 **Slicing examples on 5x5 (3 inner slices):**
 ```
-M rotates like L, so M[1] starts from L face:
+M rotates like L, so [:]M[1] starts from L face:
 
-    L    M[1]  M[2]  M[3]   R
-    |     |     |     |     |
-         1st   center 3rd
+    L   [:]M[1] [:]M[2] [:]M[3]  R
+    |     |       |       |      |
+         1st    center   3rd
 
-M       = M[1:3]  = all 3 inner slices (OUR behavior - wrong!)
-M[1]              = first inner slice (closest to L)
-M[2]              = center slice (STANDARD M on 5x5)
-M[3]              = third inner slice (closest to R)
+M       = center slice only (standard behavior) = [:]M[2] on 5x5
+[:]M    = all 3 inner slices
+[:]M[1] = first inner slice (closest to L)
+[:]M[2] = center slice
+[:]M[3] = third inner slice (closest to R)
 ```
-
-To get standard center-slice M on 5x5, use: `M[2]`
 
 ---
 
@@ -614,9 +621,9 @@ To get standard center-slice M on 5x5, use: `M[2]`
 | `R` | 1 | 1 | 1 | Yes | ✓ Correct |
 | `Rw` | 2 | 4 | 2 | No | ⚠️ Differs |
 | `r` | 2 | 4 | 2 | No | Same as Rw |
-| `M` | 1 | 3 | 1 | Yes | ⚠️ BUG |
+| `M` | 1 | 1 | 1 | No | ✓ Standard |
+| `[:]M` | 1 | 3 | - | Yes | All slices |
 | `R[1:2]` | 2 | 2 | 2 | - | Standard Rw |
-| `M[2]` | 1 | 1 | 1 | - | Standard M |
 
 ---
 

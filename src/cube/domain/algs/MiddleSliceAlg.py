@@ -2,21 +2,19 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Collection, Iterable, Self, Tuple, final
+from typing import TYPE_CHECKING, Iterable, Self, final
 
-from cube.domain.algs._internal_utils import _inv
 from cube.domain.algs.SliceAlgBase import SliceAlgBase
 from cube.domain.model.cube_slice import SliceName
 
 if TYPE_CHECKING:
     from cube.domain.algs.SimpleAlg import SimpleAlg
-    from cube.domain.model.Cube import Cube, FaceName, PartSlice
 
 
 @final
 class MiddleSliceAlg(SliceAlgBase):
     """
-    The single middle slice on the M axis.
+    The single middle slice on a given axis (M, E, or S).
 
     Unlike SliceAlg (which represents ALL slices and can be indexed),
     this class represents exactly ONE slice — the geometric center.
@@ -24,7 +22,7 @@ class MiddleSliceAlg(SliceAlgBase):
     On odd cubes (3x3, 5x5, 7x7): the true middle slice.
     On even cubes (4x4, 6x6): not standard notation, uses floor-middle.
 
-    str() = "M", parser "M" → this class.
+    str() = "M" / "E" / "S" (no prefix), parser "M" → this class.
 
     Index calculation (1-based):
         3x3: n_slices=1, middle=1
@@ -35,8 +33,8 @@ class MiddleSliceAlg(SliceAlgBase):
 
     __slots__ = ()
 
-    def __init__(self) -> None:
-        super().__init__(SliceName.M)
+    def __init__(self, slice_name: SliceName) -> None:
+        super().__init__(slice_name)
         self._freeze()
 
     @staticmethod
@@ -50,7 +48,7 @@ class MiddleSliceAlg(SliceAlgBase):
         return None
 
     def _add_to_str(self, s: str) -> str:
-        """Display as 'M' (no slice prefix)."""
+        """Display as 'M' / 'E' / 'S' (no slice prefix)."""
         return s
 
     def normalize_slice_index(self, n_max: int, _default: Iterable[int]) -> Iterable[int]:
@@ -68,10 +66,18 @@ class MiddleSliceAlg(SliceAlgBase):
         return instance
 
     def same_form(self, a: SimpleAlg) -> bool:
-        """Only matches other MiddleSliceAlg instances."""
-        return isinstance(a, MiddleSliceAlg)
+        """Only matches other MiddleSliceAlg with the same slice name."""
+        if not isinstance(a, MiddleSliceAlg):
+            return False
+        return self._slice_name == a._slice_name
 
     def get_base_alg(self) -> SliceAlgBase:
-        """Return the sliceable MM alg as the base."""
+        """Return the sliceable all-slices alg as the base."""
         from cube.domain.algs.Algs import Algs
-        return Algs.MM
+        match self._slice_name:
+            case SliceName.M:
+                return Algs.MM
+            case SliceName.E:
+                return Algs.EE
+            case SliceName.S:
+                return Algs.SS

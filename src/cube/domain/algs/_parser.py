@@ -279,19 +279,19 @@ def _token_to_alg(t: str, *, compat_3x3: bool = False) -> _Alg:
             base_alg = base_alg[slice_spec]
 
     # For bare SliceAlg tokens without explicit slice prefix (e.g., "M" not "[:]M"):
-    # - compat_3x3=True: M stays as _M (all middle slices) — for 3x3 solver algs on big cubes
-    # - compat_3x3=False: M → MiddleSliceAlg (single middle slice)
-    # - E, S → SlicedSliceAlg(slice(None, None)) so str() round-trips
+    # - compat_3x3=True: keep as _M/_E/_S (all middle slices) — for 3x3 solver algs on big cubes
+    # - compat_3x3=False: M/E/S → MiddleSliceAlg (single middle slice)
     if slice_spec is None:
         from cube.domain.algs.SliceAlg import SliceAlg
-        if isinstance(base_alg, SliceAlg):
-            if base_alg.slice_name == SliceName.M:
-                if not compat_3x3:
-                    from cube.domain.algs.Algs import Algs
+        if isinstance(base_alg, SliceAlg) and not compat_3x3:
+            from cube.domain.algs.Algs import Algs
+            match base_alg.slice_name:
+                case SliceName.M:
                     base_alg = Algs.M
-                # else: keep base_alg as _M (all middle slices)
-            else:
-                base_alg = base_alg[None:None]
+                case SliceName.E:
+                    base_alg = Algs.E
+                case SliceName.S:
+                    base_alg = Algs.S
 
     # Apply modifiers in order
     result = base_alg

@@ -34,7 +34,7 @@ class Algs:
     │  S   │  F ↔ B     │  U, R, D, L    │ Like F (clockwise when viewing F)     │
     └──────┴────────────┴────────────────┴───────────────────────────────────────┘
 
-    API: Algs.MM.get_face_name() → L, Algs.E.get_face_name() → D, Algs.S.get_face_name() → F
+    API: Algs.MM.get_face_name() → L, Algs.EE.get_face_name() → D, Algs.SS.get_face_name() → F
 
     Slice Traversal (content movement during rotation):
         M: F → U → B → D → F  (vertical cycle, like L rotation)
@@ -106,17 +106,19 @@ class Algs:
     # X, Y, Z: Identity/naming only - _X() binds to AxisName.X (just gives the alg its name).
     # Geometric relationships (X↔R axis, direction) are defined in CubeLayout.get_axis_face()
     X = _X()
-    M = MiddleSliceAlg()  # Single middle slice. str() = "M". See MiddleSliceAlg for details.
-    MM = _M()  # All middle slices (sliceable). str() = "[:]M". See class docstring for M/E/S details.
+    M = MiddleSliceAlg(SliceName.M)   # Single middle slice. str() = "M".
+    MM = _M()   # All middle slices (sliceable). str() = "[:]M".
     U = _U()
     Uw = DoubleLayerAlg(U)
     Y = _Y()  # See X comment above for X/Y/Z design notes
-    E = _E()  # Middle slice over D axis. See class docstring for M/E/S details.
+    E = MiddleSliceAlg(SliceName.E)   # Single middle slice over D axis. str() = "E".
+    EE = _E()   # All middle slices over D axis (sliceable). str() = "[:]E".
 
     F = _F()
     Fw = DoubleLayerAlg(F)
     Z = _Z()  # See X comment above for X/Y/Z design notes
-    S = _S()  # Middle slice over F axis. See class docstring for M/E/S details.
+    S = MiddleSliceAlg(SliceName.S)   # Single middle slice over F axis. str() = "S".
+    SS = _S()   # All middle slices over F axis (sliceable). str() = "[:]S".
 
     # =========================================================================
     # Adaptive Wide Moves (lowercase notation)
@@ -149,8 +151,8 @@ class Algs:
 
     Simple: Sequence[NSimpleAlg] = [L, Lw,
                                     R, Rw, X, MM,
-                                    U, Uw, E, Y,
-                                    F, Fw, Z, S,
+                                    U, Uw, EE, Y,
+                                    F, Fw, Z, SS,
                                     B, Bw,
                                     D, Dw,
                                     # Adaptive wide moves (lowercase)
@@ -226,10 +228,10 @@ class Algs:
         match slice_name:
 
             case SliceName.E:
-                return cls.E
+                return cls.EE
 
             case SliceName.S:
-                return cls.S
+                return cls.SS
 
             case SliceName.M:
                 return cls.MM

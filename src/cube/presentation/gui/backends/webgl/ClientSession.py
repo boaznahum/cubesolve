@@ -877,15 +877,15 @@ class ClientSession:
                 neg_slice_index = face_name == FaceName.B
                 inv = face_name == FaceName.F
             else:
-                slice_alg_base = Algs.E
+                slice_alg_base = Algs.EE
                 neg_slice_index = False
         elif face_name in (FaceName.R, FaceName.L):
             if face.is_bottom_or_top(part):
-                slice_alg_base = Algs.S
+                slice_alg_base = Algs.SS
                 neg_slice_index = face_name == FaceName.L
                 inv = face_name == FaceName.R
             else:
-                slice_alg_base = Algs.E
+                slice_alg_base = Algs.EE
                 neg_slice_index = False
         elif face_name in (FaceName.U, FaceName.D):
             if face.is_bottom_or_top(part):
@@ -893,7 +893,7 @@ class ClientSession:
                 neg_slice_index = False
                 inv = True
             else:
-                slice_alg_base = Algs.S
+                slice_alg_base = Algs.SS
                 neg_slice_index = face_name == FaceName.D
                 inv = face_name == FaceName.D
         else:

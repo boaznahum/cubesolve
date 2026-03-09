@@ -70,7 +70,8 @@ https://user-images.githubusercontent.com/3913990/172692615-eb9aacf8-bc06-4a95-9
 
     R, L, F, B, U, D - As usual - rotate faces
     X, Y, Z - Entire cube over R, U and F axes
-    M, E, S - Middle slice over L, D and F
+    M, E, S - Single middle slice over L, D and F
+    [:]M, [:]E, [:]S - All middle slices (MM, EE, SS in code)
 
 According to: [Ruwix](https://ruwix.com/the-rubiks-cube/notation/advanced) and [cubing](https://alg.cubing.net/?alg=mx)
 
@@ -362,7 +363,7 @@ def rf(self) -> algs.Alg:
 
 ....
 
-slice_alg = Algs.E[[ltr + 1 for ltr in ltrs]]
+slice_alg = Algs.EE[[ltr + 1 for ltr in ltrs]]
    ```
 
 ![Algs](/readme_files/algs.png)

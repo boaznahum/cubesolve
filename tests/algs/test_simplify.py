@@ -170,7 +170,7 @@ class TestSimplifyFlatten:
         """Test simplify/flatten on complex sequences."""
         cube = Cube(6, sp=_test_sp)
 
-        alg = Algs.R[3:3] + Algs.D[3:4] + Algs.S + Algs.L[2:2]
+        alg = Algs.R[3:3] + Algs.D[3:4] + Algs.SS + Algs.L[2:2]
         _test_simplify_flatten(alg, cube.size)
 
         alg = Algs.B[5:5]

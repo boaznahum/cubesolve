@@ -114,28 +114,36 @@ class _M(SliceAlg):
 @final
 class _E(SliceAlg):
     """
-    Middle slice over D
+    All middle slices over D axis. str() = "[:]E".
     """
 
     def __init__(self) -> None:
         super().__init__(SliceName.E)
         self._freeze()
 
+    def _add_to_str(self, s: str) -> str:
+        """Unsliced E represents all middle slices, displayed as [:]E."""
+        return "[:]" + s
+
     def get_base_alg(self) -> SliceAlgBase:
         from cube.domain.algs.Algs import Algs
-        return Algs.E
+        return Algs.EE
 
 
 @final
 class _S(SliceAlg):
     """
-    Middle slice over F
+    All middle slices over F axis. str() = "[:]S".
     """
 
     def __init__(self) -> None:
         super().__init__(SliceName.S)
         self._freeze()
 
+    def _add_to_str(self, s: str) -> str:
+        """Unsliced S represents all middle slices, displayed as [:]S."""
+        return "[:]" + s
+
     def get_base_alg(self) -> SliceAlgBase:
         from cube.domain.algs.Algs import Algs
-        return Algs.S
+        return Algs.SS

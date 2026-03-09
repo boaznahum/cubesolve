@@ -232,12 +232,12 @@ class CommonOp(SolverHelper):
             return None  # nothing to do
 
         if cube.right.edge_right is edge:
-            alg = -Algs.E
+            alg = -Algs.EE
             self.slv.op.play(alg)
             return alg
 
         if cube.left.edge_left is edge:
-            alg = Algs.E
+            alg = Algs.EE
             self.slv.op.play(alg)
             return alg
 

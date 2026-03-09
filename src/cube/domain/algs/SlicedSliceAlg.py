@@ -93,9 +93,9 @@ class SlicedSliceAlg(SliceAlgBase):
             case SliceName.M:
                 return Algs.MM
             case SliceName.E:
-                return Algs.E
+                return Algs.EE
             case SliceName.S:
-                return Algs.S
+                return Algs.SS
 
     # NOTE: No __getitem__ method - this class cannot be sliced again!
     # This is intentional type-level enforcement.
