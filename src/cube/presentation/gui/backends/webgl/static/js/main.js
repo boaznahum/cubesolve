@@ -286,7 +286,13 @@ function handleMessage(msg) {
             } else if (state.latestState && !animQueue.isBusy) {
                 cubeModel.updateFromState(state.latestState);
             } else if (state.latestState) {
-                animQueue.pendingState = state.latestState;
+                // Size changed while animating — flush stale animations
+                if (state.latestState.size !== cubeModel.size) {
+                    animQueue.stop();
+                    cubeModel.updateFromState(state.latestState);
+                } else {
+                    animQueue.pendingState = state.latestState;
+                }
             }
 
             // Update all UI components from the single state
