@@ -36,6 +36,11 @@ class _Mul(Alg, ABC):
         s = self._alg.atomic_str()
 
         if self._n != 1:
+            # Avoid ambiguity: if inner str ends with a digit (e.g., "r'3"),
+            # appending "2" would produce "r'32" (parsed as r'*32 not (r'*3)*2).
+            # Wrap in parentheses: "(r'3)2"
+            if s and s[-1].isdigit():
+                s = "(" + s + ")"
             s += str(self._n)
 
         return s

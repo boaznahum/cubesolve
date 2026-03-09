@@ -11,6 +11,7 @@ from cube.domain.algs.SimpleAlg import NSimpleAlg
 from cube.domain.algs.MiddleSliceAlg import MiddleSliceAlg
 from cube.domain.algs.SliceAlg import _E, _M, _S, SliceAlg
 from cube.domain.algs.WholeCubeAlg import _X, _Y, _Z
+from cube.domain.algs.WideLayerAlg import WideLayerAlg
 from cube.domain.algs.WideFaceAlg import _wb, _wd, _wf, _wl, _wr, _wu
 from cube.domain.exceptions import InternalSWError
 from cube.domain.model import FaceName
@@ -93,50 +94,70 @@ class Algs:
 
     L = _L()
     # noinspection PyPep8Naming
-    Lw = DoubleLayerAlg(L)
+    LLw = DoubleLayerAlg(L)
 
     B = _B()
-    Bw = DoubleLayerAlg(B)
+    BBw = DoubleLayerAlg(B)
 
     D = _D()
-    Dw = DoubleLayerAlg(D)
+    DDw = DoubleLayerAlg(D)
 
     R = _R()
-    Rw = DoubleLayerAlg(R)
+    RRw = DoubleLayerAlg(R)
     # X, Y, Z: Identity/naming only - _X() binds to AxisName.X (just gives the alg its name).
     # Geometric relationships (X↔R axis, direction) are defined in CubeLayout.get_axis_face()
     X = _X()
     M = MiddleSliceAlg(SliceName.M)   # Single middle slice. str() = "M".
     MM = _M()   # All middle slices (sliceable). str() = "[:]M".
     U = _U()
-    Uw = DoubleLayerAlg(U)
+    UUw = DoubleLayerAlg(U)
     Y = _Y()  # See X comment above for X/Y/Z design notes
     E = MiddleSliceAlg(SliceName.E)   # Single middle slice over D axis. str() = "E".
     EE = _E()   # All middle slices over D axis (sliceable). str() = "[:]E".
 
     F = _F()
-    Fw = DoubleLayerAlg(F)
+    FFw = DoubleLayerAlg(F)
     Z = _Z()  # See X comment above for X/Y/Z design notes
     S = MiddleSliceAlg(SliceName.S)   # Single middle slice over F axis. str() = "S".
     SS = _S()   # All middle slices over F axis (sliceable). str() = "[:]S".
 
     # =========================================================================
-    # Adaptive Wide Moves (lowercase notation)
+    # Adaptive Wide Moves — all-but-last layers
     # =========================================================================
     # These move face + ALL inner layers, adapting to cube size at play time.
     # See WideFaceAlg.py for detailed documentation.
+    # str() = "[:-1]R", "[:-1]L", etc.
     #
     # On 3x3: same as uppercase (no inner layers)
     # On NxN: moves N-1 layers (face + all inner), opposite face stays fixed
     #
     # Used by CFOP F2L to work correctly on shadow 3x3 AND real NxN cubes.
     # =========================================================================
-    d = _wd()  # D + all inner layers (U stays fixed)
-    u = _wu()  # U + all inner layers (D stays fixed)
-    r = _wr()  # R + all inner layers (L stays fixed)
-    l = _wl()  # L + all inner layers (R stays fixed)  # noqa: E741 TODO: fix
-    f = _wf()  # F + all inner layers (B stays fixed)
-    b = _wb()  # B + all inner layers (F stays fixed)
+    dd = _wd()  # D + all inner layers (U stays fixed)
+    uu = _wu()  # U + all inner layers (D stays fixed)
+    rr = _wr()  # R + all inner layers (L stays fixed)
+    ll = _wl()  # L + all inner layers (R stays fixed)  # noqa: E741 TODO: fix
+    ff = _wf()  # F + all inner layers (B stays fixed)
+    bb = _wb()  # B + all inner layers (F stays fixed)
+
+    # =========================================================================
+    # Standard Wide Moves (WCA notation)
+    # =========================================================================
+    # Rw = r = 2 outermost layers (default). 3Rw = 3r = 3 layers.
+    # See WideLayerAlg.py for detailed documentation.
+    # =========================================================================
+    Rw = WideLayerAlg(FaceName.R)
+    Lw = WideLayerAlg(FaceName.L)
+    Uw = WideLayerAlg(FaceName.U)
+    Dw = WideLayerAlg(FaceName.D)
+    Fw = WideLayerAlg(FaceName.F)
+    Bw = WideLayerAlg(FaceName.B)
+    r = WideLayerAlg(FaceName.R, lowercase=True)
+    l = WideLayerAlg(FaceName.L, lowercase=True)  # noqa: E741
+    u = WideLayerAlg(FaceName.U, lowercase=True)
+    d = WideLayerAlg(FaceName.D, lowercase=True)
+    f = WideLayerAlg(FaceName.F, lowercase=True)
+    b = WideLayerAlg(FaceName.B, lowercase=True)
 
     _NO_OP = SeqAlg(None)
     NOOP = _NO_OP  # Public alias for no-op algorithm
@@ -155,7 +176,7 @@ class Algs:
                                     F, Fw, Z, SS,
                                     B, Bw,
                                     D, Dw,
-                                    # Adaptive wide moves (lowercase)
+                                    # Standard wide moves (lowercase form)
                                     f, u, r, l, d, b,
                                     ]
 

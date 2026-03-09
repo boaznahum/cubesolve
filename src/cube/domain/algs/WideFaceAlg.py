@@ -56,7 +56,7 @@ is played on a 5x5, it still uses [1:2], moving only 2 of 4 layers:
 SOLUTION: WideFaceAlg computes slices at PLAY TIME based on the target
 cube's size. It always moves face + ALL inner layers:
 
-    | Cube | Algs.d moves     | Layers | Edges  |
+    | Cube | Algs.dd moves    | Layers | Edges  |
     |------|------------------|--------|--------|
     | 3x3  | D[0]             | 1      | OK     |
     | 4x4  | D[0,1,2]         | 3      | OK     |
@@ -70,7 +70,7 @@ USAGE IN F2L
     d = Algs.D[1:1 + cube.n_slices]
 
     # NEW (adaptive - works on all sizes):
-    d = Algs.d  # WideFaceAlg instance
+    d = Algs.dd  # WideFaceAlg instance
 """
 
 from abc import ABC
@@ -136,8 +136,8 @@ class WideFaceAlg(AnimationAbleAlg, ABC):
         return self._face, parts
 
     def atomic_str(self) -> str:
-        """Return lowercase letter with prime/double notation (standard notation)."""
-        return n_to_str(self._face.value.lower(), self._n)
+        """Return [:-1]r notation (all-but-last layers, lowercase)."""
+        return "[:-1]" + n_to_str(self._face.value.lower(), self._n)
 
 
 # Pre-defined wide move instances (lowercase notation)

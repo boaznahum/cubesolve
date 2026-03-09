@@ -1,5 +1,6 @@
 from typing import Collection, Self, Tuple
 
+from cube.domain.algs._internal_utils import n_to_str
 from cube.domain.algs.AnimationAbleAlg import AnimationAbleAlg
 from cube.domain.algs.FaceAlg import FaceAlg
 from cube.domain.algs.FaceAlgBase import FaceAlgBase
@@ -51,6 +52,9 @@ class DoubleLayerAlg(AnimationAbleAlg):
         # size-1: 3x3 -> R[1:2], 4x4 [1:3]
         # Returns SlicedFaceAlg (subclass of FaceAlgBase)
         return fa[1: cube_size - 1]
+
+    def atomic_str(self) -> str:
+        return "[:-1]" + n_to_str(self._of_face_alg._code + "w", self._n)
 
     def xsimplify(self) -> "NSimpleAlg|SeqSimpleAlg":
         """

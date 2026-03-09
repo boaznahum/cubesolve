@@ -81,3 +81,14 @@ Introduce proper M notation: `Algs.M` = single middle slice (MiddleSliceAlg), `A
 ## Future Tasks
 - **TODO:** Eliminate `Algs.parse()` usages in solver code - replace parsed algorithm strings with programmatic alg construction. This removes the need for `compat_3x3` flag.
 - **TODO:** Add MiddleSliceAlg (Algs.M) to scrambler (carefully, don't change Simple list length)
+- **TODO:** Consolidate `DoubleLayerAlg` (Rw) and `WideFaceAlg` (r) — they use different slice indexing but may produce the same cube state. Investigate whether they are truly identical, then remove one class.
+- **TODO:** Create new standard-compliant `Algs.Rw` and `Algs.r` (WCA standard: 2 outermost layers)
+  - `Rw` = `r` = 2 layers (identical per WCA standard, `Rw` is official WCA form)
+  - Support `nRw` / `nr` prefix for n layers (e.g., `3Rw` = `3r` = 3 layers)
+  - Support all slice forms: `Rw'`, `Rw2`, `3Rw'`, `3r2`, etc.
+  - Same for all 6 faces: L, U, D, F, B
+  - Add to `Algs.Simple` list and scrambler
+  - Add to parser tests (bring back `Rw`, `r`, `3Rw`, `3r` etc.)
+  - Parser: bare `Rw`/`r` → new standard 2-layer (non-compat mode)
+  - Parser: bare `Rw`/`r` → `Algs.RRw`/`Algs.rr` all-but-last (compat mode)
+  - Document everything in `algorithm_notation.md` and `README.md`

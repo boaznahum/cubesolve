@@ -132,6 +132,14 @@ def __scramble(cube_size: int, rnd: Random, n: int, nest) -> list[Alg]:
 
                     a = a[slice_start:slice_stop]
 
+            # Randomly vary layer count for WideLayerAlg (e.g., Rw → 3Rw)
+            from cube.domain.algs.WideLayerAlg import WideLayerAlg
+            if isinstance(a, WideLayerAlg) and cube_size > 3 and prob(_PROB_SLICE_AN_ALG):
+                max_layers = cube_size - 1
+                layers = rnd.randint(2, max_layers)
+                if layers != a.layers:
+                    a = a.with_layers(layers)
+
         if prob(_PROB_INV):
             a = a.inv()
 

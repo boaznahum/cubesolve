@@ -41,11 +41,11 @@ SINGLE_MOVES = [
     "X", "Y", "Z",
     "X'", "Y'", "Z'",
     "X2", "Y2", "Z2",
-    # Double-layer moves
+    # Standard wide moves (2 outermost layers, WCA notation)
     "Rw", "Lw", "Uw", "Dw", "Fw", "Bw",
     "Rw'", "Lw'", "Uw'", "Dw'", "Fw'", "Bw'",
     "Rw2", "Lw2", "Uw2", "Dw2", "Fw2", "Bw2",
-    # Adaptive wide moves
+    # Standard wide moves (lowercase form)
     "r", "l", "u", "d", "f", "b",
     "r'", "l'", "u'", "d'", "f'", "b'",
     "r2", "l2", "u2", "d2", "f2", "b2",
@@ -62,11 +62,8 @@ def test_single_move_parse_round_trip(move: str, cube_size: int) -> None:
     # Convert back to string
     result = str(parsed)
 
-    # For single moves wrapped in SeqAlg, the result might be [R] instead of R
-    # Normalize by stripping brackets if present
-    normalized = result.strip("[]")
-
-    assert normalized == move, f"Round-trip failed: '{move}' -> '{result}' -> '{normalized}'"
+    # SeqAlg with 1 element delegates to inner atomic_str() — no bracket wrapping
+    assert result == move, f"Round-trip failed: '{move}' -> '{result}'"
 
 
 @pytest.mark.parametrize("move", SINGLE_MOVES)
@@ -299,3 +296,107 @@ def test_scramble_parsed_inverse_returns_solved(seed: int, cube_size: int) -> No
     parsed.inv().play(app.cube)
 
     assert app.cube.solved, f"Scramble + parsed inverse should return to solved"
+
+
+# =============================================================================
+# Phase 3: Wide Move Notation Tests (nRw, nr, [:-1]Rw)
+# =============================================================================
+
+WIDE_LAYER_MOVES = [
+    # Standard 2-layer wide (nRw form)
+    "3Rw", "3Lw", "3Uw", "3Dw", "3Fw", "3Bw",
+    "3Rw'", "3Lw'",
+    "3Rw2", "3Lw2",
+    # Standard 2-layer wide (nr form)
+    "3r", "3l", "3u", "3d", "3f", "3b",
+    "3r'", "3l'",
+    "3r2", "3l2",
+]
+
+
+@pytest.mark.parametrize("move", WIDE_LAYER_MOVES)
+@pytest.mark.parametrize("cube_size", [4, 5])
+def test_wide_layer_move_round_trip(move: str, cube_size: int) -> None:
+    """Test that nRw/nr moves parse and round-trip correctly."""
+    parsed = Algs.parse(move)
+    result = str(parsed)
+    assert result == move, f"Round-trip failed: '{move}' -> '{result}'"
+
+
+@pytest.mark.parametrize("move", WIDE_LAYER_MOVES)
+@pytest.mark.parametrize("cube_size", [4, 5])
+def test_wide_layer_move_inverse(move: str, cube_size: int) -> None:
+    """Test that nRw/nr + inverse returns to solved."""
+    app = AbstractApp.create_app(cube_size=cube_size)
+    assert app.cube.solved
+    parsed = Algs.parse(move)
+    parsed.play(app.cube)
+    parsed.inv().play(app.cube)
+    assert app.cube.solved, f"Move '{move}' + inverse should return to solved"
+
+
+ALL_BUT_LAST_MOVES = [
+    "[:-1]Rw", "[:-1]Lw", "[:-1]Uw", "[:-1]Dw", "[:-1]Fw", "[:-1]Bw",
+    "[:-1]Rw'", "[:-1]Lw'",
+    "[:-1]r", "[:-1]l", "[:-1]u", "[:-1]d", "[:-1]f", "[:-1]b",
+    "[:-1]r'", "[:-1]l'",
+]
+
+
+@pytest.mark.parametrize("move", ALL_BUT_LAST_MOVES)
+@pytest.mark.parametrize("cube_size", [3, 4, 5])
+def test_all_but_last_round_trip(move: str, cube_size: int) -> None:
+    """Test that [:-1]Rw/[:-1]r notation parses and round-trips."""
+    parsed = Algs.parse(move)
+    result = str(parsed)
+    assert result == move, f"Round-trip failed: '{move}' -> '{result}'"
+
+
+@pytest.mark.parametrize("move", ALL_BUT_LAST_MOVES)
+@pytest.mark.parametrize("cube_size", [3, 4, 5])
+def test_all_but_last_inverse(move: str, cube_size: int) -> None:
+    """Test that [:-1]Rw/[:-1]r + inverse returns to solved."""
+    app = AbstractApp.create_app(cube_size=cube_size)
+    assert app.cube.solved
+    parsed = Algs.parse(move)
+    parsed.play(app.cube)
+    parsed.inv().play(app.cube)
+    assert app.cube.solved, f"Move '{move}' + inverse should return to solved"
+
+
+# =============================================================================
+# Phase 4: Default layer count (2Rw → Rw, 2r → r)
+# =============================================================================
+
+DEFAULT_LAYER_PAIRS = [
+    # (input, expected_str) — 2 is the default, omitted in output
+    ("2Rw", "Rw"), ("2Lw", "Lw"), ("2Uw", "Uw"),
+    ("2Dw", "Dw"), ("2Fw", "Fw"), ("2Bw", "Bw"),
+    ("2r", "r"), ("2l", "l"), ("2u", "u"),
+    ("2d", "d"), ("2f", "f"), ("2b", "b"),
+    ("2Rw'", "Rw'"), ("2r'", "r'"),
+    ("2Rw2", "Rw2"), ("2r2", "r2"),
+]
+
+
+@pytest.mark.parametrize("input_str,expected", DEFAULT_LAYER_PAIRS)
+def test_default_layer_count_omitted_in_str(input_str: str, expected: str) -> None:
+    """Test that 2Rw parses and displays as Rw (2 is default, omitted)."""
+    parsed = Algs.parse(input_str)
+    result = str(parsed)
+    assert result == expected, f"'{input_str}' should display as '{expected}', got '{result}'"
+
+
+@pytest.mark.parametrize("input_str,expected", DEFAULT_LAYER_PAIRS)
+@pytest.mark.parametrize("cube_size", [3, 4, 5])
+def test_default_layer_same_cube_state(input_str: str, expected: str, cube_size: int) -> None:
+    """Test that 2Rw and Rw produce the same cube state."""
+    app1 = AbstractApp.create_app(cube_size=cube_size)
+    app2 = AbstractApp.create_app(cube_size=cube_size)
+
+    Algs.parse(input_str).play(app1.cube)
+    Algs.parse(expected).play(app2.cube)
+
+    # Both should produce same state — apply inverse of one to the other
+    Algs.parse(expected).inv().play(app1.cube)
+    assert app1.cube.solved, f"'{input_str}' and '{expected}' should produce same state on {cube_size}x{cube_size}"

@@ -916,7 +916,7 @@ class ClientSession:
         """Extract the face name from an algorithm string for animation.
 
         Handles formats like: "R", "R'", "U2", "M", "[2:2]M", "[1:2]R", "X",
-        "Rw" (double layer), "d" (wide face, lowercase).
+        "[:-1]Rw" (double layer), "[:-1]r" (wide face, lowercase).
         """
         s = str(alg).strip()
         if not s:

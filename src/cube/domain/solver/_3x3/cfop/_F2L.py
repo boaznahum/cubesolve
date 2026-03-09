@@ -386,7 +386,7 @@ class F2L(SolverHelper):
         # This adapts to cube size at play time, so algorithms from shadow 3x3
         # work correctly when applied to NxN cubes without breaking edge pairing.
         # See WideFaceAlg.py for detailed explanation.
-        d = Algs.d
+        d = Algs.dd
 
         ################################################################
         # 1st: Easy cases: edge at top
@@ -623,7 +623,7 @@ class F2L(SolverHelper):
         U = Algs.U
         U2 = U * 2
         # Adaptive wide move - see comment in _4th_case_corner_edge_up
-        d = Algs.d
+        d = Algs.dd
 
         e_front_c = e.get_face_edge(front).color
 
@@ -775,7 +775,7 @@ class F2L(SolverHelper):
         U = Algs.U
         U2 = U * 2
         # Adaptive wide move - see comment in _4th_case_corner_edge_up
-        d = Algs.d
+        d = Algs.dd
 
         c_front_color = c.get_face_edge(front).color
         c_right_color = c.get_face_edge(right).color
