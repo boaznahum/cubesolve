@@ -68,18 +68,32 @@ class PLL(StepSolver):
     def _do_pll(self):
         description_alg = self._search_pll_alg()
 
-        if description_alg is None:
-            # Unknown PLL state - check what type of parity
-            if self._is_corner_parity():
-                # Corner parity: raise exception for orchestrator to fix
-                self.debug("PLL: Corner parity detected (2 corners in position)")
-                raise EvenCubeCornerSwapException()
+        if description_alg is not None:
+            # Found a PLL alg - apply it
+            search_alg, description, alg = description_alg
+            self.debug(f"Found PLL alg '{description}' {alg}")
+            self.play((search_alg + alg).simplify())
+            self._rotate_and_solve()  # because all our searching U
 
-            # Edge swap parity: fix internally and retry
-            self._do_edge_swap_parity()
-            if self._rotate_and_solve():
+            if self.is_solved:
                 return
-            description_alg = self._search_pll_alg()
+
+            # PLL alg matched but didn't solve — likely even-cube parity.
+            # A parity state can coincidentally match a PLL pattern, but
+            # the permutation is impossible on a true 3x3, so the alg
+            # won't fully solve. Fall through to parity detection.
+            self.debug("PLL alg applied but cube not solved - checking parity")
+
+        # No PLL alg matched, or matched alg didn't solve — check parity
+        if self._is_corner_parity():
+            self.debug("PLL: Corner parity detected (2 corners in position)")
+            raise EvenCubeCornerSwapException()
+
+        # Edge swap parity: fix internally and retry
+        self._do_edge_swap_parity()
+        if self._rotate_and_solve():
+            return
+        description_alg = self._search_pll_alg()
 
         if description_alg is None:
             raise InternalSWError("Unknown PLL state")

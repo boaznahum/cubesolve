@@ -180,6 +180,8 @@ class Algs:
                                     D, Dw,
                                     # Standard wide moves (lowercase form)
                                     f, u, r, l, d, b,
+                                    # WCA single middle slices
+                                    M, E, S,
                                     ]
 
     RU = SeqAlg("RU(top)", R, U, -R, U, R, U * 2, -R, U)
