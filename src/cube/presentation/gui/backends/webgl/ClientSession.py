@@ -590,7 +590,9 @@ class ClientSession:
         vs = self._app.vs
         if clamped != vs.cube_size:
             if not self._fsm.send(FlowEvent.SIZE_CHANGE):
-                return  # Not allowed in current state
+                # Rejected — resync client so dropdown reverts
+                self.send_state()
+                return
             prev_solver = self._app.slv.get_code
             vs.cube_size = clamped
             self._app.reset(clamped)
