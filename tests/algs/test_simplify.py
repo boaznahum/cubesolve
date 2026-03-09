@@ -306,6 +306,76 @@ class TestDisjointSliceMerge:
         # Verify correctness
         assert s.count() >= 1, f"Unexpected: {s}"
 
+    def test_mul_flatten_preserves_n(self):
+        """Test that _Mul.flatten() produces B2, not B B.
+
+        Bug: _Mul(B, 2).flatten() was expanding into two separate B moves
+        instead of yielding a single B2 move. This caused the queue to show
+        duplicate moves like B, B instead of B2.
+        """
+        # Face alg: B*2 should flatten to a single B2
+        b2 = Algs.B * 2
+        flat = list(b2.flatten())
+        assert len(flat) == 1, f"B*2 flattened to {len(flat)} moves: {[str(a) for a in flat]}, expected 1 (B2)"
+        assert flat[0].n % 4 == 2, f"Expected n=2, got n={flat[0].n}"
+
+        # Sliced slice alg: E[2:2]*2 should flatten to a single E[2:2]2
+        e_sliced_2 = Algs.EE[2:2] * 2
+        flat = list(e_sliced_2.flatten())
+        assert len(flat) == 1, f"E[2:2]*2 flattened to {len(flat)} moves, expected 1"
+        assert flat[0].n % 4 == 2, f"Expected n=2, got n={flat[0].n}"
+
+        # Sliced face alg: R[1:2]*2 should flatten to a single R[1:2]2
+        r_sliced_2 = Algs.R[1:2] * 2
+        flat = list(r_sliced_2.flatten())
+        assert len(flat) == 1, f"R[1:2]*2 flattened to {len(flat)} moves, expected 1"
+        assert flat[0].n % 4 == 2, f"Expected n=2, got n={flat[0].n}"
+
+        # Prime: B'*2 should flatten to single B'2 (which is also B2)
+        b_prime_2 = Algs.B.prime * 2
+        flat = list(b_prime_2.flatten())
+        assert len(flat) == 1, f"B'*2 flattened to {len(flat)} moves, expected 1"
+
+        # Identity: B*4 should flatten to nothing (identity)
+        b4 = Algs.B * 4
+        flat = list(b4.flatten())
+        assert len(flat) == 0, f"B*4 flattened to {len(flat)} moves, expected 0 (identity)"
+
+    def test_mul_flatten_equivalence(self):
+        """Test that _Mul.flatten() produces equivalent cube state.
+
+        Verify that flattened _Mul moves produce the same result as
+        the original algorithm on actual cubes.
+        """
+        cube_size = 7
+
+        # B*2
+        _test_flatten(Algs.B * 2, cube_size)
+
+        # Sliced: E[2:2]*2
+        _test_flatten(Algs.EE[2:2] * 2, cube_size)
+
+        # Sliced face: R[1:2]*2
+        _test_flatten(Algs.R[1:2] * 2, cube_size)
+
+        # Prime: B'*2
+        _test_flatten(Algs.B.prime * 2, cube_size)
+
+        # *3
+        _test_flatten(Algs.F * 3, cube_size)
+
+        # Complex sequence with _Mul inside
+        alg = algs.SeqAlg(None,
+                          Algs.EE[2:2] * 2,
+                          Algs.F,
+                          Algs.EE[3:3].prime * 2,
+                          Algs.F.prime,
+                          Algs.EE[2:2].prime * 2,
+                          Algs.F,
+                          Algs.B.prime * 2,
+                          Algs.B * 2)
+        _test_flatten(alg, cube_size)
+
     def test_compression_examples(self):
         """Print before/after to show compression visually."""
         cube_size = 8
