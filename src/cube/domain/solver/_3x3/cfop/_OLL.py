@@ -181,7 +181,7 @@ class OLL(StepSolver):
         self.debug(f"Found (raw) alg: {description} : {alg}")
 
         if isinstance(alg, str):
-            alg = Algs.parse(alg)
+            alg = Algs.parse(alg, compat_3x3=True)
 
         return description, alg
 

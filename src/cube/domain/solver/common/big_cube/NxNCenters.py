@@ -750,13 +750,13 @@ class NxNCenters(SolverHelper):
         if source is cube.back:
             rotate_mul = 2
 
-        # TODO [#12]: MM algorithm broken - needs fix before odd cube face swap can work
-        raise InternalSWError("Need to fix MM")
+        # TODO [#12]: M' algorithm broken - needs fix before odd cube face swap can work
+        raise InternalSWError("Need to fix M'")
 
-        swap_faces = [Algs.MM()[1:mid_pls_1 - 1].prime * rotate_mul, Algs.F.prime * 2,
-                      Algs.MM()[1:mid_pls_1 - 1] * rotate_mul,
-                      Algs.MM()[mid_pls_1 + 1:end].prime * rotate_mul,
-                      Algs.F * 2 + Algs.MM()[mid_pls_1 + 1:end] * rotate_mul
+        swap_faces = [Algs.MM.prime[1:mid_pls_1 - 1].prime * rotate_mul, Algs.F.prime * 2,
+                      Algs.MM.prime[1:mid_pls_1 - 1] * rotate_mul,
+                      Algs.MM.prime[mid_pls_1 + 1:end].prime * rotate_mul,
+                      Algs.F * 2 + Algs.MM.prime[mid_pls_1 + 1:end] * rotate_mul
                       ]
         op.op(Algs.seq_alg(None, *swap_faces))
 
@@ -1127,7 +1127,7 @@ class NxNCenters(SolverHelper):
         if c1 > c2:
             c1, c2 = c2, c1
 
-        return Algs.M[c1 + 1:c2 + 1].prime
+        return Algs.MM[c1 + 1:c2 + 1].prime
 
     def reset_block_statistics(self) -> None:
         """Reset block solving statistics."""

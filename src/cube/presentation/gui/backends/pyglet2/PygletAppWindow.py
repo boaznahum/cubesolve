@@ -796,7 +796,7 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
 
         s = f"Solver:{slv.name}, S={cube.size}, Is 3x3:{'Yes' if cube.is3x3 else 'No'}"
         s += f", Slices  [{vs.slice_start}, {vs.slice_stop}]"
-        s += f", {vs.slice_alg(cube, Algs.L)}, {vs.slice_alg(cube, Algs.M)}"
+        s += f", {vs.slice_alg(cube, Algs.L)}, {vs.slice_alg(cube, Algs.MM)}"
         self.text.append(pyglet.text.Label(s, x=10, y=y, font_size=10, color=(0, 255, 0, 255), weight='bold'))
         y += 20
 

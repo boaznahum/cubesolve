@@ -53,7 +53,7 @@ The axis faces (and their opposites) stay in place but don't rotate.
 └──────────┴───────────┴─────────────────┴───────────────────────────────────┘
 
 API Reference:
-  - Algs.M.get_face_name() → L  (M rotates like L)
+  - Algs.MM.get_face_name() → L  (M rotates like L)
   - Algs.E.get_face_name() → D  (E rotates like D)
   - Algs.S.get_face_name() → F  (S rotates like F)
 

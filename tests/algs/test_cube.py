@@ -92,7 +92,7 @@ def test_m_rotation_and_solve_kociemba():
     cube = app.cube
 
     # Apply M rotation
-    Algs.M.play(cube)
+    Algs.MM.play(cube)
 
     assert not cube.solved, "Cube should not be solved after M rotation"
 

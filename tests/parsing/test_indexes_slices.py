@@ -19,7 +19,7 @@ def test_slice_play_and_inverse():
     state = CubeQueries2(cube).get_sate()
 
     slices = [1, 2, 5, 6]
-    slice_alg = Algs.M[slices]
+    slice_alg = Algs.MM[slices]
 
     slice_alg.play(cube)
     slice_alg.prime.play(cube)

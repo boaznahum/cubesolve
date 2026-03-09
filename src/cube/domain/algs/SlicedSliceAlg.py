@@ -91,7 +91,7 @@ class SlicedSliceAlg(SliceAlgBase):
         from cube.domain.algs.Algs import Algs
         match self._slice_name:
             case SliceName.M:
-                return Algs.M
+                return Algs.MM
             case SliceName.E:
                 return Algs.E
             case SliceName.S:

@@ -2,6 +2,7 @@ import re
 from typing import TYPE_CHECKING, TypeAlias
 
 from cube.domain.exceptions import InternalSWError
+from cube.domain.model.cube_slice import SliceName
 
 if TYPE_CHECKING:
     from cube.domain.algs.Alg import Alg
@@ -11,7 +12,7 @@ _Alg: TypeAlias = "Alg"
 _SeqAlg: TypeAlias = "SeqAlg"
 
 
-def parse_alg(s: str) -> _Alg:
+def parse_alg(s: str, *, compat_3x3: bool = False) -> _Alg:
     """
     this is very naive patch version
     Currently doesn't support exp N and exp '  (only U2, U',...)
@@ -22,6 +23,12 @@ def parse_alg(s: str) -> _Alg:
     - Wide moves: Rw, r, Lw', etc.
     - Slice notation: [1:2]M, [1]R, [1:]S, etc.
     - Sequences: [R U R' U'], (R U) 2
+
+    Args:
+        s: The algorithm string to parse.
+        compat_3x3: When True, bare "M" is treated as all middle slices ([:]M),
+            matching standard 3x3 notation where M = all middle slices.
+            When False (default), bare "M" returns MiddleSliceAlg (single middle slice).
     """
 
     # We capture, so we get the splitters two, such as '(' ')', we need to ignore the spaces
@@ -35,17 +42,18 @@ def parse_alg(s: str) -> _Alg:
     pattern = r"(\s+|\(|\)|\[|\]|')"
     tokens = re.split(pattern, s)
 
-    p = _Parser(s, tokens)
+    p = _Parser(s, tokens, compat_3x3=compat_3x3)
 
     return p.parse()
 
 
 class _Parser:
 
-    def __init__(self, original: str, tokens: list[str]) -> None:
+    def __init__(self, original: str, tokens: list[str], *, compat_3x3: bool = False) -> None:
         super().__init__()
         self._tokens = tokens
         self._original = original
+        self._compat_3x3 = compat_3x3
 
     def parse(self) -> _SeqAlg:
         result: list[Alg] = []
@@ -76,7 +84,7 @@ class _Parser:
                             raise InternalSWError(f"Expected algorithm after slice in {self._original}")
                         # Combine slice notation with algorithm token
                         combined = "[" + slice_tokens + "]" + alg_token
-                        at = _token_to_alg(combined)
+                        at = _token_to_alg(combined, compat_3x3=self._compat_3x3)
                         result.append(at)
                         continue
                 # Otherwise treat [ as sequence bracket like (
@@ -111,7 +119,7 @@ class _Parser:
                 result.append(at)
 
             else:
-                at = _token_to_alg(token)
+                at = _token_to_alg(token, compat_3x3=self._compat_3x3)
                 result.append(at)
 
     def _collect_slice_tokens(self) -> str:
@@ -204,7 +212,7 @@ def _parse_slice_prefix(t: str) -> tuple[str, slice | list[int] | None]:
         return base_token, slice(index, index)
 
 
-def _token_to_alg(t: str) -> _Alg:
+def _token_to_alg(t: str, *, compat_3x3: bool = False) -> _Alg:
     """
     Parse a token to algorithm.
 
@@ -253,13 +261,37 @@ def _token_to_alg(t: str) -> _Alg:
 
     # Apply slice to base algorithm FIRST (before modifiers)
     if slice_spec is not None:
+        # If base_alg is a MiddleSliceAlg (e.g., M), swap to the sliceable MM
+        # so that [:]M, [1]M etc. work on the all-slices alg
+        from cube.domain.algs.MiddleSliceAlg import MiddleSliceAlg
+        if isinstance(base_alg, MiddleSliceAlg):
+            base_alg = base_alg.get_base_alg()
+
         from cube.domain.algs.SliceAbleAlg import SliceAbleAlg
         if not isinstance(base_alg, SliceAbleAlg):
             raise InternalSWError(f"Slice notation not supported for {base_alg}")
-        if isinstance(slice_spec, slice):
+        # [:]X means "all slices" — keep the unsliced SliceAlg so str() = "[:]M"
+        if isinstance(slice_spec, slice) and slice_spec.start is None and slice_spec.stop is None:
+            pass  # base_alg stays as unsliced SliceAlg (e.g., Algs.MM)
+        elif isinstance(slice_spec, slice):
             base_alg = base_alg[slice_spec.start:slice_spec.stop]
         else:
             base_alg = base_alg[slice_spec]
+
+    # For bare SliceAlg tokens without explicit slice prefix (e.g., "M" not "[:]M"):
+    # - compat_3x3=True: M stays as _M (all middle slices) — for 3x3 solver algs on big cubes
+    # - compat_3x3=False: M → MiddleSliceAlg (single middle slice)
+    # - E, S → SlicedSliceAlg(slice(None, None)) so str() round-trips
+    if slice_spec is None:
+        from cube.domain.algs.SliceAlg import SliceAlg
+        if isinstance(base_alg, SliceAlg):
+            if base_alg.slice_name == SliceName.M:
+                if not compat_3x3:
+                    from cube.domain.algs.Algs import Algs
+                    base_alg = Algs.M
+                # else: keep base_alg as _M (all middle slices)
+            else:
+                base_alg = base_alg[None:None]
 
     # Apply modifiers in order
     result = base_alg

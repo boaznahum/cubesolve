@@ -112,7 +112,7 @@ class TestFlatten:
     def test_flatten_slice_move(self):
         """Test flattening of slice moves."""
         cube_size = 5
-        alg = Algs.M[2:2].prime * 2
+        alg = Algs.MM[2:2].prime * 2
         _test_flatten(alg, cube_size)
 
     def test_flatten_complex_sequence(self):
@@ -125,8 +125,8 @@ class TestFlatten:
         c = 2
         cc = 4
 
-        rotate_on_cell = Algs.M[inv(c) + 1:inv(c) + 1]
-        rotate_on_second = Algs.M[inv(cc) + 1:inv(cc) + 1]
+        rotate_on_cell = Algs.MM[inv(c) + 1:inv(c) + 1]
+        rotate_on_second = Algs.MM[inv(cc) + 1:inv(cc) + 1]
 
         on_front_rotate = Algs.F.prime
 

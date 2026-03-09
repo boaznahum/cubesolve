@@ -107,7 +107,7 @@ def test_slice_only_rotations():
 
         start = time.perf_counter()
         for _ in range(n_iterations):
-            Algs.M.play(cube)
+            Algs.MM.play(cube)
             Algs.E.play(cube)
             Algs.S.play(cube)
         time_no_cache = time.perf_counter() - start
@@ -119,7 +119,7 @@ def test_slice_only_rotations():
 
         start = time.perf_counter()
         for _ in range(n_iterations):
-            Algs.M.play(cube)
+            Algs.MM.play(cube)
             Algs.E.play(cube)
             Algs.S.play(cube)
         time_with_cache = time.perf_counter() - start

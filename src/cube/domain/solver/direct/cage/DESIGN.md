@@ -374,8 +374,8 @@ execute_center_commutator(target_face, target_pos, source_face, source_pos):
     mul = 1 if source_is_up() else 2
 
     # The commutator sequence
-    target_slice = Algs.M[target_col + 1]  # 1-indexed
-    source_slice = Algs.M[source_col + 1]
+    target_slice = Algs.MM[target_col + 1]  # 1-indexed
+    source_slice = Algs.MM[source_col + 1]
 
     # Execute: [target_slice', F, source_slice', F'] pattern
     execute([

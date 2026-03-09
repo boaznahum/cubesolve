@@ -102,9 +102,13 @@ class _M(SliceAlg):
         super().__init__(SliceName.M)
         self._freeze()
 
+    def _add_to_str(self, s: str) -> str:
+        """Unsliced M represents all middle slices, displayed as [:]M."""
+        return "[:]" + s
+
     def get_base_alg(self) -> SliceAlgBase:
         from cube.domain.algs.Algs import Algs
-        return Algs.M
+        return Algs.MM
 
 
 @final

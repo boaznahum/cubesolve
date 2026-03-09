@@ -1,4 +1,3 @@
-import warnings
 from typing import Sequence
 
 from cube.domain.algs._parser import parse_alg
@@ -9,6 +8,7 @@ from cube.domain.algs.FaceAlg import _B, _D, _F, _L, _R, _U, FaceAlg
 from cube.domain.algs.Scramble import _Scramble, _scramble
 from cube.domain.algs.SeqAlg import SeqAlg
 from cube.domain.algs.SimpleAlg import NSimpleAlg
+from cube.domain.algs.MiddleSliceAlg import MiddleSliceAlg
 from cube.domain.algs.SliceAlg import _E, _M, _S, SliceAlg
 from cube.domain.algs.WholeCubeAlg import _X, _Y, _Z
 from cube.domain.algs.WideFaceAlg import _wb, _wd, _wf, _wl, _wr, _wu
@@ -34,7 +34,7 @@ class Algs:
     │  S   │  F ↔ B     │  U, R, D, L    │ Like F (clockwise when viewing F)     │
     └──────┴────────────┴────────────────┴───────────────────────────────────────┘
 
-    API: Algs.M.get_face_name() → L, Algs.E.get_face_name() → D, Algs.S.get_face_name() → F
+    API: Algs.MM.get_face_name() → L, Algs.E.get_face_name() → D, Algs.S.get_face_name() → F
 
     Slice Traversal (content movement during rotation):
         M: F → U → B → D → F  (vertical cycle, like L rotation)
@@ -106,16 +106,8 @@ class Algs:
     # X, Y, Z: Identity/naming only - _X() binds to AxisName.X (just gives the alg its name).
     # Geometric relationships (X↔R axis, direction) are defined in CubeLayout.get_axis_face()
     X = _X()
-    M = _M()  # Middle slice over L axis. See class docstring for M/E/S details.
-    _MM = _M().simple_mul(-1)  # Middle over L
-
-    # noinspection PyPep8Naming
-    @staticmethod
-    def MM() -> SliceAlg:
-        warnings.warn("Use M'", DeprecationWarning, 2)
-
-        return Algs._MM
-
+    M = MiddleSliceAlg()  # Single middle slice. str() = "M". See MiddleSliceAlg for details.
+    MM = _M()  # All middle slices (sliceable). str() = "[:]M". See class docstring for M/E/S details.
     U = _U()
     Uw = DoubleLayerAlg(U)
     Y = _Y()  # See X comment above for X/Y/Z design notes
@@ -156,7 +148,7 @@ class Algs:
         return SeqAlg(None, *algs)
 
     Simple: Sequence[NSimpleAlg] = [L, Lw,
-                                    R, Rw, X, M,
+                                    R, Rw, X, MM,
                                     U, Uw, E, Y,
                                     F, Fw, Z, S,
                                     B, Bw,
@@ -240,7 +232,7 @@ class Algs:
                 return cls.S
 
             case SliceName.M:
-                return cls.M
+                return cls.MM
 
             case _:
                 raise InternalSWError(f"Unknown slice name {slice_name}")
@@ -250,8 +242,8 @@ class Algs:
         return Algs._NO_OP
 
     @classmethod
-    def parse(cls, alg: str) -> Alg:
-        return parse_alg(alg)
+    def parse(cls, alg: str, *, compat_3x3: bool = False) -> Alg:
+        return parse_alg(alg, compat_3x3=compat_3x3)
 
     @classmethod
     def parse_multiline(cls, text: str) -> Alg:

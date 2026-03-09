@@ -259,7 +259,7 @@ class Kociemba3x3(AbstractSolver, Solver3x3Protocol):
 
             # Parse and execute the solution
             if solution:
-                alg = parse_alg(solution)
+                alg = parse_alg(solution, compat_3x3=True)
                 self._op.play(alg)
 
         finally:

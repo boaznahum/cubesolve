@@ -516,9 +516,9 @@ class NxNEdges(SolverHelper):
                 if not self._advanced_edge_parity:
                     self.debug( f"*** Doing parity on M {plus_one}", level=2)
                     for _ in range(4):
-                        self.op.play(Algs.M[plus_one].prime)
+                        self.op.play(Algs.MM[plus_one].prime)
                         self.op.play(Algs.U * 2)
-                    self.op.play(Algs.M[plus_one].prime)
+                    self.op.play(Algs.MM[plus_one].prime)
                 else:
                     # in case of R/L we need to add 1, because 1 is R, and slices begin with 2
                     plus_one = [i + 1 for i in plus_one]

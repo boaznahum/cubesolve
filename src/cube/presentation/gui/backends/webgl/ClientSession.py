@@ -873,7 +873,7 @@ class ClientSession:
 
         if face_name in (FaceName.F, FaceName.B):
             if face.is_bottom_or_top(part):
-                slice_alg_base = Algs.M
+                slice_alg_base = Algs.MM
                 neg_slice_index = face_name == FaceName.B
                 inv = face_name == FaceName.F
             else:
@@ -889,7 +889,7 @@ class ClientSession:
                 neg_slice_index = False
         elif face_name in (FaceName.U, FaceName.D):
             if face.is_bottom_or_top(part):
-                slice_alg_base = Algs.M
+                slice_alg_base = Algs.MM
                 neg_slice_index = False
                 inv = True
             else:
@@ -897,7 +897,7 @@ class ClientSession:
                 neg_slice_index = face_name == FaceName.D
                 inv = face_name == FaceName.D
         else:
-            return Algs.M
+            return Algs.MM
 
         if not on_center:
             index = part.get_face_ltr_index_from_edge_slice_index(face, index)

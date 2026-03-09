@@ -161,7 +161,7 @@ class PLL(StepSolver):
         with self.annotate(h2="PLL Edge Swap Parity"):
             # Swap 2 Edges Diagonal algorithm
             # https://cubingcheatsheet.com/algs6x.html
-            alg = rw2 + U * 2 + rw2 + uwx * 2 + rw2 + uwx + uwy + Algs.parse("R2 (U R U) (R' U' R' U') (R' U R' U')")
+            alg = rw2 + U * 2 + rw2 + uwx * 2 + rw2 + uwx + uwy + Algs.parse("R2 (U R U) (R' U' R' U') (R' U R' U')", compat_3x3=True)
             self.play(alg)
 
     def _search_pll_alg(self) -> Tuple[Alg, str, Alg] | None:
@@ -217,7 +217,7 @@ class PLL(StepSolver):
         self.debug(f"Found (raw) alg: {description} : {alg}")
 
         if isinstance(alg, str):
-            alg = Algs.parse(alg)
+            alg = Algs.parse(alg, compat_3x3=True)
 
         return description, alg
 

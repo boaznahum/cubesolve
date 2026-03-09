@@ -30,7 +30,7 @@ DEFAULT_KEY_MAPPING: dict[int, Algs] = {
     Keys.D: Algs.D,
     Keys.F: Algs.F,
     Keys.B: Algs.B,
-    Keys.M: Algs.M,
+    Keys.M: Algs.MM,
     Keys.E: Algs.E,
     Keys.S: Algs.S,
     Keys.X: Algs.X,
