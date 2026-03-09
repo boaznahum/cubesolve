@@ -83,6 +83,8 @@ class TestDiscontinuedSliceDisplay:
 # All sliceable algs to test
 _SLICE_ALGS = [Algs.MM, Algs.EE, Algs.SS]
 _FACE_ALGS = [Algs.R, Algs.L, Algs.U, Algs.D, Algs.F, Algs.B]
+# All modifier forms: identity, prime, double
+_FORMS = ["", "'", "2"]
 
 
 class TestDiscontinuedSliceRoundTrip:
@@ -196,6 +198,109 @@ class TestDiscontinuedSliceInverse:
         parsed.play(app.cube)
         parsed.inv().play(app.cube)
         assert app.cube.solved
+
+
+class TestDiscontinuedSliceAllForms:
+    """Test discontinued slices with all modifier forms (identity, prime, double)
+    on all sliceable algs (R,L,U,D,F,B,M,E,S)."""
+
+    @pytest.mark.parametrize("base_alg", _SLICE_ALGS, ids=lambda a: a.code)
+    @pytest.mark.parametrize("form", _FORMS, ids=lambda f: f if f else "id")
+    def test_slice_alg_all_forms_round_trip(self, base_alg, form):
+        """[1,3,5]M / [1,3,5]M' / [1,3,5]M2 round-trip through str/parse."""
+        alg = base_alg[[1, 3, 5]]
+        if form == "'":
+            alg = alg.prime
+        elif form == "2":
+            alg = alg * 2
+        s = str(alg)
+        parsed = Algs.parse(s)
+        assert str(parsed) == s
+
+    @pytest.mark.parametrize("base_alg", _FACE_ALGS, ids=lambda a: a.code)
+    @pytest.mark.parametrize("form", _FORMS, ids=lambda f: f if f else "id")
+    def test_face_alg_all_forms_round_trip(self, base_alg, form):
+        """[1,3,4]R / [1,3,4]R' / [1,3,4]R2 round-trip through str/parse."""
+        alg = base_alg[[1, 3, 4]]
+        if form == "'":
+            alg = alg.prime
+        elif form == "2":
+            alg = alg * 2
+        s = str(alg)
+        parsed = Algs.parse(s)
+        assert str(parsed) == s
+
+    @pytest.mark.parametrize("base_alg", _SLICE_ALGS, ids=lambda a: a.code)
+    @pytest.mark.parametrize("form", _FORMS, ids=lambda f: f if f else "id")
+    @pytest.mark.parametrize("cube_size", [7, 8])
+    def test_slice_alg_all_forms_parse_play_inverse(self, base_alg, form, cube_size):
+        """All forms of discontinued slice M/E/S: parse, play + inverse = solved."""
+        app = AbstractApp.create_app(cube_size=cube_size)
+        assert app.cube.solved
+
+        max_slice = cube_size - 2
+        indices = [1, 3, max_slice]
+        alg = base_alg[indices]
+        if form == "'":
+            alg = alg.prime
+        elif form == "2":
+            alg = alg * 2
+        s = str(alg)
+        parsed = Algs.parse(s)
+
+        parsed.play(app.cube)
+        parsed.inv().play(app.cube)
+        assert app.cube.solved
+
+    @pytest.mark.parametrize("base_alg", _FACE_ALGS, ids=lambda a: a.code)
+    @pytest.mark.parametrize("form", _FORMS, ids=lambda f: f if f else "id")
+    @pytest.mark.parametrize("cube_size", [7, 8])
+    def test_face_alg_all_forms_parse_play_inverse(self, base_alg, form, cube_size):
+        """All forms of discontinued slice R/L/U/D/F/B: parse, play + inverse = solved."""
+        app = AbstractApp.create_app(cube_size=cube_size)
+        assert app.cube.solved
+
+        max_slice = cube_size - 1
+        indices = [1, 3, max_slice]
+        alg = base_alg[indices]
+        if form == "'":
+            alg = alg.prime
+        elif form == "2":
+            alg = alg * 2
+        s = str(alg)
+        parsed = Algs.parse(s)
+
+        parsed.play(app.cube)
+        parsed.inv().play(app.cube)
+        assert app.cube.solved
+
+    @pytest.mark.parametrize("base_alg", _SLICE_ALGS, ids=lambda a: a.code)
+    @pytest.mark.parametrize("form", _FORMS, ids=lambda f: f if f else "id")
+    def test_slice_alg_mixed_range_all_forms_round_trip(self, base_alg, form):
+        """[1:2,4:6]M / M' / M2 round-trip."""
+        alg = base_alg[[1, 2, 4, 5, 6]]
+        if form == "'":
+            alg = alg.prime
+        elif form == "2":
+            alg = alg * 2
+        s = str(alg)
+        assert "1:2,4:6" in s
+        parsed = Algs.parse(s)
+        assert str(parsed) == s
+
+    @pytest.mark.parametrize("base_alg", _FACE_ALGS, ids=lambda a: a.code)
+    @pytest.mark.parametrize("form", _FORMS, ids=lambda f: f if f else "id")
+    def test_face_alg_mixed_range_all_forms_round_trip(self, base_alg, form):
+        """[1:2,5:6]R / R' / R2 round-trip."""
+        alg = base_alg[[1, 2, 5, 6]]
+        if form == "'":
+            alg = alg.prime
+        elif form == "2":
+            alg = alg * 2
+        s = str(alg)
+        assert "1:2,5:6" in s
+        parsed = Algs.parse(s)
+        assert str(parsed) == s
 
 
 class TestDiscontinuedSliceScramble:
