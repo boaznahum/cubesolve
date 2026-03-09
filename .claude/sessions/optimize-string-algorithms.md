@@ -63,6 +63,18 @@ with op.wb():  # "with buffer"
 
 5. **`_flush()` behavior** — takes the buffer, runs `.simplify()`, then plays each resulting move normally (with animation, respecting current mode — whatever `op.play()` would normally do).
 
+6. **AnnotationAlg triggers flush** — when `op.play()` receives an `AnnotationAlg` while in buffer mode: flush the buffer first (simplify + play all buffered moves), THEN play the annotation immediately. Annotations are GUI state markers (text overlays, phase markers) that must fire at the correct point in the sequence. They cannot be buffered or reordered. After the annotation plays, buffering resumes for subsequent moves.
+
+```python
+with op.wb():
+    op.play(R)          # buffered
+    op.play(R)          # buffered
+    op.play(ann)        # AnnotationAlg → flush! simplify [R,R]→R2, play R2, then play ann
+    op.play(L)          # buffered (new buffer starts)
+    op.play(L')         # buffered
+# exit: flush [L, L'] → simplify → cancel → nothing played
+```
+
 ### Open Question: Query Mode Inside Buffer
 
 **Problem:** The operator has a context manager for query mode (`with op.query_mode():`), and there are other places that enter query mode (cube query, rotate-and-check, etc.). What happens when query mode is entered WHILE we're inside `with op.wb():`?
