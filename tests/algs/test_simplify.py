@@ -305,3 +305,30 @@ class TestDisjointSliceMerge:
         s = _test_simplify(alg, cube_size)
         # Verify correctness
         assert s.count() >= 1, f"Unexpected: {s}"
+
+    def test_compression_examples(self):
+        """Print before/after to show compression visually."""
+        cube_size = 8
+
+        cases = [
+            ("Same n, disjoint",
+             Algs.R[1:2] + Algs.R[3:4]),
+
+            ("3 disjoint, same n",
+             Algs.R[1:2] + Algs.R[3:4] + Algs.R[5:5]),
+
+            ("Extract min (n=2 vs n=1)",
+             (Algs.R[1:2] * 2) + Algs.R[3:4]),
+
+            ("Cascade: R[1]*2 + R[2]*1 + R[2]*1",
+             (Algs.R[1:1] * 2) + Algs.R[2:2] + Algs.R[2:2]),
+
+            ("Prime merge",
+             Algs.R[1:2].prime + Algs.R[3:4].prime + Algs.R[5:5].prime),
+        ]
+
+        for label, alg in cases:
+            s = _test_simplify(alg, cube_size)
+            print(f"  {label}:")
+            print(f"    before: {alg}  (count={alg.count()})")
+            print(f"    after:  {s}  (count={s.count()})")
