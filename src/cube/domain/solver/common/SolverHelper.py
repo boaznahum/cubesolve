@@ -25,7 +25,7 @@ _Common: TypeAlias = "CommonOp"
 
 
 class SolverHelper(CubeSupplier, SolverElementsProvider):
-    __slots__ = ["_solver", "_ann",
+    __slots__ = ["_solver",
                  "_cmn",
                  "_cube",
                  "_cqr",
@@ -36,7 +36,6 @@ class SolverHelper(CubeSupplier, SolverElementsProvider):
 
     def __init__(self, solver: SolverElementsProvider, debug_prefix: str, _is_common_op: bool = False) -> None:
         self._solver = solver
-        self._ann = solver.op.annotation
         self._cube = solver.cube
         self._cqr = solver.cube.cqr
         self.__logger: ILogger = solver._logger.with_prefix(debug_prefix)
@@ -90,7 +89,10 @@ class SolverHelper(CubeSupplier, SolverElementsProvider):
         """
         :deprecated: use annotate() directly
         """
-        return self._ann
+        # Resolve dynamically from the operator — the annotation protocol may be
+        # replaced after solver construction (e.g. when enable_animation() swaps
+        # NoopAnnotation for OpAnnotation).
+        return self._solver.op.annotation
 
     def annotate(self, *elements: Tuple[SupportsAnnotation, AnnWhat],
                  additional_markers: list[AdditionalMarker] | None = None,
@@ -98,8 +100,8 @@ class SolverHelper(CubeSupplier, SolverElementsProvider):
                  h2: str | Callable[[], str] | None = None,
                  h3: str | Callable[[], str] | None = None,
                  animation: bool = True) -> ContextManager[None]:
-        return self._ann.annotate(*elements, additional_markers=additional_markers,
-                                  h1=h1, h2=h2, h3=h3, animation=animation)
+        return self._solver.op.annotation.annotate(*elements, additional_markers=additional_markers,
+                                                   h1=h1, h2=h2, h3=h3, animation=animation)
 
 
     @property
