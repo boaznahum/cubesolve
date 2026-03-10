@@ -76,6 +76,10 @@ OPERATOR_SHOW_ALG_ANNOTATION = True
 # Disable to isolate bugs: "is this a buffer bug or a solver bug?"
 OPERATOR_BUFFER_MODE = True
 
+# Queue heading visibility — controls which heading levels appear in WebGL queue display
+QUEUE_HEADING_H1 = True   # Show h1 headings (solver phase names)
+QUEUE_HEADING_H2 = True  # Show h2 headings (sub-step details)
+
 ##############  Solver  ##################
 
 SOLVER_DEBUG = True

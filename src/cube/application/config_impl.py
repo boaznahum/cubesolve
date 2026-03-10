@@ -382,6 +382,16 @@ class AppConfig(ConfigProtocol):
         """
         return cfg.OPERATOR_BUFFER_MODE
 
+    @property
+    def queue_heading_h1(self) -> bool:
+        """Show h1 headings (solver phase names) in WebGL queue display."""
+        return cfg.QUEUE_HEADING_H1
+
+    @property
+    def queue_heading_h2(self) -> bool:
+        """Show h2 headings (sub-step details) in WebGL queue display."""
+        return cfg.QUEUE_HEADING_H2
+
     # ==========================================================================
     # Testing settings
     # ==========================================================================

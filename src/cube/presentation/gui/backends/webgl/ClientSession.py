@@ -229,13 +229,30 @@ class ClientSession:
         # Cube state
         cube_state = extract_cube_state(app.cube)
 
-        # History
+        # History — filter headings based on config
+        from cube.domain.algs.HeadingAlg import HeadingAlg as _HA
+
+        show_h1 = cfg.queue_heading_h1
+        show_h2 = cfg.queue_heading_h2
+
+        def _include(a: "Alg") -> bool:
+            if isinstance(a, _HA):
+                has_h1 = bool(a.h1)
+                has_h2 = bool(a.h2)
+                # Include if any visible heading level is present
+                if has_h1 and show_h1:
+                    return True
+                if has_h2 and show_h2:
+                    return True
+                return False
+            return True
+
         done: list[dict[str, str]] = [
-            self._serialize_alg(a) for a in op.history()
+            self._serialize_alg(a) for a in op.history() if _include(a)
         ]
         redo_list = list(reversed(op.redo_queue()))
         redo: list[dict[str, str]] = [
-            self._serialize_alg(a) for a in redo_list
+            self._serialize_alg(a) for a in redo_list if _include(a)
         ]
 
         # Text overlays
@@ -418,6 +435,8 @@ class ClientSession:
         item: dict[str, str] = {"alg": str(alg), "type": self._classify_alg(alg)}
         if isinstance(alg, HeadingAlg):
             item["text"] = alg.h1
+            if alg.h2:
+                item["h2"] = alg.h2
         return item
 
     def _compute_next_move(self, redo_list: list["Alg"]) -> dict[str, object] | None:

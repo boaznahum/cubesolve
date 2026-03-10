@@ -68,12 +68,14 @@ export class HistoryPanel {
             alg: item.alg,
             type: item.type || 'move',
             text: item.text || '',
+            h2: item.h2 || '',
             index: i + 1,
         }));
         this._redoItems = (appState.historyRedo || []).map((item, i) => ({
             alg: item.alg,
             type: item.type || 'move',
             text: item.text || '',
+            h2: item.h2 || '',
             index: (appState.historyDone || []).length + i + 1,
         }));
         this._redoSource = appState.redoSource || 'undo';
@@ -174,10 +176,14 @@ export class HistoryPanel {
     _createHeading(item, state) {
         const el = document.createElement('div');
         el.className = `hp-heading hp-${state}`;
-        el.innerHTML =
+        let html =
             '<span class="hp-heading-line"></span>' +
-            `<span class="hp-heading-text">${this._esc(item.text)}</span>` +
-            '<span class="hp-heading-line"></span>';
+            `<span class="hp-heading-text">${this._esc(item.text)}`;
+        if (item.h2) {
+            html += `<span class="hp-heading-h2">${this._esc(item.h2)}</span>`;
+        }
+        html += '</span><span class="hp-heading-line"></span>';
+        el.innerHTML = html;
         return el;
     }
 

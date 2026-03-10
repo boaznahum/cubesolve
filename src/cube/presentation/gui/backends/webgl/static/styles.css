@@ -295,6 +295,14 @@ body {
     white-space: nowrap;
 }
 
+.hp-heading-h2 {
+    display: block;
+    color: rgba(120, 180, 255, 0.55);
+    font-size: 8px;
+    font-weight: 400;
+    letter-spacing: 0.3px;
+}
+
 /* ── Footer (undo/redo/play) ── */
 .hp-footer {
     display: flex;
@@ -1285,6 +1293,10 @@ a.info-item-name:hover {
 
     .hp-heading-text {
         font-size: 7px;
+    }
+
+    .hp-heading-h2 {
+        font-size: 6px;
     }
 
     #container {

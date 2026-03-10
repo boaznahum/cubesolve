@@ -476,6 +476,16 @@ class ConfigProtocol(Protocol):
         """
         ...
 
+    @property
+    def queue_heading_h1(self) -> bool:
+        """Show h1 headings (solver phase names) in WebGL queue display."""
+        ...
+
+    @property
+    def queue_heading_h2(self) -> bool:
+        """Show h2 headings (sub-step details) in WebGL queue display."""
+        ...
+
     # ==========================================================================
     # Testing settings
     # ==========================================================================
