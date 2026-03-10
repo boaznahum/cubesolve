@@ -78,7 +78,7 @@ OPERATOR_BUFFER_MODE = True
 
 # Queue heading visibility — controls which heading levels appear in WebGL queue display
 QUEUE_HEADING_H1 = True   # Show h1 headings (solver phase names)
-QUEUE_HEADING_H2 = False  # Show h2 headings (sub-step details)
+QUEUE_HEADING_H2 = True  # Show h2 headings (sub-step details)
 
 ##############  Solver  ##################
 
