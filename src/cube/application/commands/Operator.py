@@ -11,6 +11,7 @@ from cube.application.state import ApplicationAndViewState
 from cube.domain.algs.Alg import Alg
 from cube.domain.algs.Algs import Algs
 from cube.domain.algs.AnnotationAlg import AnnotationAlg
+from cube.domain.algs.HeadingAlg import HeadingAlg
 from cube.domain.algs.SeqAlg import SeqAlg
 from cube.domain.algs.SimpleAlg import SimpleAlg
 from cube.domain.model.Cube import Cube
@@ -72,7 +73,7 @@ class Operator(OperatorProtocol):
             self._annotation: AnnotationProtocol = OpAnnotation(self)
         else:
             from cube.domain.solver.protocols.NoopAnnotation import NoopAnnotation
-            self._annotation = NoopAnnotation()
+            self._annotation = NoopAnnotation(self)
 
         # Buffer mode: list of algs waiting to be flushed, or None if not buffering
         self._buffer: MutableSequence[Alg] | None = None
@@ -210,6 +211,9 @@ class Operator(OperatorProtocol):
         else:
 
             if is_annotation:
+                if isinstance(alg, HeadingAlg):
+                    # HeadingAlg survives in history for queue display
+                    self._history.append(alg)
                 return
 
             if self._recording is not None:

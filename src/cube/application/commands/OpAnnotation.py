@@ -198,6 +198,12 @@ class OpAnnotation(AnnotationProtocol):
         on = self.op.animation_enabled
 
         if (not on) or (not animation):
+            # Even without animation, emit HeadingAlg so it appears in the queue
+            if h1 is not None:
+                h1_text = h1() if callable(h1) else h1
+                if h1_text:
+                    from cube.domain.algs.HeadingAlg import HeadingAlg
+                    self.op.play(HeadingAlg(h1_text))
             return nullcontext()
         else:
             return self._annotate(*elements, additional_markers=additional_markers, h1=h1, h2=h2, h3=h3, animation=animation)

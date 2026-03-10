@@ -268,6 +268,33 @@ body {
     cursor: help;
 }
 
+/* ── Heading Separator ── */
+.hp-heading {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 8px;
+    margin: 3px 0;
+}
+
+.hp-heading.hp-redo {
+    opacity: 0.55;
+}
+
+.hp-heading-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(120, 180, 255, 0.4), transparent);
+}
+
+.hp-heading-text {
+    color: rgba(120, 180, 255, 0.85);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
 /* ── Footer (undo/redo/play) ── */
 .hp-footer {
     display: flex;
@@ -1248,6 +1275,16 @@ a.info-item-name:hover {
     .hp-marker-text {
         font-size: 7px;
         letter-spacing: 0.8px;
+    }
+
+    .hp-heading {
+        padding: 1px 4px;
+        margin: 1px 0;
+        gap: 3px;
+    }
+
+    .hp-heading-text {
+        font-size: 7px;
     }
 
     #container {

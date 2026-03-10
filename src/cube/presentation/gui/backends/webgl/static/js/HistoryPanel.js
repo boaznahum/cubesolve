@@ -67,11 +67,13 @@ export class HistoryPanel {
         this._doneItems = (appState.historyDone || []).map((item, i) => ({
             alg: item.alg,
             type: item.type || 'move',
+            text: item.text || '',
             index: i + 1,
         }));
         this._redoItems = (appState.historyRedo || []).map((item, i) => ({
             alg: item.alg,
             type: item.type || 'move',
+            text: item.text || '',
             index: (appState.historyDone || []).length + i + 1,
         }));
         this._redoSource = appState.redoSource || 'undo';
@@ -87,9 +89,14 @@ export class HistoryPanel {
         const doneVisible = this._doneItems.filter(item => item.type !== 'scramble');
         const lastVisIdx = doneVisible.length - 1;
         for (let i = 0; i < doneVisible.length; i++) {
-            const el = this._createItem(doneVisible[i], 'done');
-            if (i === lastVisIdx) el.classList.add('hp-last-done');
-            this._list.appendChild(el);
+            const item = doneVisible[i];
+            if (item.type === 'heading') {
+                this._list.appendChild(this._createHeading(item, 'done'));
+            } else {
+                const el = this._createItem(item, 'done');
+                if (i === lastVisIdx) el.classList.add('hp-last-done');
+                this._list.appendChild(el);
+            }
         }
 
         // NOW marker (only if there are items on either side)
@@ -121,9 +128,14 @@ export class HistoryPanel {
 
         // Redo items (future operations)
         for (let i = 0; i < this._redoItems.length; i++) {
-            const el = this._createItem(this._redoItems[i], 'redo');
-            if (i === 0) el.classList.add('hp-next-redo');
-            this._list.appendChild(el);
+            const item = this._redoItems[i];
+            if (item.type === 'heading') {
+                this._list.appendChild(this._createHeading(item, 'redo'));
+            } else {
+                const el = this._createItem(item, 'redo');
+                if (i === 0) el.classList.add('hp-next-redo');
+                this._list.appendChild(el);
+            }
         }
 
         this._updateButtons();
@@ -157,6 +169,22 @@ export class HistoryPanel {
         el.appendChild(alg);
 
         return el;
+    }
+
+    _createHeading(item, state) {
+        const el = document.createElement('div');
+        el.className = `hp-heading hp-${state}`;
+        el.innerHTML =
+            '<span class="hp-heading-line"></span>' +
+            `<span class="hp-heading-text">${this._esc(item.text)}</span>` +
+            '<span class="hp-heading-line"></span>';
+        return el;
+    }
+
+    _esc(text) {
+        const d = document.createElement('div');
+        d.textContent = text;
+        return d.innerHTML;
     }
 
     _badgeLabel(type) {

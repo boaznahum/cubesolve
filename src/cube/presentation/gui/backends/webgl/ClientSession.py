@@ -231,13 +231,11 @@ class ClientSession:
 
         # History
         done: list[dict[str, str]] = [
-            {"alg": str(a), "type": self._classify_alg(a)}
-            for a in op.history()
+            self._serialize_alg(a) for a in op.history()
         ]
         redo_list = list(reversed(op.redo_queue()))
         redo: list[dict[str, str]] = [
-            {"alg": str(a), "type": self._classify_alg(a)}
-            for a in redo_list
+            self._serialize_alg(a) for a in redo_list
         ]
 
         # Text overlays
@@ -396,10 +394,13 @@ class ClientSession:
         """Classify an algorithm for history panel badges."""
         from cube.domain.algs.Algs import Algs
         from cube.domain.algs.FaceAlgBase import FaceAlgBase
+        from cube.domain.algs.HeadingAlg import HeadingAlg
         from cube.domain.algs.SliceAlgBase import SliceAlgBase
         from cube.domain.algs.WholeCubeAlg import WholeCubeAlg
         from cube.domain.algs.WideLayerAlg import WideLayerAlg
 
+        if isinstance(alg, HeadingAlg):
+            return "heading"
         if Algs.is_scramble(alg):
             return "scramble"
         if isinstance(alg, WholeCubeAlg):
@@ -409,6 +410,15 @@ class ClientSession:
         if isinstance(alg, (FaceAlgBase, WideLayerAlg)):
             return "face"
         return "move"
+
+    def _serialize_alg(self, alg: "Alg") -> dict[str, str]:
+        """Serialize an algorithm for the history panel."""
+        from cube.domain.algs.HeadingAlg import HeadingAlg
+
+        item: dict[str, str] = {"alg": str(alg), "type": self._classify_alg(alg)}
+        if isinstance(alg, HeadingAlg):
+            item["text"] = alg.h1
+        return item
 
     def _compute_next_move(self, redo_list: list["Alg"]) -> dict[str, object] | None:
         """Peek at the first redo item and compute its face/layers/direction.
@@ -421,7 +431,15 @@ class ClientSession:
         if not redo_list:
             return None
 
-        alg = redo_list[0]
+        # Find the first real move (skip headings)
+        from cube.domain.algs.HeadingAlg import HeadingAlg
+        alg = None
+        for candidate in redo_list:
+            if not isinstance(candidate, HeadingAlg):
+                alg = candidate
+                break
+        if alg is None:
+            return None
 
         # Skip scrambles
         if Algs.is_scramble(alg):

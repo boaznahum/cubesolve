@@ -76,11 +76,16 @@ class SeqAlg(Alg):
         work_to_do = bool(algs)
         while work_to_do:
             work_to_do = False
-            new_algs: list[NSimpleAlg] = []
+            new_algs: list[SimpleAlg] = []
             prev: NSimpleAlg | None = None
             for a in algs:
                 if not isinstance(a, NSimpleAlg):
-                    raise TypeError("Unexpected type", type(a))
+                    # Non-combinable alg (e.g. HeadingAlg) — flush prev, pass through
+                    if prev:
+                        new_algs.append(prev)
+                        prev = None
+                    new_algs.append(a)
+                    continue
 
                 if not a.n % 4:  # get rid of R4
                     continue
