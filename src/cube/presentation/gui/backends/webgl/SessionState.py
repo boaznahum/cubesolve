@@ -85,6 +85,7 @@ class SessionStateSnapshot:
     status_text: str = ""
     solver_text: str = ""
     move_count: int = 0
+    error_text: str = ""
 
     # -- Meta --
     version: str = ""
@@ -146,6 +147,7 @@ class SessionStateSnapshot:
                 "status": self.status_text,
                 "solver": self.solver_text,
                 "moves": self.move_count,
+                "error": self.error_text,
             },
 
             "version": self.version,

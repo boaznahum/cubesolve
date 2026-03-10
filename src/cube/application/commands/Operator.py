@@ -25,6 +25,40 @@ if TYPE_CHECKING:
     from ..animation.AnimationManager import AnimationManager, OpProtocol
 
 
+class OperatorBuffer:
+    """Handle yielded by Operator.with_buffer() for explicit flush control.
+
+    Auto-flush on AnnotationAlg and context exit still happen.
+    This just adds an explicit flush() call for when the solver
+    needs to query cube state mid-buffer.
+
+    Can only be used inside the ``with op.with_buffer() as buffer:`` block.
+    """
+
+    __slots__ = ["_operator", "_active"]
+
+    def __init__(self, operator: "Operator") -> None:
+        self._operator = operator
+        self._active: bool = True
+
+    def flush(self) -> None:
+        """Explicitly flush the buffer: simplify + play buffered moves.
+
+        After flush, the cube state is up-to-date and safe to query.
+        Buffering continues — subsequent op.play() calls still buffer.
+
+        Raises:
+            RuntimeError: If called outside the with_buffer() context.
+        """
+        if not self._active:
+            raise RuntimeError("OperatorBuffer.flush() can only be called inside with_buffer() context")
+        self._operator._flush_buffer()
+
+    def _deactivate(self) -> None:
+        """Mark this handle as inactive (called by with_buffer __exit__)."""
+        self._active = False
+
+
 class Operator(OperatorProtocol):
     __slots__ = ["_cube",
                  "_history",
@@ -396,12 +430,13 @@ class Operator(OperatorProtocol):
         simplified = combined.simplify()
         buf.clear()
 
-        # Temporarily bypass buffering to play the simplified algs
+        # Temporarily disable buffering to play the simplified algs
+        # (self.play() won't re-buffer since _buffer is None)
         saved_buffer = self._buffer
         self._buffer = None
         try:
             for a in simplified.flatten():
-                self._play(a, inv=False, animation=True)
+                self.play(a)
         finally:
             self._buffer = saved_buffer
 
@@ -409,12 +444,25 @@ class Operator(OperatorProtocol):
     def with_buffer(self):
         """Context manager for buffered play.
 
-        Moves played inside are buffered and simplified on exit.
-        If config.operator_buffer_mode is False, this is a transparent no-op.
+        Yields an OperatorBuffer handle for explicit flush control::
+
+            with op.with_buffer() as buffer:
+                op.play(R)
+                op.play(R)
+                buffer.flush()   # simplify + play, cube state now current
+                # safe to query cube here
+                op.play(L)
+            # auto-flush on exit
+
+        Auto-flush on AnnotationAlg and context exit still happen.
+        If config.operator_buffer_mode is False, this is a transparent no-op
+        (buffer.flush() is harmless).
         Nestable: inner flush pushes to outer buffer (only outermost flushes to play).
         """
+        buf_handle = OperatorBuffer(self)
+
         if not self._app_state.config.operator_buffer_mode:
-            yield None
+            yield buf_handle
             return
 
         self._buffer_depth += 1
@@ -423,8 +471,9 @@ class Operator(OperatorProtocol):
             self._buffer = []
 
         try:
-            yield None
+            yield buf_handle
         finally:
+            buf_handle._deactivate()
             self._buffer_depth -= 1
             if self._buffer_depth == 0:
                 # Outermost exit: flush and play

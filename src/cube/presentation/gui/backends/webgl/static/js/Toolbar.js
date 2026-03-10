@@ -12,6 +12,7 @@ export class Toolbar {
         this._animOverlay = document.getElementById('anim-overlay');
         this._statusOverlay = document.getElementById('status-overlay');
         this._statusEl = document.getElementById('status');
+        this._errorBanner = this._createErrorBanner();
         this._assistDelayMs = 400;  // default, overridden by server config
         this._cubeModel = null;  // set by main.js for shadow toggle
     }
@@ -94,6 +95,16 @@ export class Toolbar {
                 html += `<span class="seg seg-moves"><span class="seg-label">Moves</span><span class="seg-value">${appState.moveCount}</span></span>`;
             }
             this._statusOverlay.innerHTML = html;
+        }
+
+        // Error banner — separate element above status bar
+        if (this._errorBanner) {
+            if (appState.errorText) {
+                this._errorBanner.textContent = '\u26A0 ' + appState.errorText;
+                this._errorBanner.style.display = 'block';
+            } else {
+                this._errorBanner.style.display = 'none';
+            }
         }
     }
 
@@ -189,6 +200,16 @@ export class Toolbar {
             this._statusEl.appendChild(document.createTextNode(` #${this._state.clientCount}`));
         }
         this._statusEl.className = 'connected';
+    }
+
+    _createErrorBanner() {
+        const banner = document.createElement('div');
+        banner.id = 'error-banner';
+        banner.style.cssText = 'display:none;position:fixed;left:0;right:0;bottom:60px;z-index:9999;' +
+            'background:#cc0000;color:#fff;font-weight:bold;font-size:14px;' +
+            'padding:6px 16px;text-align:center;box-shadow:0 -2px 8px rgba(0,0,0,0.5)';
+        document.body.appendChild(banner);
+        return banner;
     }
 
     _esc(text) {

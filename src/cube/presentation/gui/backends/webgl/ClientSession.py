@@ -316,6 +316,7 @@ class ClientSession:
             status_text=app.slv.status,
             solver_text=app.slv.name,
             move_count=op.count,
+            error_text=app.error or "",
             # Meta
             version=get_version(),
             client_count=self._client_count,
@@ -1167,6 +1168,7 @@ class ClientSession:
         the client signals animation_done. This keeps solver annotations
         (markers from annotate() blocks) visible during animation.
         """
+        self._app.set_error("")  # Clear previous error
         am = self._animation_manager
         am.set_blocking_mode(True)
         try:

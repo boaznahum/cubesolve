@@ -58,6 +58,7 @@ export class AppState extends EventTarget {
         this.statusText = '';
         this.solverText = '';
         this.moveCount = 0;
+        this.errorText = '';
 
         // -- Meta --
         this.version = '';
@@ -145,6 +146,7 @@ export class AppState extends EventTarget {
             patch.statusText = msg.text.status || '';
             patch.solverText = msg.text.solver || '';
             patch.moveCount = msg.text.moves || 0;
+            patch.errorText = msg.text.error || '';
         }
 
         // Meta

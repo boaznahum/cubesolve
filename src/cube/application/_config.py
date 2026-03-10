@@ -204,7 +204,7 @@ class ConfigData:
 
     # ── Operator ──
     operator_show_alg_annotation: bool = True
-    operator_buffer_mode: bool = True
+    operator_buffer_mode: bool = False
     queue_heading_h1: bool = True
     queue_heading_h2: bool = False
 
