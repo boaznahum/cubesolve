@@ -37,6 +37,8 @@ class ConfigData:
     """
     solver_debug: bool = True
     operator_buffer_mode: bool = True
+    queue_heading_h1: bool = True
+    queue_heading_h2: bool = True
 
     # Listeners are NOT copied — each session registers its own
     _listeners: list[ConfigListener] = field(default_factory=list, repr=False, compare=False)
@@ -71,6 +73,18 @@ class ConfigData:
         if self.operator_buffer_mode != value:
             self.operator_buffer_mode = value
             self._notify("operator_buffer_mode", value)
+
+    def set_queue_heading_h1(self, value: bool) -> None:
+        """Set queue_heading_h1 and notify listeners."""
+        if self.queue_heading_h1 != value:
+            self.queue_heading_h1 = value
+            self._notify("queue_heading_h1", value)
+
+    def set_queue_heading_h2(self, value: bool) -> None:
+        """Set queue_heading_h2 and notify listeners."""
+        if self.queue_heading_h2 != value:
+            self.queue_heading_h2 = value
+            self._notify("queue_heading_h2", value)
 
 
 # Module-level default instance — used as template for new sessions
@@ -135,6 +149,10 @@ OPERATOR_SHOW_ALG_ANNOTATION = True
 # When disabled, op.with_buffer() is a transparent no-op (moves play immediately).
 # Disable to isolate bugs: "is this a buffer bug or a solver bug?"
 OPERATOR_BUFFER_MODE = True
+
+# Queue heading visibility — controls which heading levels appear in WebGL queue display
+QUEUE_HEADING_H1 = True   # Show h1 headings (solver phase names)
+QUEUE_HEADING_H2 = True  # Show h2 headings (sub-step details)
 
 ##############  Solver  ##################
 

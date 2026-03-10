@@ -54,6 +54,8 @@ export class SettingsPopup {
         this._snapshot = {
             debug: this._state.debug,
             operatorBufferMode: this._state.operatorBufferMode,
+            queueHeadingH1: this._state.queueHeadingH1,
+            queueHeadingH2: this._state.queueHeadingH2,
             shadows: this._cubeModel
                 ? ['L', 'D', 'B'].some(f => this._cubeModel.shadowVisible[f])
                 : false,
@@ -62,6 +64,8 @@ export class SettingsPopup {
         // Populate controls from snapshot
         this._setToggle('settings-debug', this._snapshot.debug);
         this._setToggle('settings-buffer', this._snapshot.operatorBufferMode);
+        this._setToggle('settings-h1', this._snapshot.queueHeadingH1);
+        this._setToggle('settings-h2', this._snapshot.queueHeadingH2);
         this._setToggle('settings-shadows', this._snapshot.shadows);
 
         this._backdrop.style.display = '';
@@ -105,6 +109,8 @@ export class SettingsPopup {
     _apply() {
         const newDebug = this._getToggle('settings-debug');
         const newBuffer = this._getToggle('settings-buffer');
+        const newH1 = this._getToggle('settings-h1');
+        const newH2 = this._getToggle('settings-h2');
         const newShadows = this._getToggle('settings-shadows');
 
         // Send server-side config changes
@@ -116,6 +122,14 @@ export class SettingsPopup {
         }
         if (newBuffer !== this._snapshot.operatorBufferMode) {
             settings.operator_buffer_mode = newBuffer;
+            hasServerChanges = true;
+        }
+        if (newH1 !== this._snapshot.queueHeadingH1) {
+            settings.queue_heading_h1 = newH1;
+            hasServerChanges = true;
+        }
+        if (newH2 !== this._snapshot.queueHeadingH2) {
+            settings.queue_heading_h2 = newH2;
             hasServerChanges = true;
         }
         if (hasServerChanges) {
@@ -193,6 +207,16 @@ export class SettingsPopup {
                 id: 'settings-buffer',
                 label: 'Operator Buffer',
                 desc: 'Buffer and simplify moves before playing',
+            },
+            {
+                id: 'settings-h1',
+                label: 'Queue Headings',
+                desc: 'Show solver phase names in queue',
+            },
+            {
+                id: 'settings-h2',
+                label: 'Queue Sub-headings',
+                desc: 'Show sub-step details in queue',
             },
             {
                 id: 'settings-shadows',

@@ -395,6 +395,26 @@ class AppConfig(ConfigProtocol):
         """Set operator buffer mode flag."""
         self._data.set_operator_buffer_mode(value)
 
+    @property
+    def queue_heading_h1(self) -> bool:
+        """Show h1 headings (solver phase names) in WebGL queue display."""
+        return self._data.queue_heading_h1
+
+    @queue_heading_h1.setter
+    def queue_heading_h1(self, value: bool) -> None:
+        """Set queue heading h1 flag."""
+        self._data.set_queue_heading_h1(value)
+
+    @property
+    def queue_heading_h2(self) -> bool:
+        """Show h2 headings (sub-step details) in WebGL queue display."""
+        return self._data.queue_heading_h2
+
+    @queue_heading_h2.setter
+    def queue_heading_h2(self, value: bool) -> None:
+        """Set queue heading h2 flag."""
+        self._data.set_queue_heading_h2(value)
+
     # ==========================================================================
     # Testing settings
     # ==========================================================================

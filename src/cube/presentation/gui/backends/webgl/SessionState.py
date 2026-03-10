@@ -76,6 +76,8 @@ class SessionStateSnapshot:
     assist_delay_ms: int = 400
     sound_enabled: bool = False
     operator_buffer_mode: bool = True
+    queue_heading_h1: bool = True
+    queue_heading_h2: bool = True
     default_scramble: str = "0"  # "0"-"9" or "*" (random)
 
     # -- Text overlays --
@@ -134,6 +136,8 @@ class SessionStateSnapshot:
                 "assist_delay_ms": self.assist_delay_ms,
                 "sound_enabled": self.sound_enabled,
                 "operator_buffer_mode": self.operator_buffer_mode,
+                "queue_heading_h1": self.queue_heading_h1,
+                "queue_heading_h2": self.queue_heading_h2,
                 "default_scramble": self.default_scramble,
             },
 

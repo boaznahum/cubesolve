@@ -268,6 +268,41 @@ body {
     cursor: help;
 }
 
+/* ── Heading Separator ── */
+.hp-heading {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 8px;
+    margin: 3px 0;
+}
+
+.hp-heading.hp-redo {
+    opacity: 0.55;
+}
+
+.hp-heading-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(120, 180, 255, 0.4), transparent);
+}
+
+.hp-heading-text {
+    color: rgba(120, 180, 255, 0.85);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+.hp-heading-h2 {
+    display: block;
+    color: rgba(120, 180, 255, 0.55);
+    font-size: 8px;
+    font-weight: 400;
+    letter-spacing: 0.3px;
+}
+
 /* ── Footer (undo/redo/play) ── */
 .hp-footer {
     display: flex;
@@ -1140,14 +1175,14 @@ a.info-item-name:hover {
 }
 
 .settings-content {
-    padding: 20px 24px;
+    padding: 14px 20px;
 }
 
 .settings-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 0;
+    padding: 8px 0;
     border-bottom: 1px solid rgba(0, 255, 65, 0.06);
 }
 
@@ -1372,6 +1407,20 @@ a.info-item-name:hover {
         letter-spacing: 0.8px;
     }
 
+    .hp-heading {
+        padding: 1px 4px;
+        margin: 1px 0;
+        gap: 3px;
+    }
+
+    .hp-heading-text {
+        font-size: 7px;
+    }
+
+    .hp-heading-h2 {
+        font-size: 6px;
+    }
+
     #container {
         flex: 1;
         min-width: 0;
@@ -1499,6 +1548,41 @@ a.info-item-name:hover {
 
     .info-item-desc {
         font-size: 10.5px;
+    }
+
+    /* Settings dialog — compact on mobile */
+    .settings-dialog {
+        max-width: 95%;
+    }
+
+    .settings-content {
+        padding: 10px 14px;
+    }
+
+    .settings-row {
+        padding: 8px 0;
+    }
+
+    .settings-label {
+        font-size: 11px;
+    }
+
+    .settings-desc {
+        font-size: 9px;
+    }
+
+    .settings-toggle {
+        width: 36px;
+        height: 20px;
+    }
+
+    .settings-slider::before {
+        height: 14px;
+        width: 14px;
+    }
+
+    .settings-toggle input:checked + .settings-slider::before {
+        transform: translateX(16px);
     }
 }
 

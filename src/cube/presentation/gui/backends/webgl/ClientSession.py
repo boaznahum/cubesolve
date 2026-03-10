@@ -229,15 +229,30 @@ class ClientSession:
         # Cube state
         cube_state = extract_cube_state(app.cube)
 
-        # History
+        # History — filter headings based on config
+        from cube.domain.algs.HeadingAlg import HeadingAlg as _HA
+
+        show_h1 = cfg.queue_heading_h1
+        show_h2 = cfg.queue_heading_h2
+
+        def _include(a: "Alg") -> bool:
+            if isinstance(a, _HA):
+                has_h1 = bool(a.h1)
+                has_h2 = bool(a.h2)
+                # Include if any visible heading level is present
+                if has_h1 and show_h1:
+                    return True
+                if has_h2 and show_h2:
+                    return True
+                return False
+            return True
+
         done: list[dict[str, str]] = [
-            {"alg": str(a), "type": self._classify_alg(a)}
-            for a in op.history()
+            self._serialize_alg(a) for a in op.history() if _include(a)
         ]
         redo_list = list(reversed(op.redo_queue()))
         redo: list[dict[str, str]] = [
-            {"alg": str(a), "type": self._classify_alg(a)}
-            for a in redo_list
+            self._serialize_alg(a) for a in redo_list if _include(a)
         ]
 
         # Text overlays
@@ -293,6 +308,8 @@ class ClientSession:
             assist_delay_ms=cfg.assist_config.delay_ms,
             sound_enabled=cfg.sound_config.enabled,
             operator_buffer_mode=cfg.operator_buffer_mode,
+            queue_heading_h1=cfg.queue_heading_h1,
+            queue_heading_h2=cfg.queue_heading_h2,
             default_scramble="*" if self._default_scramble is None else str(self._default_scramble),
             # Text
             animation_text=anim_lines,
@@ -397,10 +414,13 @@ class ClientSession:
         """Classify an algorithm for history panel badges."""
         from cube.domain.algs.Algs import Algs
         from cube.domain.algs.FaceAlgBase import FaceAlgBase
+        from cube.domain.algs.HeadingAlg import HeadingAlg
         from cube.domain.algs.SliceAlgBase import SliceAlgBase
         from cube.domain.algs.WholeCubeAlg import WholeCubeAlg
         from cube.domain.algs.WideLayerAlg import WideLayerAlg
 
+        if isinstance(alg, HeadingAlg):
+            return "heading"
         if Algs.is_scramble(alg):
             return "scramble"
         if isinstance(alg, WholeCubeAlg):
@@ -410,6 +430,17 @@ class ClientSession:
         if isinstance(alg, (FaceAlgBase, WideLayerAlg)):
             return "face"
         return "move"
+
+    def _serialize_alg(self, alg: "Alg") -> dict[str, str]:
+        """Serialize an algorithm for the history panel."""
+        from cube.domain.algs.HeadingAlg import HeadingAlg
+
+        item: dict[str, str] = {"alg": str(alg), "type": self._classify_alg(alg)}
+        if isinstance(alg, HeadingAlg):
+            item["text"] = alg.h1
+            if alg.h2:
+                item["h2"] = alg.h2
+        return item
 
     def _compute_next_move(self, redo_list: list["Alg"]) -> dict[str, object] | None:
         """Peek at the first redo item and compute its face/layers/direction.
@@ -422,7 +453,15 @@ class ClientSession:
         if not redo_list:
             return None
 
-        alg = redo_list[0]
+        # Find the first real move (skip headings)
+        from cube.domain.algs.HeadingAlg import HeadingAlg
+        alg = None
+        for candidate in redo_list:
+            if not isinstance(candidate, HeadingAlg):
+                alg = candidate
+                break
+        if alg is None:
+            return None
 
         # Skip scrambles
         if Algs.is_scramble(alg):
@@ -626,6 +665,10 @@ class ClientSession:
             cfg.solver_debug = bool(settings["solver_debug"])
         if "operator_buffer_mode" in settings:
             cfg.operator_buffer_mode = bool(settings["operator_buffer_mode"])
+        if "queue_heading_h1" in settings:
+            cfg.queue_heading_h1 = bool(settings["queue_heading_h1"])
+        if "queue_heading_h2" in settings:
+            cfg.queue_heading_h2 = bool(settings["queue_heading_h2"])
         self.send_state()
 
     def _handle_command(self, command_name: str) -> None:
