@@ -1289,6 +1289,100 @@ a.info-item-name:hover {
 }
 
 /* ============================================================
+   Console Panel — bottom-docked terminal log viewer
+   ============================================================ */
+#console-panel {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 200px;
+    z-index: 900;
+    display: flex;
+    flex-direction: column;
+    background: rgba(8, 12, 8, 0.96);
+    border-top: 1px solid rgba(0, 255, 65, 0.25);
+    overflow: hidden;
+    box-shadow:
+        0 -4px 20px rgba(0, 0, 0, 0.5),
+        0 0 20px rgba(0, 255, 65, 0.04);
+}
+
+.console-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 12px;
+    border-bottom: 1px solid rgba(0, 255, 65, 0.1);
+    background: rgba(0, 20, 0, 0.4);
+    flex-shrink: 0;
+}
+
+.console-title {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(0, 255, 65, 0.7);
+    letter-spacing: 0.5px;
+}
+
+.console-controls {
+    display: flex;
+    gap: 6px;
+}
+
+.console-ctrl-btn {
+    background: none;
+    border: 1px solid rgba(0, 255, 65, 0.15);
+    border-radius: 3px;
+    color: rgba(0, 255, 65, 0.45);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 1px 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.console-ctrl-btn:hover {
+    color: rgba(0, 255, 65, 0.8);
+    border-color: rgba(0, 255, 65, 0.4);
+    background: rgba(0, 255, 65, 0.06);
+}
+
+.console-content {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding: 6px 10px;
+    min-height: 0;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 255, 65, 0.12) transparent;
+}
+
+.console-content::-webkit-scrollbar {
+    width: 4px;
+}
+
+.console-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.console-content::-webkit-scrollbar-thumb {
+    background: rgba(0, 255, 65, 0.12);
+    border-radius: 4px;
+}
+
+.console-line {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 11px;
+    line-height: 1.45;
+    color: rgba(0, 255, 65, 0.75);
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+/* ============================================================
    SEO Tagline
    ============================================================ */
 #seo-tagline {
@@ -1583,6 +1677,28 @@ a.info-item-name:hover {
 
     .settings-toggle input:checked + .settings-slider::before {
         transform: translateX(16px);
+    }
+
+    /* Console panel — compact on mobile */
+    #console-panel {
+        height: 35vh;
+    }
+
+    .console-header {
+        padding: 3px 8px;
+    }
+
+    .console-title {
+        font-size: 10px;
+    }
+
+    .console-content {
+        padding: 4px 6px;
+    }
+
+    .console-line {
+        font-size: 9px;
+        line-height: 1.35;
     }
 }
 

@@ -13,7 +13,6 @@ export class Toolbar {
         this._statusOverlay = document.getElementById('status-overlay');
         this._statusEl = document.getElementById('status');
         this._errorBanner = this._createErrorBanner();
-        this._assistDelayMs = 400;  // default, overridden by server config
         this._cubeModel = null;  // set by main.js for shadow toggle
     }
 
@@ -36,6 +35,12 @@ export class Toolbar {
             const cmd = btn.dataset.cmd;
             if (cmd === 'stop' || cmd === 'toggle_animation') continue;
             if (a[cmd] !== undefined) btn.disabled = !a[cmd];
+        }
+
+        // Move buttons (F, U, R, etc.): disable when face_turn not allowed
+        const canTurn = !!a.face_turn;
+        for (const btn of document.querySelectorAll('.mv-btn[data-key]')) {
+            btn.disabled = !canTurn;
         }
 
         // Paint button + size/solver selects: disable during solving/playing
@@ -129,10 +134,9 @@ export class Toolbar {
             }
         }
 
-        // Assist checkbox — only set from server if user hasn't locally overridden
-        const chkAssist = document.getElementById('chk-assist');
-        if (chkAssist && this._assistLocalOverride === undefined) {
-            chkAssist.checked = appState.assistEnabled;
+        // Assist — sync animation queue delay from server config
+        if (this._animQueue) {
+            this._animQueue.assistDelayMs = appState.assistEnabled ? (appState.assistDelayMs || 400) : 0;
         }
 
         // Sound toggle — sync from server config on initial load
@@ -281,16 +285,6 @@ export class Toolbar {
         if (btnViewReset) {
             btnViewReset.addEventListener('click', () => {
                 this._controls.reset();
-            });
-        }
-
-        // Assist checkbox (controls AnimationQueue preview delay)
-        const chkAssist = document.getElementById('chk-assist');
-        if (chkAssist) {
-            chkAssist.addEventListener('change', () => {
-                this._assistLocalOverride = chkAssist.checked;
-                this._animQueue.assistDelayMs = chkAssist.checked ? (this._assistDelayMs || 400) : 0;
-                chkAssist.blur();  // Release focus so keyboard handler works
             });
         }
 

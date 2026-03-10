@@ -190,3 +190,19 @@ class ILogger(Protocol):
         """
         ...
 
+    # --- Stream callbacks ---
+
+    def add_stream(self, callback: Callable[[str], None]) -> None:
+        """Register a stream callback on the root logger.
+
+        Every debug line produced by this logger or any child will be
+        forwarded to *callback* as a single formatted string.  Multiple
+        streams can be registered concurrently (e.g. a buffer and a live
+        WebSocket forwarder).
+        """
+        ...
+
+    def remove_stream(self, callback: Callable[[str], None]) -> None:
+        """Unregister a previously registered stream callback."""
+        ...
+

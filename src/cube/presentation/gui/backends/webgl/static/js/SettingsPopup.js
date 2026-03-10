@@ -54,6 +54,13 @@ const SETTINGS = [
         serverKey: 'queue_heading_h2',
     },
     {
+        id: 'settings-assist',
+        label: 'Assist',
+        desc: 'Show move indicator before each animation',
+        stateKey: 'assistEnabled',
+        serverKey: 'assist_enabled',
+    },
+    {
         id: 'settings-shadows',
         label: 'Show Shadows (LDB)',
         desc: 'Show hidden faces beside the cube',

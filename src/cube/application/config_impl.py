@@ -413,6 +413,16 @@ class AppConfig(ConfigProtocol):
         """Set queue heading h2 flag."""
         self._data.set_queue_heading_h2(value)
 
+    @property
+    def assist_enabled(self) -> bool:
+        """Whether assist mode (move preview) is enabled."""
+        return self._data.assist_config.enabled
+
+    @assist_enabled.setter
+    def assist_enabled(self, value: bool) -> None:
+        """Set assist enabled flag."""
+        self._data.assist_config.enabled = value
+
     # ==========================================================================
     # Testing settings
     # ==========================================================================

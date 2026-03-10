@@ -20,6 +20,7 @@ import { SoundManager } from './SoundManager.js';
 import { ColorPicker } from './ColorPicker.js';
 import { InfoPopup } from './InfoPopup.js';
 import { SettingsPopup } from './SettingsPopup.js';
+import { ConsolePanel } from './ConsolePanel.js';
 
 // ── Application state ──
 const state = new AppState();
@@ -70,6 +71,7 @@ window._testAnimQueue = animQueue;  // Expose for E2E test assertions
 const faceTurnHandler = new FaceTurnHandler(
     cubeModel, camera, canvas, animQueue, send, scene,
 );
+faceTurnHandler.appState = state;
 
 // ── Orbit controls ──
 const controls = new OrbitControls(camera, canvas, faceTurnHandler, send);
@@ -119,6 +121,12 @@ colorPicker.canEnter = () => {
 const infoPopup = new InfoPopup();
 document.getElementById('btn-info')?.addEventListener('click', () => {
     infoPopup.toggle();
+});
+
+// ── Console panel ──
+const consolePanel = new ConsolePanel(send);
+document.getElementById('btn-console')?.addEventListener('click', () => {
+    consolePanel.toggle();
 });
 
 // ── Settings popup ──
@@ -382,6 +390,14 @@ function handleMessage(msg) {
 
         case 'full_check_result':
             colorPicker.onFullCheckResult(msg.valid, msg.error, msg.gen);
+            break;
+
+        case 'console_snapshot':
+            consolePanel.onSnapshot(msg.lines || []);
+            break;
+
+        case 'console_lines':
+            consolePanel.onLines(msg.lines || []);
             break;
     }
 }

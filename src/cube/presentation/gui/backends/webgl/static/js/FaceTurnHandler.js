@@ -26,6 +26,9 @@ export class FaceTurnHandler {
         // Paint mode — disables face turns but keeps hit detection
         this.paintMode = false;
 
+        /** @type {object|null} AppState reference — set after construction */
+        this.appState = null;
+
         // State
         this._active = false;
         this._hitSticker = null;   // { face, row, col, gridIndex }
@@ -34,10 +37,13 @@ export class FaceTurnHandler {
         this._turnSent = false;
     }
 
-    /** True when animations are playing — face turns are blocked.
+    /** True when face turns should be blocked.
+     *  Blocked when: animations playing, or FSM disallows face_turn.
      *  In paint mode, hit detection is allowed (not blocked). */
     get blocked() {
         if (this.paintMode) return false;
+        // FSM gate: server says face turns not allowed in current state
+        if (this.appState?.allowedActions && !this.appState.allowedActions.face_turn) return true;
         return this.animQueue.currentAnim !== null || this.animQueue.queue.length > 0;
     }
 

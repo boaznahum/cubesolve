@@ -28,6 +28,7 @@ from cube.presentation.gui.backends.webgl.CubeStateSerializer import apply_cube_
 from cube.presentation.gui.backends.webgl.FlowStateMachine import FlowEvent, FlowState, FlowStateMachine
 from cube.presentation.gui.backends.webgl.SessionState import SessionStateSnapshot
 from cube.presentation.gui.commands import Command, CommandContext
+from cube.utils.log_stream_buffer import LogStreamBuffer
 from cube.version import get_version
 
 if TYPE_CHECKING:
@@ -127,6 +128,13 @@ class ClientSession:
                 self.send_state()
 
         am.set_on_queue_drained(_on_am_queue_drained)
+
+        # Log stream buffer — captures debug output for browser console
+        self._log_buffer: LogStreamBuffer = LogStreamBuffer(max_lines=500)
+        self._app.vs.logger.add_stream(self._log_buffer.append)
+
+        # Live console forwarding callback (added/removed on subscribe/unsubscribe)
+        self._console_live_cb: Callable[[str], None] | None = None
 
         # Client count — set externally by SessionManager
         self._client_count: int = 0
@@ -610,6 +618,12 @@ class ClientSession:
         elif msg_type == "set_config":
             self._handle_set_config(data.get("settings", {}))
 
+        elif msg_type == "console_subscribe":
+            self._handle_console_subscribe()
+
+        elif msg_type == "console_unsubscribe":
+            self._handle_console_unsubscribe()
+
         elif msg_type == "resize":
             pass
 
@@ -656,6 +670,16 @@ class ClientSession:
         self._app.op.clear_redo()
         self.send_state()
 
+    # Command names that are face turns — must be gated by FSM before execution.
+    # These correspond to the ROTATE_* and SLICE_* entries in _handle_command's command_map.
+    _FACE_TURN_COMMAND_NAMES: frozenset[str] = frozenset({
+        "ROTATE_R", "ROTATE_R_PRIME", "ROTATE_L", "ROTATE_L_PRIME",
+        "ROTATE_U", "ROTATE_U_PRIME", "ROTATE_D", "ROTATE_D_PRIME",
+        "ROTATE_F", "ROTATE_F_PRIME", "ROTATE_B", "ROTATE_B_PRIME",
+        "SLICE_M", "SLICE_M_PRIME", "SLICE_E", "SLICE_E_PRIME",
+        "SLICE_S", "SLICE_S_PRIME",
+    })
+
     # Server keys that map to ConfigProtocol bool properties.
     # Adding a new setting only requires adding it here (+ ConfigData + frontend SETTINGS).
     _CONFIG_BOOL_KEYS: tuple[str, ...] = (
@@ -663,6 +687,7 @@ class ClientSession:
         "operator_buffer_mode",
         "queue_heading_h1",
         "queue_heading_h2",
+        "assist_enabled",
     )
 
     def _handle_set_config(self, settings: dict[str, object]) -> None:
@@ -675,6 +700,28 @@ class ClientSession:
             if key in settings:
                 setattr(cfg, key, bool(settings[key]))
         self.send_state()
+
+    # -- Console stream handlers --
+
+    def _handle_console_subscribe(self) -> None:
+        """Client opened the console — send snapshot and add live stream."""
+        lines = self._log_buffer.snapshot()
+        self._send(json.dumps({"type": "console_snapshot", "lines": lines}))
+
+        # Remove previous live callback if any, then add a fresh one
+        self._handle_console_unsubscribe()
+
+        def _on_line(line: str) -> None:
+            self._send(json.dumps({"type": "console_lines", "lines": [line]}))
+
+        self._console_live_cb = _on_line
+        self._app.vs.logger.add_stream(_on_line)
+
+    def _handle_console_unsubscribe(self) -> None:
+        """Client closed the console — remove live stream."""
+        if self._console_live_cb is not None:
+            self._app.vs.logger.remove_stream(self._console_live_cb)
+            self._console_live_cb = None
 
     def _handle_command(self, command_name: str) -> None:
         from cube.presentation.gui.commands import Commands
@@ -796,8 +843,16 @@ class ClientSession:
         }
 
         command = command_map.get(command_name)
-        if command:
-            self.inject_command(command)
+        if not command:
+            return
+
+        # Gate face turns by FSM — only allowed in IDLE/READY
+        if command_name in self._FACE_TURN_COMMAND_NAMES:
+            if not self._fsm.send(FlowEvent.FACE_TURN):
+                self.send_state()
+                return
+
+        self.inject_command(command)
 
     def _handle_mouse_rotate(self, dx: float, dy: float) -> None:
         # Client handles orbit camera locally — no server round-trip needed
@@ -1296,7 +1351,14 @@ class ClientSession:
             return
 
         try:
-            from cube.presentation.gui.commands.concrete import NewSessionCommand
+            from cube.presentation.gui.commands.concrete import NewSessionCommand, RotateCommand
+
+            # Gate face rotations by FSM — only allowed in IDLE/READY.
+            # Without this, keyboard shortcuts bypass the button disable logic.
+            if isinstance(command, RotateCommand):
+                if not self._fsm.send(FlowEvent.FACE_TURN):
+                    self.send_state()
+                    return
 
             history_len_before = len(self._app.op.history())
             ctx = CommandContext.from_window(self)  # type: ignore[arg-type]
@@ -1492,6 +1554,8 @@ class ClientSession:
         pass
 
     def cleanup(self) -> None:
+        self._handle_console_unsubscribe()
+        self._app.vs.logger.remove_stream(self._log_buffer.append)
         self._renderer.cleanup()
 
     # Alias used by WebglAnimationManager
