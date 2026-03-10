@@ -394,6 +394,20 @@ export class Toolbar {
     }
 
     _bindKeyboard() {
+        // Blur selects after value change so keyboard shortcuts work immediately
+        for (const sel of document.querySelectorAll('select')) {
+            sel.addEventListener('change', () => sel.blur());
+        }
+        // Canvas click releases focus from any input/select
+        const canvas = document.getElementById('canvas');
+        if (canvas) {
+            canvas.addEventListener('pointerdown', () => {
+                if (document.activeElement instanceof HTMLElement) {
+                    document.activeElement.blur();
+                }
+            });
+        }
+
         window.addEventListener('keydown', (e) => {
             // Don't capture when typing in inputs
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
