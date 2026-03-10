@@ -204,7 +204,6 @@ class ConfigData:
 
     # ── Operator ──
     operator_show_alg_annotation: bool = True
-    operator_buffer_mode: bool = False
     queue_heading_h1: bool = True
     queue_heading_h2: bool = False
 
@@ -314,12 +313,6 @@ class ConfigData:
         if self.solver_debug != value:
             self.solver_debug = value
             self._notify("solver_debug", value)
-
-    def set_operator_buffer_mode(self, value: bool) -> None:
-        """Set operator_buffer_mode and notify listeners."""
-        if self.operator_buffer_mode != value:
-            self.operator_buffer_mode = value
-            self._notify("operator_buffer_mode", value)
 
     def set_queue_heading_h1(self, value: bool) -> None:
         """Set queue_heading_h1 and notify listeners."""

@@ -338,7 +338,6 @@ class ClientSession:
             assist_enabled=cfg.assist_config.enabled,
             assist_delay_ms=cfg.assist_config.delay_ms,
             sound_enabled=cfg.sound_config.enabled,
-            operator_buffer_mode=cfg.operator_buffer_mode,
             queue_heading_h1=cfg.queue_heading_h1,
             queue_heading_h2=cfg.queue_heading_h2,
             default_scramble="*" if self._default_scramble is None else str(self._default_scramble),
@@ -707,7 +706,6 @@ class ClientSession:
     # Adding a new setting only requires adding it here (+ ConfigData + frontend SETTINGS).
     _CONFIG_BOOL_KEYS: tuple[str, ...] = (
         "solver_debug",
-        "operator_buffer_mode",
         "queue_heading_h1",
         "queue_heading_h2",
         "assist_enabled",

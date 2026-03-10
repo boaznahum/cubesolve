@@ -233,12 +233,6 @@ class DualOperator(OperatorProtocol):
             for alg in reversed(shadow_moves):
                 alg.prime.play(shadow, False)
 
-    @contextmanager
-    def with_buffer(self) -> Generator[None, None, None]:
-        """Delegate buffered play to real operator."""
-        with self._real_op.with_buffer():
-            yield
-
     def log(self, *s: Any) -> None:
         """
         Log operation to the real operator's log.

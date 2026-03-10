@@ -33,13 +33,6 @@ const SETTINGS = [
         serverKey: 'solver_debug',
     },
     {
-        id: 'settings-buffer',
-        label: 'Operator Buffer',
-        desc: 'Buffer and simplify moves before playing',
-        stateKey: 'operatorBufferMode',
-        serverKey: 'operator_buffer_mode',
-    },
-    {
         id: 'settings-h1',
         label: 'Queue Headings',
         desc: 'Show solver phase names in queue',

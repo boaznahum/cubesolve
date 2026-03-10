@@ -380,20 +380,6 @@ class AppConfig(ConfigProtocol):
         return self._data.operator_show_alg_annotation
 
     @property
-    def operator_buffer_mode(self) -> bool:
-        """Enable buffered play mode (op.with_buffer()).
-
-        When True, op.with_buffer() buffers moves and simplifies on flush.
-        When False, op.with_buffer() is a transparent no-op (moves play immediately).
-        """
-        return self._data.operator_buffer_mode
-
-    @operator_buffer_mode.setter
-    def operator_buffer_mode(self, value: bool) -> None:
-        """Set operator buffer mode flag."""
-        self._data.set_operator_buffer_mode(value)
-
-    @property
     def queue_heading_h1(self) -> bool:
         """Show h1 headings (solver phase names) in WebGL queue display."""
         return self._data.queue_heading_h1
