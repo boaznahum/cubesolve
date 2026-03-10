@@ -8,9 +8,12 @@ from collections.abc import (
     MutableSequence,
     Sequence,
 )
-from typing import Callable, Tuple, TypeVar, Generator
+from typing import TYPE_CHECKING, Callable, Tuple, TypeVar, Generator
 
 from cube.domain.exceptions import InternalSWError
+
+if TYPE_CHECKING:
+    from cube.domain.solver.protocols.OperatorProtocol import OperatorProtocol
 from cube.domain.geometric.geometry_types import Point
 
 from ..algs import Alg, Algs, NSimpleAlg
@@ -254,52 +257,37 @@ class CubeQueries2:
 
     ####################### Rotate and check methods ##########################
 
-    def rotate_and_check(self, alg: NSimpleAlg, pred: Callable[[], bool]) -> int:
+    def rotate_and_check(self, alg: NSimpleAlg, pred: Callable[[], bool],
+                         op: "OperatorProtocol") -> int:
         """
         Find how many times `alg` must be applied for `pred` to become True.
 
         Checks predicate before each rotation, up to 4 times (0, 1, 2, 3 applications).
-        Cube state is always restored before returning (query mode - no side effects).
+        Cube state is always restored via op.with_query_restore_state().
 
         Args:
             alg: The algorithm to apply repeatedly (typically a face rotation).
             pred: Predicate to check after each rotation. Takes no args, returns bool.
+            op: Operator used for playing alg and restoring state.
 
         Returns:
             0-3: Number of times `alg` needs to be applied for `pred` to be True.
             -1: Predicate never became True within 4 rotations.
-
-        Note:
-            Bypasses Operator - no history tracking. Similar to
-            Operator.with_query_restore_state but operates directly on cube.
         """
-
-        n = 0
-        cube = self._cube
-        # Skip texture direction updates during query rotations
-        # Save original value to support nesting
-        was_in_query_mode = cube._in_query_mode
-        cube.set_in_query_mode(True)
-        try:
-            for _ in range(0, 4):
+        with op.with_query_restore_state():
+            for n in range(0, 4):
                 if pred():
                     return n
-                alg.play(cube)
-                n += 1
-        finally:
-            (alg * n).prime.play(cube)
-            cube.set_in_query_mode(was_in_query_mode)
-
+                op.play(alg)
         return -1
 
-    def rotate_and_check_get_alg(self, alg: NSimpleAlg, pred: Pred0) -> Alg | None:
+    def rotate_and_check_get_alg(self, alg: NSimpleAlg, pred: Pred0,
+                                 op: "OperatorProtocol") -> Alg | None:
         """
-        Rotate face and check condition
-        :return the algorithm needed to fulfill the pred, or None if no such
-        :param alg:
-        :param pred:
+        Rotate and check condition, returning the algorithm needed.
+        :return: the algorithm needed to fulfill the pred, or None if no such
         """
-        n = self.rotate_and_check(alg, pred)
+        n = self.rotate_and_check(alg, pred, op)
 
         if n >= 0:
             if n == 0:
@@ -309,34 +297,22 @@ class CubeQueries2:
         else:
             return None
 
-    def rotate_face_and_check(self, f: Face, pred: Callable[[], bool]) -> int:
+    def rotate_face_and_check(self, f: Face, pred: Callable[[], bool],
+                              op: "OperatorProtocol") -> int:
         """
-        Rotate face and check condition
-        Restores Cube, doesn't operate on operator
-        :param f:
-        :param pred:
-        :return: number of rotation, -1 if check fails
-        restore cube state before returning, this is not count as solve step
+        Rotate face and check condition.
+        Cube state is restored via op.with_query_restore_state().
+        :return: number of rotations, -1 if check fails
         """
-        return self.rotate_and_check(Algs.of_face(f.name), pred)
+        return self.rotate_and_check(Algs.of_face(f.name), pred, op)
 
-    def rotate_face_and_check_get_alg(self, f: Face, pred: Pred0) -> Alg | None:
+    def rotate_face_and_check_get_alg(self, f: Face, pred: Pred0,
+                                      op: "OperatorProtocol") -> Alg | None:
         """
-        Rotate face and check condition
-        :return the algorithm needed to fulfill the pred, or None if no such
-        :param f:
-        :param pred:
+        Rotate face and check condition.
+        :return: the algorithm needed to fulfill the pred, or None if no such
         """
-        alg = Algs.of_face(f.name)
-        n = self.rotate_and_check(alg, pred)
-
-        if n >= 0:
-            if n == 0:
-                return Algs.no_op()
-            else:
-                return alg * n
-        else:
-            return None
+        return self.rotate_and_check_get_alg(Algs.of_face(f.name), pred, op)
 
     # Count colors
     def count_color_on_face(self, face: Face, color: Color):

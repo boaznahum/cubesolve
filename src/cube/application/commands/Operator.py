@@ -37,7 +37,9 @@ class Operator(OperatorProtocol):
                  "_animation_manager",
                  "_app_state",
                  "_annotation",
-                 "_log_path"]
+                 "_log_path",
+                 "_buffer",
+                 "_buffer_depth"]
 
     def __init__(self, cube: Cube,
                  app_state: ApplicationAndViewState,
@@ -72,6 +74,10 @@ class Operator(OperatorProtocol):
             from cube.domain.solver.protocols.NoopAnnotation import NoopAnnotation
             self._annotation = NoopAnnotation()
 
+        # Buffer mode: list of algs waiting to be flushed, or None if not buffering
+        self._buffer: MutableSequence[Alg] | None = None
+        self._buffer_depth: int = 0  # nesting depth for with_buffer()
+
         # Get config from app_state
         cfg = app_state.config
         self._log_path = cfg.operation_log_path if cfg.operation_log else None
@@ -88,8 +94,12 @@ class Operator(OperatorProtocol):
 
     def play(self, alg: Alg, inv: Any = False, animation: Any = True) -> None:
         """
-        deprecated, use play
-        Animation can run only from top level, not from animation itself
+        Execute an algorithm on the cube.
+
+        If inside a with_buffer() context and buffer mode is enabled:
+        - AnnotationAlg triggers a flush before playing the annotation immediately
+        - Other algs are buffered (not played until flush)
+
         :param alg:
         :param inv:
         :param animation: if true and animation is enabled(globally, toggle_animation_on)
@@ -98,7 +108,19 @@ class Operator(OperatorProtocol):
         So it can only turn off current global animation
         :return:
         """
-        self._play(alg, inv, animation)
+        if self._buffer is not None:
+            is_annotation = isinstance(alg, AnnotationAlg)
+            if is_annotation:
+                # Flush buffer before annotation, then play annotation immediately
+                self._flush_buffer()
+                self._play(alg, inv, animation)
+            else:
+                # Buffer the alg (apply inv now so buffer contains resolved algs)
+                if inv:
+                    alg = alg.inv()
+                self._buffer.append(alg)
+        else:
+            self._play(alg, inv, animation)
 
     @deprecated("Use play() instead")
     def op(self, alg: Alg, inv: bool = False, animation: bool = True) -> None:
@@ -355,6 +377,56 @@ class Operator(OperatorProtocol):
         finally:
             self._history[:] = _history
 
+    def _flush_buffer(self) -> None:
+        """Flush the buffer: simplify buffered algs, then play each one.
+
+        Private — called by with_buffer().__exit__ and by play() when an AnnotationAlg
+        is encountered while buffering.
+        """
+        buf = self._buffer
+        if not buf:
+            return
+
+        # Build a single alg from buffer, simplify, then play each result
+        combined = SeqAlg(None, *buf)
+        simplified = combined.simplify()
+        buf.clear()
+
+        # Temporarily bypass buffering to play the simplified algs
+        saved_buffer = self._buffer
+        self._buffer = None
+        try:
+            for a in simplified.flatten():
+                self._play(a, inv=False, animation=True)
+        finally:
+            self._buffer = saved_buffer
+
+    @contextmanager
+    def with_buffer(self):
+        """Context manager for buffered play.
+
+        Moves played inside are buffered and simplified on exit.
+        If config.operator_buffer_mode is False, this is a transparent no-op.
+        Nestable: inner flush pushes to outer buffer (only outermost flushes to play).
+        """
+        if not self._app_state.config.operator_buffer_mode:
+            yield None
+            return
+
+        self._buffer_depth += 1
+        if self._buffer is None:
+            # Outermost: create the buffer
+            self._buffer = []
+
+        try:
+            yield None
+        finally:
+            self._buffer_depth -= 1
+            if self._buffer_depth == 0:
+                # Outermost exit: flush and play
+                self._flush_buffer()
+                self._buffer = None
+
     @contextmanager
     def with_query_restore_state(self):
         """
@@ -365,10 +437,11 @@ class Operator(OperatorProtocol):
         are automatically undone on exit.
 
         Behavior:
+            - If inside with_buffer(): flushes buffer first, disables buffering during query
             - Enables query mode (skips texture/GUI updates for performance)
             - Disables animation
             - Records history length on entry
-            - On exit: undoes all moves back to original state
+            - On exit: undoes all moves back to original state, restores buffer state
             - Supports nesting
 
         Example:
@@ -381,11 +454,15 @@ class Operator(OperatorProtocol):
         Warning:
             Direct cube manipulation (cube.rotate() without operator) inside
             the context will NOT be rolled back - only operator moves are tracked.
-
-        See Also:
-            CubeQueries2.rotate_and_check: Similar but operates directly on cube
-            without operator (no history tracking).
         """
+        # Flush and temporarily disable buffering — query needs accurate cube state
+        saved_buffer = self._buffer
+        saved_depth = self._buffer_depth
+        if saved_buffer is not None:
+            self._flush_buffer()
+        self._buffer = None
+        self._buffer_depth = 0
+
         cube = self._cube
 
         # Save original states
@@ -404,6 +481,10 @@ class Operator(OperatorProtocol):
                     self.undo(animation=False)
 
                 cube._in_query_mode = was_in_query_mode
+
+                # Restore buffer state
+                self._buffer = saved_buffer
+                self._buffer_depth = saved_depth
 
     @property
     def is_animation_running(self):

@@ -50,6 +50,7 @@ class DualOperator(OperatorProtocol):
         "_shadow_cube",
         "_real_op",
         "_annotation",
+        "_query_shadow_moves",
     ]
 
     def __init__(self, shadow_cube: "Cube", real_op: OperatorProtocol) -> None:
@@ -63,6 +64,7 @@ class DualOperator(OperatorProtocol):
         self._shadow_cube = shadow_cube
         self._real_op = real_op
         self._annotation = DualAnnotation(self)
+        self._query_shadow_moves: list[Alg] | None = None
 
     @property
     def cube(self) -> "Cube":
@@ -124,6 +126,10 @@ class DualOperator(OperatorProtocol):
         # Invert if needed
         if inv:
             alg = alg.inv()
+
+        # Track shadow moves for query rollback
+        if self._query_shadow_moves is not None:
+            self._query_shadow_moves.append(alg)
 
         # 1. Play on shadow cube (direct execution, no operator overhead)
         alg.play(self._shadow_cube, False)
@@ -207,23 +213,30 @@ class DualOperator(OperatorProtocol):
         """
         Context manager for query operations with auto-rollback.
 
-        This is complex for DualOperator because we need to:
-        1. Save shadow cube state
-        2. Delegate to real operator's query mode
-        3. Restore shadow cube state on exit
-
-        For now, we raise NotImplementedError - the current use case
-        (CageNxNSolver) doesn't use query mode inside the shadow solve.
+        Tracks moves played on the shadow cube during the query and
+        undoes them on exit, alongside the real operator's rollback.
 
         Yields:
             None
         """
-        # Save shadow cube history position
-        # Note: Shadow cube doesn't have operator history, so we'd need
-        # to track moves ourselves. For now, just delegate to real op.
-        # The shadow cube state will drift, but that's acceptable for
-        # the current use case.
-        with self._real_op.with_query_restore_state():
+        shadow = self._shadow_cube
+        # Track algs played on shadow cube for manual rollback
+        shadow_moves: list[Alg] = []
+        self._query_shadow_moves = shadow_moves
+
+        try:
+            with self._real_op.with_query_restore_state():
+                yield
+        finally:
+            self._query_shadow_moves = None
+            # Undo shadow cube moves in reverse order
+            for alg in reversed(shadow_moves):
+                alg.prime.play(shadow, False)
+
+    @contextmanager
+    def with_buffer(self) -> Generator[None, None, None]:
+        """Delegate buffered play to real operator."""
+        with self._real_op.with_buffer():
             yield
 
     def log(self, *s: Any) -> None:

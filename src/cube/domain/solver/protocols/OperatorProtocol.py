@@ -79,7 +79,20 @@ class OperatorProtocol(Protocol, metaclass=ABCMeta):
         - Query mode (_in_query_mode = True, skips texture updates)
         - Animation disabled
         - Auto-rollback: undoes all moves on exit
+        - If inside with_buffer(): flushes buffer first, disables buffering during query
         - Supports nesting
+        """
+        ...
+
+    def with_buffer(self) -> ContextManager[None]:
+        """
+        Context manager for buffered play ("with buffer").
+
+        Moves played inside the context are buffered and simplified on exit.
+        If config.operator_buffer_mode is False, this is a transparent no-op.
+
+        Nestable: inner flush pushes to outer buffer.
+        AnnotationAlg triggers flush before playing the annotation.
         """
         ...
 

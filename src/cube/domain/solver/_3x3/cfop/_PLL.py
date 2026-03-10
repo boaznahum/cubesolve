@@ -32,7 +32,7 @@ class PLL(StepSolver):
         Can be solved only by rotate
         :return:
         """
-        return self.cqr.rotate_face_and_check(self.yellow_face, lambda: self.is_solved) >= 0
+        return self.cqr.rotate_face_and_check(self.yellow_face, lambda: self.is_solved, self.op) >= 0
 
     def solve(self):
 
@@ -58,7 +58,7 @@ class PLL(StepSolver):
 
     def _rotate_and_solve(self):
         rotate_alg = self.cqr.rotate_face_and_check_get_alg(self.cmn.white_face.opposite,
-                                                            lambda: self.is_solved)
+                                                            lambda: self.is_solved, self.op)
 
         if rotate_alg:
             self.play(rotate_alg)

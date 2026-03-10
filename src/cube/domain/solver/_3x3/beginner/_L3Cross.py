@@ -26,7 +26,7 @@ class L3Cross(SolverHelper):
 
         yf: Face = self.white_face.opposite
 
-        return self.cqr.rotate_face_and_check(yf, self._is_solved) >= 0
+        return self.cqr.rotate_face_and_check(yf, self._is_solved, self.op) >= 0
 
     def solve(self):
 
@@ -42,7 +42,7 @@ class L3Cross(SolverHelper):
         # 'yellow' face
         yf: Face = self.white_face.opposite
 
-        n = self.cqr.rotate_face_and_check(yf, self._is_solved)
+        n = self.cqr.rotate_face_and_check(yf, self._is_solved, self.op)
         if n >= 0:
             if n > 0:
                 # the query solves by rotate  n, so we need

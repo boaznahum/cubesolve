@@ -132,7 +132,7 @@ class F2L(SolverHelper):
             after_brought_up = False
             for _ in range(8):
 
-                n = self.cqr.rotate_and_check(Algs.Y, need_n_can_work)
+                n = self.cqr.rotate_and_check(Algs.Y, need_n_can_work, self.op)
 
                 if n < 0:
                     assert not after_brought_up
@@ -551,9 +551,9 @@ class F2L(SolverHelper):
 
         e_matches_front = e_up_cc == r_color
         if e_matches_front:
-            pre = self.cqr.rotate_face_and_check_get_alg(up, lambda: edge.actual is u_bottom)
+            pre = self.cqr.rotate_face_and_check_get_alg(up, lambda: edge.actual is u_bottom, self.op)
         else:
-            pre = self.cqr.rotate_face_and_check_get_alg(up, lambda: edge.actual is u_right)
+            pre = self.cqr.rotate_face_and_check_get_alg(up, lambda: edge.actual is u_right, self.op)
 
         assert pre
 
@@ -855,7 +855,7 @@ class F2L(SolverHelper):
             def preserve_cond() -> bool:
                 return True
 
-        pre = self.cqr.rotate_face_and_check_get_alg(cube.up, preserve_cond)
+        pre = self.cqr.rotate_face_and_check_get_alg(cube.up, preserve_cond, self.op)
 
         return pre
 

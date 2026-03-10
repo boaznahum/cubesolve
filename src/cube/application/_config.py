@@ -71,6 +71,11 @@ FIRST_FACE_COLOR: _Color = _Color.WHITE
 ############## Operator ##############
 OPERATOR_SHOW_ALG_ANNOTATION = True
 
+# Buffer mode - when enabled, op.with_buffer() buffers moves and simplifies on flush.
+# When disabled, op.with_buffer() is a transparent no-op (moves play immediately).
+# Disable to isolate bugs: "is this a buffer bug or a solver bug?"
+OPERATOR_BUFFER_MODE = True
+
 ##############  Solver  ##################
 
 SOLVER_DEBUG = True

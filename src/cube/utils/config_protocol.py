@@ -467,6 +467,15 @@ class ConfigProtocol(Protocol):
         """Show algorithm annotations."""
         ...
 
+    @property
+    def operator_buffer_mode(self) -> bool:
+        """Enable buffered play mode (op.with_buffer()).
+
+        When True, op.with_buffer() buffers moves and simplifies on flush.
+        When False, op.with_buffer() is a transparent no-op (moves play immediately).
+        """
+        ...
+
     # ==========================================================================
     # Testing settings
     # ==========================================================================

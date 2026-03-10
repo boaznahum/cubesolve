@@ -38,7 +38,7 @@ class OLL(StepSolver):
         Can be solved only by rotate
         :return:
         """
-        return self.cqr.rotate_face_and_check(self.yellow_face, lambda: self.is_solved) >= 0
+        return self.cqr.rotate_face_and_check(self.yellow_face, lambda: self.is_solved, self.op) >= 0
 
     def solve(self):
 

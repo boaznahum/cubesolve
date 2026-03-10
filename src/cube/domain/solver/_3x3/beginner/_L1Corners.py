@@ -49,7 +49,7 @@ class L1Corners(SolverHelper):
 
         wf: Face = self.white_face
 
-        return self.cqr.rotate_face_and_check(wf, lambda: self._is_corners() and l1_cross.is_cross()) >= 0
+        return self.cqr.rotate_face_and_check(wf, lambda: self._is_corners() and l1_cross.is_cross(), self.op) >= 0
 
     def solve(self, l1_cross: L1Cross) -> None:
         """Solve Layer 1 corners using the beginner method.

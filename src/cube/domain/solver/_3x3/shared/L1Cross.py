@@ -56,7 +56,7 @@ class L1Cross(SolverHelper):
         """
 
         wf: Face = self.white_face
-        return self.cqr.rotate_face_and_check(wf, self.is_cross) >= 0
+        return self.cqr.rotate_face_and_check(wf, self.is_cross, self.op) >= 0
 
     def solve(self, with_rotations: bool = False):
 
@@ -66,7 +66,7 @@ class L1Cross(SolverHelper):
         with self.ann.annotate(h1="Doing L1 Cross"):
 
             # before rotating
-            n = self.cqr.rotate_face_and_check(self.white_face, self.is_cross)
+            n = self.cqr.rotate_face_and_check(self.white_face, self.is_cross, self.op)
             if n >= 0:
                 if n > 0:
                     # the query solves by rotate  n, so we need
