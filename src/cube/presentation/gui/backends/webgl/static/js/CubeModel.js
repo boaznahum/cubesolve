@@ -22,7 +22,8 @@ export class CubeModel {
         this.cellSize = 1.0;
         this.stickers = {};  // {faceName: [meshes in row-major order]}
         this.faceGroups = {};
-        this.markerGroups = {};  // {faceName: [THREE.Group|null per sticker]}
+        this.markerGroups = {};  // {faceName: [THREE.Group|null per sticker]} — moveable markers
+        this.fixedMarkerGroups = {};  // {faceName: [THREE.Group|null per sticker]} — fixed markers
 
         // Shadow faces: duplicate L/D/B at offset positions
         this.shadowGroup = new THREE.Group();
@@ -48,6 +49,7 @@ export class CubeModel {
         this.stickers = {};
         this.faceGroups = {};
         this.markerGroups = {};
+        this.fixedMarkerGroups = {};
 
         this.size = size;
         // Keep total physical size constant regardless of N — cube fits the same view
@@ -83,6 +85,7 @@ export class CubeModel {
             this.faceGroups[faceName] = faceGroup;
             this.stickers[faceName] = [];
             this.markerGroups[faceName] = [];
+            this.fixedMarkerGroups[faceName] = [];
 
             const right = new THREE.Vector3(...def.right);
             const up = new THREE.Vector3(...def.up);
@@ -136,6 +139,7 @@ export class CubeModel {
                     faceGroup.add(mesh);
                     this.stickers[faceName].push(mesh);
                     this.markerGroups[faceName].push(null);
+                    this.fixedMarkerGroups[faceName].push(null);
                 }
             }
         }
@@ -179,35 +183,70 @@ export class CubeModel {
     /**
      * Update markers for one face from server state.
      * markers: flat array of (null | Array<markerDesc>) in row-major order
+     *
+     * Markers with moveable=true are parented to the sticker mesh (they follow
+     * the piece during rotation animations). Markers with moveable=false are
+     * parented to the cubeGroup so they stay at fixed grid positions during
+     * face-turn animations.
      */
     updateFaceMarkers(faceName, markers) {
         const meshes = this.stickers[faceName];
         if (!meshes || !markers) return;
 
         for (let i = 0; i < meshes.length && i < markers.length; i++) {
-            const existing = this.markerGroups[faceName][i];
+            const existingMoveable = this.markerGroups[faceName][i];
+            const existingFixed = this.fixedMarkerGroups[faceName][i];
             const newData = markers[i];
 
             if (!newData) {
                 // No markers — remove existing if present
-                if (existing) {
-                    this._disposeMarkerGroup(existing);
-                    meshes[i].remove(existing);
+                if (existingMoveable) {
+                    this._disposeMarkerGroup(existingMoveable);
+                    meshes[i].remove(existingMoveable);
                     this.markerGroups[faceName][i] = null;
+                }
+                if (existingFixed) {
+                    this._disposeMarkerGroup(existingFixed);
+                    this.cubeGroup.remove(existingFixed);
+                    this.fixedMarkerGroups[faceName][i] = null;
                 }
                 continue;
             }
 
-            // Remove old marker group before creating new one
-            if (existing) {
-                this._disposeMarkerGroup(existing);
-                meshes[i].remove(existing);
+            // Separate markers by moveable flag
+            const moveableDescs = newData.filter(d => d.moveable !== false);
+            const fixedDescs = newData.filter(d => d.moveable === false);
+
+            // Remove old moveable markers
+            if (existingMoveable) {
+                this._disposeMarkerGroup(existingMoveable);
+                meshes[i].remove(existingMoveable);
+                this.markerGroups[faceName][i] = null;
             }
 
-            // Create new marker group and add as child of sticker mesh
-            const group = createMarkerGroup(newData, this.cellSize);
-            meshes[i].add(group);
-            this.markerGroups[faceName][i] = group;
+            // Remove old fixed markers
+            if (existingFixed) {
+                this._disposeMarkerGroup(existingFixed);
+                this.cubeGroup.remove(existingFixed);
+                this.fixedMarkerGroups[faceName][i] = null;
+            }
+
+            // Create moveable marker group — child of sticker mesh (follows piece)
+            if (moveableDescs.length > 0) {
+                const group = createMarkerGroup(moveableDescs, this.cellSize);
+                meshes[i].add(group);
+                this.markerGroups[faceName][i] = group;
+            }
+
+            // Create fixed marker group — child of cubeGroup (stays at position)
+            if (fixedDescs.length > 0) {
+                const group = createMarkerGroup(fixedDescs, this.cellSize);
+                // Position and orient the group to match the sticker's location
+                group.position.copy(meshes[i].position);
+                group.quaternion.copy(meshes[i].quaternion);
+                this.cubeGroup.add(group);
+                this.fixedMarkerGroups[faceName][i] = group;
+            }
         }
     }
 
@@ -238,6 +277,7 @@ export class CubeModel {
      * Remove and dispose all marker meshes from all faces.
      */
     clearAllMarkers() {
+        // Clear moveable markers (children of sticker meshes)
         for (const faceName of Object.keys(this.markerGroups)) {
             const groups = this.markerGroups[faceName];
             const meshes = this.stickers[faceName];
@@ -247,6 +287,20 @@ export class CubeModel {
                 if (groups[i]) {
                     this._disposeMarkerGroup(groups[i]);
                     meshes[i].remove(groups[i]);
+                    groups[i] = null;
+                }
+            }
+        }
+
+        // Clear fixed markers (children of cubeGroup)
+        for (const faceName of Object.keys(this.fixedMarkerGroups)) {
+            const groups = this.fixedMarkerGroups[faceName];
+            if (!groups) continue;
+
+            for (let i = 0; i < groups.length; i++) {
+                if (groups[i]) {
+                    this._disposeMarkerGroup(groups[i]);
+                    this.cubeGroup.remove(groups[i]);
                     groups[i] = null;
                 }
             }

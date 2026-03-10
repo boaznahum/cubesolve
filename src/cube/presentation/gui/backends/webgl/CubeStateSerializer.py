@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from cube.application.markers import get_markers_from_part_edge
+from cube.application.markers._marker_creator_protocol import MarkerCreator as _MC
 from cube.application.markers._complementary_colors import get_complementary_color
 from cube.application.markers._marker_creators import (
     RingMarker, FilledCircleMarker, CrossMarker, ArrowMarker,
@@ -27,7 +27,6 @@ from cube.application.markers._marker_creators import (
     color_float_to_255,
 )
 from cube.application.markers._outlined_circle_marker import OutlinedCircleMarker
-from cube.application.markers._marker_creator_protocol import MarkerCreator
 from cube.domain.model.Color import color2rgb_int
 
 if TYPE_CHECKING:
@@ -58,6 +57,35 @@ def _resolve_marker_color(
     if use_complementary:
         return complementary
     return _FALLBACK_MAGENTA
+
+
+def _get_markers_with_moveable_flag(part_edge: "PartEdge") -> list[tuple[_MC, bool]]:
+    """Get all markers from a PartEdge with their moveable flag.
+
+    Returns list of (marker, moveable) tuples, deduplicated and sorted by z_order.
+    """
+    _MARKER_KEY = "markers"
+    result: list[tuple[_MC, bool]] = []
+
+    fixed_dict: dict[str, _MC] | None = part_edge.fixed_attributes.get(_MARKER_KEY)
+    if fixed_dict:
+        for m in fixed_dict.values():
+            result.append((m, False))
+
+    moveable_dict: dict[str, _MC] | None = part_edge.moveable_attributes.get(_MARKER_KEY)
+    if moveable_dict:
+        for m in moveable_dict.values():
+            result.append((m, True))
+
+    # Deduplicate: keep highest z_order for each unique marker config
+    unique: dict[_MC, tuple[_MC, bool]] = {}
+    for marker, moveable in result:
+        if marker not in unique or marker.get_z_order() > unique[marker][0].get_z_order():
+            unique[marker] = (marker, moveable)
+
+    items = list(unique.values())
+    items.sort(key=lambda x: x[0].get_z_order())
+    return items
 
 
 def extract_cube_state(cube: "Cube") -> dict[str, Any]:
@@ -169,8 +197,8 @@ def _extract_face_data(face: "Face", n: int) -> dict[str, list[Any]]:
         if part_edge is None:
             flat_markers.append(None)
             continue
-        markers = get_markers_from_part_edge(part_edge)
-        if not markers:
+        marker_items = _get_markers_with_moveable_flag(part_edge)
+        if not marker_items:
             flat_markers.append(None)
             continue
         # Resolve face color for complementary color lookup
@@ -179,7 +207,11 @@ def _extract_face_data(face: "Face", n: int) -> dict[str, list[Any]]:
             flat_colors[i][1] / 255.0,
             flat_colors[i][2] / 255.0,
         )
-        serialized = [_serialize_marker(m, face_color_float) for m in markers]
+        serialized = []
+        for m, moveable in marker_items:
+            d = _serialize_marker(m, face_color_float)
+            d["moveable"] = moveable
+            serialized.append(d)
         flat_markers.append(serialized)
 
     return {
@@ -235,7 +267,7 @@ def _set_edge_cells(
             edge_grid[row + i][col_start] = edge_on_face
 
 
-def _serialize_marker(marker: MarkerCreator, face_color_float: _ColorF) -> dict[str, Any]:
+def _serialize_marker(marker: _MC, face_color_float: _ColorF) -> dict[str, Any]:
     """Serialize a MarkerCreator to a JSON-friendly dict.
 
     Colors are resolved to RGB 0-255 ints. ``use_complementary_color``
