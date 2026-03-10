@@ -50,7 +50,7 @@ export class AppState extends EventTarget {
         this.soundEnabled = false;
         this.operatorBufferMode = true;
         this.queueHeadingH1 = true;
-        this.queueHeadingH2 = true;
+        this.queueHeadingH2 = false;
         this.defaultScramble = '0';  // '0'-'9' or '*'
 
         // -- Text overlays --

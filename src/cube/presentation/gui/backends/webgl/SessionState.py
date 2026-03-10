@@ -77,7 +77,7 @@ class SessionStateSnapshot:
     sound_enabled: bool = False
     operator_buffer_mode: bool = True
     queue_heading_h1: bool = True
-    queue_heading_h2: bool = True
+    queue_heading_h2: bool = False
     default_scramble: str = "0"  # "0"-"9" or "*" (random)
 
     # -- Text overlays --
