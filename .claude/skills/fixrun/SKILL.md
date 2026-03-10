@@ -27,6 +27,45 @@ Activate on any of:
 - "no interpreter", "can't run tests", "run tests doesn't appear"
 - After switching Python interpreter or recreating venv
 
+## Pre-Check: Detect PyCharm Terminal
+
+**CRITICAL — Do this FIRST before anything else.**
+
+Check if running inside PyCharm's integrated terminal:
+
+```bash
+echo "$TERMINAL_EMULATOR"
+```
+
+- If the output contains `JetBrains` (e.g., `JetBrains-JediTerm`): **you are inside PyCharm's terminal**.
+- Otherwise: you are in an external terminal — proceed normally.
+
+### If Inside PyCharm Terminal
+
+This skill needs to edit `jdk.table.xml`, which PyCharm overwrites on exit. Closing PyCharm kills this terminal session. **You cannot proceed from here.**
+
+Tell the user:
+
+> I'm running inside PyCharm's terminal. This skill needs PyCharm closed to edit `jdk.table.xml`, but closing PyCharm would kill this session.
+>
+> Please:
+> 1. Open **Windows Terminal** (or any terminal outside PyCharm)
+> 2. Run these commands:
+>    ```
+>    cd <PROJECT_DIR>
+>    claude
+>    ```
+> 3. Then type `/fixrun` in the Claude session
+> 4. After the skill completes successfully, restart PyCharm
+
+Replace `<PROJECT_DIR>` with the actual absolute project directory path.
+
+**STOP HERE** — do not proceed with any fixes. The external session will handle everything.
+
+### If Outside PyCharm Terminal (or user confirms they are external)
+
+Continue with the rest of the skill. Before editing `jdk.table.xml` (Part 2), ask the user to confirm PyCharm is closed.
+
 ## Core Principle: Don't Fight PyCharm's Naming
 
 **CRITICAL:** PyCharm auto-generates interpreter names based on the project directory (e.g., `uv (cubesolve3)`, `uv (cubesolve3) (2)`). If you rename an entry to something PyCharm doesn't expect, it will create a NEW entry on next restart, making things worse.
