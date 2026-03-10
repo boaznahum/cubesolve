@@ -132,21 +132,11 @@ export class AppState extends EventTarget {
             patch.sliceStop = msg.toolbar.slice_stop;
             patch.assistEnabled = msg.toolbar.assist_enabled;
             patch.assistDelayMs = msg.toolbar.assist_delay_ms;
-            if (msg.toolbar.sound_enabled !== undefined) {
-                patch.soundEnabled = msg.toolbar.sound_enabled;
-            }
-            if (msg.toolbar.operator_buffer_mode !== undefined) {
-                patch.operatorBufferMode = msg.toolbar.operator_buffer_mode;
-            }
-            if (msg.toolbar.queue_heading_h1 !== undefined) {
-                patch.queueHeadingH1 = msg.toolbar.queue_heading_h1;
-            }
-            if (msg.toolbar.queue_heading_h2 !== undefined) {
-                patch.queueHeadingH2 = msg.toolbar.queue_heading_h2;
-            }
-            if (msg.toolbar.default_scramble !== undefined) {
-                patch.defaultScramble = msg.toolbar.default_scramble;
-            }
+            patch.soundEnabled = msg.toolbar.sound_enabled;
+            patch.operatorBufferMode = msg.toolbar.operator_buffer_mode;
+            patch.queueHeadingH1 = msg.toolbar.queue_heading_h1;
+            patch.queueHeadingH2 = msg.toolbar.queue_heading_h2;
+            patch.defaultScramble = msg.toolbar.default_scramble;
         }
 
         // Text
