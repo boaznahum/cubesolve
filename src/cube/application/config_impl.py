@@ -43,7 +43,7 @@ class AppConfig(ConfigProtocol):
     """
 
     def __init__(self) -> None:
-        self._data = cfg.DEFAULTS.copy()
+        self._data = cfg.CONFIG_DEFAULTS.copy()
 
     # ==========================================================================
     # Model settings

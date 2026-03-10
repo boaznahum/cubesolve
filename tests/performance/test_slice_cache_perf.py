@@ -36,11 +36,11 @@ def test_slice_cache_performance():
     moves_per_scramble = 100
 
     # Store original config value
-    original_cache_setting = cfg.DEFAULTS.enable_cube_cache
+    original_cache_setting = cfg.CONFIG_DEFAULTS.enable_cube_cache
 
     try:
         # ===== Test WITHOUT cache =====
-        cfg.DEFAULTS.enable_cube_cache = False
+        cfg.CONFIG_DEFAULTS.enable_cube_cache = False
         sp_no_cache = TestServiceProvider()
 
         total_time_no_cache = 0.0
@@ -50,7 +50,7 @@ def test_slice_cache_performance():
             total_time_no_cache += elapsed
 
         # ===== Test WITH cache =====
-        cfg.DEFAULTS.enable_cube_cache = True
+        cfg.CONFIG_DEFAULTS.enable_cube_cache = True
         sp_with_cache = TestServiceProvider()
 
         total_time_with_cache = 0.0
@@ -82,7 +82,7 @@ def test_slice_cache_performance():
 
     finally:
         # Restore original config
-        cfg.DEFAULTS.enable_cube_cache = original_cache_setting
+        cfg.CONFIG_DEFAULTS.enable_cube_cache = original_cache_setting
 
 
 @pytest.mark.slow
@@ -97,11 +97,11 @@ def test_slice_only_rotations():
     n_iterations = 100
 
     # Store original config value
-    original_cache_setting = cfg.DEFAULTS.enable_cube_cache
+    original_cache_setting = cfg.CONFIG_DEFAULTS.enable_cube_cache
 
     try:
         # ===== Test WITHOUT cache =====
-        cfg.DEFAULTS.enable_cube_cache = False
+        cfg.CONFIG_DEFAULTS.enable_cube_cache = False
         sp_no_cache = TestServiceProvider()
         cube = Cube(cube_size, sp=sp_no_cache)
 
@@ -113,7 +113,7 @@ def test_slice_only_rotations():
         time_no_cache = time.perf_counter() - start
 
         # ===== Test WITH cache =====
-        cfg.DEFAULTS.enable_cube_cache = True
+        cfg.CONFIG_DEFAULTS.enable_cube_cache = True
         sp_with_cache = TestServiceProvider()
         cube = Cube(cube_size, sp=sp_with_cache)
 
@@ -143,4 +143,4 @@ def test_slice_only_rotations():
 
     finally:
         # Restore original config
-        cfg.DEFAULTS.enable_cube_cache = original_cache_setting
+        cfg.CONFIG_DEFAULTS.enable_cube_cache = original_cache_setting

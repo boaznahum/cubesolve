@@ -335,6 +335,6 @@ class ConfigData:
 
 
 # Module-level defaults instance — the single source of truth.
-# Tests may modify fields before creating an app (e.g., DEFAULTS.gui_test_mode = True).
+# Tests may modify fields before creating an app (e.g., CONFIG_DEFAULTS.gui_test_mode = True).
 # Each AppConfig() copies from this at creation time.
-DEFAULTS = ConfigData()
+CONFIG_DEFAULTS = ConfigData()
