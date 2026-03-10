@@ -292,6 +292,7 @@ class ClientSession:
             assist_enabled=cfg.assist_config.enabled,
             assist_delay_ms=cfg.assist_config.delay_ms,
             sound_enabled=cfg.sound_config.enabled,
+            operator_buffer_mode=cfg.operator_buffer_mode,
             default_scramble="*" if self._default_scramble is None else str(self._default_scramble),
             # Text
             animation_text=anim_lines,
@@ -566,6 +567,9 @@ class ClientSession:
         elif msg_type == "set_cube_colors":
             self._handle_set_cube_colors(data.get("faces", {}))
 
+        elif msg_type == "set_config":
+            self._handle_set_config(data.get("settings", {}))
+
         elif msg_type == "resize":
             pass
 
@@ -610,6 +614,18 @@ class ClientSession:
             return
         self._app.switch_to_solver(solver_name)
         self._app.op.clear_redo()
+        self.send_state()
+
+    def _handle_set_config(self, settings: dict[str, object]) -> None:
+        """Apply per-session config changes from the settings dialog.
+
+        Only touches config — no FSM transitions, no cube state changes.
+        """
+        cfg = self._app.config
+        if "solver_debug" in settings:
+            cfg.solver_debug = bool(settings["solver_debug"])
+        if "operator_buffer_mode" in settings:
+            cfg.operator_buffer_mode = bool(settings["operator_buffer_mode"])
         self.send_state()
 
     def _handle_command(self, command_name: str) -> None:

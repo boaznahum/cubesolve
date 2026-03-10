@@ -11,11 +11,71 @@ To access configuration values from outside the application package:
 DO NOT use `from cube.application._config import X` in production code.
 Access config values through the ConfigProtocol interface instead.
 """
-from dataclasses import dataclass
+from __future__ import annotations
+
+import copy
+from dataclasses import dataclass, field
 from typing import Tuple
 
 from cube.config.face_tracer_config import FaceTrackerConfig, TrackerIndicatorConfig
 from cube.utils.markers_config import MarkersConfig
+
+########## Per-session mutable configuration ##########
+# ConfigData holds fields that can vary per client session.
+# Each session gets its own copy; changes don't leak across sessions.
+
+# Type alias for config change listener callback
+ConfigListener = object  # Callable[[str, object], None] — avoid import cycle
+
+
+@dataclass
+class ConfigData:
+    """Mutable per-session configuration fields.
+
+    Each client session gets its own copy (via copy()).
+    Listeners are notified when fields change via set_* methods.
+    """
+    solver_debug: bool = True
+    operator_buffer_mode: bool = True
+
+    # Listeners are NOT copied — each session registers its own
+    _listeners: list[ConfigListener] = field(default_factory=list, repr=False, compare=False)
+
+    def copy(self) -> ConfigData:
+        """Create a copy with empty listener list."""
+        new = copy.copy(self)
+        new._listeners = []
+        return new
+
+    def add_listener(self, listener: ConfigListener) -> None:
+        """Register a callback(field_name: str, new_value: object) for changes."""
+        self._listeners.append(listener)
+
+    def remove_listener(self, listener: ConfigListener) -> None:
+        """Unregister a change listener."""
+        self._listeners.remove(listener)
+
+    def _notify(self, field_name: str, value: object) -> None:
+        """Notify all listeners of a field change."""
+        for listener in self._listeners:
+            listener(field_name, value)  # type: ignore[operator]
+
+    def set_solver_debug(self, value: bool) -> None:
+        """Set solver_debug and notify listeners."""
+        if self.solver_debug != value:
+            self.solver_debug = value
+            self._notify("solver_debug", value)
+
+    def set_operator_buffer_mode(self, value: bool) -> None:
+        """Set operator_buffer_mode and notify listeners."""
+        if self.operator_buffer_mode != value:
+            self.operator_buffer_mode = value
+            self._notify("operator_buffer_mode", value)
+
+
+# Module-level default instance — used as template for new sessions
+DEFAULT_CONFIG_DATA = ConfigData()
+
 
 ########## Some top important
 # Only initial value, can be changed

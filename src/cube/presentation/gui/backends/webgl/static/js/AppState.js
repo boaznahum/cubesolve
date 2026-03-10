@@ -48,6 +48,7 @@ export class AppState extends EventTarget {
         this.assistEnabled = true;
         this.assistDelayMs = 400;
         this.soundEnabled = false;
+        this.operatorBufferMode = true;
         this.defaultScramble = '0';  // '0'-'9' or '*'
 
         // -- Text overlays --
@@ -131,6 +132,9 @@ export class AppState extends EventTarget {
             patch.assistDelayMs = msg.toolbar.assist_delay_ms;
             if (msg.toolbar.sound_enabled !== undefined) {
                 patch.soundEnabled = msg.toolbar.sound_enabled;
+            }
+            if (msg.toolbar.operator_buffer_mode !== undefined) {
+                patch.operatorBufferMode = msg.toolbar.operator_buffer_mode;
             }
             if (msg.toolbar.default_scramble !== undefined) {
                 patch.defaultScramble = msg.toolbar.default_scramble;

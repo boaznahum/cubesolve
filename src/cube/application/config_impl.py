@@ -36,7 +36,15 @@ class AppConfig(ConfigProtocol):
 
     Implements ConfigProtocol by delegating to the actual config module.
     This is the single point of access to _config values.
+
+    Per-session mutable fields (solver_debug, operator_buffer_mode) are
+    stored in a ConfigData instance. Each session gets its own copy so
+    changes don't leak across sessions.
     """
+
+    def __init__(self) -> None:
+        from cube.application._config import DEFAULT_CONFIG_DATA
+        self._data = DEFAULT_CONFIG_DATA.copy()
 
     # ==========================================================================
     # Model settings
@@ -119,12 +127,12 @@ class AppConfig(ConfigProtocol):
     @property
     def solver_debug(self) -> bool:
         """Enable solver debug output."""
-        return cfg.SOLVER_DEBUG
+        return self._data.solver_debug
 
     @solver_debug.setter
     def solver_debug(self, value: bool) -> None:
         """Set solver debug flag."""
-        cfg.SOLVER_DEBUG = value
+        self._data.set_solver_debug(value)
 
 
     @property
@@ -380,7 +388,12 @@ class AppConfig(ConfigProtocol):
         When True, op.with_buffer() buffers moves and simplifies on flush.
         When False, op.with_buffer() is a transparent no-op (moves play immediately).
         """
-        return cfg.OPERATOR_BUFFER_MODE
+        return self._data.operator_buffer_mode
+
+    @operator_buffer_mode.setter
+    def operator_buffer_mode(self, value: bool) -> None:
+        """Set operator buffer mode flag."""
+        self._data.set_operator_buffer_mode(value)
 
     # ==========================================================================
     # Testing settings
@@ -417,6 +430,20 @@ class AppConfig(ConfigProtocol):
     def input_mouse_rotate_adjusted_face(self) -> bool:
         """Rotate adjusted face on edge/corner drag."""
         return cfg.INPUT_MOUSE_ROTATE_ADJUSTED_FACE
+
+    # ==========================================================================
+    # Single-step mode settings
+    # ==========================================================================
+    # ==========================================================================
+    # Config change listeners
+    # ==========================================================================
+    def add_config_listener(self, listener: object) -> None:
+        """Register a callback(field_name: str, new_value: object) for config changes."""
+        self._data.add_listener(listener)
+
+    def remove_config_listener(self, listener: object) -> None:
+        """Unregister a config change listener."""
+        self._data.remove_listener(listener)
 
     # ==========================================================================
     # Single-step mode settings

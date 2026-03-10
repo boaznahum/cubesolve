@@ -33,7 +33,7 @@ export class Toolbar {
         // Disable action buttons that aren't allowed in current state
         for (const btn of document.querySelectorAll('[data-cmd]')) {
             const cmd = btn.dataset.cmd;
-            if (cmd === 'stop' || cmd === 'toggle_debug' || cmd === 'toggle_animation') continue;
+            if (cmd === 'stop' || cmd === 'toggle_animation') continue;
             if (a[cmd] !== undefined) btn.disabled = !a[cmd];
         }
 
@@ -98,13 +98,6 @@ export class Toolbar {
     }
 
     _updateToolbarFromState(appState) {
-        // Debug toggle
-        const btnDebug = document.getElementById('btn-debug');
-        if (btnDebug) {
-            btnDebug.textContent = appState.debug ? 'Dbg:ON' : 'Dbg:OFF';
-            btnDebug.className = 'tb-btn ' + (appState.debug ? 'tb-on' : 'tb-off');
-        }
-
         // Animation toggle
         const btnAnim = document.getElementById('btn-anim');
         if (btnAnim) {

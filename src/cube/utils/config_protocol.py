@@ -476,6 +476,11 @@ class ConfigProtocol(Protocol):
         """
         ...
 
+    @operator_buffer_mode.setter
+    def operator_buffer_mode(self, value: bool) -> None:
+        """Set operator buffer mode flag."""
+        ...
+
     # ==========================================================================
     # Testing settings
     # ==========================================================================
@@ -510,6 +515,20 @@ class ConfigProtocol(Protocol):
     @property
     def input_mouse_rotate_adjusted_face(self) -> bool:
         """Rotate adjusted face on edge/corner drag."""
+        ...
+
+    # ==========================================================================
+    # Single-step mode settings
+    # ==========================================================================
+    # ==========================================================================
+    # Config change listeners
+    # ==========================================================================
+    def add_config_listener(self, listener: object) -> None:
+        """Register a callback(field_name: str, new_value: object) for config changes."""
+        ...
+
+    def remove_config_listener(self, listener: object) -> None:
+        """Unregister a config change listener."""
         ...
 
     # ==========================================================================

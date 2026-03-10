@@ -19,6 +19,7 @@ import { MoveIndicator } from './MoveIndicator.js';
 import { SoundManager } from './SoundManager.js';
 import { ColorPicker } from './ColorPicker.js';
 import { InfoPopup } from './InfoPopup.js';
+import { SettingsPopup } from './SettingsPopup.js';
 
 // ── Application state ──
 const state = new AppState();
@@ -118,6 +119,13 @@ colorPicker.canEnter = () => {
 const infoPopup = new InfoPopup();
 document.getElementById('btn-info')?.addEventListener('click', () => {
     infoPopup.toggle();
+});
+
+// ── Settings popup ──
+const settingsPopup = new SettingsPopup(send, state, cubeModel);
+settingsPopup.onApply = () => toolbar._updateShadowButtons();
+document.getElementById('btn-settings')?.addEventListener('click', () => {
+    settingsPopup.toggle();
 });
 
 // Paint button in toolbar
