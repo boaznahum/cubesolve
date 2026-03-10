@@ -123,7 +123,6 @@ document.getElementById('btn-info')?.addEventListener('click', () => {
 
 // ── Settings popup ──
 const settingsPopup = new SettingsPopup(send, state, cubeModel);
-settingsPopup.onApply = () => toolbar._updateShadowButtons();
 document.getElementById('btn-settings')?.addEventListener('click', () => {
     settingsPopup.toggle();
 });

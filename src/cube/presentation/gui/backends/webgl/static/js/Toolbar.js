@@ -284,24 +284,6 @@ export class Toolbar {
             });
         }
 
-        // Shadow face toggle button — toggles all L/D/B at once
-        const btnShadowAll = document.getElementById('btn-shadow-all');
-        if (btnShadowAll) {
-            btnShadowAll.addEventListener('click', () => {
-                if (!this._cubeModel) return;
-                // Toggle: if any are on, turn all off; otherwise turn all on
-                const anyOn = ['L', 'D', 'B'].some(f => this._cubeModel.shadowVisible[f]);
-                for (const f of ['L', 'D', 'B']) {
-                    if (anyOn && this._cubeModel.shadowVisible[f]) {
-                        this._cubeModel.toggleShadow(f);
-                    } else if (!anyOn && !this._cubeModel.shadowVisible[f]) {
-                        this._cubeModel.toggleShadow(f);
-                    }
-                }
-                this._updateShadowButtons();
-            });
-        }
-
         // Scramble seed dropdown
         document.getElementById('scramble-seed').addEventListener('change', (e) => {
             this._send({ type: 'set_scramble_seed', seed: e.target.value });
@@ -412,7 +394,6 @@ export class Toolbar {
                         this._cubeModel.toggleShadow(f);
                     }
                 }
-                this._updateShadowButtons();
                 return;
             }
 
@@ -479,13 +460,4 @@ export class Toolbar {
         });
     }
 
-    /** Update shadow toggle button style to reflect current state. */
-    _updateShadowButtons() {
-        if (!this._cubeModel) return;
-        const btn = document.getElementById('btn-shadow-all');
-        if (btn) {
-            const anyOn = ['L', 'D', 'B'].some(f => this._cubeModel.shadowVisible[f]);
-            btn.className = 'tb-btn tb-shadow ' + (anyOn ? 'tb-on' : 'tb-off');
-        }
-    }
 }
