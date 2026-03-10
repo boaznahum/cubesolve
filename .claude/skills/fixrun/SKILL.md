@@ -14,7 +14,7 @@ description: |
 
 Fix four common PyCharm breakages in this project:
 1. Project module (.iml file) — source/test roots
-2. Global interpreter (jdk.table.xml) — ensure "uv (cubesolve2)" exists, clean up stale entries
+2. Global interpreter (jdk.table.xml) — deduplicate entries, determine active SDK name
 3. Run configurations — all configs point to the correct interpreter
 4. Git filter — prevent SDK_NAME drift from creating git diffs
 
@@ -27,22 +27,106 @@ Activate on any of:
 - "no interpreter", "can't run tests", "run tests doesn't appear"
 - After switching Python interpreter or recreating venv
 
-## Part 1: Fix Project Module (.iml file)
+## Core Principle: Don't Fight PyCharm's Naming
 
-The `.iml` file defines source roots, test roots, and excluded directories.
+**CRITICAL:** PyCharm auto-generates interpreter names based on the project directory (e.g., `uv (cubesolve3)`, `uv (cubesolve3) (2)`). If you rename an entry to something PyCharm doesn't expect, it will create a NEW entry on next restart, making things worse.
 
-### Step 1A: Check .iml Health
+**Strategy:**
+1. **Deduplicate** jdk.table entries for this project (keep one, delete the rest)
+2. **Read the active SDK name** from whichever entry survives — do NOT invent a name
+3. **Use that name** consistently in .iml, misc.xml, and run configs
+4. **Git filter** uses its own canonical name independently (only affects what git stages, not what PyCharm sees)
 
-1. Read `.idea/modules.xml` to find which `.iml` file is expected.
-2. Check if that `.iml` file exists.
-3. If it exists, verify it contains:
-   - `<sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />`
-   - `<sourceFolder url="file://$MODULE_DIR$/tests" isTestSource="true" />`
+## Part 0: Determine PyCharm Config Path
 
-### Step 1B: Repair .iml if Missing or Broken
+```bash
+# Glob for all PyCharm versions (both Pro and CE)
+ls -d "$APPDATA/JetBrains/PyCharm"*/options/jdk.table.xml \
+      "$APPDATA/JetBrains/PyCharmCE"*/options/jdk.table.xml 2>/dev/null | sort
+```
 
-If missing or incorrect, create/overwrite with:
+- **If exactly one match:** use it.
+- **If multiple matches:** ask the user which PyCharm version they are using (use `AskUserQuestion` with the list of found versions as options).
+- **If no matches:** report error — PyCharm config directory not found.
 
+## Part 1: Analyze Current State (Read Everything First)
+
+Before making ANY changes, read all relevant files to understand the full picture.
+
+### Step 1A: Read All State
+
+1. Read `.idea/modules.xml` → find which `.iml` file is expected
+2. Read the `.iml` file → note the `jdkName` it references
+3. Read `jdk.table.xml` → identify all entries, especially for this project
+4. Read `.idea/misc.xml` → note current `sdkName`
+5. Read all `.idea/runConfigurations/*.xml` → note their `SDK_NAME` values
+
+### Step 1B: Identify This Project's Entries in jdk.table.xml
+
+Categorize each `<jdk>` entry:
+- **This project:** `ASSOCIATED_PROJECT_PATH` matches the current project directory (use forward-slash path comparison)
+- **Other projects:** Everything else
+
+### Step 1C: Determine the Active SDK Name
+
+The **active SDK name** is determined by this priority:
+1. The `jdkName` in the `.iml` file (this is what PyCharm is currently using)
+2. If that doesn't match any jdk.table entry → use the name of the first jdk.table entry for this project
+3. If no jdk.table entries exist for this project → report error, cannot proceed
+
+**Store this as `ACTIVE_SDK_NAME`** — it will be used everywhere.
+
+### Step 1D: Display State Table
+
+```
+ACTIVE_SDK_NAME: uv (cubesolve3) (3)  ← from .iml jdkName
+
+jdk.table.xml entries for this project:
+| # | Name                  | SDK_UUID  | Action                    |
+|---|-----------------------|-----------|---------------------------|
+| 1 | uv (cubesolve3)       | abc-123   | Delete (not active)       |
+| 2 | uv (cubesolve3) (2)   | def-456   | Delete (not active)       |
+| 3 | uv (cubesolve3) (3)   | ghi-789   | Keep (matches .iml)       |
+
+Other references:
+- misc.xml sdkName: "uv (cubesolve2)" → needs update to ACTIVE_SDK_NAME
+- Run configs SDK_NAME: "uv (cubesolve2)" → needs update to ACTIVE_SDK_NAME
+```
+
+## Part 2: Fix Global Interpreter (jdk.table.xml)
+
+### Step 2A: Warn About PyCharm
+
+**IMPORTANT:** Tell the user: "Close PyCharm before proceeding — it will overwrite jdk.table.xml on exit."
+
+Wait for confirmation before proceeding.
+
+### Step 2B: Deduplicate (Do NOT Rename)
+
+For **this project's entries**:
+1. **Keep the entry whose name matches `ACTIVE_SDK_NAME`** (the one .iml references)
+2. **Delete all other entries** for this project
+3. **Do NOT rename anything** — keep the exact name PyCharm assigned
+
+For **other projects' duplicate entries** (same ASSOCIATED_PROJECT_PATH appearing multiple times):
+1. Delete duplicates, keeping only the first entry for each project.
+
+**Never delete the sole entry for another project.**
+
+### Step 2C: Verify the Kept Entry
+
+After deletion, verify:
+- The kept entry's `homePath` points to `<project_dir>/.venv/Scripts/python.exe`
+- The `ASSOCIATED_PROJECT_PATH` matches the project directory
+- If `homePath` is wrong, update it (but keep the name!)
+
+## Part 3: Fix Project Files (.iml and misc.xml)
+
+### Step 3A: Fix .iml Source/Test Roots
+
+Check if the `.iml` file has correct source and test roots. If not, fix ONLY the content/roots — **preserve the `jdkName` reference**.
+
+Required structure:
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <module type="PYTHON_MODULE" version="4">
@@ -58,91 +142,40 @@ If missing or incorrect, create/overwrite with:
       <excludeFolder url="file://$MODULE_DIR$/build" />
       <excludeFolder url="file://$MODULE_DIR$/src/cube.egg-info" />
     </content>
-    <orderEntry type="inheritedJdk" />
+    <orderEntry type="jdk" jdkName="ACTIVE_SDK_NAME" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>
 ```
 
-Also verify `.idea/modules.xml` points to the correct `.iml` path.
+**IMPORTANT:** Replace `ACTIVE_SDK_NAME` with the actual name determined in Step 1C. Do NOT use `inheritedJdk` — use an explicit `jdkName` reference so PyCharm knows exactly which SDK to use.
 
-### Step 1C: Report
+**IMPORTANT:** If the .iml has `external.system.id="java-source"` in the `<module>` tag, preserve it — PyCharm adds this and expects it.
 
-- If repaired: "Restored .iml — **restart PyCharm** to pick up the change."
-- If healthy: "Project module file (.iml) is OK."
+### Step 3B: Fix misc.xml
 
-## Part 2: Fix Global Interpreter (jdk.table.xml)
-
-The global interpreter table lives in the PyCharm config directory. To find it:
-
-```bash
-# Glob for all PyCharm versions (both Pro and CE)
-ls -d C:/Users/boaz2/AppData/Roaming/JetBrains/PyCharm*/options/jdk.table.xml \
-      C:/Users/boaz2/AppData/Roaming/JetBrains/PyCharmCE*/options/jdk.table.xml 2>/dev/null | sort
-```
-
-- **If exactly one match:** use it.
-- **If multiple matches:** ask the user which PyCharm version they are using (use `AskUserQuestion` with the list of found versions as options).
-- **If no matches:** report error — PyCharm config directory not found.
-
-### Goal
-
-Ensure exactly ONE interpreter named `"uv (cubesolve2)"` exists for this project, pointing to the current project's `.venv/Scripts/python.exe`. Delete all stale/duplicate entries.
-
-### Step 2A: Read and Analyze jdk.table.xml
-
-1. Read `jdk.table.xml`.
-2. Identify all `<jdk>` entries. Categorize each:
-   - **This project:** `ASSOCIATED_PROJECT_PATH` contains `cubesolve2` (the current project dir)
-   - **Other projects:** Everything else (Supplement, cubesolve, cubesolve3, etc.)
-
-### Step 2B: Report Current State
-
-Display a table:
-
-```
-| # | Name                  | Home Path                                    | Associated Project | Action     |
-|---|-----------------------|----------------------------------------------|--------------------|------------|
-| 1 | uv (cubesolve)        | E:/.../cubesolve/.venv/Scripts/python.exe     | cubesolve          | Keep (other project) |
-| 2 | uv (cubesolve2)       | E:/.../cubesolve2/.venv/Scripts/python.exe    | cubesolve2         | → Rename to "uv (cubesolve2)" |
-| 3 | uv (cubesolve3)       | E:/.../cubesolve3/.venv/Scripts/python.exe    | cubesolve3         | Keep (other project) |
-| 4 | uv (cubesolve3) (2)   | E:/.../cubesolve3/.venv/Scripts/python.exe    | cubesolve3         | Delete (duplicate) |
-| 5 | uv (Supplement)       | E:/.../Supplement/.venv/Scripts/python.exe    | Supplement         | Keep (other project) |
-```
-
-### Step 2C: Apply Fixes
-
-**IMPORTANT:** Close PyCharm before editing `jdk.table.xml`. Warn the user: "Close PyCharm before proceeding — it will overwrite jdk.table.xml on exit."
-
-For **this project's** entries (ASSOCIATED_PROJECT_PATH contains current project dir):
-1. Keep exactly one entry. Rename it to `"uv (cubesolve2)"`.
-2. Set `homePath` to the current project's `.venv/Scripts/python.exe` (absolute path).
-3. Set `ASSOCIATED_PROJECT_PATH` to the current project's absolute path.
-4. Update `UV_WORKING_DIR` and `UV_VENV_PATH` to match.
-5. Delete any duplicate entries for this project.
-
-For **other projects' duplicate entries** (same ASSOCIATED_PROJECT_PATH appearing multiple times):
-1. Delete duplicates, keeping only the first entry for each project.
-
-**Never delete the sole entry for another project** (e.g., Supplement, cubesolve3) — those belong to other PyCharm projects.
-
-### Step 2D: Fix misc.xml Project SDK Reference
-
-Update `.idea/misc.xml` to reference the correct interpreter name:
+Update `.idea/misc.xml` so the `sdkName` matches `ACTIVE_SDK_NAME`:
 
 ```xml
-<component name="ProjectRootManager" version="2" project-jdk-name="uv (cubesolve2)" project-jdk-type="Python SDK" />
+<option name="sdkName" value="ACTIVE_SDK_NAME" />
 ```
 
-## Part 3: Fix Run Configurations
+Or if using `ProjectRootManager`:
+```xml
+<component name="ProjectRootManager" version="2" project-jdk-name="ACTIVE_SDK_NAME" project-jdk-type="Python SDK" />
+```
 
-### Step 3A: Scan Run Configs
+**Use whichever format misc.xml already uses** — don't change its structure, just update the SDK name value.
+
+## Part 4: Fix Run Configurations
+
+### Step 4A: Scan Run Configs
 
 1. Glob for all `.idea/runConfigurations/*.xml` files.
 2. Read each file. Only consider `type="PythonConfigurationType"` or `type="tests"`.
 3. For each config, check:
    - `SDK_HOME` should be `$PROJECT_DIR$/.venv/Scripts/python.exe`
-   - `SDK_NAME` should be `uv (cubesolve)`
+   - `SDK_NAME` should match `ACTIVE_SDK_NAME`
    - `IS_MODULE_SDK` should be `false`
 
 4. Display a table:
@@ -150,12 +183,11 @@ Update `.idea/misc.xml` to reference the correct interpreter name:
 ```
 | # | Config Name              | SDK_HOME | SDK_NAME            | IS_MODULE_SDK | Needs Fix |
 |---|--------------------------|----------|---------------------|---------------|-----------|
-| 1 | main_pyglet2             | (set)    | uv (cubesolve3)     | false         | Yes       |
+| 1 | main_pyglet2             | (set)    | uv (cubesolve3) (3) | false         | No        |
 | 2 | pytest_all_tests         | (empty)  | —                   | true          | Yes       |
-| 3 | main_any_backend         | (set)    | uv (cubesolve)      | false         | No        |
 ```
 
-### Step 3B: Apply Fixes (no confirmation needed — fix all automatically)
+### Step 4B: Apply Fixes (no confirmation needed — fix all automatically)
 
 For each config that needs fixing, apply these XML changes:
 
@@ -164,9 +196,9 @@ For each config that needs fixing, apply these XML changes:
 <option name="SDK_HOME" value="$PROJECT_DIR$/.venv/Scripts/python.exe" />
 ```
 
-**b) Set SDK_NAME:**
+**b) Set SDK_NAME to ACTIVE_SDK_NAME:**
 ```xml
-<option name="SDK_NAME" value="uv (cubesolve2)" />
+<option name="SDK_NAME" value="ACTIVE_SDK_NAME" />
 ```
 
 **c) Set IS_MODULE_SDK to false:**
@@ -174,7 +206,7 @@ For each config that needs fixing, apply these XML changes:
 <option name="IS_MODULE_SDK" value="false" />
 ```
 
-### Step 3C: Cross-Platform Symlink (Linux only)
+### Step 4C: Cross-Platform Symlink (Linux only)
 
 If running on Linux (`uname -s` returns "Linux"), create compatibility symlink:
 
@@ -185,27 +217,21 @@ ln -sf ../bin/python .venv/Scripts/python.exe
 
 This ensures `$PROJECT_DIR$/.venv/Scripts/python.exe` resolves on Linux too.
 
-### Step 3D: Report Results
-
-Show summary:
-- "Fixed N run configurations."
-- "Updated interpreter name to 'uv (cubesolve)' in jdk.table.xml."
-- "Deleted N stale interpreter entries."
-- "**Restart PyCharm** for all changes to take effect."
-
-## Part 4: Git Filter for SDK_NAME
+## Part 5: Git Filter for SDK_NAME
 
 Prevent PyCharm's SDK_NAME auto-changes from creating git diffs. This uses a git clean filter that normalizes SDK_NAME to a canonical value before staging.
 
-### Step 4A: Check if Filter Already Set Up
+**The canonical name for git is `uv (cubesolve2)`.** This is independent of what PyCharm uses — it only affects what git sees when staging files.
+
+### Step 5A: Check if Filter Already Set Up
 
 1. Check if `.git-filters/normalize-sdk-name.py` exists.
 2. Check if `.gitattributes` contains the filter rule for `runConfigurations/*.xml`.
 3. Check if `git config filter.normalize-sdk-name.clean` is set.
 
-If all three exist, report "Git filter already configured." and skip to Step 4D.
+If all three exist, report "Git filter already configured." and skip to Step 5D.
 
-### Step 4B: Create Filter Script
+### Step 5B: Create Filter Script
 
 Create `.git-filters/normalize-sdk-name.py`:
 
@@ -229,7 +255,7 @@ for line in sys.stdin:
     sys.stdout.write(line)
 ```
 
-### Step 4C: Configure Git
+### Step 5C: Configure Git
 
 1. Add to `.gitattributes`:
    ```
@@ -249,7 +275,7 @@ for line in sys.stdin:
    git checkout -- .idea/runConfigurations/
    ```
 
-### Step 4D: Verify Filter Works
+### Step 5D: Verify Filter Works
 
 Test the filter:
 ```bash
@@ -270,3 +296,25 @@ Git sees:       SDK_NAME="uv (cubesolve2)"
 - The filter runs automatically on `git add` — no manual steps needed.
 - The working copy keeps whatever PyCharm writes — the filter only affects what git stages.
 - After the one-time setup, SDK_NAME changes never appear in `git diff` again.
+
+## Part 6: Final Verification
+
+After all changes, verify consistency:
+
+1. **Read the kept jdk.table entry name** → `ACTIVE_SDK_NAME`
+2. **Check .iml `jdkName`** → must match `ACTIVE_SDK_NAME`
+3. **Check misc.xml `sdkName`** → must match `ACTIVE_SDK_NAME`
+4. **Check all run configs `SDK_NAME`** → must match `ACTIVE_SDK_NAME`
+
+If any mismatch is found, fix it immediately.
+
+### Report Results
+
+Show summary:
+- "Active SDK name: `ACTIVE_SDK_NAME`"
+- "Deleted N duplicate interpreter entries from jdk.table.xml"
+- "Fixed .iml source/test roots: [yes/no]"
+- "Updated misc.xml SDK reference: [yes/no]"
+- "Fixed N run configurations"
+- "Git filter: [already configured / newly configured]"
+- "**Restart PyCharm** for all changes to take effect."
