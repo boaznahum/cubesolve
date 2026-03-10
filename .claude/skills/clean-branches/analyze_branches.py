@@ -29,6 +29,7 @@ class BranchInfo:
     namespace: str  # 'archive/completed', 'archive/stopped', 'wip', 'feature', or ''
     ff_relation: str  # 'same', 'behind' (contained in target), 'ahead' (target FF to branch), 'diverged'
     ahead_behind: str  # e.g. "3 ahead, 2 behind" relative to target
+    worktree_path: str  # path if checked out in a worktree, else ''
 
 
 def run_git(args: list[str], check: bool = True) -> str:
@@ -162,6 +163,24 @@ def get_ff_relation(ref: str, target: str) -> tuple[str, str]:
         return "diverged", "unknown"
 
 
+def get_worktree_branches() -> dict[str, str]:
+    """Return a mapping of branch name -> worktree path for branches checked out in worktrees."""
+    try:
+        output = run_git(["worktree", "list", "--porcelain"])
+    except subprocess.CalledProcessError:
+        return {}
+
+    result: dict[str, str] = {}
+    current_path = ""
+    for line in output.splitlines():
+        if line.startswith("worktree "):
+            current_path = line[len("worktree "):]
+        elif line.startswith("branch refs/heads/"):
+            branch_name = line[len("branch refs/heads/"):]
+            result[branch_name] = current_path
+    return result
+
+
 def get_namespace(branch: str) -> str:
     """Extract namespace from branch name."""
     if branch.startswith("archive/completed/"):
@@ -218,6 +237,7 @@ def analyze_branches(target_branch: str | None = None) -> dict:
     compare_branch = target_branch if target_branch else default_branch
 
     all_branch_names = set(local_branches) | set(remote_branches)
+    worktree_map = get_worktree_branches()
 
     branches: list[BranchInfo] = []
 
@@ -263,6 +283,7 @@ def analyze_branches(target_branch: str | None = None) -> dict:
             namespace=namespace,
             ff_relation=ff_relation,
             ahead_behind=ahead_behind,
+            worktree_path=worktree_map.get(name, ""),
         ))
 
     return {
@@ -329,6 +350,7 @@ def print_report(data: dict) -> None:
                 can_ff = "NO (diverged)"
 
             # Determine recommended action
+            wt_note = f" WORKTREE: {b.worktree_path}" if b.worktree_path else ""
             if b.name == compare_branch:
                 action = "Keep (target)"
             elif b.name == default_branch:
@@ -339,19 +361,23 @@ def print_report(data: dict) -> None:
                 action = "Keep (standard)"
             elif b.ff_relation == "behind":
                 if b.is_local and not b.is_remote:
-                    action = "Delete local (in target)"
+                    action = "Delete local (in target)" + wt_note
+                elif b.is_local and b.is_remote:
+                    action = "Delete both (in target)" + wt_note
                 else:
-                    action = "Archive? (in target)"
+                    action = "Delete remote (in target)"
             elif b.ff_relation == "same":
                 if b.is_local and not b.is_remote:
-                    action = "Delete local (same as target)"
+                    action = "Delete local (same as target)" + wt_note
+                elif b.is_local and b.is_remote:
+                    action = "Delete both (same as target)" + wt_note
                 else:
-                    action = "Archive? (same as target)"
+                    action = "Delete remote (same as target)"
             elif b.ff_relation == "ahead":
                 action = "Review (ahead of target)"
             elif b.contained_in:
                 if b.is_local and not b.is_remote:
-                    action = "Delete local (in " + b.contained_in[0] + ")"
+                    action = "Delete local (in " + b.contained_in[0] + ")" + wt_note
                 else:
                     action = "Archive? (in " + b.contained_in[0] + ")"
             else:
@@ -405,16 +431,42 @@ def print_report(data: dict) -> None:
 
         # Active branches
         for b in needs_action:
-            if b.contained_in:
+            merged = b.ff_relation in ("behind", "same")
+            if merged:
+                if b.is_local and not b.is_remote:
+                    print(f"- `{b.name}`: Local-only, merged into `{compare_branch}` - **delete local**")
+                elif b.is_local and b.is_remote:
+                    print(f"- `{b.name}`: Merged into `{compare_branch}` - **delete local + remote**")
+                else:
+                    print(f"- `{b.name}`: Remote-only, merged into `{compare_branch}` - **delete remote**")
+            elif b.contained_in:
                 if b.is_local and not b.is_remote:
                     print(f"- `{b.name}`: Local-only, already in `{b.contained_in[0]}` - **safe to delete**")
                 elif not b.is_local and b.is_remote:
-                    print(f"- `{b.name}`: Remote-only, in `{b.contained_in[0]}` - consider archiving")
+                    print(f"- `{b.name}`: Remote-only, in `{b.contained_in[0]}` - consider deleting")
+                else:
+                    print(f"- `{b.name}`: In `{b.contained_in[0]}` - **safe to delete**")
             else:
                 if b.is_local and not b.is_remote:
                     print(f"- `{b.name}`: Local-only, **not merged** - review before deleting")
                 else:
                     print(f"- `{b.name}`: Not merged - keep, move to wip/, or archive")
+
+    # Worktree warnings
+    worktree_branches = [b for b in branches if b.worktree_path and b.name != current_branch]
+    if worktree_branches:
+        print(f"\n### Branches Checked Out in Worktrees (cannot delete)\n")
+        print("These branches cannot be deleted until detached from their worktree.\n")
+        print("**To detach, run:**\n")
+        print("```bash")
+        for b in worktree_branches:
+            print(f"git -C \"{b.worktree_path}\" checkout --detach")
+        print("```\n")
+        print("After detaching, you can delete the branches normally, or remove the worktree entirely:\n")
+        print("```bash")
+        for b in worktree_branches:
+            print(f"git worktree remove \"{b.worktree_path}\"  # removes worktree + detaches branch")
+        print("```")
 
 
 def list_branches_for_selection() -> None:
