@@ -136,6 +136,7 @@ class ClientSession:
         # Live console forwarding callback (added/removed on subscribe/unsubscribe)
         self._console_live_cb: Callable[[str], None] | None = None
 
+
         # Client count — set externally by SessionManager
         self._client_count: int = 0
 
@@ -263,12 +264,34 @@ class ClientSession:
             self._serialize_alg(a) for a in redo_list if _include(a)
         ]
 
-        # Text overlays
+        # Text overlays — derive h1/h2 from history (HeadingAlg entries),
+        # h3 from AnimationText stack. This works for both one-phase (blocking)
+        # and two-phase (redo playback) solve modes.
+        from cube.domain.algs.HeadingAlg import HeadingAlg as _HeadingAlg
+
         at = vs.animation_text
-        anim_lines: list[dict[str, object]] = []
         animation_text_props = cfg.animation_text
-        for i in range(3):
-            line = at.get_line(i)
+
+        # h3: current algorithm name (from AnimationText stack, set by Operator)
+        h3_text = at.get_line(2)
+
+        # h1/h2: scan history backwards for the most recent HeadingAlg.
+        # Stop at the first HeadingAlg with h1 (phase boundary).
+        h1_text: str | None = None
+        h2_text: str | None = None
+        for alg_entry in reversed(op.history()):
+            if isinstance(alg_entry, _HeadingAlg):
+                if alg_entry.h1:
+                    h1_text = alg_entry.h1
+                    # h2 from same entry (or None if this phase has no sub-heading)
+                    if h2_text is None:
+                        h2_text = alg_entry.h2
+                    break
+                if alg_entry.h2 and h2_text is None:
+                    h2_text = alg_entry.h2
+
+        anim_lines: list[dict[str, object]] = []
+        for i, line in enumerate((h1_text, h2_text, h3_text)):
             if line:
                 prop = animation_text_props[i]
                 color: tuple[int, int, int, int] = prop[3]

@@ -37,6 +37,7 @@ export class ConsolePanel {
         this._panel.style.display = '';
         this._visible = true;
         this._autoScroll = true;
+        document.body.classList.add('console-open');
         // Subscribe to live log stream
         this._send({ type: 'console_subscribe' });
 
@@ -54,6 +55,7 @@ export class ConsolePanel {
     hide() {
         if (this._panel) this._panel.style.display = 'none';
         this._visible = false;
+        document.body.classList.remove('console-open');
         // Unsubscribe from live log stream
         this._send({ type: 'console_unsubscribe' });
         if (this._keyHandler) {

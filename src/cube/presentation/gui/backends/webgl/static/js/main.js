@@ -150,7 +150,7 @@ function isAssistActive() {
 }
 
 // Wire debug overlay callback from AnimationQueue → Toolbar
-animQueue._onDebugUpdate = (alg, layers, count) => toolbar.updateDebug(alg, layers, count);
+// Debug overlay removed — ALG/LAYERS/STICKERS info not useful to users
 
 // When all animations finish, update stop button and re-show move indicators
 animQueue._onAllDone = () => {

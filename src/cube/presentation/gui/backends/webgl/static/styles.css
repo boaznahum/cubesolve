@@ -1382,6 +1382,11 @@ a.info-item-name:hover {
     word-break: break-all;
 }
 
+/* When console is open, shrink app to fit above the panel */
+body.console-open #app-layout {
+    max-height: calc(100vh - 200px);
+}
+
 /* ============================================================
    SEO Tagline
    ============================================================ */
@@ -1682,6 +1687,10 @@ a.info-item-name:hover {
     /* Console panel — compact on mobile */
     #console-panel {
         height: 35vh;
+    }
+
+    body.console-open #app-layout {
+        max-height: calc(100dvh - 35vh);
     }
 
     .console-header {
