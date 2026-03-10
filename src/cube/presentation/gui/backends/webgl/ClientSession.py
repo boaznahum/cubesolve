@@ -655,20 +655,24 @@ class ClientSession:
         self._app.op.clear_redo()
         self.send_state()
 
+    # Server keys that map to ConfigProtocol bool properties.
+    # Adding a new setting only requires adding it here (+ ConfigData + frontend SETTINGS).
+    _CONFIG_BOOL_KEYS: tuple[str, ...] = (
+        "solver_debug",
+        "operator_buffer_mode",
+        "queue_heading_h1",
+        "queue_heading_h2",
+    )
+
     def _handle_set_config(self, settings: dict[str, object]) -> None:
         """Apply per-session config changes from the settings dialog.
 
         Only touches config — no FSM transitions, no cube state changes.
         """
         cfg = self._app.config
-        if "solver_debug" in settings:
-            cfg.solver_debug = bool(settings["solver_debug"])
-        if "operator_buffer_mode" in settings:
-            cfg.operator_buffer_mode = bool(settings["operator_buffer_mode"])
-        if "queue_heading_h1" in settings:
-            cfg.queue_heading_h1 = bool(settings["queue_heading_h1"])
-        if "queue_heading_h2" in settings:
-            cfg.queue_heading_h2 = bool(settings["queue_heading_h2"])
+        for key in self._CONFIG_BOOL_KEYS:
+            if key in settings:
+                setattr(cfg, key, bool(settings[key]))
         self.send_state()
 
     def _handle_command(self, command_name: str) -> None:

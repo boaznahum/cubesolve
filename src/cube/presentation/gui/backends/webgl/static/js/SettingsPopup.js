@@ -5,9 +5,63 @@
  * configuration. ESC / backdrop click discards changes. OK sends
  * changed settings to the server.
  *
- * Reuses the info-dialog CSS theme (info-backdrop, info-dialog, etc.)
- * with additional settings-specific styles.
+ * Fully data-driven: SETTINGS array defines all settings. Each entry
+ * specifies the DOM id, label, description, AppState key, server key,
+ * and whether it's client-only. The snapshot, populate, and apply
+ * logic all loop over the same array — no per-setting special cases.
  */
+
+/**
+ * Setting definition.
+ * @typedef {{
+ *   id: string,
+ *   label: string,
+ *   desc: string,
+ *   stateKey: string,
+ *   serverKey: string | null,
+ *   clientOnly?: boolean,
+ * }} SettingDef
+ */
+
+/** @type {SettingDef[]} */
+const SETTINGS = [
+    {
+        id: 'settings-debug',
+        label: 'Solver Debug',
+        desc: 'Show solver step-by-step annotations',
+        stateKey: 'debug',
+        serverKey: 'solver_debug',
+    },
+    {
+        id: 'settings-buffer',
+        label: 'Operator Buffer',
+        desc: 'Buffer and simplify moves before playing',
+        stateKey: 'operatorBufferMode',
+        serverKey: 'operator_buffer_mode',
+    },
+    {
+        id: 'settings-h1',
+        label: 'Queue Headings',
+        desc: 'Show solver phase names in queue',
+        stateKey: 'queueHeadingH1',
+        serverKey: 'queue_heading_h1',
+    },
+    {
+        id: 'settings-h2',
+        label: 'Queue Sub-headings',
+        desc: 'Show sub-step details in queue',
+        stateKey: 'queueHeadingH2',
+        serverKey: 'queue_heading_h2',
+    },
+    {
+        id: 'settings-shadows',
+        label: 'Show Shadows (LDB)',
+        desc: 'Show hidden faces beside the cube',
+        stateKey: '_shadows',   // special: computed from cubeModel
+        serverKey: null,        // client-only, no server message
+        clientOnly: true,
+    },
+];
 
 export class SettingsPopup {
     /**
@@ -35,6 +89,7 @@ export class SettingsPopup {
         this._keyHandler = null;
 
         // Snapshot of values when dialog opens (for cancel/discard)
+        /** @type {Object<string, boolean>} keyed by setting id */
         this._snapshot = {};
     }
 
@@ -50,23 +105,11 @@ export class SettingsPopup {
     show() {
         if (!this._built) this._build();
 
-        // Snapshot current values
-        this._snapshot = {
-            debug: this._state.debug,
-            operatorBufferMode: this._state.operatorBufferMode,
-            queueHeadingH1: this._state.queueHeadingH1,
-            queueHeadingH2: this._state.queueHeadingH2,
-            shadows: this._cubeModel
-                ? ['L', 'D', 'B'].some(f => this._cubeModel.shadowVisible[f])
-                : false,
-        };
-
-        // Populate controls from snapshot
-        this._setToggle('settings-debug', this._snapshot.debug);
-        this._setToggle('settings-buffer', this._snapshot.operatorBufferMode);
-        this._setToggle('settings-h1', this._snapshot.queueHeadingH1);
-        this._setToggle('settings-h2', this._snapshot.queueHeadingH2);
-        this._setToggle('settings-shadows', this._snapshot.shadows);
+        // Snapshot all settings from current state
+        for (const s of SETTINGS) {
+            this._snapshot[s.id] = this._readCurrentValue(s);
+            this._setToggle(s.id, this._snapshot[s.id]);
+        }
 
         this._backdrop.style.display = '';
         this._visible = true;
@@ -105,50 +148,56 @@ export class SettingsPopup {
         this.hide();
     }
 
+    /** Read current value for a setting from appState or cubeModel. */
+    _readCurrentValue(s) {
+        if (s.stateKey === '_shadows') {
+            return this._cubeModel
+                ? ['L', 'D', 'B'].some(f => this._cubeModel.shadowVisible[f])
+                : false;
+        }
+        return !!this._state[s.stateKey];
+    }
+
     /** Apply changes and close. */
     _apply() {
-        const newDebug = this._getToggle('settings-debug');
-        const newBuffer = this._getToggle('settings-buffer');
-        const newH1 = this._getToggle('settings-h1');
-        const newH2 = this._getToggle('settings-h2');
-        const newShadows = this._getToggle('settings-shadows');
-
-        // Send server-side config changes
-        const settings = {};
+        // Collect server-side changes
+        const serverSettings = {};
         let hasServerChanges = false;
-        if (newDebug !== this._snapshot.debug) {
-            settings.solver_debug = newDebug;
-            hasServerChanges = true;
-        }
-        if (newBuffer !== this._snapshot.operatorBufferMode) {
-            settings.operator_buffer_mode = newBuffer;
-            hasServerChanges = true;
-        }
-        if (newH1 !== this._snapshot.queueHeadingH1) {
-            settings.queue_heading_h1 = newH1;
-            hasServerChanges = true;
-        }
-        if (newH2 !== this._snapshot.queueHeadingH2) {
-            settings.queue_heading_h2 = newH2;
-            hasServerChanges = true;
-        }
-        if (hasServerChanges) {
-            this._send({ type: 'set_config', settings });
+
+        for (const s of SETTINGS) {
+            const newVal = this._getToggle(s.id);
+            const oldVal = this._snapshot[s.id];
+            if (newVal === oldVal) continue;
+
+            if (s.serverKey) {
+                // Server-side setting
+                serverSettings[s.serverKey] = newVal;
+                hasServerChanges = true;
+            } else if (s.clientOnly) {
+                // Client-only: apply directly
+                this._applyClientSetting(s, newVal);
+            }
         }
 
-        // Apply client-only changes: shadows
-        if (this._cubeModel && newShadows !== this._snapshot.shadows) {
-            for (const f of ['L', 'D', 'B']) {
-                if (newShadows && !this._cubeModel.shadowVisible[f]) {
-                    this._cubeModel.toggleShadow(f);
-                } else if (!newShadows && this._cubeModel.shadowVisible[f]) {
-                    this._cubeModel.toggleShadow(f);
-                }
-            }
+        if (hasServerChanges) {
+            this._send({ type: 'set_config', settings: serverSettings });
         }
 
         if (this.onApply) this.onApply();
         this.hide();
+    }
+
+    /** Apply a client-only setting change. */
+    _applyClientSetting(s, newVal) {
+        if (s.stateKey === '_shadows' && this._cubeModel) {
+            for (const f of ['L', 'D', 'B']) {
+                if (newVal && !this._cubeModel.shadowVisible[f]) {
+                    this._cubeModel.toggleShadow(f);
+                } else if (!newVal && this._cubeModel.shadowVisible[f]) {
+                    this._cubeModel.toggleShadow(f);
+                }
+            }
+        }
     }
 
     // -- Toggle helpers --
@@ -193,37 +242,9 @@ export class SettingsPopup {
         header.appendChild(title);
         header.appendChild(closeBtn);
 
-        // Content
+        // Content — built from SETTINGS array
         const content = document.createElement('div');
         content.className = 'info-content settings-content';
-
-        const SETTINGS = [
-            {
-                id: 'settings-debug',
-                label: 'Solver Debug',
-                desc: 'Show solver step-by-step annotations',
-            },
-            {
-                id: 'settings-buffer',
-                label: 'Operator Buffer',
-                desc: 'Buffer and simplify moves before playing',
-            },
-            {
-                id: 'settings-h1',
-                label: 'Queue Headings',
-                desc: 'Show solver phase names in queue',
-            },
-            {
-                id: 'settings-h2',
-                label: 'Queue Sub-headings',
-                desc: 'Show sub-step details in queue',
-            },
-            {
-                id: 'settings-shadows',
-                label: 'Show Shadows (LDB)',
-                desc: 'Show hidden faces beside the cube',
-            },
-        ];
 
         for (const setting of SETTINGS) {
             const row = document.createElement('div');
