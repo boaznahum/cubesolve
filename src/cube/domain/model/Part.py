@@ -4,11 +4,9 @@ import sys
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator, Sequence
 from typing import TYPE_CHECKING, Self, Tuple, TypeVar
-import sys
 if sys.version_info >= (3, 13):
     from warnings import deprecated
 else:
-    from typing import TypeVar as _TV
     def deprecated(msg: str):  # type: ignore[misc]
         """No-op fallback for Python < 3.13."""
         def decorator(func):

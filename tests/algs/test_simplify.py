@@ -60,7 +60,7 @@ def _test_simplify(alg: Alg, cube_size: int):
 
 def _test_flatten(alg: Alg, cube_size: int):
     """Test that flattening an algorithm produces equivalent results."""
-    config.CHECK_CUBE_SANITY = False
+    config.DEFAULTS.check_cube_sanity = False
 
     cube = Cube(cube_size, sp=_test_sp)
     scramble = Algs.scramble(cube.size, "1")
@@ -90,7 +90,7 @@ class TestSimplify:
     def test_simplify_random_sequence(self):
         """Test simplification of a random sequence."""
         cube_size = 8
-        config.CHECK_CUBE_SANITY = False
+        config.DEFAULTS.check_cube_sanity = False
 
         alg = Algs.scramble(cube_size, seq_length=5000, seed=None)
         _test_simplify(alg, cube_size)
@@ -98,7 +98,7 @@ class TestSimplify:
     def test_simplify_inverse(self):
         """Test simplification of an inverse algorithm."""
         cube_size = 8
-        config.CHECK_CUBE_SANITY = False
+        config.DEFAULTS.check_cube_sanity = False
 
         alg = (Algs.R * 2).inv()
 

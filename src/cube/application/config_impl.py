@@ -34,17 +34,16 @@ def _env_bool(name: str) -> bool | None:
 class AppConfig(ConfigProtocol):
     """Application config implementation wrapping _config.py values.
 
-    Implements ConfigProtocol by delegating to the actual config module.
-    This is the single point of access to _config values.
+    Implements ConfigProtocol by delegating to a per-session ConfigData instance.
+    Each session gets its own copy so changes don't leak across sessions.
 
-    Per-session mutable fields (solver_debug, operator_buffer_mode) are
-    stored in a ConfigData instance. Each session gets its own copy so
-    changes don't leak across sessions.
+    ConfigData is populated from the current module-level constants at creation
+    time, so tests that set cfg.X = value before creating an AppConfig get the
+    right values.
     """
 
     def __init__(self) -> None:
-        from cube.application._config import DEFAULT_CONFIG_DATA
-        self._data = DEFAULT_CONFIG_DATA.copy()
+        self._data = cfg.DEFAULTS.copy()
 
     # ==========================================================================
     # Model settings
@@ -52,32 +51,32 @@ class AppConfig(ConfigProtocol):
     @property
     def check_cube_sanity(self) -> bool:
         """Enable cube sanity checks."""
-        return cfg.CHECK_CUBE_SANITY
+        return self._data.check_cube_sanity
 
     @check_cube_sanity.setter
     def check_cube_sanity(self, value: bool) -> None:
         """Set cube sanity check flag."""
-        cfg.CHECK_CUBE_SANITY = value
+        self._data.check_cube_sanity = value
 
     @property
     def short_part_name(self) -> bool:
         """Use short names for parts."""
-        return cfg.SHORT_PART_NAME
+        return self._data.short_part_name
 
     @property
     def dont_optimized_part_id(self) -> bool:
         """Disable part ID optimization."""
-        return cfg.DONT_OPTIMIZED_PART_ID
+        return self._data.dont_optimized_part_id
 
     @property
     def print_cube_as_text_during_solve(self) -> bool:
         """Print cube state as text during solve."""
-        return cfg.PRINT_CUBE_AS_TEXT_DURING_SOLVE
+        return self._data.print_cube_as_text_during_solve
 
     @property
     def cube_size(self) -> int:
         """Default cube size."""
-        return cfg.CUBE_SIZE
+        return self._data.cube_size
 
     @property
     def enable_cube_cache(self) -> bool:
@@ -88,12 +87,12 @@ class AppConfig(ConfigProtocol):
         env_disable = _env_bool("CUBE_DISABLE_CACHE")
         if env_disable is not None:
             return not env_disable  # DISABLE_CACHE=1 → enable=False
-        return cfg.ENABLE_CUBE_CACHE
+        return self._data.enable_cube_cache
 
     @property
     def prevent_random_face_pick_up_in_geometry(self) -> bool:
         """Prevent random face selection in geometry walking (debug flag)."""
-        return cfg.PREVENT_RANDOM_FACE_PICK_UP_IN_GEOMETRY
+        return self._data.prevent_random_face_pick_up_in_geometry
 
     # ==========================================================================
     # Solver settings
@@ -101,7 +100,7 @@ class AppConfig(ConfigProtocol):
     @property
     def default_solver(self) -> str:
         """Default solver name (case-insensitive, prefix matching allowed)."""
-        return cfg.DEFAULT_SOLVER
+        return self._data.default_solver
 
     @property
     def solver_for_tests(self) -> str:
@@ -111,7 +110,7 @@ class AppConfig(ConfigProtocol):
             RuntimeError: If the configured test solver is not implemented.
         """
         from cube.domain.solver.SolverName import SolverName
-        solver_name = cfg.SOLVER_FOR_TESTS
+        solver_name = self._data.solver_for_tests
         try:
             solver = SolverName.lookup(solver_name)
             if not solver.meta.implemented:
@@ -134,41 +133,40 @@ class AppConfig(ConfigProtocol):
         """Set solver debug flag."""
         self._data.set_solver_debug(value)
 
-
     @property
     def solver_pll_rotate_while_search(self) -> bool:
         """Rotate during PLL search."""
-        return cfg.SOLVER_PLL_ROTATE_WHILE_SEARCH
+        return self._data.solver_pll_rotate_while_search
 
     @property
     def face_tracker(self) -> FaceTrackerConfig:
         """Face tracker configuration (annotations, validation)."""
-        return cfg.FACE_TRACKER
+        return self._data.face_tracker
 
     @property
     def solver_sanity_check_is_a_boy(self) -> bool:
         """Check if cube is in BOY orientation."""
-        return cfg.SOLVER_SANITY_CHECK_IS_A_BOY
+        return self._data.solver_sanity_check_is_a_boy
 
     @property
     def lbl_sanity_check(self) -> bool:
         """Enable LBL solver sanity checks (performance impact)."""
-        return cfg.LBL_SANITY_CHECK
+        return self._data.lbl_sanity_check
 
     @property
     def default_2x2_solver(self) -> str:
         """Default 2x2 solver used when a 3x3+ solver is asked to solve a 2x2."""
-        return cfg.DEFAULT_2X2_SOLVER
+        return self._data.default_2x2_solver
 
     @property
     def cage_3x3_solver(self) -> str:
         """3x3 solver used by cage method for corner solving (Phase 1b)."""
-        return cfg.CAGE_3X3_SOLVER
+        return self._data.cage_3x3_solver
 
     @property
     def first_face_color(self) -> Color:
         """First face color for Layer 1 in beginner and LBL solvers."""
-        return cfg.FIRST_FACE_COLOR
+        return self._data.first_face_color
 
     # ==========================================================================
     # Optimization settings
@@ -176,22 +174,22 @@ class AppConfig(ConfigProtocol):
     @property
     def optimize_odd_cube_centers_switch_centers(self) -> bool:
         """Optimize odd cube center switching."""
-        return cfg.OPTIMIZE_ODD_CUBE_CENTERS_SWITCH_CENTERS
+        return self._data.optimize_odd_cube_centers_switch_centers
 
     @property
     def optimize_big_cube_centers_search_complete_slices(self) -> bool:
         """Search for complete slices in big cube centers."""
-        return cfg.OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES
+        return self._data.optimize_big_cube_centers_search_complete_slices
 
     @property
     def optimize_big_cube_centers_search_complete_slices_only_target_zero(self) -> bool:
         """Only search complete slices for target zero."""
-        return cfg.OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES_ONLY_TARGET_ZERO
+        return self._data.optimize_big_cube_centers_search_complete_slices_only_target_zero
 
     @property
     def optimize_big_cube_centers_search_blocks(self) -> bool:
         """Search for blocks in big cube centers."""
-        return cfg.OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS
+        return self._data.optimize_big_cube_centers_search_blocks
 
     # ==========================================================================
     # Viewer settings
@@ -199,62 +197,62 @@ class AppConfig(ConfigProtocol):
     @property
     def cell_size(self) -> int:
         """Size of each cell in the viewer."""
-        return cfg.CELL_SIZE
+        return self._data.cell_size
 
     @property
     def corner_size(self) -> float:
         """Relative corner size (to cell size)."""
-        return cfg.CORNER_SIZE
+        return self._data.corner_size
 
     @property
     def axis_enabled(self) -> bool:
         """Master switch for axis drawing - when False, no axis code runs."""
-        return cfg.AXIS_ENABLED
+        return self._data.axis_enabled
 
     @property
     def axis_length(self) -> float:
         """Length of axis display."""
-        return cfg.AXIS_LENGTH
+        return self._data.axis_length
 
     @property
     def max_marker_radius(self) -> float:
         """Maximum radius for markers."""
-        return cfg.MAX_MARKER_RADIUS
+        return self._data.max_marker_radius
 
     @property
     def viewer_max_size_for_texture(self) -> int:
         """Maximum cube size for texture rendering."""
-        return cfg.VIEWER_MAX_SIZE_FOR_TEXTURE
+        return self._data.viewer_max_size_for_texture
 
     @property
     def tracker_indicator(self) -> TrackerIndicatorConfig:
         """Tracker indicator configuration (colored circle on tracked center slices)."""
-        return cfg.TRACKER_INDICATOR
+        return self._data.tracker_indicator
 
     @property
     def viewer_draw_shadows(self) -> str:
         """Faces to draw shadows for (e.g., 'LDB')."""
-        return cfg.VIEWER_DRAW_SHADOWS
+        return self._data.viewer_draw_shadows
 
     @property
     def viewer_trace_draw_update(self) -> bool:
         """Trace draw/update calls."""
-        return cfg.VIEWER_TRACE_DRAW_UPDATE
+        return self._data.viewer_trace_draw_update
 
     @property
     def prof_viewer_search_facet(self) -> bool:
         """Profile facet search."""
-        return cfg.PROF_VIEWER_SEARCH_FACET
+        return self._data.prof_viewer_search_facet
 
     @property
     def markers(self) -> dict[str, MarkerDef]:
         """Marker definitions by name."""
-        return cfg.MARKERS  # type: ignore[return-value]
+        return self._data.markers  # type: ignore[return-value]
 
     @property
     def arrow_config(self) -> ArrowConfigProtocol:
         """Get 3D arrow configuration for solver annotations."""
-        return cfg.ARROW_CONFIG
+        return self._data.arrow_config
 
     # ==========================================================================
     # GUI settings
@@ -262,57 +260,57 @@ class AppConfig(ConfigProtocol):
     @property
     def markers_config(self) -> MarkersConfig:
         """Get markers configuration (draw flags for various marker types)."""
-        return cfg.MARKERS_CONFIG
+        return self._data.markers_config
 
     @property
     def gui_test_mode(self) -> bool:
         """GUI testing mode - exceptions propagate."""
-        return cfg.GUI_TEST_MODE
+        return self._data.gui_test_mode
 
     @property
     def quit_on_error_in_test_mode(self) -> bool:
         """Quit application on error in test mode."""
-        return cfg.QUIT_ON_ERROR_IN_TEST_MODE
+        return self._data.quit_on_error_in_test_mode
 
     @property
     def animation_text(self) -> list[AnimationTextDef]:
         """Animation text display properties."""
-        return cfg.ANIMATION_TEXT  # type: ignore[return-value]
+        return self._data.animation_text  # type: ignore[return-value]
 
     @property
     def animation_enabled(self) -> bool:
         """Whether animation is enabled by default."""
-        return cfg.animation_enabled
+        return self._data.animation_enabled
 
     @property
     def animation_speed_config(self) -> AnimationSpeedConfigProtocol:
         """Animation speed parameters for WebGL frontend."""
-        return cfg.ANIMATION_SPEED_CONFIG
+        return self._data.animation_speed_config
 
     @property
     def assist_config(self) -> AssistConfigProtocol:
         """Assist mode configuration for WebGL frontend."""
-        return cfg.ASSIST_CONFIG
+        return self._data.assist_config
 
     @property
     def sound_config(self) -> SoundConfigProtocol:
         """Sound effects configuration for WebGL frontend."""
-        return cfg.SOUND_CONFIG
+        return self._data.sound_config
 
     @property
     def session_config(self) -> SessionConfigProtocol:
         """WebGL session configuration (keepalive timeout, etc.)."""
-        return cfg.SESSION_CONFIG
+        return self._data.session_config
 
     @property
     def show_file_algs(self) -> bool:
         """Show F1-F5 file algorithm buttons in toolbar."""
-        return cfg.SHOW_FILE_ALGS
+        return self._data.show_file_algs
 
     @property
     def full_mode(self) -> bool:
         """Whether app starts in full mode (hides toolbar/status text)."""
-        return cfg.FULL_MODE
+        return self._data.full_mode
 
     # ==========================================================================
     # Texture settings
@@ -320,17 +318,17 @@ class AppConfig(ConfigProtocol):
     @property
     def texture_sets(self) -> list[str | None] | None:
         """List of texture set names to cycle through."""
-        return cfg.TEXTURE_SETS
+        return self._data.texture_sets
 
     @property
     def texture_set_index(self) -> int:
         """Initial texture set index."""
-        return cfg.TEXTURE_SET_INDEX
+        return self._data.texture_set_index
 
     @property
     def debug_texture(self) -> bool:
         """Enable texture debug output."""
-        return cfg.DEBUG_TEXTURE
+        return self._data.debug_texture
 
     # ==========================================================================
     # Lighting settings
@@ -338,12 +336,12 @@ class AppConfig(ConfigProtocol):
     @property
     def lighting_brightness(self) -> float:
         """Default brightness level."""
-        return cfg.LIGHTING_BRIGHTNESS
+        return self._data.lighting_brightness
 
     @property
     def lighting_background(self) -> float:
         """Default background gray level."""
-        return cfg.LIGHTING_BACKGROUND
+        return self._data.lighting_background
 
     # ==========================================================================
     # Celebration settings
@@ -351,17 +349,17 @@ class AppConfig(ConfigProtocol):
     @property
     def celebration_effect(self) -> str:
         """Default celebration effect name."""
-        return cfg.CELEBRATION_EFFECT
+        return self._data.celebration_effect
 
     @property
     def celebration_enabled(self) -> bool:
         """Whether celebration effects are enabled."""
-        return cfg.CELEBRATION_ENABLED
+        return self._data.celebration_enabled
 
     @property
     def celebration_duration(self) -> float:
         """Celebration effect duration in seconds."""
-        return cfg.CELEBRATION_DURATION
+        return self._data.celebration_duration
 
     # ==========================================================================
     # Operator settings
@@ -369,17 +367,17 @@ class AppConfig(ConfigProtocol):
     @property
     def operation_log(self) -> bool:
         """Enable operation logging."""
-        return cfg.OPERATION_LOG
+        return self._data.operation_log
 
     @property
     def operation_log_path(self) -> str:
         """Path for operation log file."""
-        return cfg.OPERATION_LOG_PATH
+        return self._data.operation_log_path
 
     @property
     def operator_show_alg_annotation(self) -> bool:
         """Show algorithm annotations."""
-        return cfg.OPERATOR_SHOW_ALG_ANNOTATION
+        return self._data.operator_show_alg_annotation
 
     @property
     def operator_buffer_mode(self) -> bool:
@@ -421,17 +419,17 @@ class AppConfig(ConfigProtocol):
     @property
     def scramble_key_for_f9(self) -> int:
         """Scramble key for F9 shortcut."""
-        return cfg.SCRAMBLE_KEY_FOR_F9
+        return self._data.scramble_key_for_f9
 
     @property
     def test_number_of_scramble_iterations(self) -> int:
         """Number of scramble iterations for tests."""
-        return cfg.TEST_NUMBER_OF_SCRAMBLE_ITERATIONS
+        return self._data.test_number_of_scramble_iterations
 
     @property
     def last_scramble_path(self) -> str:
         """Path for last scramble file."""
-        return cfg.LAST_SCRAMBLE_PATH
+        return self._data.last_scramble_path
 
     # ==========================================================================
     # Mouse input settings
@@ -439,21 +437,18 @@ class AppConfig(ConfigProtocol):
     @property
     def input_mouse_debug(self) -> bool:
         """Enable mouse input debug output."""
-        return cfg.INPUT_MOUSE_DEBUG
+        return self._data.input_mouse_debug
 
     @property
     def input_mouse_model_rotate_by_drag_right_bottom(self) -> bool:
         """Model rotation by dragging right/bottom."""
-        return cfg.INPUT_MOUSE_MODEL_ROTATE_BY_DRAG_RIGHT_BOTTOM
+        return self._data.input_mouse_model_rotate_by_drag_right_bottom
 
     @property
     def input_mouse_rotate_adjusted_face(self) -> bool:
         """Rotate adjusted face on edge/corner drag."""
-        return cfg.INPUT_MOUSE_ROTATE_ADJUSTED_FACE
+        return self._data.input_mouse_rotate_adjusted_face
 
-    # ==========================================================================
-    # Single-step mode settings
-    # ==========================================================================
     # ==========================================================================
     # Config change listeners
     # ==========================================================================
@@ -477,4 +472,4 @@ class AppConfig(ConfigProtocol):
         Returns:
             True if the code is enabled in SS_CODES config, False otherwise
         """
-        return cfg.SS_CODES.get(code, False)
+        return self._data.ss_codes.get(code, False)

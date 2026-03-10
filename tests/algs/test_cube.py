@@ -19,9 +19,9 @@ def skip_if_not_supported(solver_name: SolverName, cube_size: int) -> None:
 @pytest.fixture(autouse=True)
 def reset_sanity_config():
     """Reset sanity config before each test to ensure clean state."""
-    original = config.CHECK_CUBE_SANITY
+    original = config.DEFAULTS.check_cube_sanity
     yield
-    config.CHECK_CUBE_SANITY = original
+    config.DEFAULTS.check_cube_sanity = original
 
 
 @pytest.mark.parametrize("cube_size", [3, 5])
@@ -30,7 +30,7 @@ def reset_sanity_config():
 def test_scramble_and_solve(cube_size: int, sanity_check: bool, solver: SolverName):
     """Test that a scrambled cube can be solved correctly."""
     skip_if_not_supported(solver, cube_size)
-    config.CHECK_CUBE_SANITY = sanity_check
+    config.DEFAULTS.check_cube_sanity = sanity_check
 
     app = AbstractApp.create_app(cube_size, solver=solver)
     cube = app.cube
