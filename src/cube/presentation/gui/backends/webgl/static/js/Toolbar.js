@@ -437,6 +437,28 @@ export class Toolbar {
                 return;
             }
 
+            // ArrowRight → redo, Shift+ArrowRight → play all
+            if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                if (e.shiftKey) {
+                    this._send({ type: 'play_next_redo' });
+                } else {
+                    this._send({ type: 'command', name: 'redo' });
+                }
+                return;
+            }
+
+            // ArrowLeft → undo, Shift+ArrowLeft → undo all
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                if (e.shiftKey) {
+                    this._send({ type: 'play_next_undo' });
+                } else {
+                    this._send({ type: 'command', name: 'undo' });
+                }
+                return;
+            }
+
             // Camera reset: Alt+C (view reset) or Ctrl+C (cube + view reset)
             // Camera is client-side (OrbitControls), so handle here
             if (e.key.toLowerCase() === 'c' && (e.altKey || e.ctrlKey)) {

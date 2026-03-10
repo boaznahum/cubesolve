@@ -22,6 +22,10 @@ python -m cube.main_webgl --debug-all       # verbose logging
 | Shift + R/L/U/D/F/B | Rotate face counter-clockwise |
 | M / E / S | Rotate middle slice |
 | X / Y / Z | Rotate whole cube |
+| Space / → | Play next queued move |
+| Backspace / ← | Undo last move |
+| Shift + → | Play all queued moves |
+| Shift + ← | Undo all moves |
 | 1 | Scramble |
 | S | Solve |
 | + / - | Speed up / slow down animation |
