@@ -21,7 +21,7 @@ def scramble(app:AbstractApp,
     alg = Algs.scramble(op.cube.size, scramble_key, scramble_size)
 
     if op.app_state.is_debug(verbose):
-        print(f"Running scramble, cube size={op.cube.size} key={scramble_key}, {type(scramble_key)=}, n={scramble_size}, alg={alg}")
+        op.app_state.debug(verbose, f"Running scramble, cube size={op.cube.size} key={scramble_key}, {type(scramble_key)=}, n={scramble_size}, alg={alg}")
 
     op.play(alg, False, animation=animation)
 

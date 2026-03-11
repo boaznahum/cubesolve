@@ -48,6 +48,9 @@ export class AppState extends EventTarget {
         this.assistEnabled = true;
         this.assistDelayMs = 400;
         this.soundEnabled = false;
+        this.operatorBufferMode = true;
+        this.queueHeadingH1 = true;
+        this.queueHeadingH2 = false;
         this.defaultScramble = '0';  // '0'-'9' or '*'
 
         // -- Text overlays --
@@ -55,6 +58,7 @@ export class AppState extends EventTarget {
         this.statusText = '';
         this.solverText = '';
         this.moveCount = 0;
+        this.errorText = '';
 
         // -- Meta --
         this.version = '';
@@ -129,12 +133,11 @@ export class AppState extends EventTarget {
             patch.sliceStop = msg.toolbar.slice_stop;
             patch.assistEnabled = msg.toolbar.assist_enabled;
             patch.assistDelayMs = msg.toolbar.assist_delay_ms;
-            if (msg.toolbar.sound_enabled !== undefined) {
-                patch.soundEnabled = msg.toolbar.sound_enabled;
-            }
-            if (msg.toolbar.default_scramble !== undefined) {
-                patch.defaultScramble = msg.toolbar.default_scramble;
-            }
+            patch.soundEnabled = msg.toolbar.sound_enabled;
+            patch.operatorBufferMode = msg.toolbar.operator_buffer_mode;
+            patch.queueHeadingH1 = msg.toolbar.queue_heading_h1;
+            patch.queueHeadingH2 = msg.toolbar.queue_heading_h2;
+            patch.defaultScramble = msg.toolbar.default_scramble;
         }
 
         // Text
@@ -143,6 +146,7 @@ export class AppState extends EventTarget {
             patch.statusText = msg.text.status || '';
             patch.solverText = msg.text.solver || '';
             patch.moveCount = msg.text.moves || 0;
+            patch.errorText = msg.text.error || '';
         }
 
         // Meta

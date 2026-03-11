@@ -140,15 +140,16 @@
                 </div>
                 <div class="tb-sep"></div>
                 <div class="tb-group">
-                    <button class="tb-btn tb-on" id="btn-debug" data-cmd="toggle_debug">Dbg:ON</button>
+                    <button class="tb-btn tb-icon" id="btn-console" title="Server console">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="2" y="3" width="20" height="18" rx="2" stroke="#ccc" stroke-width="2" fill="none"/>
+                            <polyline points="6,10 10,14 6,18" stroke="#ccc" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                            <line x1="13" y1="18" x2="18" y2="18" stroke="#ccc" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                    <button class="tb-btn" id="btn-settings" title="Settings">&#x2699;</button>
                     <button class="tb-btn tb-on" id="btn-anim" data-cmd="toggle_animation">Anim:ON</button>
-                    <label class="tb-label" style="cursor:pointer"><input type="checkbox" id="chk-assist" checked>
-                        Assist</label>
                     <button class="tb-btn tb-on" id="btn-sound" title="Toggle sound effects">🔊</button>
-                </div>
-                <div class="tb-sep"></div>
-                <div class="tb-group">
-                    <button class="tb-btn tb-shadow tb-off" id="btn-shadow-all" title="Show hidden faces (L/D/B)">LDB</button>
                 </div>
                 <div class="tb-sep"></div>
                 <div class="tb-group">
@@ -186,7 +187,6 @@
                 <canvas id="canvas"></canvas>
                 <div id="anim-overlay"></div>
                 <div id="status-overlay"></div>
-                <div id="debug-overlay"></div>
             </div>
             <div id="move-buttons">
                 <div class="mv-row">

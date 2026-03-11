@@ -75,6 +75,9 @@ class SessionStateSnapshot:
     assist_enabled: bool = True
     assist_delay_ms: int = 400
     sound_enabled: bool = False
+    operator_buffer_mode: bool = True
+    queue_heading_h1: bool = True
+    queue_heading_h2: bool = False
     default_scramble: str = "0"  # "0"-"9" or "*" (random)
 
     # -- Text overlays --
@@ -82,6 +85,7 @@ class SessionStateSnapshot:
     status_text: str = ""
     solver_text: str = ""
     move_count: int = 0
+    error_text: str = ""
 
     # -- Meta --
     version: str = ""
@@ -132,6 +136,9 @@ class SessionStateSnapshot:
                 "assist_enabled": self.assist_enabled,
                 "assist_delay_ms": self.assist_delay_ms,
                 "sound_enabled": self.sound_enabled,
+                "operator_buffer_mode": self.operator_buffer_mode,
+                "queue_heading_h1": self.queue_heading_h1,
+                "queue_heading_h2": self.queue_heading_h2,
                 "default_scramble": self.default_scramble,
             },
 
@@ -140,6 +147,7 @@ class SessionStateSnapshot:
                 "status": self.status_text,
                 "solver": self.solver_text,
                 "moves": self.move_count,
+                "error": self.error_text,
             },
 
             "version": self.version,

@@ -1167,6 +1167,227 @@ a.info-item-name:hover {
 }
 
 /* ============================================================
+   Settings Dialog (reuses info-dialog theme)
+   ============================================================ */
+
+.settings-dialog {
+    max-width: 400px;
+}
+
+.settings-content {
+    padding: 14px 20px;
+}
+
+.settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(0, 255, 65, 0.06);
+}
+
+.settings-row:last-child {
+    border-bottom: none;
+}
+
+.settings-label-wrap {
+    flex: 1;
+    margin-right: 16px;
+}
+
+.settings-label {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(0, 255, 65, 0.85);
+    cursor: pointer;
+}
+
+.settings-desc {
+    font-size: 11px;
+    color: rgba(0, 255, 65, 0.4);
+    margin-top: 2px;
+}
+
+/* Toggle switch */
+.settings-toggle {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 22px;
+    flex-shrink: 0;
+}
+
+.settings-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.settings-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 255, 65, 0.1);
+    border: 1px solid rgba(0, 255, 65, 0.2);
+    border-radius: 22px;
+    transition: all 0.25s ease;
+}
+
+.settings-slider::before {
+    content: '';
+    position: absolute;
+    height: 16px;
+    width: 16px;
+    left: 2px;
+    bottom: 2px;
+    background: rgba(0, 255, 65, 0.4);
+    border-radius: 50%;
+    transition: all 0.25s ease;
+}
+
+.settings-toggle input:checked + .settings-slider {
+    background: rgba(0, 255, 65, 0.2);
+    border-color: rgba(0, 255, 65, 0.5);
+}
+
+.settings-toggle input:checked + .settings-slider::before {
+    transform: translateX(18px);
+    background: rgba(0, 255, 65, 0.9);
+    box-shadow: 0 0 8px rgba(0, 255, 65, 0.3);
+}
+
+/* Cancel button */
+.settings-cancel-btn {
+    background: none;
+    border: 1px solid rgba(0, 255, 65, 0.15);
+    border-radius: 5px;
+    color: rgba(0, 255, 65, 0.5);
+    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    letter-spacing: 1px;
+    margin-right: 8px;
+}
+
+.settings-cancel-btn:hover {
+    border-color: rgba(0, 255, 65, 0.3);
+    color: rgba(0, 255, 65, 0.7);
+}
+
+/* Settings gear button */
+#btn-settings {
+    font-size: 18px;
+    line-height: 1;
+    padding: 2px 6px;
+}
+
+/* ============================================================
+   Console Panel — bottom-docked terminal log viewer
+   ============================================================ */
+#console-panel {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 200px;
+    z-index: 900;
+    display: flex;
+    flex-direction: column;
+    background: rgba(8, 12, 8, 0.96);
+    border-top: 1px solid rgba(0, 255, 65, 0.25);
+    overflow: hidden;
+    box-shadow:
+        0 -4px 20px rgba(0, 0, 0, 0.5),
+        0 0 20px rgba(0, 255, 65, 0.04);
+}
+
+.console-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 12px;
+    border-bottom: 1px solid rgba(0, 255, 65, 0.1);
+    background: rgba(0, 20, 0, 0.4);
+    flex-shrink: 0;
+}
+
+.console-title {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(0, 255, 65, 0.7);
+    letter-spacing: 0.5px;
+}
+
+.console-controls {
+    display: flex;
+    gap: 6px;
+}
+
+.console-ctrl-btn {
+    background: none;
+    border: 1px solid rgba(0, 255, 65, 0.15);
+    border-radius: 3px;
+    color: rgba(0, 255, 65, 0.45);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 1px 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.console-ctrl-btn:hover {
+    color: rgba(0, 255, 65, 0.8);
+    border-color: rgba(0, 255, 65, 0.4);
+    background: rgba(0, 255, 65, 0.06);
+}
+
+.console-content {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding: 6px 10px;
+    min-height: 0;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 255, 65, 0.12) transparent;
+}
+
+.console-content::-webkit-scrollbar {
+    width: 4px;
+}
+
+.console-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.console-content::-webkit-scrollbar-thumb {
+    background: rgba(0, 255, 65, 0.12);
+    border-radius: 4px;
+}
+
+.console-line {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 11px;
+    line-height: 1.45;
+    color: rgba(0, 255, 65, 0.75);
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+/* When console is open, shrink app to fit above the panel */
+body.console-open #app-layout {
+    max-height: calc(100vh - 200px);
+}
+
+/* ============================================================
    SEO Tagline
    ============================================================ */
 #seo-tagline {
@@ -1426,6 +1647,67 @@ a.info-item-name:hover {
 
     .info-item-desc {
         font-size: 10.5px;
+    }
+
+    /* Settings dialog — compact on mobile */
+    .settings-dialog {
+        max-width: 95%;
+    }
+
+    .settings-content {
+        padding: 10px 14px;
+    }
+
+    .settings-row {
+        padding: 8px 0;
+    }
+
+    .settings-label {
+        font-size: 11px;
+    }
+
+    .settings-desc {
+        font-size: 9px;
+    }
+
+    .settings-toggle {
+        width: 36px;
+        height: 20px;
+    }
+
+    .settings-slider::before {
+        height: 14px;
+        width: 14px;
+    }
+
+    .settings-toggle input:checked + .settings-slider::before {
+        transform: translateX(16px);
+    }
+
+    /* Console panel — compact on mobile */
+    #console-panel {
+        height: 35vh;
+    }
+
+    body.console-open #app-layout {
+        max-height: calc(100dvh - 35vh);
+    }
+
+    .console-header {
+        padding: 3px 8px;
+    }
+
+    .console-title {
+        font-size: 10px;
+    }
+
+    .console-content {
+        padding: 4px 6px;
+    }
+
+    .console-line {
+        font-size: 9px;
+        line-height: 1.35;
     }
 }
 

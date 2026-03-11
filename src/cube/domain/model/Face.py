@@ -671,8 +671,8 @@ class Face(SuperElement, Hashable, Colorable):
     def solved(self):
         if self.cube.n_slices == 0:
             # 2x2: no centers, no edges — solved iff all 4 corner stickers share one color
-            c = self._corners[0].f_color(self)
-            return all(corner.f_color(self) == c for corner in self._corners[1:])
+            c = self._corners[0].face_color(self)
+            return all(corner.face_color(self) == c for corner in self._corners[1:])
 
         if not self.is3x3:
             return False
@@ -680,14 +680,14 @@ class Face(SuperElement, Hashable, Colorable):
         c = self.color
 
         return (c ==
-                self._edge_top.f_color(self) ==
-                self._edge_right.f_color(self) ==
-                self._edge_bottom.f_color(self) ==
-                self._edge_left.f_color(self) ==
-                self._corner_top_left.f_color(self) ==
-                self._corner_top_right.f_color(self) ==
-                self._corner_bottom_left.f_color(self) ==
-                self._corner_bottom_right.f_color(self)
+                self._edge_top.face_color(self) ==
+                self._edge_right.face_color(self) ==
+                self._edge_bottom.face_color(self) ==
+                self._edge_left.face_color(self) ==
+                self._corner_top_left.face_color(self) ==
+                self._corner_top_right.face_color(self) ==
+                self._corner_bottom_left.face_color(self) ==
+                self._corner_bottom_right.face_color(self)
                 )
 
     @property

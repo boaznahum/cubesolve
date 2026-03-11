@@ -476,14 +476,39 @@ class ConfigProtocol(Protocol):
         """
         ...
 
+    @operator_buffer_mode.setter
+    def operator_buffer_mode(self, value: bool) -> None:
+        """Set operator buffer mode flag."""
+        ...
+
     @property
     def queue_heading_h1(self) -> bool:
         """Show h1 headings (solver phase names) in WebGL queue display."""
         ...
 
+    @queue_heading_h1.setter
+    def queue_heading_h1(self, value: bool) -> None:
+        """Set queue heading h1 flag."""
+        ...
+
     @property
     def queue_heading_h2(self) -> bool:
         """Show h2 headings (sub-step details) in WebGL queue display."""
+        ...
+
+    @queue_heading_h2.setter
+    def queue_heading_h2(self, value: bool) -> None:
+        """Set queue heading h2 flag."""
+        ...
+
+    @property
+    def assist_enabled(self) -> bool:
+        """Whether assist mode (move preview) is enabled."""
+        ...
+
+    @assist_enabled.setter
+    def assist_enabled(self, value: bool) -> None:
+        """Set assist enabled flag."""
         ...
 
     # ==========================================================================
@@ -520,6 +545,20 @@ class ConfigProtocol(Protocol):
     @property
     def input_mouse_rotate_adjusted_face(self) -> bool:
         """Rotate adjusted face on edge/corner drag."""
+        ...
+
+    # ==========================================================================
+    # Single-step mode settings
+    # ==========================================================================
+    # ==========================================================================
+    # Config change listeners
+    # ==========================================================================
+    def add_config_listener(self, listener: object) -> None:
+        """Register a callback(field_name: str, new_value: object) for config changes."""
+        ...
+
+    def remove_config_listener(self, listener: object) -> None:
+        """Unregister a config change listener."""
         ...
 
     # ==========================================================================

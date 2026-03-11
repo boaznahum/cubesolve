@@ -134,9 +134,9 @@ class GUITestRunner:
             cmd_seq = commands
 
         # Save original config values (only test-specific flags)
-        original_test_mode = config.GUI_TEST_MODE
-        original_debug = config.KEYBOAD_INPUT_DEBUG
-        original_solver = config.DEFAULT_SOLVER
+        original_test_mode = config.CONFIG_DEFAULTS.gui_test_mode
+        original_debug = config.CONFIG_DEFAULTS.keyboard_input_debug
+        original_solver = config.CONFIG_DEFAULTS.default_solver
 
         test_error: Exception | None = None
         test_success = False
@@ -155,18 +155,18 @@ class GUITestRunner:
 
         try:
             # Configure for testing (only test-specific flags)
-            config.GUI_TEST_MODE = True
-            config.KEYBOAD_INPUT_DEBUG = debug
+            config.CONFIG_DEFAULTS.gui_test_mode = True
+            config.CONFIG_DEFAULTS.keyboard_input_debug = debug
             # Use test solver (must be implemented)
             from cube.domain.solver.SolverName import SolverName
-            test_solver = config.SOLVER_FOR_TESTS
+            test_solver = config.CONFIG_DEFAULTS.solver_for_tests
             solver_name = SolverName.lookup(test_solver)
             if not solver_name.meta.implemented:
                 raise RuntimeError(
                     f"SOLVER_FOR_TESTS='{test_solver}' is not implemented. "
                     f"Set it to one of: {', '.join(s.display_name for s in SolverName.implemented())}"
                 )
-            config.DEFAULT_SOLVER = test_solver
+            config.CONFIG_DEFAULTS.default_solver = test_solver
 
             if debug:
                 print(f"Starting GUI test with commands: {cmd_seq}")
@@ -273,9 +273,9 @@ class GUITestRunner:
                 pass
 
             # Restore original config
-            config.GUI_TEST_MODE = original_test_mode
-            config.KEYBOAD_INPUT_DEBUG = original_debug
-            config.DEFAULT_SOLVER = original_solver
+            config.CONFIG_DEFAULTS.gui_test_mode = original_test_mode
+            config.CONFIG_DEFAULTS.keyboard_input_debug = original_debug
+            config.CONFIG_DEFAULTS.default_solver = original_solver
 
             if debug:
                 print("Test completed, config restored")

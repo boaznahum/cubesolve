@@ -215,9 +215,9 @@ def _parse_slice_prefix(t: str) -> tuple[str, slice | list[int] | None]:
             raise InternalSWError(f"Invalid slice format: {slice_str}")
 
         start_str, stop_str = parts
-        start = int(start_str) if start_str else None
-        stop = int(stop_str) if stop_str else None
-        return base_token, slice(start, stop)
+        s_start: int | None = int(start_str) if start_str else None
+        s_stop: int | None = int(stop_str) if stop_str else None
+        return base_token, slice(s_start, s_stop)
 
     else:
         # Single index: [1] -> slice(1, 1)

@@ -58,8 +58,8 @@ def webgl_server(request: pytest.FixtureRequest) -> Generator[str, None, None]:
     from cube.application import _config as cfg
 
     # Enable test mode: localhost binding, random port, no browser
-    original_test_mode = cfg.GUI_TEST_MODE
-    cfg.GUI_TEST_MODE = True
+    original_test_mode = cfg.CONFIG_DEFAULTS.gui_test_mode
+    cfg.CONFIG_DEFAULTS.gui_test_mode = True
 
     # Temporarily hide dist/ so server serves from source static/
     # (dist/ may be stale and missing test-time JS changes like window.appState)
@@ -112,7 +112,7 @@ def webgl_server(request: pytest.FixtureRequest) -> Generator[str, None, None]:
         window.cleanup()
 
     finally:
-        cfg.GUI_TEST_MODE = original_test_mode
+        cfg.CONFIG_DEFAULTS.gui_test_mode = original_test_mode
         # Restore dist/ if we hid it
         if did_hide_dist and dist_hidden.exists():
             # Retry rename — on Windows, file locks may linger briefly

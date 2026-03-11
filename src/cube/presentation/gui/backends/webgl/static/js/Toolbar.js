@@ -12,7 +12,7 @@ export class Toolbar {
         this._animOverlay = document.getElementById('anim-overlay');
         this._statusOverlay = document.getElementById('status-overlay');
         this._statusEl = document.getElementById('status');
-        this._assistDelayMs = 400;  // default, overridden by server config
+        this._errorBanner = this._createErrorBanner();
         this._cubeModel = null;  // set by main.js for shadow toggle
     }
 
@@ -33,8 +33,14 @@ export class Toolbar {
         // Disable action buttons that aren't allowed in current state
         for (const btn of document.querySelectorAll('[data-cmd]')) {
             const cmd = btn.dataset.cmd;
-            if (cmd === 'stop' || cmd === 'toggle_debug' || cmd === 'toggle_animation') continue;
+            if (cmd === 'stop' || cmd === 'toggle_animation') continue;
             if (a[cmd] !== undefined) btn.disabled = !a[cmd];
+        }
+
+        // Move buttons (F, U, R, etc.): disable when face_turn not allowed
+        const canTurn = !!a.face_turn;
+        for (const btn of document.querySelectorAll('.mv-btn[data-key]')) {
+            btn.disabled = !canTurn;
         }
 
         // Paint button + size/solver selects: disable during solving/playing
@@ -95,16 +101,19 @@ export class Toolbar {
             }
             this._statusOverlay.innerHTML = html;
         }
+
+        // Error banner — separate element above status bar
+        if (this._errorBanner) {
+            if (appState.errorText) {
+                this._errorBanner.textContent = '\u26A0 ' + appState.errorText;
+                this._errorBanner.style.display = 'block';
+            } else {
+                this._errorBanner.style.display = 'none';
+            }
+        }
     }
 
     _updateToolbarFromState(appState) {
-        // Debug toggle
-        const btnDebug = document.getElementById('btn-debug');
-        if (btnDebug) {
-            btnDebug.textContent = appState.debug ? 'Dbg:ON' : 'Dbg:OFF';
-            btnDebug.className = 'tb-btn ' + (appState.debug ? 'tb-on' : 'tb-off');
-        }
-
         // Animation toggle
         const btnAnim = document.getElementById('btn-anim');
         if (btnAnim) {
@@ -125,10 +134,9 @@ export class Toolbar {
             }
         }
 
-        // Assist checkbox — only set from server if user hasn't locally overridden
-        const chkAssist = document.getElementById('chk-assist');
-        if (chkAssist && this._assistLocalOverride === undefined) {
-            chkAssist.checked = appState.assistEnabled;
+        // Assist — sync animation queue delay from server config
+        if (this._animQueue) {
+            this._animQueue.assistDelayMs = appState.assistEnabled ? (appState.assistDelayMs || 400) : 0;
         }
 
         // Sound toggle — sync from server config on initial load
@@ -196,6 +204,16 @@ export class Toolbar {
             this._statusEl.appendChild(document.createTextNode(` #${this._state.clientCount}`));
         }
         this._statusEl.className = 'connected';
+    }
+
+    _createErrorBanner() {
+        const banner = document.createElement('div');
+        banner.id = 'error-banner';
+        banner.style.cssText = 'display:none;position:fixed;left:0;right:0;bottom:60px;z-index:9999;' +
+            'background:#cc0000;color:#fff;font-weight:bold;font-size:14px;' +
+            'padding:6px 16px;text-align:center;box-shadow:0 -2px 8px rgba(0,0,0,0.5)';
+        document.body.appendChild(banner);
+        return banner;
     }
 
     _esc(text) {
@@ -270,16 +288,6 @@ export class Toolbar {
             });
         }
 
-        // Assist checkbox (controls AnimationQueue preview delay)
-        const chkAssist = document.getElementById('chk-assist');
-        if (chkAssist) {
-            chkAssist.addEventListener('change', () => {
-                this._assistLocalOverride = chkAssist.checked;
-                this._animQueue.assistDelayMs = chkAssist.checked ? (this._assistDelayMs || 400) : 0;
-                chkAssist.blur();  // Release focus so keyboard handler works
-            });
-        }
-
         // Sound toggle (client-side only — no server message)
         const btnSound = document.getElementById('btn-sound');
         if (btnSound && this._sound) {
@@ -288,24 +296,6 @@ export class Toolbar {
                 this._sound.enabled = !this._sound.enabled;
                 btnSound.textContent = this._sound.enabled ? '🔊' : '🔇';
                 btnSound.className = 'tb-btn ' + (this._sound.enabled ? 'tb-on' : 'tb-off');
-            });
-        }
-
-        // Shadow face toggle button — toggles all L/D/B at once
-        const btnShadowAll = document.getElementById('btn-shadow-all');
-        if (btnShadowAll) {
-            btnShadowAll.addEventListener('click', () => {
-                if (!this._cubeModel) return;
-                // Toggle: if any are on, turn all off; otherwise turn all on
-                const anyOn = ['L', 'D', 'B'].some(f => this._cubeModel.shadowVisible[f]);
-                for (const f of ['L', 'D', 'B']) {
-                    if (anyOn && this._cubeModel.shadowVisible[f]) {
-                        this._cubeModel.toggleShadow(f);
-                    } else if (!anyOn && !this._cubeModel.shadowVisible[f]) {
-                        this._cubeModel.toggleShadow(f);
-                    }
-                }
-                this._updateShadowButtons();
             });
         }
 
@@ -404,6 +394,20 @@ export class Toolbar {
     }
 
     _bindKeyboard() {
+        // Blur selects after value change so keyboard shortcuts work immediately
+        for (const sel of document.querySelectorAll('select')) {
+            sel.addEventListener('change', () => sel.blur());
+        }
+        // Canvas click releases focus from any input/select
+        const canvas = document.getElementById('canvas');
+        if (canvas) {
+            canvas.addEventListener('pointerdown', () => {
+                if (document.activeElement instanceof HTMLElement) {
+                    document.activeElement.blur();
+                }
+            });
+        }
+
         window.addEventListener('keydown', (e) => {
             // Don't capture when typing in inputs
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
@@ -419,7 +423,6 @@ export class Toolbar {
                         this._cubeModel.toggleShadow(f);
                     }
                 }
-                this._updateShadowButtons();
                 return;
             }
 
@@ -486,13 +489,4 @@ export class Toolbar {
         });
     }
 
-    /** Update shadow toggle button style to reflect current state. */
-    _updateShadowButtons() {
-        if (!this._cubeModel) return;
-        const btn = document.getElementById('btn-shadow-all');
-        if (btn) {
-            const anyOn = ['L', 'D', 'B'].some(f => this._cubeModel.shadowVisible[f]);
-            btn.className = 'tb-btn tb-shadow ' + (anyOn ? 'tb-on' : 'tb-off');
-        }
-    }
 }
