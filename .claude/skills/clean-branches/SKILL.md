@@ -59,10 +59,15 @@ After reviewing the output, proceed with user approval for any actions (delete, 
 
 | Namespace | Purpose | Example |
 |-----------|---------|---------|
-| `archive/completed/<name>` | Merged branches (work completed) | `archive/completed/feature-login` |
-| `archive/stopped/<name>` | Unmerged branches (abandoned work) | `archive/stopped/experiment-x` |
+| `zzarchive/completed/<name>` | Merged branches (work completed) | `zzarchive/completed/feature-login` |
+| `zzarchive/stopped/<name>` | Unmerged branches (abandoned work) | `zzarchive/stopped/experiment-x` |
+| `zzarchive/claudez/<name>` | Archived claude/ branches | `zzarchive/claudez/fix-bug-abc123` |
 | `wip/<name>` | Work in progress (active development) | `wip/new-feature` |
 | (root) | Keep as-is | `feature-y` |
+
+**Special naming rules:**
+- `claude/` branches are archived to `zzarchive/claudez/` (not `zzarchive/claude/`) so searching for `claude/` won't find archived branches
+- All archive branches use `zzarchive/` prefix (sorts to bottom of branch list)
 
 ## Workflow
 
@@ -120,7 +125,7 @@ For each LOCAL branch (excluding the target branch and already-archived branches
    git merge-base --is-ancestor <branch> <target-branch> && echo "Contained in target"
 
    # Check if branch is ancestor of any archived branch
-   for archived in $(git branch -r | grep "origin/archive/"); do
+   for archived in $(git branch -r | grep "origin/zzarchive/"); do
      git merge-base --is-ancestor <branch> $archived 2>/dev/null && echo "Contained in $archived"
    done
 
@@ -130,8 +135,8 @@ For each LOCAL branch (excluding the target branch and already-archived branches
 
    **Interpretation:**
    - If contained in the target branch → Work was merged, safe to delete local branch
-   - If contained in `archive/completed/*` → Work was completed, safe to delete local branch
-   - If contained in `archive/stopped/*` → Work was archived, safe to delete local branch
+   - If contained in `zzarchive/completed/*` → Work was completed, safe to delete local branch
+   - If contained in `zzarchive/stopped/*` → Work was archived, safe to delete local branch
    - If NOT contained anywhere → Work may be lost if deleted, ask user carefully
 
 ### Step 5: Analyze Remote-Only Branches (CRITICAL!)
@@ -140,7 +145,7 @@ For each LOCAL branch (excluding the target branch and already-archived branches
 
 ```bash
 # List remote branches not merged into target branch
-git branch -r --no-merged <target-branch> | grep -v HEAD | grep -v "archive/" | grep -v "wip/"
+git branch -r --no-merged <target-branch> | grep -v HEAD | grep -v "zzarchive/" | grep -v "wip/"
 ```
 
 For each remote-only branch found:
@@ -166,17 +171,17 @@ For each remote-only branch found:
    ```
 
 **Actions for remote-only branches:**
-- If contained in target branch → Move to `archive/completed/` (work was merged)
+- If contained in target branch → Move to `zzarchive/completed/` (work was merged)
 - If contained in current branch but not target → Ask user (might be pending merge)
-- If NOT contained anywhere → Ask user: archive/stopped or keep for future work
+- If NOT contained anywhere → Ask user: zzarchive/stopped or keep for future work
 
 ```bash
-# Move remote branch to archive/completed (if merged)
-git push origin origin/<branch>:refs/heads/archive/completed/<branch>
+# Move remote branch to zzarchive/completed (if merged)
+git push origin origin/<branch>:refs/heads/zzarchive/completed/<branch>
 git push origin --delete <branch>
 
-# Move remote branch to archive/stopped (if abandoned)
-git push origin origin/<branch>:refs/heads/archive/stopped/<branch>
+# Move remote branch to zzarchive/stopped (if abandoned)
+git push origin origin/<branch>:refs/heads/zzarchive/stopped/<branch>
 git push origin --delete <branch>
 ```
 
@@ -187,14 +192,14 @@ Present a summary table to the user:
 | Branch | Status | Last Commit | Age | Remote | Contained In | Recommendation |
 |--------|--------|-------------|-----|--------|--------------|----------------|
 | feature-x | Merged | abc123 Fix bug | 2 weeks | Yes | target | → delete local (work in target) |
-| experiment-y | Unmerged | def456 WIP | 3 months | No | archive/stopped/exp-y | → delete local (already archived) |
+| experiment-y | Unmerged | def456 WIP | 3 months | No | zzarchive/stopped/exp-y | → delete local (already archived) |
 | new-feature | Unmerged | ghi789 Add X | 1 day | No | (none) | → ask user: WIP/stop/keep |
 
 **Key insight:** If "Contained In" shows the target branch or another branch, the work is NOT lost - it's safe to delete the local branch.
 
 ### Step 7: Delete Contained Local-Only Branches
 
-For local branches that have no remote but ARE contained in another branch (target branch or archive/*), the work is already preserved elsewhere. These can be safely deleted:
+For local branches that have no remote but ARE contained in another branch (target branch or zzarchive/*), the work is already preserved elsewhere. These can be safely deleted:
 
 ```bash
 # Delete local branch that's already contained in target or archive
@@ -233,7 +238,7 @@ For branches that have remotes and are confirmed as merged, offer these options:
 **Archive remote + delete local** (best option - preserves history on remote):
 ```bash
 # Move remote branch to archive
-git push origin origin/<branch>:refs/heads/archive/completed/<branch>
+git push origin origin/<branch>:refs/heads/zzarchive/completed/<branch>
 
 # Delete old remote branch
 git push origin --delete <branch>
@@ -244,17 +249,17 @@ git branch -D <branch>
 # Prune stale remote-tracking refs
 git fetch --prune
 
-# Delete the new archive remote-tracking ref (we don't want to track archive/* locally)
-git branch -dr origin/archive/completed/<branch>
+# Delete the new zzarchive remote-tracking ref (we don't want to track zzarchive/* locally)
+git branch -dr origin/zzarchive/completed/<branch>   # or zzarchive/claudez/ for claude/ branches
 ```
 
 **IMPORTANT: Clean up archive refs and [gone] branches.**
 
-1. **Delete archive remote-tracking refs** - The push creates a local ref `remotes/origin/archive/*` that we don't need. Delete it with `git branch -dr`. The fetch refspec should exclude `archive/*` so it won't be re-fetched:
+1. **Delete zzarchive remote-tracking refs** - The push creates a local ref `remotes/origin/zzarchive/*` that we don't need. Delete it with `git branch -dr`. The fetch refspec should exclude `zzarchive/*` so it won't be re-fetched:
    ```bash
-   # Ensure archive/* is excluded from fetch (one-time setup)
-   git config --get-all remote.origin.fetch | grep -q 'archive' || \
-     git config --add remote.origin.fetch '^refs/heads/archive/*'
+   # Ensure zzarchive/* is excluded from fetch (one-time setup)
+   git config --get-all remote.origin.fetch | grep -q 'zzarchive' || \
+     git config --add remote.origin.fetch '^refs/heads/zzarchive/*'
    ```
 
 2. **Run `/commit-commands:clean_gone`** - Deletes any local branches marked as `[gone]` (including associated worktrees).
@@ -276,7 +281,7 @@ For each unmerged branch, ask the user using AskUserQuestion:
 
 - **Keep**: Leave branch as-is
 - **WIP**: Move to `wip/<branch-name>`
-- **Stop**: Move to `archive/stopped/<branch-name>`
+- **Stop**: Move to `zzarchive/stopped/<branch-name>`
 
 Then execute the chosen action:
 
@@ -287,8 +292,8 @@ git push origin wip/<branch>
 git push origin --delete <branch>
 
 # For Stop
-git branch -m <branch> archive/stopped/<branch>
-git push origin archive/stopped/<branch>
+git branch -m <branch> zzarchive/stopped/<branch>
+git push origin zzarchive/stopped/<branch>
 git push origin --delete <branch>
 ```
 
@@ -298,8 +303,8 @@ Local archive branches that are synced with remote are redundant - they're safel
 
 1. **Identify synced archive branches**:
    ```bash
-   # Find local archive branches that have matching remote
-   for branch in $(git branch --list 'archive/*'); do
+   # Find local zzarchive branches that have matching remote
+   for branch in $(git branch --list 'zzarchive/*'); do
      branch_name=$(echo "$branch" | sed 's/^[* ]*//')
      if git ls-remote --heads origin "$branch_name" | grep -q .; then
        echo "$branch_name"  # Has remote backup, safe to delete locally
@@ -310,12 +315,12 @@ Local archive branches that are synced with remote are redundant - they're safel
 2. **Present to user**:
    | Local Archive Branch | Remote Status | Recommendation |
    |---------------------|---------------|----------------|
-   | archive/completed/feature-x | ✅ Synced | Delete local (backed up) |
-   | archive/image-bug | ✅ Synced | Delete local (backed up) |
+   | zzarchive/completed/feature-x | ✅ Synced | Delete local (backed up) |
+   | zzarchive/image-bug | ✅ Synced | Delete local (backed up) |
 
 3. **Offer bulk deletion**:
    Ask using AskUserQuestion:
-   - **Delete all synced**: Remove all local archive branches that have remote backups
+   - **Delete all synced**: Remove all local zzarchive branches that have remote backups
    - **Review each**: Go through them one by one
    - **Keep all**: Leave local copies
 
@@ -334,7 +339,7 @@ After processing, show updated branch list and ask if further cleanup is needed.
 - Query/read operations (git log, git branch --list, git branch --contains, etc.) do NOT require approval
 - Never batch multiple branch operations - ask for approval for each branch individually or show a clear list and get explicit confirmation
 - Even if analysis shows a branch is "safe to delete", still ask the user first
-- Skip branches that are already in `archive/` or `wip/` namespaces (no action needed)
+- Skip branches that are already in `zzarchive/` or `wip/` namespaces (no action needed)
 - **Archive branches**: When analyzing, distinguish between:
   - Local-only archives: May want to push to remote first or delete
   - Synced archives: Safe to delete locally (backed up on remote)

@@ -26,7 +26,7 @@ class BranchInfo:
     last_commit_age: str
     contained_in: list[str]
     is_archived: bool
-    namespace: str  # 'archive/completed', 'archive/stopped', 'wip', 'feature', or ''
+    namespace: str  # 'zzarchive/completed', 'zzarchive/stopped', 'zzarchive/claudez', 'wip', 'feature', or ''
     ff_relation: str  # 'same', 'behind' (contained in target), 'ahead' (target FF to branch), 'diverged'
     ahead_behind: str  # e.g. "3 ahead, 2 behind" relative to target
     worktree_path: str  # path if checked out in a worktree, else ''
@@ -181,14 +181,28 @@ def get_worktree_branches() -> dict[str, str]:
     return result
 
 
+def _archive_name(branch_name: str, category: str = "completed") -> str:
+    """Build the archive destination for a branch.
+
+    claude/ branches go to zzarchive/claudez/ (so searching 'claude/' won't find them).
+    All other branches go to zzarchive/<category>/<name>.
+    """
+    if branch_name.startswith("claude/"):
+        # claude/foo-bar -> zzarchive/claudez/foo-bar
+        return f"zzarchive/claudez/{branch_name[len('claude/'):]}"
+    return f"zzarchive/{category}/{branch_name}"
+
+
 def get_namespace(branch: str) -> str:
     """Extract namespace from branch name."""
-    if branch.startswith("archive/completed/"):
-        return "archive/completed"
-    if branch.startswith("archive/stopped/"):
-        return "archive/stopped"
-    if branch.startswith("archive/"):
-        return "archive"
+    if branch.startswith("zzarchive/completed/"):
+        return "zzarchive/completed"
+    if branch.startswith("zzarchive/stopped/"):
+        return "zzarchive/stopped"
+    if branch.startswith("zzarchive/claudez/"):
+        return "zzarchive/claudez"
+    if branch.startswith("zzarchive/"):
+        return "zzarchive"
     if branch.startswith("wip/"):
         return "wip"
     if branch.startswith("feature/"):
@@ -211,12 +225,75 @@ def find_contained_in(branch: str, ref: str, all_branches: list[str], default_br
         if target == default_branch:
             continue
         # Check archived branches
-        if target.startswith("archive/"):
+        if target.startswith("zzarchive/"):
             target_ref = f"origin/{target}"
             if is_ancestor(ref, target_ref):
                 contained.append(target)
 
     return contained
+
+
+def _update_compare_branch(compare_branch: str, current_branch: str, local_branches: list[str]) -> str:
+    """Update the compare branch to match its remote tracking branch.
+
+    Returns a status message describing what happened.
+    """
+    # Check if remote exists for compare branch
+    try:
+        run_git(["ls-remote", "--heads", "origin", compare_branch])
+    except subprocess.CalledProcessError:
+        return f"WARNING: No remote for {compare_branch}, using local state"
+
+    remote_ref = f"origin/{compare_branch}"
+
+    # Check if remote ref exists locally (was fetched)
+    try:
+        run_git(["rev-parse", "--verify", remote_ref])
+    except subprocess.CalledProcessError:
+        return f"WARNING: Remote ref {remote_ref} not found locally"
+
+    if compare_branch not in local_branches:
+        # No local branch - we'll compare against origin/compare_branch
+        # Nothing to update, but we need to use the remote ref for comparison
+        return f"Using remote {remote_ref} (no local branch)"
+
+    # Check if local is behind remote
+    try:
+        local_sha = run_git(["rev-parse", compare_branch])
+        remote_sha = run_git(["rev-parse", remote_ref])
+    except subprocess.CalledProcessError:
+        return f"WARNING: Could not resolve refs for {compare_branch}"
+
+    if local_sha == remote_sha:
+        return f"{compare_branch} is up to date with remote"
+
+    # Local differs from remote - try to fast-forward
+    if compare_branch == current_branch:
+        # Currently on this branch - try git pull --ff-only
+        try:
+            run_git(["merge", "--ff-only", remote_ref])
+            return f"Fast-forwarded {compare_branch} to match remote"
+        except subprocess.CalledProcessError:
+            # Can't FF - local has diverged
+            return (f"WARNING: {compare_branch} has diverged from remote! "
+                    f"Using local state (may give incorrect results). "
+                    f"Consider: git pull --rebase")
+    else:
+        # Not on this branch - update the ref directly
+        if is_ancestor(compare_branch, remote_ref):
+            # Local is behind remote - safe to fast-forward
+            try:
+                run_git(["update-ref", f"refs/heads/{compare_branch}", remote_sha])
+                return f"Updated {compare_branch} to match remote (was behind)"
+            except subprocess.CalledProcessError:
+                return f"WARNING: Could not update {compare_branch} ref"
+        elif is_ancestor(remote_ref, compare_branch):
+            # Local is ahead of remote - unusual but not an error
+            return f"WARNING: Local {compare_branch} is ahead of remote"
+        else:
+            # Diverged
+            return (f"WARNING: {compare_branch} has diverged from remote! "
+                    f"Using local state (may give incorrect results)")
 
 
 def analyze_branches(target_branch: str | None = None) -> dict:
@@ -236,6 +313,11 @@ def analyze_branches(target_branch: str | None = None) -> dict:
     # Use target_branch if specified, otherwise use default branch
     compare_branch = target_branch if target_branch else default_branch
 
+    # Update the compare branch to match remote before analysis
+    update_status = _update_compare_branch(compare_branch, current_branch, local_branches)
+    if update_status:
+        print(update_status, file=sys.stderr)
+
     all_branch_names = set(local_branches) | set(remote_branches)
     worktree_map = get_worktree_branches()
 
@@ -247,7 +329,7 @@ def analyze_branches(target_branch: str | None = None) -> dict:
         is_local = name in local_branches
         is_remote = name in remote_branches
         namespace = get_namespace(name)
-        is_archived = namespace.startswith("archive")
+        is_archived = namespace.startswith("zzarchive")
 
         # Get ref to use for analysis
         if is_local:
@@ -316,38 +398,40 @@ def print_report(data: dict) -> None:
 
     # Active branches
     print(f"\n### Active Branches ({len(active)})\n")
-    print(f"**Legend:** Unique = commits only on this branch (not in `{compare_branch}`). "
-          f"Missing = commits in `{compare_branch}` not on this branch.\n")
+    print(f"Comparing against `{compare_branch}`\n")
     if active:
-        print("| Branch | Local | Remote | Last Commit | Age | Unique | Missing | Can FF? | Action |")
-        print("|--------|-------|--------|-------------|-----|--------|---------|---------|--------|")
+        print("| Branch | Local | Remote | Last Commit | Age | Status | Action |")
+        print("|--------|-------|--------|-------------|-----|--------|--------|")
 
         for b in active:
             local = "Yes" if b.is_local else "No"
             remote = "Yes" if b.is_remote else "No"
 
-            # Parse ahead/behind into unique and missing counts
-            unique = "-"
-            missing = "-"
-            can_ff = "-"
-            if b.ahead_behind and b.ahead_behind != "unknown":
-                parts = b.ahead_behind.split(", ")
-                if len(parts) == 2:
-                    unique = parts[0].split()[0]   # "N ahead" -> "N"
-                    missing = parts[1].split()[0]   # "M behind" -> "M"
-
-            # Can FF? logic:
-            # - unique=0: all work in target, can FF (or already same)
-            # - missing=0: target can FF to this branch
-            # - both >0: diverged, no FF possible
+            # Status: clear human-readable description of relationship to target
             if b.ff_relation == "same":
-                can_ff = "= same"
+                status = "= identical to target"
             elif b.ff_relation == "behind":
-                can_ff = "YES (all work in target)"
+                status = "ALL work in target"
             elif b.ff_relation == "ahead":
-                can_ff = "YES (target can FF here)"
+                # Parse ahead count for clarity
+                ahead_count = ""
+                if b.ahead_behind and b.ahead_behind != "unknown":
+                    parts = b.ahead_behind.split(", ")
+                    if len(parts) == 2:
+                        ahead_count = parts[0].split()[0]
+                status = f"NOT in target ({ahead_count} unique commits)"
             elif b.ff_relation == "diverged":
-                can_ff = "NO (diverged)"
+                # Parse counts
+                ahead_count = ""
+                behind_count = ""
+                if b.ahead_behind and b.ahead_behind != "unknown":
+                    parts = b.ahead_behind.split(", ")
+                    if len(parts) == 2:
+                        ahead_count = parts[0].split()[0]
+                        behind_count = parts[1].split()[0]
+                status = f"NOT in target ({ahead_count} unique, {behind_count} missing)"
+            else:
+                status = "-"
 
             # Determine recommended action
             wt_note = f" WORKTREE: {b.worktree_path}" if b.worktree_path else ""
@@ -359,31 +443,23 @@ def print_report(data: dict) -> None:
                 action = "Keep (current)"
             elif b.name in standard_branches:
                 action = "Keep (standard)"
-            elif b.ff_relation == "behind":
+            elif b.ff_relation in ("behind", "same"):
+                # All work is in the target - safe to delete
                 if b.is_local and not b.is_remote:
-                    action = "Delete local (in target)" + wt_note
+                    action = "Delete local (work in target)" + wt_note
                 elif b.is_local and b.is_remote:
-                    action = "Delete both (in target)" + wt_note
+                    action = "Delete both (work in target)" + wt_note
                 else:
-                    action = "Delete remote (in target)"
-            elif b.ff_relation == "same":
-                if b.is_local and not b.is_remote:
-                    action = "Delete local (same as target)" + wt_note
-                elif b.is_local and b.is_remote:
-                    action = "Delete both (same as target)" + wt_note
-                else:
-                    action = "Delete remote (same as target)"
-            elif b.ff_relation == "ahead":
-                action = "Review (ahead of target)"
+                    action = "Delete remote (work in target)"
             elif b.contained_in:
                 if b.is_local and not b.is_remote:
                     action = "Delete local (in " + b.contained_in[0] + ")" + wt_note
                 else:
                     action = "Archive? (in " + b.contained_in[0] + ")"
             else:
-                action = "Review"
+                action = "Review (work NOT in target)"
 
-            print(f"| `{b.name}` | {local} | {remote} | {b.last_commit_hash} {b.last_commit_msg} | {b.last_commit_age} | {unique} | {missing} | {can_ff} | {action} |")
+            print(f"| `{b.name}` | {local} | {remote} | {b.last_commit_hash} {b.last_commit_msg} | {b.last_commit_age} | {status} | {action} |")
     else:
         print("*No active branches*")
 
@@ -395,7 +471,7 @@ def print_report(data: dict) -> None:
         for b in wip:
             contained = ", ".join(b.contained_in) if b.contained_in else "-"
             if compare_branch in b.contained_in:
-                action = f"-> archive/completed (merged to {compare_branch})"
+                action = f"-> zzarchive/completed (merged to {compare_branch})"
             elif b.contained_in:
                 action = f"Review (in {b.contained_in[0]})"
             else:
@@ -406,9 +482,9 @@ def print_report(data: dict) -> None:
 
     # Archived summary
     print(f"\n### Archived ({len(archived)})\n")
-    completed = [b for b in archived if b.namespace == "archive/completed"]
-    stopped = [b for b in archived if b.namespace == "archive/stopped"]
-    other = [b for b in archived if b.namespace == "archive"]
+    completed = [b for b in archived if b.namespace == "zzarchive/completed"]
+    stopped = [b for b in archived if b.namespace == "zzarchive/stopped"]
+    other = [b for b in archived if b.namespace == "zzarchive"]
 
     print(f"- **Completed:** {len(completed)}")
     print(f"- **Stopped:** {len(stopped)}")
@@ -427,30 +503,21 @@ def print_report(data: dict) -> None:
         # WIP branches merged to compare branch
         for b in wip_needs_action:
             short_name = b.name.replace("wip/", "")
-            print(f"- `{b.name}`: **Merged to {compare_branch}** -> move to `archive/completed/{short_name}`")
+            archive_name = _archive_name(short_name)
+            print(f"- `{b.name}`: **Merged to {compare_branch}** -> move to `{archive_name}`")
 
         # Active branches
         for b in needs_action:
-            merged = b.ff_relation in ("behind", "same")
-            if merged:
-                if b.is_local and not b.is_remote:
-                    print(f"- `{b.name}`: Local-only, merged into `{compare_branch}` - **delete local**")
-                elif b.is_local and b.is_remote:
-                    print(f"- `{b.name}`: Merged into `{compare_branch}` - **delete local + remote**")
-                else:
-                    print(f"- `{b.name}`: Remote-only, merged into `{compare_branch}` - **delete remote**")
+            work_in_target = b.ff_relation in ("behind", "same")
+            if work_in_target:
+                loc = "local-only" if (b.is_local and not b.is_remote) else ("remote-only" if (not b.is_local) else "local+remote")
+                print(f"- `{b.name}`: [{loc}] Work IS in `{compare_branch}` - **safe to delete**")
             elif b.contained_in:
-                if b.is_local and not b.is_remote:
-                    print(f"- `{b.name}`: Local-only, already in `{b.contained_in[0]}` - **safe to delete**")
-                elif not b.is_local and b.is_remote:
-                    print(f"- `{b.name}`: Remote-only, in `{b.contained_in[0]}` - consider deleting")
-                else:
-                    print(f"- `{b.name}`: In `{b.contained_in[0]}` - **safe to delete**")
+                loc = "local-only" if (b.is_local and not b.is_remote) else ("remote-only" if (not b.is_local) else "local+remote")
+                print(f"- `{b.name}`: [{loc}] Work IS in `{b.contained_in[0]}` - **safe to delete**")
             else:
-                if b.is_local and not b.is_remote:
-                    print(f"- `{b.name}`: Local-only, **not merged** - review before deleting")
-                else:
-                    print(f"- `{b.name}`: Not merged - keep, move to wip/, or archive")
+                loc = "local-only" if (b.is_local and not b.is_remote) else ("remote-only" if (not b.is_local) else "local+remote")
+                print(f"- `{b.name}`: [{loc}] Work NOT in `{compare_branch}` - keep, move to wip/, or archive")
 
     # Worktree warnings
     worktree_branches = [b for b in branches if b.worktree_path and b.name != current_branch]
@@ -497,7 +564,7 @@ def list_branches_for_selection() -> None:
     if remote_only:
         print("\n### Remote-Only Branches")
         for b in sorted(remote_only):
-            if not b.startswith("archive/"):
+            if not b.startswith("zzarchive/"):
                 print(f"  - `origin/{b}`")
 
 
