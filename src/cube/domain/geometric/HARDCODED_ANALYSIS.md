@@ -42,9 +42,9 @@ Two-layer architecture (see `GEOMETRY_LAYERS.md`):
 | 1.3 | `_X_CYCLE`, `_Y_CYCLE`, `_Z_CYCLE` | ~~Face2FaceTranslator.py~~ | **REMOVED** | Derived via `get_face_neighbors_cw_names()` |
 | 1.4 | `slice_to_axis` dict | Face2FaceTranslator.py:488 | TODO | Duplicates `_AXIS_ROTATION_FACE` |
 | 1.5 | `_build_slice_cycle` start faces | Face2FaceTranslator.py:693 | **FIXED** | Uses `resolve_cube_cycle()` |
-| 2.1 | `_SLICE_ROTATION_FACE` | cube_layout.py | **OK** | Fundamental |
-| 2.2 | `_AXIS_ROTATION_FACE` | cube_layout.py | **OK** | Fundamental |
-| 2.3 | `_OPPOSITE` | cube_layout.py | **OK** | Fundamental |
+| 2.1 | `SLICE_ROTATION_FACE` | geometry_fundamentals.py | **MOVED** | Axiom (was `_SLICE_ROTATION_FACE` in `_CubeLayout.py`) |
+| 2.2 | `AXIS_FACE` | geometry_fundamentals.py | **MOVED** | Axiom (was `_AXIS_FACE` in `_CubeLayout.py`) |
+| 2.3 | `_OPPOSITE` | schematic_cube.py | **OK** | Fundamental (to move to fundamentals) |
 | 2.4 | `get_slice_for_faces()` | cube_layout.py | **ADDED** | Derives slices from constants |
 | 2.5 | `get_all_slices_for_faces()` | cube_layout.py | **ADDED** | Derives all connecting slices |
 | 2.6 | `get_slice_parallel_to_face()` | cube_layout.py | **ADDED** | Derives parallel slice for face |
@@ -65,7 +65,8 @@ Two-layer architecture (see `GEOMETRY_LAYERS.md`):
 
 | File | What | Count | Notes |
 |------|------|-------|-------|
-| `cube_layout.py` | `_OPPOSITE`, `_SLICE_ROTATION_FACE`, `_AXIS_ROTATION_FACE` | 9 | Topology definitions |
+| `geometry_fundamentals.py` | `SLICE_ROTATION_FACE`, `AXIS_FACE` | 6 | Axioms |
+| `schematic_cube.py` | `_OPPOSITE` | 3 | Topology (to move to fundamentals) |
 | `cube_boy.py` | BOY color mapping | 6 | Color scheme |
 | `_part.py` | Edge/corner name definitions | 24 | Part structure |
 | `Cube.py:374-387` | Face object creation | 6 | Uses BOY layout |
@@ -185,7 +186,8 @@ These are inherently tied to enum values and are acceptable:
 src/cube/
 ├── domain/
 │   ├── geometric/           # ANALYZED - see table above
-│   │   ├── cube_layout.py   # FUNDAMENTAL CONSTANTS HERE
+│   │   ├── geometry_fundamentals.py  # AXIOMS (SLICE_ROTATION_FACE, AXIS_FACE)
+│   │   ├── cube_layout.py   # CubeLayout protocol
 │   │   ├── cube_boy.py      # BOY COLOR SCHEME HERE
 │   │   └── ...
 │   │
@@ -214,10 +216,10 @@ src/cube/
 
 | To derive... | Look at... |
 |--------------|------------|
-| Opposite faces | `cube_layout._OPPOSITE` |
-| Adjacent faces | `cube_layout._ADJACENT` |
-| Slice rotation face | `cube_layout._SLICE_ROTATION_FACE` |
-| Slice axis face | `cube_layout._AXIS_ROTATION_FACE` |
+| Opposite faces | `schematic_cube._OPPOSITE` |
+| Adjacent faces | `schematic_cube._ADJACENT` |
+| Slice rotation face | `geometry_fundamentals.SLICE_ROTATION_FACE` |
+| Axis rotation face | `geometry_fundamentals.AXIS_FACE` |
 | Slices connecting faces | `cube_layout.get_slice_for_faces()` |
 | All slices connecting faces | `cube_layout.get_all_slices_for_faces()` |
 | Slice parallel to a face | `cube_layout.get_slice_parallel_to_face()` |

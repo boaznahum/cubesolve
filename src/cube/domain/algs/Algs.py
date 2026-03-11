@@ -8,7 +8,8 @@ from cube.domain.algs.Scramble import _Scramble, _scramble
 from cube.domain.algs.SeqAlg import SeqAlg
 from cube.domain.algs.SimpleAlg import NSimpleAlg
 from cube.domain.algs.MiddleSliceAlg import MiddleSliceAlg
-from cube.domain.algs.SliceAlg import _E, _M, _S, SliceAlg
+from cube.domain.algs.SliceAlg import SliceAlg
+from cube.domain.geometric.geometry_fundamentals import SLICE_ROTATION_FACE
 from cube.domain.algs.WholeCubeAlg import _X, _Y, _Z
 from cube.domain.algs.WideLayerAlg import ALL_BUT_LAST, WideLayerAlg
 from cube.domain.exceptions import InternalSWError
@@ -105,19 +106,32 @@ class Algs:
     # X, Y, Z: Identity/naming only - _X() binds to AxisName.X (just gives the alg its name).
     # Geometric relationships (X↔R axis, direction) are defined in CubeLayout.get_axis_face()
     X = _X()
+    # =========================================================================
+    # Slice algorithms — derived from geometry_fundamentals.SLICE_ROTATION_FACE
+    # =========================================================================
+    # SLICE_ROTATION_FACE defines which slices exist (M, E, S).
+    # SliceBaseAlgs is the canonical collection, built from that axiom.
+    # MM/EE/SS are convenience aliases into the same objects.
+    # =========================================================================
+    SliceBaseAlgs: Sequence[SliceAlg] = [SliceAlg(sn) for sn in SLICE_ROTATION_FACE]
+    _slice_by_name: dict[SliceName, SliceAlg] = {a._slice_name: a for a in SliceBaseAlgs}
+    MM: SliceAlg = _slice_by_name[SliceName.M]   # All middle slices (sliceable). str() = "[:]M".
+    EE: SliceAlg = _slice_by_name[SliceName.E]   # All middle slices over D axis. str() = "[:]E".
+    SS: SliceAlg = _slice_by_name[SliceName.S]   # All middle slices over F axis. str() = "[:]S".
     M = MiddleSliceAlg(SliceName.M)   # Single middle slice. str() = "M".
-    MM = _M()   # All middle slices (sliceable). str() = "[:]M".
+    E = MiddleSliceAlg(SliceName.E)   # Single middle slice over D axis. str() = "E".
+    S = MiddleSliceAlg(SliceName.S)   # Single middle slice over F axis. str() = "S".
+
     U = _U()
     UUw = WideLayerAlg(FaceName.U, ALL_BUT_LAST)
     Y = _Y()  # See X comment above for X/Y/Z design notes
-    E = MiddleSliceAlg(SliceName.E)   # Single middle slice over D axis. str() = "E".
-    EE = _E()   # All middle slices over D axis (sliceable). str() = "[:]E".
 
     F = _F()
     FFw = WideLayerAlg(FaceName.F, ALL_BUT_LAST)
     Z = _Z()  # See X comment above for X/Y/Z design notes
-    S = MiddleSliceAlg(SliceName.S)   # Single middle slice over F axis. str() = "S".
-    SS = _S()   # All middle slices over F axis (sliceable). str() = "[:]S".
+
+    FACE_ALGS: Sequence[FaceAlg] = [L, R, U, D, F, B]
+    _face_name_to_alg: dict[FaceName, FaceAlg] = {a._face: a for a in FACE_ALGS}
 
     # =========================================================================
     # Adaptive Wide Moves — all-but-last layers
@@ -172,10 +186,11 @@ class Algs:
     def seq(*algs: Alg) -> SeqAlg:
         return SeqAlg(None, *algs)
 
+    # claude: you can replace MM/EE/SS here with *SliceBaseAlgs
     Simple: Sequence[NSimpleAlg] = [L, Lw,
-                                    R, Rw, X, MM,
-                                    U, Uw, EE, Y,
-                                    F, Fw, Z, SS,
+                                    R, Rw, X, *SliceBaseAlgs,
+                                    U, Uw, Y,
+                                    F, Fw, Z,
                                     B, Bw,
                                     D, Dw,
                                     # Standard wide moves (lowercase form)
@@ -223,46 +238,18 @@ class Algs:
 
     @classmethod
     def of_face(cls, face: FaceName) -> FaceAlg:
+        alg = cls._face_name_to_alg.get(face)
+        if alg is None:
+            raise InternalSWError(f"Unknown face name {face}")
+        return alg
 
-        match face:
-
-            case FaceName.F:
-                return cls.F
-
-            case FaceName.B:
-                return cls.B
-
-            case FaceName.L:
-                return cls.L
-
-            case FaceName.R:
-                return cls.R
-
-            case FaceName.U:
-                return cls.U
-
-            case FaceName.D:
-                return cls.D
-
-            case _:
-                raise InternalSWError(f"Unknown face name {face}")
 
     @classmethod
     def of_slice(cls, slice_name: SliceName) -> SliceAlg:
-
-        match slice_name:
-
-            case SliceName.E:
-                return cls.EE
-
-            case SliceName.S:
-                return cls.SS
-
-            case SliceName.M:
-                return cls.MM
-
-            case _:
-                raise InternalSWError(f"Unknown slice name {slice_name}")
+        alg = cls._slice_by_name.get(slice_name)
+        if alg is None:
+            raise InternalSWError(f"Unknown slice name {slice_name}")
+        return alg
 
     @classmethod
     def no_op(cls) -> Alg:

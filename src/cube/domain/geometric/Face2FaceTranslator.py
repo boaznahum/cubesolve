@@ -774,17 +774,10 @@ class Face2FaceTranslator:
         source_face = cube.face(source_name)
         target_face = cube.face(target_name)
 
-        # Map slice names to algorithm objects
-        slice_name_to_alg: dict[SliceName, SliceAlg] = {
-            SliceName.M: Algs.MM,
-            SliceName.E: Algs.EE,
-            SliceName.S: Algs.SS,
-        }
-
         sized_layout = cube.sized_layout
 
         for slice_name in connecting_slices:
-            slice_alg = slice_name_to_alg[slice_name]
+            slice_alg = Algs.of_slice(slice_name)
 
             # Get walking info for this slice
             walk_info = sized_layout.create_walking_info(slice_name)

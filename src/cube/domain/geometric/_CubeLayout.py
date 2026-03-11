@@ -23,20 +23,7 @@ from cube.domain.model.FaceName import FaceName
 from cube.domain.model._elements import AxisName, EdgePosition
 
 from cube.domain.geometric.schematic_cube import SchematicCube, SchematicEdge, SchematicCorner
-
-# Slice rotation faces: which face each slice rotates like
-_SLICE_ROTATION_FACE: dict[SliceName, FaceName] = {
-    SliceName.M: FaceName.L,
-    SliceName.E: FaceName.D,
-    SliceName.S: FaceName.F,
-}
-
-# Axis rotation faces: which face each axis rotates like
-_AXIS_FACE: dict[AxisName, FaceName] = {
-    AxisName.X: FaceName.R,
-    AxisName.Y: FaceName.U,
-    AxisName.Z: FaceName.F,
-}
+from cube.domain.geometric.geometry_fundamentals import SLICE_ROTATION_FACE, AXIS_FACE
 
 
 if TYPE_CHECKING:
@@ -190,7 +177,7 @@ class _CubeLayout(CubeLayout):
     def get_slice_for_faces(self, source: FaceName, target: FaceName) -> SliceName | None:
         """Find which slice connects two faces."""
         for slice_name in SliceName:
-            rotation_face = _SLICE_ROTATION_FACE[slice_name]
+            rotation_face = SLICE_ROTATION_FACE[slice_name]
             slice_faces = self._scheme.get_adjacent_faces(rotation_face)
             if source in slice_faces and target in slice_faces:
                 return slice_name
@@ -202,7 +189,7 @@ class _CubeLayout(CubeLayout):
             return []
         result: list[SliceName] = []
         for slice_name in SliceName:
-            rotation_face = _SLICE_ROTATION_FACE[slice_name]
+            rotation_face = SLICE_ROTATION_FACE[slice_name]
             slice_faces = self._scheme.get_adjacent_faces(rotation_face)
             if source in slice_faces and target in slice_faces:
                 result.append(slice_name)
@@ -225,7 +212,7 @@ class _CubeLayout(CubeLayout):
     def get_slice_name_parallel_to_face(self, face: FaceName) -> SliceName:
         """Find which slice is parallel to a face."""
         for slice_name in SliceName:
-            rotation_face = _SLICE_ROTATION_FACE[slice_name]
+            rotation_face = SLICE_ROTATION_FACE[slice_name]
             opposite_face = self._scheme.opposite(rotation_face)
             if face not in (rotation_face, opposite_face):
                 return slice_name
@@ -257,22 +244,22 @@ class _CubeLayout(CubeLayout):
 
         cluade: this is SliceLayout method, need to resolve and delegate
         """
-        return _SLICE_ROTATION_FACE[slice_name]
+        return SLICE_ROTATION_FACE[slice_name]
 
     def get_axis_face(self, axis_name: AxisName) -> FaceName:
         """Get the face that defines the rotation direction for a whole-cube axis.
 
         See CubeLayout.get_axis_face() for full documentation.
         """
-        return _AXIS_FACE[axis_name]
+        return AXIS_FACE[axis_name]
 
     def get_axis_for_slice(self, slice_name: SliceName) -> tuple[AxisName, bool]:
         """Get the axis and direction relationship for a slice.
 
-        DERIVED from _SLICE_ROTATION_FACE, get_axis_face(), and opposite().
+        DERIVED from SLICE_ROTATION_FACE, get_axis_face(), and opposite().
         See CubeLayout.get_axis_for_slice() for full documentation.
         """
-        slice_face = _SLICE_ROTATION_FACE[slice_name]  # M→L, E→D, S→F
+        slice_face = SLICE_ROTATION_FACE[slice_name]  # M→L, E→D, S→F
 
         for axis_name in AxisName:
             axis_face = self.get_axis_face(axis_name)  # X→R, Y→U, Z→F

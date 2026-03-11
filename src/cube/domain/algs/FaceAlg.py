@@ -132,3 +132,4 @@ class _L(FaceAlg):
     def __init__(self) -> None:
         super().__init__(FaceName.L)
         self._freeze()
+

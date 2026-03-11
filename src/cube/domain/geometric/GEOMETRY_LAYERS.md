@@ -96,6 +96,9 @@ src/cube/domain/geometric/
 ├── UNIT_WALKING_INFO.md        # Unit walking info pattern (size-independent geometry)
 ├── CUBELAYOUT_INTERNAL_CUBE.md # Internal 3x3 cube for geometry queries
 │
+├── # FUNDAMENTALS (Axioms - hand-defined conventions)
+├── geometry_fundamentals.py    # SLICE_ROTATION_FACE, AXIS_FACE
+│
 ├── # LAYOUT LAYER (Size-Independent)
 ├── cube_layout.py              # CubeLayout protocol
 ├── slice_layout.py             # SliceLayout protocol + _SliceLayout implementation
@@ -168,15 +171,15 @@ cube.sized_layout   # → SizedCubeLayout (size-dependent)
 
 ## Constants Location
 
-**All topology constants are in `cube_layout.py`:**
+**Fundamental axioms are in `geometry_fundamentals.py`:**
 
-Fundamental (hand-defined):
+- `SLICE_ROTATION_FACE` - Slice → rotation face: M→L, E→D, S→F
+- `AXIS_FACE` - Axis → rotation face: X→R, Y→U, Z→F
+
+**Opposite/adjacent facts are in `schematic_cube.py`** (to be moved to fundamentals):
+
 - `_OPPOSITE` - Canonical opposite pairs: F↔B, U↔D, L↔R
-- `_SLICE_ROTATION_FACE` - Slice → rotation face: M→L, E→D, S→F
-- `_AXIS_ROTATION_FACE` - Slice → axis face: M→R, E→U, S→F
-
-Derived (computed from fundamental):
-- `_ALL_OPPOSITE` - Bidirectional opposite mapping
+- `_ALL_OPPOSITE` - Bidirectional opposite mapping (derived from `_OPPOSITE`)
 - `_ADJACENT` - Adjacent faces (derived from `_OPPOSITE`)
 
 Note: `_SLICE_FACES` was removed - now derived on demand in `get_slice_for_faces()`.
