@@ -82,6 +82,18 @@ All pyglet imports now only exist in:
 - Tests (non-GUI): `python -m pytest tests/ -v --ignore=tests/gui -m "not slow"`
 - Tests (GUI): `python -m pytest tests/gui -v --speed-up 5`
 
+### Environment Setup (Headless / Claude Code on Web)
+- **Python:** Use `python3.13` (not `python` which may be 3.11). Project requires Python 3.13+ (`from warnings import deprecated`).
+- **kociemba package:** Requires `--use-pep517` flag to build correctly:
+  ```bash
+  python3.13 -m pip install kociemba --use-pep517
+  python3.13 -m pip install -e ".[dev]" --use-pep517
+  ```
+- **Non-GUI tests:** Ignore `tests/gui`, `tests/console`, `tests/webgl`, and `tests/backends` (requires display):
+  ```bash
+  python3.13 -m pytest tests/ --ignore=tests/gui --ignore=tests/console --ignore=tests/webgl --ignore=tests/backends --tb=short -q
+  ```
+
 ### All Checks (run before committing)
 
 **CRITICAL:** When user says "run all checks", run ALL FIVE of these:
@@ -246,6 +258,32 @@ grep -r "import pyglet\|from pyglet" src/cube --include="*.py" | grep -v "presen
 - Any time you would otherwise wait for user response
 
 The script uses Windows Text-to-Speech to say "Hey Friend! Claude needs your attention!" through the user's speakers.
+
+---
+
+## WebGL Backend — Server Restart Notifications
+
+**CRITICAL:** When working on the WebGL backend, ALWAYS tell the user when they need to restart the Python server.
+
+- **Python changes** (anything under `src/cube/`): **Server restart required.** Always tell the user: "You need to restart the Python server to pick up these changes."
+- **JS/HTML/CSS changes** (anything under `static/`): **Browser refresh only.** Tell the user: "Just refresh the browser — no server restart needed."
+- **Mixed changes** (both Python and JS): Tell the user: "Restart the server and refresh the browser."
+
+Never assume the user knows which changes require a restart. Always be explicit.
+
+---
+
+## Version Management - MANDATORY
+
+**CRITICAL:** On ANY code change, increment the version number before committing.
+
+- **Version file:** `src/cube/resources/version.txt` (single line, e.g. `1.0`)
+- **Version reader:** `src/cube/version.py` → `get_version()`
+- **Displayed in:** Web backend status bar ("Connected v1.0")
+- **Rule:** Bump version in `version.txt` with every commit:
+  - Patch (`1.0` → `1.0.1`) for bugfixes
+  - Minor (`1.0` → `1.1`) for features
+  - Major (`1.0` → `2.0`) for breaking changes
 
 ---
 

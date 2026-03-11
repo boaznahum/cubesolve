@@ -8,6 +8,7 @@ from .AnnotationProtocol import AnnotationProtocol, SupportsAnnotation, _HEAD
 
 if TYPE_CHECKING:
     from .AnnotationProtocol import AdditionalMarker, AnnWhat
+    from cube.application.commands.Operator import Operator
 
 
 class NoopAnnotation(AnnotationProtocol):
@@ -15,6 +16,9 @@ class NoopAnnotation(AnnotationProtocol):
 
     Used when animation is disabled. Always returns nullcontext().
     """
+
+    def __init__(self, op: "Operator | None" = None) -> None:
+        self._op = op
 
     def annotate(
         self,
@@ -25,4 +29,11 @@ class NoopAnnotation(AnnotationProtocol):
         h3: _HEAD = None,
         animation: bool = True,
     ) -> ContextManager[None]:
+        # Even without animation, emit HeadingAlg so it appears in the queue
+        if (h1 is not None or h2 is not None) and self._op is not None:
+            h1_text: str | None = h1() if callable(h1) else h1  # type: ignore[assignment]
+            h2_text: str | None = h2() if callable(h2) else h2  # type: ignore[assignment]
+            if h1_text or h2_text:
+                from cube.domain.algs.HeadingAlg import HeadingAlg
+                self._op.play(HeadingAlg(h1_text or "", h2_text))
         return nullcontext()

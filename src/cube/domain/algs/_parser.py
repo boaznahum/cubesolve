@@ -2,6 +2,7 @@ import re
 from typing import TYPE_CHECKING, TypeAlias
 
 from cube.domain.exceptions import InternalSWError
+from cube.domain.model.cube_slice import SliceName
 
 if TYPE_CHECKING:
     from cube.domain.algs.Alg import Alg
@@ -11,7 +12,7 @@ _Alg: TypeAlias = "Alg"
 _SeqAlg: TypeAlias = "SeqAlg"
 
 
-def parse_alg(s: str) -> _Alg:
+def parse_alg(s: str, *, compat_3x3: bool = False) -> _Alg:
     """
     this is very naive patch version
     Currently doesn't support exp N and exp '  (only U2, U',...)
@@ -22,6 +23,12 @@ def parse_alg(s: str) -> _Alg:
     - Wide moves: Rw, r, Lw', etc.
     - Slice notation: [1:2]M, [1]R, [1:]S, etc.
     - Sequences: [R U R' U'], (R U) 2
+
+    Args:
+        s: The algorithm string to parse.
+        compat_3x3: When True, bare "M" is treated as all middle slices ([:]M),
+            matching standard 3x3 notation where M = all middle slices.
+            When False (default), bare "M" returns MiddleSliceAlg (single middle slice).
     """
 
     # We capture, so we get the splitters two, such as '(' ')', we need to ignore the spaces
@@ -35,17 +42,18 @@ def parse_alg(s: str) -> _Alg:
     pattern = r"(\s+|\(|\)|\[|\]|')"
     tokens = re.split(pattern, s)
 
-    p = _Parser(s, tokens)
+    p = _Parser(s, tokens, compat_3x3=compat_3x3)
 
     return p.parse()
 
 
 class _Parser:
 
-    def __init__(self, original: str, tokens: list[str]) -> None:
+    def __init__(self, original: str, tokens: list[str], *, compat_3x3: bool = False) -> None:
         super().__init__()
         self._tokens = tokens
         self._original = original
+        self._compat_3x3 = compat_3x3
 
     def parse(self) -> _SeqAlg:
         result: list[Alg] = []
@@ -65,9 +73,10 @@ class _Parser:
             if token == "(" or token == "[":
                 # Check if [ is a slice prefix or sequence bracket
                 if token == "[":
-                    # Peek at next token to see if it's slice notation (starts with digit or :)
+                    # Peek at next token to see if it's slice notation (only digits/colons/commas/minus)
+                    # vs a sequence bracket containing a digit-prefixed move like [3Rw ...]
                     next_tok = self.peek_token()
-                    if next_tok and (next_tok[0].isdigit() or next_tok[0] == ":"):
+                    if next_tok and re.match(r'^[\d:,\-]+$', next_tok):
                         # This is slice notation [1:2]M - collect tokens until ] and build slice
                         slice_tokens = self._collect_slice_tokens()
                         # Next token should be the algorithm
@@ -76,7 +85,7 @@ class _Parser:
                             raise InternalSWError(f"Expected algorithm after slice in {self._original}")
                         # Combine slice notation with algorithm token
                         combined = "[" + slice_tokens + "]" + alg_token
-                        at = _token_to_alg(combined)
+                        at = _token_to_alg(combined, compat_3x3=self._compat_3x3)
                         result.append(at)
                         continue
                 # Otherwise treat [ as sequence bracket like (
@@ -111,7 +120,7 @@ class _Parser:
                 result.append(at)
 
             else:
-                at = _token_to_alg(token)
+                at = _token_to_alg(token, compat_3x3=self._compat_3x3)
                 result.append(at)
 
     def _collect_slice_tokens(self) -> str:
@@ -182,21 +191,33 @@ def _parse_slice_prefix(t: str) -> tuple[str, slice | list[int] | None]:
         raise InternalSWError(f"No algorithm after slice in token: {t}")
 
     # Parse slice content
-    if ":" in slice_str:
-        # Range notation: [start:stop] or [start:] or [:stop]
+    if "," in slice_str:
+        # Mixed notation: [1:2,4:6] or [1,2,3] or [1:3,5,7:9]
+        # Split by comma, each part is either a range "start:stop" or a single int
+        indices: list[int] = []
+        for part in slice_str.split(","):
+            part = part.strip()
+            if ":" in part:
+                range_parts = part.split(":")
+                if len(range_parts) != 2:
+                    raise InternalSWError(f"Invalid range in slice: {part}")
+                start = int(range_parts[0])
+                stop = int(range_parts[1])
+                indices.extend(range(start, stop + 1))
+            else:
+                indices.append(int(part))
+        return base_token, sorted(indices)
+
+    elif ":" in slice_str:
+        # Pure range notation: [start:stop] or [start:] or [:stop]
         parts = slice_str.split(":")
         if len(parts) != 2:
             raise InternalSWError(f"Invalid slice format: {slice_str}")
 
         start_str, stop_str = parts
-        start = int(start_str) if start_str else None
-        stop = int(stop_str) if stop_str else None
-        return base_token, slice(start, stop)
-
-    elif "," in slice_str:
-        # List notation: [1,2,3]
-        indices = [int(x.strip()) for x in slice_str.split(",")]
-        return base_token, indices
+        s_start: int | None = int(start_str) if start_str else None
+        s_stop: int | None = int(stop_str) if stop_str else None
+        return base_token, slice(s_start, s_stop)
 
     else:
         # Single index: [1] -> slice(1, 1)
@@ -204,7 +225,7 @@ def _parse_slice_prefix(t: str) -> tuple[str, slice | list[int] | None]:
         return base_token, slice(index, index)
 
 
-def _token_to_alg(t: str) -> _Alg:
+def _token_to_alg(t: str, *, compat_3x3: bool = False) -> _Alg:
     """
     Parse a token to algorithm.
 
@@ -249,17 +270,80 @@ def _token_to_alg(t: str) -> _Alg:
     if not remaining:
         raise InternalSWError(f"Empty base token in: {t}")
 
-    base_alg = _token_to_alg_no_slice(remaining)
+    # Check for digit prefix on wide moves: nRw or nr (e.g., 3Rw, 3r)
+    import re as _re
+    base_alg: _Alg
+    _wide_match = _re.match(r'^(\d+)(.+)$', remaining)
+    if _wide_match:
+        _n_layers = int(_wide_match.group(1))
+        _inner_code = _wide_match.group(2)
+        try:
+            _inner_alg = _token_to_alg_no_slice(_inner_code)
+        except InternalSWError:
+            _inner_alg = None
+        from cube.domain.algs.WideLayerAlg import WideLayerAlg
+        if _inner_alg is not None and isinstance(_inner_alg, WideLayerAlg):
+            base_alg = _inner_alg.with_layers(_n_layers)
+        else:
+            base_alg = _token_to_alg_no_slice(remaining)
+    else:
+        base_alg = _token_to_alg_no_slice(remaining)
+
+    # Track whether the original token had a slice prefix (for bare-token checks below)
+    had_slice_prefix = slice_spec is not None
 
     # Apply slice to base algorithm FIRST (before modifiers)
     if slice_spec is not None:
-        from cube.domain.algs.SliceAbleAlg import SliceAbleAlg
-        if not isinstance(base_alg, SliceAbleAlg):
-            raise InternalSWError(f"Slice notation not supported for {base_alg}")
-        if isinstance(slice_spec, slice):
-            base_alg = base_alg[slice_spec.start:slice_spec.stop]
-        else:
-            base_alg = base_alg[slice_spec]
+        # Special case: [:-1]Rw or [:-1]r → all-but-last wide move (RRw/rr)
+        # Simple list lookup returns WideLayerAlg — swap to ALL_BUT_LAST mode.
+        if isinstance(slice_spec, slice) and slice_spec.start is None and slice_spec.stop == -1:
+            from cube.domain.algs.WideLayerAlg import WideLayerAlg
+            if isinstance(base_alg, WideLayerAlg):
+                base_alg = _wide_to_all_but_last(base_alg)
+                slice_spec = None  # Consumed — don't apply as regular slice
+            else:
+                raise InternalSWError(f"[:-1] notation only supported for wide moves (Rw/r), got {base_alg}")
+
+        if slice_spec is not None:
+            # If base_alg is a MiddleSliceAlg (e.g., M), swap to the sliceable MM
+            # so that [:]M, [1]M etc. work on the all-slices alg
+            from cube.domain.algs.MiddleSliceAlg import MiddleSliceAlg
+            if isinstance(base_alg, MiddleSliceAlg):
+                base_alg = base_alg.get_base_alg()
+
+            from cube.domain.algs.SliceAbleAlg import SliceAbleAlg
+            if not isinstance(base_alg, SliceAbleAlg):
+                raise InternalSWError(f"Slice notation not supported for {base_alg}")
+            # [:]X means "all slices" — keep the unsliced SliceAlg so str() = "[:]M"
+            if isinstance(slice_spec, slice) and slice_spec.start is None and slice_spec.stop is None:
+                pass  # base_alg stays as unsliced SliceAlg (e.g., Algs.MM)
+            elif isinstance(slice_spec, slice):
+                base_alg = base_alg[slice_spec.start:slice_spec.stop]
+            else:
+                base_alg = base_alg[slice_spec]
+
+    # For bare SliceAlg tokens without explicit slice prefix (e.g., "M" not "[:]M"):
+    # - compat_3x3=True: keep as _M/_E/_S (all middle slices) — for 3x3 solver algs on big cubes
+    # - compat_3x3=False: M/E/S → MiddleSliceAlg (single middle slice)
+    if not had_slice_prefix:
+        from cube.domain.algs.SliceAlg import SliceAlg
+        if isinstance(base_alg, SliceAlg) and not compat_3x3:
+            from cube.domain.algs.Algs import Algs
+            match base_alg.slice_name:
+                case SliceName.M:
+                    base_alg = Algs.M
+                case SliceName.E:
+                    base_alg = Algs.E
+                case SliceName.S:
+                    base_alg = Algs.S
+
+    # For bare WideLayerAlg tokens (e.g., "Rw", "r"):
+    # - compat_3x3=True: swap to all-but-last (RRw/rr) for CFOP solver algs on big cubes
+    # - compat_3x3=False: keep as standard 2-layer wide move
+    if not had_slice_prefix and compat_3x3:
+        from cube.domain.algs.WideLayerAlg import WideLayerAlg
+        if isinstance(base_alg, WideLayerAlg):
+            base_alg = _wide_to_all_but_last(base_alg)
 
     # Apply modifiers in order
     result = base_alg
@@ -280,7 +364,7 @@ def _token_to_alg_no_slice(t: str) -> _Alg:
 
     simple = Algs.Simple
 
-    # First pass: check exact matches (including WideFaceAlg like 'r', 'u', etc.)
+    # First pass: check exact matches (including WideLayerAlg like 'r', 'u', etc.)
     for s in simple:
         if s.code == t:
             return s
@@ -293,10 +377,20 @@ def _token_to_alg_no_slice(t: str) -> _Alg:
 
     # Third pass: check if lowercase face letter should map to wide (r -> Rw)
     # This is for backward compatibility, but only if not already matched
-    # as WideFaceAlg in the first pass
+    # as WideLayerAlg in the first pass
     for s in simple:
         if isinstance(s, algs.FaceAlg):
             if s.code.lower() == t:
                 return _token_to_alg_no_slice(s.code + "w")
 
     raise InternalSWError(f"Unknown token {t}")
+
+
+def _wide_to_all_but_last(wide: _Alg) -> _Alg:
+    """Convert a WideLayerAlg to all-but-last mode (layers=ALL_BUT_LAST).
+
+    Used for [:-1]Rw notation and compat_3x3 mode.
+    """
+    from cube.domain.algs.WideLayerAlg import ALL_BUT_LAST, WideLayerAlg
+    assert isinstance(wide, WideLayerAlg)
+    return wide.with_layers(ALL_BUT_LAST)

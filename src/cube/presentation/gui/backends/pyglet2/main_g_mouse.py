@@ -477,26 +477,26 @@ def _handle_selected_slice(window: AppWindow, slice_face: PartEdge, inv: bool):
             if face_name in [FaceName.F, FaceName.B]:
 
                 if face.is_bottom_or_top(part):
-                    slice_alg_base = Algs.M  # we want over L
+                    slice_alg_base = Algs.MM # we want over L
                     neg_slice_index = face_name == FaceName.B  # but r start at right, ltr is from left
                 else:
-                    slice_alg_base = Algs.E  # we want over D
+                    slice_alg_base = Algs.EE  # we want over D
                     neg_slice_index = False
             elif face_name in [FaceName.R, FaceName.L]:
 
                 if face.is_bottom_or_top(part):
-                    slice_alg_base = Algs.S  # we want over F
+                    slice_alg_base = Algs.SS  # we want over F
                     neg_slice_index = face_name == FaceName.L
                 else:
-                    slice_alg_base = Algs.E  # we want over D
+                    slice_alg_base = Algs.EE  # we want over D
                     neg_slice_index = False
             elif face_name in [FaceName.U, FaceName.D]:
 
                 if face.is_bottom_or_top(part):
-                    slice_alg_base = Algs.M  # we want over L
+                    slice_alg_base = Algs.MM # we want over L
                     neg_slice_index = True
                 else:
-                    slice_alg_base = Algs.S  # we want over F
+                    slice_alg_base = Algs.SS  # we want over F
                     neg_slice_index = face_name == FaceName.D
 
             if slice_alg_base:
@@ -529,28 +529,28 @@ def _slice_on_edge_alg(part: Edge, face: Face, index: int, on_center=False) -> A
     if face_name in [FaceName.F, FaceName.B]:
 
         if face.is_bottom_or_top(part):
-            slice_alg_base = Algs.M  # we want over L
+            slice_alg_base = Algs.MM # we want over L
             neg_slice_index = face_name == FaceName.B  # but r start at right, ltr is from left
             inv = face_name == FaceName.F
         else:
-            slice_alg_base = Algs.E  # we want over D
+            slice_alg_base = Algs.EE  # we want over D
             neg_slice_index = False
     elif face_name in [FaceName.R, FaceName.L]:
 
         if face.is_bottom_or_top(part):
-            slice_alg_base = Algs.S  # we want over F
+            slice_alg_base = Algs.SS  # we want over F
             neg_slice_index = face_name == FaceName.L
             inv = face_name == FaceName.R  # over F, so left-top is F prime
         else:
-            slice_alg_base = Algs.E  # we want over D
+            slice_alg_base = Algs.EE  # we want over D
             neg_slice_index = False
     elif face_name in [FaceName.U, FaceName.D]:
 
         if face.is_bottom_or_top(part):
-            slice_alg_base = Algs.M  # we want over L
+            slice_alg_base = Algs.MM # we want over L
             neg_slice_index = False
         else:
-            slice_alg_base = Algs.S  # we want over F
+            slice_alg_base = Algs.SS  # we want over F
             neg_slice_index = face_name == FaceName.D
             inv = face_name == FaceName.D
 

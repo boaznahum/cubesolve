@@ -36,11 +36,11 @@ def test_slice_cache_performance():
     moves_per_scramble = 100
 
     # Store original config value
-    original_cache_setting = cfg.ENABLE_CUBE_CACHE
+    original_cache_setting = cfg.CONFIG_DEFAULTS.enable_cube_cache
 
     try:
         # ===== Test WITHOUT cache =====
-        cfg.ENABLE_CUBE_CACHE = False
+        cfg.CONFIG_DEFAULTS.enable_cube_cache = False
         sp_no_cache = TestServiceProvider()
 
         total_time_no_cache = 0.0
@@ -50,7 +50,7 @@ def test_slice_cache_performance():
             total_time_no_cache += elapsed
 
         # ===== Test WITH cache =====
-        cfg.ENABLE_CUBE_CACHE = True
+        cfg.CONFIG_DEFAULTS.enable_cube_cache = True
         sp_with_cache = TestServiceProvider()
 
         total_time_with_cache = 0.0
@@ -82,7 +82,7 @@ def test_slice_cache_performance():
 
     finally:
         # Restore original config
-        cfg.ENABLE_CUBE_CACHE = original_cache_setting
+        cfg.CONFIG_DEFAULTS.enable_cube_cache = original_cache_setting
 
 
 @pytest.mark.slow
@@ -97,31 +97,31 @@ def test_slice_only_rotations():
     n_iterations = 100
 
     # Store original config value
-    original_cache_setting = cfg.ENABLE_CUBE_CACHE
+    original_cache_setting = cfg.CONFIG_DEFAULTS.enable_cube_cache
 
     try:
         # ===== Test WITHOUT cache =====
-        cfg.ENABLE_CUBE_CACHE = False
+        cfg.CONFIG_DEFAULTS.enable_cube_cache = False
         sp_no_cache = TestServiceProvider()
         cube = Cube(cube_size, sp=sp_no_cache)
 
         start = time.perf_counter()
         for _ in range(n_iterations):
-            Algs.M.play(cube)
-            Algs.E.play(cube)
-            Algs.S.play(cube)
+            Algs.MM.play(cube)
+            Algs.EE.play(cube)
+            Algs.SS.play(cube)
         time_no_cache = time.perf_counter() - start
 
         # ===== Test WITH cache =====
-        cfg.ENABLE_CUBE_CACHE = True
+        cfg.CONFIG_DEFAULTS.enable_cube_cache = True
         sp_with_cache = TestServiceProvider()
         cube = Cube(cube_size, sp=sp_with_cache)
 
         start = time.perf_counter()
         for _ in range(n_iterations):
-            Algs.M.play(cube)
-            Algs.E.play(cube)
-            Algs.S.play(cube)
+            Algs.MM.play(cube)
+            Algs.EE.play(cube)
+            Algs.SS.play(cube)
         time_with_cache = time.perf_counter() - start
 
         # Calculate statistics
@@ -143,4 +143,4 @@ def test_slice_only_rotations():
 
     finally:
         # Restore original config
-        cfg.ENABLE_CUBE_CACHE = original_cache_setting
+        cfg.CONFIG_DEFAULTS.enable_cube_cache = original_cache_setting

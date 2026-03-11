@@ -44,7 +44,23 @@ class OperatorProtocol(Protocol, metaclass=ABCMeta):
         ...
 
     def undo(self, animation: bool = True) -> "Alg | None":
-        """Undo the last operation."""
+        """Undo the last operation. Pushes the undone alg to the redo queue."""
+        ...
+
+    def redo(self, animation: bool = True) -> "Alg | None":
+        """Redo the last undone operation. Pops from redo queue and plays forward."""
+        ...
+
+    def redo_queue(self) -> Sequence["Alg"]:
+        """Get the redo queue (operations available for redo)."""
+        ...
+
+    def clear_redo(self) -> None:
+        """Clear the redo queue."""
+        ...
+
+    def enqueue_redo(self, algs: Sequence["Alg"]) -> None:
+        """Replace the redo queue with the given algorithms (e.g., solver solution)."""
         ...
 
     def with_animation(self, animation: bool | None = None) -> ContextManager[None]:
@@ -63,11 +79,10 @@ class OperatorProtocol(Protocol, metaclass=ABCMeta):
         - Query mode (_in_query_mode = True, skips texture updates)
         - Animation disabled
         - Auto-rollback: undoes all moves on exit
+        - If inside with_buffer(): flushes buffer first, disables buffering during query
         - Supports nesting
         """
-        ...
 
-    @property
     def annotation(self) -> "AnnotationProtocol":
         """Get the annotation object."""
         ...

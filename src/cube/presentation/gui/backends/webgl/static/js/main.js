@@ -1,0 +1,420 @@
+/**
+ * WebGL Cube Client — Entry point.
+ *
+ * Wires together all modules: scene, model, animation, controls,
+ * WebSocket client, and toolbar.
+ */
+
+import * as THREE from 'three';
+import { BACKGROUND_COLOR } from './constants.js';
+import { AppState } from './AppState.js';
+import { CubeModel } from './CubeModel.js';
+import { AnimationQueue } from './AnimationQueue.js';
+import { FaceTurnHandler } from './FaceTurnHandler.js';
+import { OrbitControls } from './OrbitControls.js';
+import { WsClient } from './WsClient.js';
+import { Toolbar } from './Toolbar.js';
+import { HistoryPanel } from './HistoryPanel.js';
+import { MoveIndicator } from './MoveIndicator.js';
+import { SoundManager } from './SoundManager.js';
+import { ColorPicker } from './ColorPicker.js';
+import { InfoPopup } from './InfoPopup.js';
+import { SettingsPopup } from './SettingsPopup.js';
+import { ConsolePanel } from './ConsolePanel.js';
+
+// ── Application state ──
+const state = new AppState();
+window.appState = state;  // Expose for E2E test assertions
+
+// ── Three.js setup ──
+const canvas = document.getElementById('canvas');
+
+const renderer = new THREE.WebGLRenderer({
+    canvas: canvas,
+    antialias: true,
+    alpha: false,
+});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setClearColor(BACKGROUND_COLOR);
+renderer.outputEncoding = THREE.sRGBEncoding;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
+
+// Lighting
+const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+scene.add(ambient);
+
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+dirLight.position.set(5, 8, 6);
+scene.add(dirLight);
+
+const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.3);
+dirLight2.position.set(-3, -2, 4);
+scene.add(dirLight2);
+
+// ── Cube model ──
+const cubeModel = new CubeModel(scene);
+
+// ── WebSocket client ──
+const wsClient = new WsClient(handleMessage);
+const send = (msg) => wsClient.send(msg);
+
+// ── Sound manager ──
+const soundManager = new SoundManager();
+
+// ── Animation queue ──
+const animQueue = new AnimationQueue(cubeModel, send, soundManager);
+window._testAnimQueue = animQueue;  // Expose for E2E test assertions
+
+// ── Face turn handler ──
+const faceTurnHandler = new FaceTurnHandler(
+    cubeModel, camera, canvas, animQueue, send, scene,
+);
+faceTurnHandler.appState = state;
+
+// ── Orbit controls ──
+const controls = new OrbitControls(camera, canvas, faceTurnHandler, send);
+
+// ── Toolbar ──
+const toolbar = new Toolbar(state, send, controls, animQueue, soundManager);
+toolbar._cubeModel = cubeModel;  // For shadow face toggle
+toolbar.bind();
+
+// ── History panel ──
+const historyPanel = new HistoryPanel(send, animQueue, state);
+
+// ── Move indicator (next-move arrows) ──
+const moveIndicator = new MoveIndicator(cubeModel, scene);
+
+// ── Color picker (paint mode) ──
+const colorPicker = new ColorPicker(cubeModel, camera, canvas);
+
+colorPicker.onEnter = () => {
+    faceTurnHandler.paintMode = true;
+    controls.onStickerClick = (hit) => colorPicker.handleStickerClick(hit);
+};
+
+colorPicker.onExit = () => {
+    faceTurnHandler.paintMode = false;
+    controls.onStickerClick = null;
+};
+
+colorPicker.onApply = (faces) => {
+    send({ type: 'set_cube_colors', faces });
+};
+
+colorPicker.onQuickCheck = (faces, gen) => {
+    send({ type: 'quick_check_colors', faces, gen });
+};
+
+colorPicker.onCheck = (faces, gen) => {
+    send({ type: 'full_check_colors', faces, gen });
+};
+
+// Guard: don't enter paint mode during animation or solving
+colorPicker.canEnter = () => {
+    return !animQueue.isBusy && !state.isPlaying && state.latestState != null;
+};
+
+// ── Info popup ──
+const infoPopup = new InfoPopup();
+document.getElementById('btn-info')?.addEventListener('click', () => {
+    infoPopup.toggle();
+});
+
+// ── Console panel ──
+const consolePanel = new ConsolePanel(send);
+document.getElementById('btn-console')?.addEventListener('click', () => {
+    consolePanel.toggle();
+});
+
+// ── Settings popup ──
+const settingsPopup = new SettingsPopup(send, state, cubeModel);
+document.getElementById('btn-settings')?.addEventListener('click', () => {
+    settingsPopup.toggle();
+});
+
+// Paint button in toolbar
+document.getElementById('btn-paint')?.addEventListener('click', () => {
+    colorPicker.serverState = state.latestState;
+    colorPicker.enter();
+});
+
+/** Check if assist is active (respects local user override). */
+function isAssistActive() {
+    if (toolbar._assistLocalOverride !== undefined) {
+        return toolbar._assistLocalOverride;
+    }
+    return state.assistEnabled;
+}
+
+// Wire debug overlay callback from AnimationQueue → Toolbar
+// Debug overlay removed — ALG/LAYERS/STICKERS info not useful to users
+
+// When all animations finish, update stop button and re-show move indicators
+animQueue._onAllDone = () => {
+    // Update stop button from state machine
+    const stopBtn = document.getElementById('btn-stop');
+    const a = state.allowedActions || {};
+    if (stopBtn) {
+        stopBtn.disabled = !a.stop;
+    }
+    // Re-show move indicators (but not during autoplay, and only if assist is on)
+    if (state.isPlaying) return;
+    if (isAssistActive() && state.nextMove) {
+        moveIndicator.show(state.nextMove);
+    }
+};
+
+// Wire assist preview callbacks from AnimationQueue → MoveIndicator
+animQueue._onAssistShow = (face, layers, direction, isUndo) => {
+    if (!isAssistActive()) return;
+    moveIndicator.show({ face, layers, direction }, { isUndo });
+};
+animQueue._onAssistHide = () => {
+    moveIndicator.hide();
+};
+
+// ── Mobile viewport fix ──
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+
+// Prevent page-level pinch-zoom (iOS ignores user-scalable=no since iOS 10).
+// Canvas 3D zoom still works — OrbitControls handles its own touch events.
+document.addEventListener('touchmove', (e) => {
+    if (e.touches.length > 1) e.preventDefault();
+}, { passive: false });
+
+// If page loaded while zoomed in (Chrome iOS persists zoom), counter-scale
+// the content so it fits the visible viewport.
+function fitToViewport() {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const scale = vv.scale;
+    const app = document.getElementById('app-layout');
+    if (!app) return;
+    if (scale > 1.05) {
+        app.style.transform = `scale(${1 / scale})`;
+        app.style.transformOrigin = '0 0';
+        app.style.width = `${scale * 100}%`;
+        app.style.height = `${scale * 100}%`;
+    } else {
+        app.style.transform = '';
+        app.style.transformOrigin = '';
+        app.style.width = '';
+        app.style.height = '';
+    }
+}
+if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', fitToViewport);
+}
+// Run after DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fitToViewport);
+} else {
+    fitToViewport();
+}
+
+// ── Responsive sizing ──
+let _lastAspect = 0;
+
+function resize() {
+    const wrapper = canvas.parentElement;
+    const isMobile = window.matchMedia('(max-width: 768px)').matches;
+    let w, h;
+
+    if (isMobile) {
+        w = wrapper.clientWidth;
+        h = wrapper.clientHeight;
+
+        // Fallback: on iOS initial load, flex layout may not have settled yet
+        // so wrapper dimensions can be 0.  Compute from viewport instead.
+        if (h < 50) {
+            const toolbarEl = document.getElementById('toolbar');
+            const statusEl = document.getElementById('status');
+            const moveBtns = document.getElementById('move-buttons');
+            const vpH = window.visualViewport?.height ?? window.innerHeight;
+            h = vpH - (toolbarEl?.offsetHeight || 50) - (moveBtns?.offsetHeight || 70) - (statusEl?.offsetHeight || 20) - 10;
+        }
+        if (w < 50) {
+            const histPanel = document.getElementById('history-panel');
+            w = window.innerWidth - (histPanel?.offsetWidth || 62) - 8;
+        }
+
+        renderer.setSize(w, h);
+        camera.aspect = w / h;
+    } else {
+        const toolbarH = document.getElementById('toolbar')?.offsetHeight || 40;
+        const availH = window.innerHeight - toolbarH - 40;
+        const size = Math.min(wrapper.clientWidth, availH);
+        renderer.setSize(size, size);
+        camera.aspect = 1;
+    }
+
+    camera.updateProjectionMatrix();
+
+    // Adjust camera distance when aspect ratio changes (orientation change, etc.)
+    const aspect = camera.aspect;
+    if (Math.abs(aspect - _lastAspect) > 0.01) {
+        _lastAspect = aspect;
+        controls.fitToView(aspect);
+    }
+}
+
+// Initial resize
+resize();
+window.addEventListener('resize', resize);
+
+// Mobile: visualViewport fires more reliably on orientation change / address bar
+if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', resize);
+}
+
+// Delayed resize — catches late CSS flex layout on first load
+requestAnimationFrame(() => requestAnimationFrame(resize));
+
+// Reset camera and resize on every WebSocket (re)connection
+wsClient.onConnected = () => {
+    window.scrollTo(0, 0);
+    controls.reset();
+    _lastAspect = 0;  // force fitToView recalc
+    resize();
+    // Force-exit paint mode on reconnect — server state may have changed
+    if (colorPicker.active) colorPicker.exit(true);
+};
+
+// ── Message handler ──
+function handleMessage(msg) {
+    switch (msg.type) {
+        case 'state': {
+            // Unified state snapshot — single source of truth
+            document.body.style.cursor = '';
+
+            const wasPlaying = state.isPlaying;
+
+            // Apply snapshot to AppState (updates all fields)
+            state.applyServerSnapshot(msg);
+
+            // Update cube model if not animating (skip during paint mode)
+            if (colorPicker.active) {
+                // Don't overwrite painted stickers with server state
+            } else if (state.latestState && !animQueue.isBusy) {
+                cubeModel.updateFromState(state.latestState);
+            } else if (state.latestState) {
+                // Size changed while animating — flush stale animations
+                if (state.latestState.size !== cubeModel.size) {
+                    animQueue.stop();
+                    cubeModel.updateFromState(state.latestState);
+                } else {
+                    animQueue.pendingState = state.latestState;
+                }
+            }
+
+            // Update all UI components from the single state
+            toolbar.updateFromState(state);
+            historyPanel.updateFromState(state);
+
+            // Update assist delay from state (skip if user locally overrode assist checkbox)
+            if (toolbar._assistLocalOverride === undefined) {
+                animQueue.assistDelayMs = state.assistEnabled ? state.assistDelayMs : 0;
+            }
+
+            // Save session ID
+            if (state.sessionId) {
+                localStorage.setItem('cube_session_id', state.sessionId);
+            }
+
+            // Show next-move indicators if assist is on, not animating, not in autoplay
+            if (isAssistActive() && !state.isPlaying && !animQueue.isBusy) {
+                moveIndicator.show(state.nextMove);
+            }
+            if ((state.isPlaying && !wasPlaying) || !isAssistActive()) {
+                moveIndicator.hide();
+            }
+
+            // Sync client playback mode from server state machine
+            const ms = state.machineState;
+            if (ms === 'playing' && animQueue.playbackMode !== 'forward') {
+                animQueue.startPlayback('forward');
+                // If transitioning to PLAYING (e.g., solve_and_play), request first move
+                if (!wasPlaying) {
+                    send({ type: 'play_next_redo' });
+                }
+            } else if (ms === 'rewinding' && animQueue.playbackMode !== 'backward') {
+                animQueue.startPlayback('backward');
+                if (!wasPlaying) {
+                    send({ type: 'play_next_undo' });
+                }
+            } else if (ms !== 'playing' && ms !== 'rewinding' && ms !== 'animating' && ms !== 'stopping') {
+                if (animQueue.playbackMode !== null) {
+                    animQueue.stopPlayback();
+                }
+            }
+            break;
+        }
+
+        case 'animation_start': {
+            if (moveIndicator.isVisible) moveIndicator.hide();
+            const animState = msg.state || state.latestState;
+            if (animState) {
+                state.latestState = animState;
+                animQueue.enqueue(msg, animState);
+            }
+            break;
+        }
+
+        case 'animation_stop':
+            animQueue.stop();
+            if (state.latestState) {
+                cubeModel.updateFromState(state.latestState);
+            }
+            break;
+
+        case 'play_empty':
+            // No more moves — stop playback
+            animQueue.stopPlayback();
+            break;
+
+        case 'flush_queue':
+            animQueue.flush(state.latestState);
+            break;
+
+        case 'color_map':
+            cubeModel.buildColorCorrections(msg.colors);
+            colorPicker.setColorMap(msg.colors);
+            break;
+
+        case 'quick_check_result':
+            colorPicker.onQuickCheckResult(msg.valid, msg.gen);
+            break;
+
+        case 'full_check_result':
+            colorPicker.onFullCheckResult(msg.valid, msg.error, msg.gen);
+            break;
+
+        case 'console_snapshot':
+            consolePanel.onSnapshot(msg.lines || []);
+            break;
+
+        case 'console_lines':
+            consolePanel.onLines(msg.lines || []);
+            break;
+    }
+}
+
+// ── Render loop ──
+let lastTime = performance.now();
+function animate() {
+    requestAnimationFrame(animate);
+    const now = performance.now();
+    const dt = (now - lastTime) / 1000;
+    lastTime = now;
+
+    animQueue.update();
+    moveIndicator.updatePulse(dt);
+    renderer.render(scene, camera);
+}
+animate();
+
+// ── Connect ──
+wsClient.connect();

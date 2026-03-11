@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Protocol, Tuple, cast
 
-from cube.application import _config
 from cube.domain.exceptions import GeometryError, GeometryErrorCode
 from cube.domain.geometric.geometry_types import CLGColRow, CenterToSlice
 from cube.domain.model.FaceName import FaceName
@@ -15,6 +14,7 @@ if TYPE_CHECKING:
     from cube.domain.model.SliceName import SliceName
     from cube.domain.geometric._CubeLayout import _CubeLayout
     from cube.domain.geometric.cube_walking import CubeWalkingInfoUnit
+    from cube.utils.config_protocol import ConfigProtocol
 
 
 class SliceLayout(Protocol):
@@ -303,6 +303,7 @@ class _SliceLayout(SliceLayout):
                  sp: IServiceProvider):
         self._slice_name = slice_name
         self._cube_layout: _CubeLayout = layout
+        self._config: ConfigProtocol = sp.config
 
         self._cache_manager = CacheManager.create(sp.config)
 
@@ -586,9 +587,7 @@ class _SliceLayout(SliceLayout):
             # INTENTIONALLY RANDOM: The user chose this to expose potential bugs.
             # The walking algorithm must NOT depend on which face we start from.
             # If tests fail non-deterministically, it reveals hidden assumptions.
-            # claude: move it to config protocol
-            # temporarily when investigation bug !!!
-            prevent_random_face_in = _config.PREVENT_RANDOM_FACE_PICK_UP_IN_GEOMETRY
+            prevent_random_face_in = self._config.prevent_random_face_pick_up_in_geometry
             if prevent_random_face_in:
                 print("❌❌❌❌❌❌❌ PREVENT_RANDOM_FACE_PICK_UP_IN_GEOMETRY is True ❌❌❌❌❌❌❌")
             fidx = 0 if prevent_random_face_in else random.randint(0, 3)

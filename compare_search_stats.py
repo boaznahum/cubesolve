@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from cube.domain.algs import Algs
 from cube.application.AbstractApp import AbstractApp
-from cube.domain.solver.direct.lbl.LayerByLayerNxNSolver import LayerByLayerNxNSolver
+from cube.domain.solver.direct.lbl.DirectLayerByLayerNxNSolver import DirectLayerByLayerNxNSolver
 from cube.domain.solver.solver import SolveStep
 
 
@@ -15,7 +15,7 @@ def run_test(use_new_search: bool) -> dict[int, int]:
 
     # Create cube and solver
     app = AbstractApp.create_app(cube_size=12)
-    solver = LayerByLayerNxNSolver(app.op, app.op.sp.logger)
+    solver = DirectLayerByLayerNxNSolver(app.op, app.op.sp.logger)
 
     # Apply scramble
     alg = Algs.E[1:4] + Algs.E[7:8]

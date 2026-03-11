@@ -134,6 +134,16 @@ class ConsoleShapeRenderer(ShapeRenderer):
         """No-op for console mode."""
         return None
 
+    def set_sticker_context(self, face: str, row: int, col: int,
+                            slice_index: int = -1,
+                            sx: int = -1, sy: int = -1) -> None:
+        """No-op for console mode."""
+        pass
+
+    def clear_sticker_context(self) -> None:
+        """No-op for console mode."""
+        pass
+
 
 class ConsoleDisplayListManager(DisplayListManager):
     """Null display list manager for console mode."""

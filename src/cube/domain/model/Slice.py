@@ -53,9 +53,9 @@ The axis faces (and their opposites) stay in place but don't rotate.
 └──────────┴───────────┴─────────────────┴───────────────────────────────────┘
 
 API Reference:
-  - Algs.M.get_face_name() → L  (M rotates like L)
-  - Algs.E.get_face_name() → D  (E rotates like D)
-  - Algs.S.get_face_name() → F  (S rotates like F)
+  - Algs.MM.get_face_name() → L  (M rotates like L)
+  - Algs.EE.get_face_name() → D  (E rotates like D)
+  - Algs.SS.get_face_name() → F  (S rotates like F)
 
 ================================================================================
 SLICE TRAVERSAL (used in _get_slices_by_index)
@@ -469,6 +469,10 @@ class Slice(SuperElement):
         """
 
         if n == 0:
+            return
+
+        # 2x2: no physical center/edge slices, nothing to rotate
+        if self.n_slices == 0:
             return
 
         # Invert direction: _rotate() cycles opposite to geometric traversal order

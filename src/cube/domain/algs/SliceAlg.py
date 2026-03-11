@@ -1,5 +1,4 @@
-from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Self, Sequence, final
+from typing import TYPE_CHECKING, Self, Sequence
 
 from cube.domain.algs.SliceAbleAlg import SliceAbleAlg
 from cube.domain.algs.SliceAlgBase import SliceAlgBase
@@ -11,13 +10,15 @@ if TYPE_CHECKING:
     from cube.domain.algs.SimpleAlg import SimpleAlg
 
 
-class SliceAlg(SliceAlgBase, SliceAbleAlg, ABC):
+class SliceAlg(SliceAlgBase, SliceAbleAlg):
     """
     Slice algorithm that CAN be sliced. M[1:2] returns SlicedSliceAlg.
 
     This class represents an unsliced slice algorithm (M, E, S).
     When sliced via __getitem__, it returns a SlicedSliceAlg which cannot
     be sliced again (type-level enforcement).
+
+    One instance per SliceName defined in geometry_fundamentals.SLICE_ROTATION_FACE.
 
     All instances are frozen (immutable) after construction.
 
@@ -28,7 +29,7 @@ class SliceAlg(SliceAlgBase, SliceAbleAlg, ABC):
 
     def __init__(self, slice_name: SliceName, n: int = 1) -> None:
         super().__init__(slice_name, n)
-        # Note: _freeze() is called by concrete subclasses
+        self._freeze()
 
     @property
     def slices(self) -> None:
@@ -77,61 +78,19 @@ class SliceAlg(SliceAlgBase, SliceAbleAlg, ABC):
 
         return SlicedSliceAlg(self._slice_name, self._n, a_slice)
 
-    @abstractmethod
+    def _add_to_str(self, s: str) -> str:
+        """Unsliced slice represents all middle slices, displayed as [:]M/E/S."""
+        return "[:]" + s
+
     def get_base_alg(self) -> "SliceAlgBase":
         """Return whole slice alg that is not yet sliced."""
-        pass
+        from cube.domain.algs.Algs import Algs
+        return Algs.of_slice(self._slice_name)
 
     def same_form(self, a: "SimpleAlg") -> bool:
-        """Check if another alg has the same form (both unsliced).
-
-        Note: We don't need to check self._slice_name == a._slice_name here
-        because each slice has its own concrete type (_M, _E, _S).
-        The optimizer uses `type(prev) is type(a)` which already ensures
-        we only compare algs of the same slice type.
-        """
+        """Check if another alg has the same form (both unsliced, same slice)."""
         if not isinstance(a, SliceAlg):
             return False
-        return True
+        return self._slice_name == a._slice_name
 
 
-@final
-class _M(SliceAlg):
-
-    def __init__(self) -> None:
-        super().__init__(SliceName.M)
-        self._freeze()
-
-    def get_base_alg(self) -> SliceAlgBase:
-        from cube.domain.algs.Algs import Algs
-        return Algs.M
-
-
-@final
-class _E(SliceAlg):
-    """
-    Middle slice over D
-    """
-
-    def __init__(self) -> None:
-        super().__init__(SliceName.E)
-        self._freeze()
-
-    def get_base_alg(self) -> SliceAlgBase:
-        from cube.domain.algs.Algs import Algs
-        return Algs.E
-
-
-@final
-class _S(SliceAlg):
-    """
-    Middle slice over F
-    """
-
-    def __init__(self) -> None:
-        super().__init__(SliceName.S)
-        self._freeze()
-
-    def get_base_alg(self) -> SliceAlgBase:
-        from cube.domain.algs.Algs import Algs
-        return Algs.S

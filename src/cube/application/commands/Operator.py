@@ -11,6 +11,7 @@ from cube.application.state import ApplicationAndViewState
 from cube.domain.algs.Alg import Alg
 from cube.domain.algs.Algs import Algs
 from cube.domain.algs.AnnotationAlg import AnnotationAlg
+from cube.domain.algs.HeadingAlg import HeadingAlg
 from cube.domain.algs.SeqAlg import SeqAlg
 from cube.domain.algs.SimpleAlg import SimpleAlg
 from cube.domain.model.Cube import Cube
@@ -24,9 +25,45 @@ if TYPE_CHECKING:
     from ..animation.AnimationManager import AnimationManager, OpProtocol
 
 
+class OperatorBuffer:
+    """Handle yielded by Operator.with_buffer() for explicit flush control.
+
+    Auto-flush on AnnotationAlg and context exit still happen.
+    This just adds an explicit flush() call for when the solver
+    needs to query cube state mid-buffer.
+
+    Can only be used inside the ``with op.with_buffer() as buffer:`` block.
+    """
+
+    __slots__ = ["_operator", "_active"]
+
+    def __init__(self, operator: "Operator") -> None:
+        self._operator = operator
+        self._active: bool = True
+
+    def flush(self) -> None:
+        """Explicitly flush the buffer: simplify + play buffered moves.
+
+        After flush, the cube state is up-to-date and safe to query.
+        Buffering continues — subsequent op.play() calls still buffer.
+
+        Raises:
+            RuntimeError: If called outside the with_buffer() context.
+        """
+        if not self._active:
+            raise RuntimeError("OperatorBuffer.flush() can only be called inside with_buffer() context")
+        self._operator._flush_buffer()
+
+    def _deactivate(self) -> None:
+        """Mark this handle as inactive (called by with_buffer __exit__)."""
+        self._active = False
+
+
 class Operator(OperatorProtocol):
     __slots__ = ["_cube",
                  "_history",
+                 "_redo_queue",
+                 "_in_undo_redo",
                  "_recording",
                  "_self_annotation_running",
                  "_aborted",
@@ -35,7 +72,9 @@ class Operator(OperatorProtocol):
                  "_animation_manager",
                  "_app_state",
                  "_annotation",
-                 "_log_path"]
+                 "_log_path",
+                 "_buffer",
+                 "_buffer_depth"]
 
     def __init__(self, cube: Cube,
                  app_state: ApplicationAndViewState,
@@ -46,6 +85,8 @@ class Operator(OperatorProtocol):
         self._aborted: Any = None
         self._cube = cube
         self._history: MutableSequence[Alg] = []
+        self._redo_queue: MutableSequence[Alg] = []
+        self._in_undo_redo: bool = False
 
         # a non none indicates that recorder is running
         self._recording: MutableSequence[Alg] | None = None
@@ -66,7 +107,11 @@ class Operator(OperatorProtocol):
             self._annotation: AnnotationProtocol = OpAnnotation(self)
         else:
             from cube.domain.solver.protocols.NoopAnnotation import NoopAnnotation
-            self._annotation = NoopAnnotation()
+            self._annotation = NoopAnnotation(self)
+
+        # Buffer mode: list of algs waiting to be flushed, or None if not buffering
+        self._buffer: MutableSequence[Alg] | None = None
+        self._buffer_depth: int = 0  # nesting depth for with_buffer()
 
         # Get config from app_state
         cfg = app_state.config
@@ -84,8 +129,12 @@ class Operator(OperatorProtocol):
 
     def play(self, alg: Alg, inv: Any = False, animation: Any = True) -> None:
         """
-        deprecated, use play
-        Animation can run only from top level, not from animation itself
+        Execute an algorithm on the cube.
+
+        If inside a with_buffer() context and buffer mode is enabled:
+        - AnnotationAlg triggers a flush before playing the annotation immediately
+        - Other algs are buffered (not played until flush)
+
         :param alg:
         :param inv:
         :param animation: if true and animation is enabled(globally, toggle_animation_on)
@@ -94,7 +143,19 @@ class Operator(OperatorProtocol):
         So it can only turn off current global animation
         :return:
         """
-        self._play(alg, inv, animation)
+        if self._buffer is not None:
+            is_annotation = isinstance(alg, AnnotationAlg)
+            if is_annotation:
+                # Flush buffer before annotation, then play annotation immediately
+                self._flush_buffer()
+                self._play(alg, inv, animation)
+            else:
+                # Buffer the alg (apply inv now so buffer contains resolved algs)
+                if inv:
+                    alg = alg.inv()
+                self._buffer.append(alg)
+        else:
+            self._play(alg, inv, animation)
 
     @deprecated("Use play() instead")
     def op(self, alg: Alg, inv: bool = False, animation: bool = True) -> None:
@@ -184,6 +245,9 @@ class Operator(OperatorProtocol):
         else:
 
             if is_annotation:
+                if isinstance(alg, HeadingAlg):
+                    # HeadingAlg survives in history for queue display
+                    self._history.append(alg)
                 return
 
             if self._recording is not None:
@@ -195,6 +259,10 @@ class Operator(OperatorProtocol):
             alg.play(self._cube, False)
             self._cube.sanity()
             self._history.append(alg)
+            # Note: redo queue is NOT cleared on manual moves.
+            # Unlike text editors, clearing the solver's redo queue on an
+            # accidental key press is destructive. The queue is only cleared
+            # explicitly (reset, new scramble, new solve).
 
     def play_seq(self, algs: Reversible[Alg], inv: Any):
 
@@ -205,20 +273,38 @@ class Operator(OperatorProtocol):
             for alg in algs:
                 self.play(alg, inv)
 
-    def undo(self, animation=True) -> Alg | None:
+    def undo(self, animation: bool = True) -> Alg | None:
+        """Undo the last operation. Pushes undone alg to redo queue.
 
+        :return: the undone alg, or None if history is empty
         """
-        :return: the undo alg
-        """
-        # with self.with_animation(animation=False):
         if self.history():
             alg = self._history.pop()
             _history = [*self._history]
-            self.play(alg, True, animation=animation)
-            # do not add to history !!! otherwise history will never shrink
-            # because op may break big algs to steps, and add more than one , we can't just pop
-            # self._history.pop()
+            self._in_undo_redo = True
+            try:
+                self.play(alg, True, animation=animation)
+            finally:
+                self._in_undo_redo = False
+            # Restore history (play() adds to it, but undo shouldn't grow history)
             self._history[:] = _history
+            self._redo_queue.append(alg)
+            return alg
+        else:
+            return None
+
+    def redo(self, animation: bool = True) -> Alg | None:
+        """Redo the last undone operation. Pops from redo queue and plays forward.
+
+        :return: the redone alg, or None if redo queue is empty
+        """
+        if self._redo_queue:
+            alg = self._redo_queue.pop()
+            self._in_undo_redo = True
+            try:
+                self.play(alg, animation=animation)
+            finally:
+                self._in_undo_redo = False
             return alg
         else:
             return None
@@ -232,6 +318,23 @@ class Operator(OperatorProtocol):
         """Get the service provider."""
         return self.cube.sp
 
+
+    def redo_queue(self) -> Sequence[Alg]:
+        """Get the redo queue (operations available for redo)."""
+        return self._redo_queue[:]
+
+    def clear_redo(self) -> None:
+        """Clear the redo queue."""
+        self._redo_queue.clear()
+
+    def enqueue_redo(self, algs: Sequence[Alg]) -> None:
+        """Replace the redo queue with the given algorithms (e.g., solver solution).
+
+        Stores in reversed order so that pop() (LIFO) yields the first step
+        first — matching the same pop() semantics used by manual undo/redo.
+        """
+        self._redo_queue.clear()
+        self._redo_queue.extend(reversed(algs))
 
     def history(self, *, remove_scramble: bool = False) -> Sequence[Alg]:
         """
@@ -274,15 +377,16 @@ class Operator(OperatorProtocol):
     def count(self):
         return functools.reduce(lambda n, a: n + a.count(), self._history, 0)
 
-    def reset(self):
+    def reset(self) -> None:
         """
-        Reset the cube and clear the history.
+        Reset the cube and clear the history and redo queue.
         So,:meth: `count` will return zero
         :return:
         """
         self._aborted = False
         self._cube.reset()
         self._history.clear()
+        self._redo_queue.clear()
 
     @contextmanager
     def with_animation(self, animation: bool | None = None):
@@ -311,6 +415,31 @@ class Operator(OperatorProtocol):
         finally:
             self._history[:] = _history
 
+    def _flush_buffer(self) -> None:
+        """Flush the buffer: simplify buffered algs, then play each one.
+
+        Private — called by with_buffer().__exit__ and by play() when an AnnotationAlg
+        is encountered while buffering.
+        """
+        buf = self._buffer
+        if not buf:
+            return
+
+        # Build a single alg from buffer, simplify, then play each result
+        combined = SeqAlg(None, *buf)
+        simplified = combined.simplify()
+        buf.clear()
+
+        # Temporarily disable buffering to play the simplified algs
+        # (self.play() won't re-buffer since _buffer is None)
+        saved_buffer = self._buffer
+        self._buffer = None
+        try:
+            for a in simplified.flatten():
+                self.play(a)
+        finally:
+            self._buffer = saved_buffer
+
     @contextmanager
     def with_query_restore_state(self):
         """
@@ -321,10 +450,11 @@ class Operator(OperatorProtocol):
         are automatically undone on exit.
 
         Behavior:
+            - If inside with_buffer(): flushes buffer first, disables buffering during query
             - Enables query mode (skips texture/GUI updates for performance)
             - Disables animation
             - Records history length on entry
-            - On exit: undoes all moves back to original state
+            - On exit: undoes all moves back to original state, restores buffer state
             - Supports nesting
 
         Example:
@@ -337,16 +467,21 @@ class Operator(OperatorProtocol):
         Warning:
             Direct cube manipulation (cube.rotate() without operator) inside
             the context will NOT be rolled back - only operator moves are tracked.
-
-        See Also:
-            CubeQueries2.rotate_and_check: Similar but operates directly on cube
-            without operator (no history tracking).
         """
+        # Flush and temporarily disable buffering — query needs accurate cube state
+        saved_buffer = self._buffer
+        saved_depth = self._buffer_depth
+        if saved_buffer is not None:
+            self._flush_buffer()
+        self._buffer = None
+        self._buffer_depth = 0
+
         cube = self._cube
 
         # Save original states
         was_in_query_mode = cube._in_query_mode
         history_len_before = len(self._history)
+        saved_redo_queue = [*self._redo_queue]
 
         # CLAUDE [#8]: move the query mode context manager to cube itself, this is not OOP programming
         cube._in_query_mode = True
@@ -359,7 +494,14 @@ class Operator(OperatorProtocol):
                 while len(self._history) > history_len_before:
                     self.undo(animation=False)
 
+                # Restore redo queue — undo() above pollutes it with query moves
+                self._redo_queue[:] = saved_redo_queue
+
                 cube._in_query_mode = was_in_query_mode
+
+                # Restore buffer state
+                self._buffer = saved_buffer
+                self._buffer_depth = saved_depth
 
     @property
     def is_animation_running(self):

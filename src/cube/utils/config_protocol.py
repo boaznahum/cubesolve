@@ -17,6 +17,55 @@ if TYPE_CHECKING:
 
 
 @runtime_checkable
+class AnimationSpeedConfigProtocol(Protocol):
+    """Protocol for animation speed configuration."""
+
+    @property
+    def default_index(self) -> float: ...
+
+    @property
+    def step(self) -> float: ...
+
+    @property
+    def d0(self) -> float: ...
+
+    @property
+    def dn(self) -> float: ...
+
+    @property
+    def blocking_timeout(self) -> float: ...
+
+
+@runtime_checkable
+class AssistConfigProtocol(Protocol):
+    """Protocol for assist mode configuration."""
+
+    @property
+    def enabled(self) -> bool: ...
+
+    @property
+    def delay_ms(self) -> int: ...
+
+
+@runtime_checkable
+class SoundConfigProtocol(Protocol):
+    """Protocol for sound effects configuration."""
+
+    @property
+    def enabled(self) -> bool: ...
+
+
+@runtime_checkable
+class SessionConfigProtocol(Protocol):
+    """Protocol for WebGL session configuration."""
+
+    @property
+    def keepalive_timeout(self) -> int:
+        """How long (seconds) to keep a disconnected session alive."""
+        ...
+
+
+@runtime_checkable
 class ArrowConfigProtocol(Protocol):
     """Protocol for 3D arrow configuration.
 
@@ -132,6 +181,11 @@ class ConfigProtocol(Protocol):
         """Enable cube caching for performance optimization."""
         ...
 
+    @property
+    def prevent_random_face_pick_up_in_geometry(self) -> bool:
+        """Prevent random face selection in geometry walking (debug flag)."""
+        ...
+
     # ==========================================================================
     # Solver settings
     # ==========================================================================
@@ -168,6 +222,15 @@ class ConfigProtocol(Protocol):
     @property
     def lbl_sanity_check(self) -> bool:
         """Enable LBL solver sanity checks (performance impact)."""
+        ...
+
+    @property
+    def default_2x2_solver(self) -> str:
+        """Default 2x2 solver used when a 3x3+ solver is asked to solve a 2x2.
+
+        Options: "2x2 Beginner", "2x2 IDA*"
+        Default: "2x2 Beginner"
+        """
         ...
 
     @property
@@ -308,19 +371,23 @@ class ConfigProtocol(Protocol):
         ...
 
     @property
-    def animation_speed(self) -> int:
-        """Default animation speed index (0-7, higher is faster).
+    def animation_speed_config(self) -> AnimationSpeedConfigProtocol:
+        """Animation speed parameters for WebGL frontend."""
+        ...
 
-        Speed presets:
-        0: 45 deg/s (slowest)
-        1: 90 deg/s
-        2: 180 deg/s
-        3: 360 deg/s (default)
-        4: 540 deg/s
-        5: 900 deg/s
-        6: 1800 deg/s
-        7: 3000 deg/s (fastest)
-        """
+    @property
+    def assist_config(self) -> AssistConfigProtocol:
+        """Assist mode configuration for WebGL frontend."""
+        ...
+
+    @property
+    def sound_config(self) -> "SoundConfigProtocol":
+        """Sound effects configuration for WebGL frontend."""
+        ...
+
+    @property
+    def session_config(self) -> "SessionConfigProtocol":
+        """WebGL session configuration (keepalive timeout, etc.)."""
         ...
 
     @property
@@ -400,6 +467,50 @@ class ConfigProtocol(Protocol):
         """Show algorithm annotations."""
         ...
 
+    @property
+    def operator_buffer_mode(self) -> bool:
+        """Enable buffered play mode (op.with_buffer()).
+
+        When True, op.with_buffer() buffers moves and simplifies on flush.
+        When False, op.with_buffer() is a transparent no-op (moves play immediately).
+        """
+        ...
+
+    @operator_buffer_mode.setter
+    def operator_buffer_mode(self, value: bool) -> None:
+        """Set operator buffer mode flag."""
+        ...
+
+    @property
+    def queue_heading_h1(self) -> bool:
+        """Show h1 headings (solver phase names) in WebGL queue display."""
+        ...
+
+    @queue_heading_h1.setter
+    def queue_heading_h1(self, value: bool) -> None:
+        """Set queue heading h1 flag."""
+        ...
+
+    @property
+    def queue_heading_h2(self) -> bool:
+        """Show h2 headings (sub-step details) in WebGL queue display."""
+        ...
+
+    @queue_heading_h2.setter
+    def queue_heading_h2(self, value: bool) -> None:
+        """Set queue heading h2 flag."""
+        ...
+
+    @property
+    def assist_enabled(self) -> bool:
+        """Whether assist mode (move preview) is enabled."""
+        ...
+
+    @assist_enabled.setter
+    def assist_enabled(self, value: bool) -> None:
+        """Set assist enabled flag."""
+        ...
+
     # ==========================================================================
     # Testing settings
     # ==========================================================================
@@ -434,6 +545,20 @@ class ConfigProtocol(Protocol):
     @property
     def input_mouse_rotate_adjusted_face(self) -> bool:
         """Rotate adjusted face on edge/corner drag."""
+        ...
+
+    # ==========================================================================
+    # Single-step mode settings
+    # ==========================================================================
+    # ==========================================================================
+    # Config change listeners
+    # ==========================================================================
+    def add_config_listener(self, listener: object) -> None:
+        """Register a callback(field_name: str, new_value: object) for config changes."""
+        ...
+
+    def remove_config_listener(self, listener: object) -> None:
+        """Unregister a config change listener."""
         ...
 
     # ==========================================================================

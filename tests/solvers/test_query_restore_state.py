@@ -149,3 +149,46 @@ class TestQueryRestoreState:
 
         # _in_query_mode should be False
         assert not cube._in_query_mode, "Should not be in query mode after exception"
+
+    def test_redo_queue_not_polluted_by_query(self, test_sp) -> None:
+        """Test that redo queue is not polluted by query rollback undos.
+
+        Bug: with_query_restore_state() uses undo() to rollback, which pushes
+        each undone move onto the redo queue. This causes the WebGL viewer to
+        show spurious moves in the undo queue.
+        """
+        app = AbstractApp.create_app(cube_size=3)
+        cube = Cube(size=3, sp=test_sp)
+        op = Operator(cube, app.vs)
+
+        # Start with empty redo queue
+        assert len(op.redo_queue()) == 0
+
+        # Do a query that plays and rolls back moves
+        with op.with_query_restore_state():
+            op.play(Algs.U)
+            op.play(Algs.R)
+            op.play(Algs.F)
+
+        # Redo queue should still be empty — query rollback should not pollute it
+        assert len(op.redo_queue()) == 0, \
+            "Redo queue should not contain moves from query rollback"
+
+    def test_redo_queue_preserved_through_query(self, test_sp) -> None:
+        """Test that pre-existing redo queue entries survive a query."""
+        app = AbstractApp.create_app(cube_size=3)
+        cube = Cube(size=3, sp=test_sp)
+        op = Operator(cube, app.vs)
+
+        # Create a redo entry: play U then undo it
+        op.play(Algs.U)
+        op.undo()
+        assert len(op.redo_queue()) == 1
+
+        # Do a query
+        with op.with_query_restore_state():
+            op.play(Algs.R)
+
+        # Redo queue should still have exactly the original entry
+        assert len(op.redo_queue()) == 1, \
+            "Pre-existing redo queue entries should be preserved through query"

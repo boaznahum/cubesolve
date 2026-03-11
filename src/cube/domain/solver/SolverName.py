@@ -21,7 +21,9 @@ class SolverMeta:
     """
     display_name: str
     implemented: bool = True  # If False, solver not available anywhere
+    user_visible: bool = True  # If False, hidden from UI solver lists
     not_testable: str | None = None
+    only_2x2: str | None = None
     only_3x3: str | None = None
     skip_3x3: str | None = None
     skip_even: str | None = None
@@ -37,6 +39,8 @@ class SolverMeta:
             return "Not implemented"
         if self.not_testable:
             return self.not_testable
+        if self.only_2x2 and cube_size != 2:
+            return self.only_2x2
         if self.only_3x3 and cube_size != 3:
             return self.only_3x3
         if self.skip_3x3 and cube_size == 3:
@@ -59,15 +63,17 @@ class SolverName(Enum):
 
     Each enum value contains SolverMeta with test skip reasons (None = supported).
     """
-    LBL = SolverMeta("LBL")
-    CFOP = SolverMeta("CFOP")#, only_3x3="CFOP use same reducer as LBL")
+    LBL = SolverMeta("Beginner Reducer")
+    CFOP = SolverMeta("CFOP")
     KOCIEMBA = SolverMeta("Kociemba")
     CAGE = SolverMeta("Cage")  # Cage method: edges first, then corners, then centers
-    LBL_BIG = SolverMeta("LBL-Big",
-                         #implemented=False,  # Not yet fully implemented
-                         #skip_3x3="LBL-Big is for NxN cubes only",
-                         #skip_even="WIP: Even cubes not fully tested"
-              )  # Layer-by-layer for big cubes
+    LBL_BIG = SolverMeta("Big LBL")  # Layer-by-layer for big cubes
+    TWO_BY_TWO_IDA = SolverMeta("2x2 IDA*", user_visible=False, only_2x2="2x2 IDA* solver only supports 2x2 cubes")
+    TWO_BY_TWO_BEGINNER = SolverMeta(
+        "2x2 Beginner",
+        user_visible=False,
+        only_2x2="2x2 Beginner solver only supports 2x2 cubes",
+    )
 
     @property
     def display_name(self) -> str:
@@ -98,7 +104,7 @@ class SolverName(Enum):
             ValueError: If name doesn't match any solver or matches multiple solvers
 
         Examples:
-            SolverName.lookup("lbl") -> SolverName.LBL
+            SolverName.lookup("beginner") -> SolverName.LBL
             SolverName.lookup("ca") -> SolverName.CAGE
             SolverName.lookup("c") -> ValueError (ambiguous: CFOP, CAGE)
         """
@@ -137,6 +143,11 @@ class SolverName(Enum):
     def implemented(cls) -> list["SolverName"]:
         """Return list of implemented solvers (for use in tests)."""
         return [s for s in cls if s.meta.implemented]
+
+    @classmethod
+    def user_visible(cls) -> list["SolverName"]:
+        """Return list of user-visible implemented solvers."""
+        return [s for s in cls if s.meta.implemented and s.meta.user_visible]
 
     @classmethod
     def all(cls) -> list["SolverName"]:

@@ -38,7 +38,7 @@ class OLL(StepSolver):
         Can be solved only by rotate
         :return:
         """
-        return self.cqr.rotate_face_and_check(self.yellow_face, lambda: self.is_solved) >= 0
+        return self.cqr.rotate_face_and_check(self.yellow_face, lambda: self.is_solved, self.op) >= 0
 
     def solve(self):
 
@@ -181,7 +181,7 @@ class OLL(StepSolver):
         self.debug(f"Found (raw) alg: {description} : {alg}")
 
         if isinstance(alg, str):
-            alg = Algs.parse(alg)
+            alg = Algs.parse(alg, compat_3x3=True)
 
         return description, alg
 

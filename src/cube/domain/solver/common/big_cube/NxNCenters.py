@@ -157,7 +157,9 @@ class NxNCenters(SolverHelper):
 
 
         #fix: a pathc is this is the problem ? yes it is !!!
-        self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES = False
+        # Solver run infinite loop
+        if True:
+            self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES = False
 
         # Use CommutatorHelper for block search operations
         self._comm_helper = CommutatorHelper(slv)

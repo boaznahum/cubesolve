@@ -233,7 +233,7 @@ def main(args: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--backend", "-b",
-        choices=["pyglet", "pyglet2", "tkinter", "console", "headless", "web"],
+        choices=["pyglet", "pyglet2", "tkinter", "console", "headless", "web", "webgl"],
         default="pyglet",
         help="GUI backend to use (default: pyglet)"
     )

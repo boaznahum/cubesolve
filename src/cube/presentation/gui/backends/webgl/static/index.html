@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NxN Rubik's Cube Solver — 3D Interactive | Boaz Nahum</title>
+
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Free online NxN Rubik's Cube solver with 3D WebGL visualization. Supports 2x2 to 10x10 cubes. Scramble, solve step-by-step with animated algorithms, and learn how it works.">
+    <meta name="keywords" content="Rubik's Cube solver, NxN cube solver, 3D cube, WebGL, 2x2, 3x3, 4x4, 5x5, interactive, step-by-step, animated, online">
+    <meta name="author" content="Boaz Nahum">
+
+    <!-- Open Graph (Facebook, WhatsApp, Slack, LinkedIn) -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="NxN Rubik's Cube Solver — 3D Interactive">
+    <meta property="og:description" content="Free online Rubik's Cube solver with 3D WebGL visualization. Supports 2x2 to 10x10. Scramble, solve step-by-step with animated algorithms.">
+    <meta property="og:url" content="https://cubesolve.fly.dev/">
+    <meta property="og:image" content="https://cubesolve.fly.dev/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:site_name" content="CubeSolve">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="NxN Rubik's Cube Solver — 3D Interactive">
+    <meta name="twitter:description" content="Free online Rubik's Cube solver with 3D WebGL visualization. Supports 2x2 to 10x10 cubes.">
+    <meta name="twitter:image" content="https://cubesolve.fly.dev/og-image.png">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="favicon.png">
+
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "CubeSolve — NxN Rubik's Cube Solver",
+        "description": "Free online NxN Rubik's Cube solver with 3D WebGL visualization. Supports 2x2 to 10x10 cubes with animated step-by-step solutions.",
+        "url": "https://cubesolve.fly.dev/",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Any",
+        "browserRequirements": "WebGL 2.0 support",
+        "author": {
+            "@type": "Person",
+            "name": "Boaz Nahum"
+        },
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        }
+    }
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div id="app-layout">
+        <!-- History Panel -->
+        <div id="history-panel">
+            <div class="hp-header">
+                <span class="hp-title">History</span>
+                <button class="hp-header-btn" id="btn-history-clear" title="Clear history">&#x2715;</button>
+            </div>
+            <div id="history-list"></div>
+            <div class="hp-footer">
+                <button class="hp-action-btn" id="btn-fastrewind" title="Undo all" disabled>
+                    <span class="icon">&#x25C0;&#x25C0;</span>
+                </button>
+                <button class="hp-action-btn" id="btn-undo" title="Undo" disabled>
+                    <span class="icon">&#x25C0;</span>
+                </button>
+                <button class="hp-action-btn" id="btn-redo" title="Redo" disabled>
+                    <span class="icon">&#x25B6;</span>
+                </button>
+                <button class="hp-action-btn hp-btn-play" id="btn-fastplay" title="Play all" disabled>
+                    <span class="icon">&#x25B6;&#x25B6;</span>
+                </button>
+            </div>
+        </div>
+        <!-- Cube area -->
+        <div id="container">
+            <div id="toolbar">
+                <div class="tb-group">
+                    <button class="tb-btn" data-cmd="scramble">Scramble 0</button>
+                    <select id="scramble-seed" class="tb-select" title="Scramble seed (* = random)">
+                        <option value="0" selected>0</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                        <option value="9">9</option>
+                        <option value="*">*</option>
+                    </select>
+                    <button class="tb-btn" data-cmd="solve_and_play">Solve</button>
+                    <button class="tb-btn" data-cmd="solve">Solution</button>
+                    <button class="tb-btn" id="btn-stop" data-cmd="stop" disabled>Stop</button>
+                    <button class="tb-btn" data-cmd="reset">Reset</button>
+                </div>
+                <div class="tb-group">
+                    <button class="tb-btn tb-icon" data-cmd="reset_session"
+                        title="Reset session — start completely fresh">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path
+                                d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"
+                                fill="#ccc" />
+                        </svg>
+                    </button>
+                    <button class="tb-btn tb-icon" id="btn-paint" title="Paint mode — set sticker colors manually">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2C6.49 2 2 6.49 2 12s4.49 10 10 10a2.5 2.5 0 0 0 2.5-2.5c0-.61-.23-1.21-.64-1.67a.528.528 0 0 1 .36-.83H16c3.31 0 6-2.69 6-6 0-4.96-4.49-9-10-9z" fill="#ccc"/>
+                            <circle cx="6.5" cy="10" r="1.5" fill="#e33"/>
+                            <circle cx="9.5" cy="7" r="1.5" fill="#3b3"/>
+                            <circle cx="14.5" cy="7" r="1.5" fill="#36f"/>
+                            <circle cx="17.5" cy="10" r="1.5" fill="#fa0"/>
+                        </svg>
+                    </button>
+                    <button class="tb-btn tb-compass" id="btn-view-reset" title="Reset view to default camera position">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="12" cy="12" r="9.5" stroke="#4dd" stroke-width="1.8" />
+                            <line x1="12" y1="1" x2="12" y2="5.5" stroke="#4dd" stroke-width="1.5" />
+                            <line x1="12" y1="18.5" x2="12" y2="23" stroke="#4dd" stroke-width="1.5" />
+                            <line x1="1" y1="12" x2="5.5" y2="12" stroke="#4dd" stroke-width="1.5" />
+                            <line x1="18.5" y1="12" x2="23" y2="12" stroke="#4dd" stroke-width="1.5" />
+                            <polygon points="12,5 9.5,13 12,11.5 14.5,13" fill="#e33" />
+                            <polygon points="12,19 9.5,13 12,14.5 14.5,13" fill="#fff" opacity="0.7" />
+                            <text x="12" y="3.5" text-anchor="middle" fill="#e33" font-size="4"
+                                font-weight="bold">N</text>
+                        </svg>
+                    </button>
+                </div>
+                <div class="tb-sep"></div>
+                <div class="tb-group">
+                    <button class="tb-btn tb-icon" id="btn-console" title="Server console">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="2" y="3" width="20" height="18" rx="2" stroke="#ccc" stroke-width="2" fill="none"/>
+                            <polyline points="6,10 10,14 6,18" stroke="#ccc" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                            <line x1="13" y1="18" x2="18" y2="18" stroke="#ccc" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                    <button class="tb-btn" id="btn-settings" title="Settings">&#x2699;</button>
+                    <button class="tb-btn tb-on" id="btn-anim" data-cmd="toggle_animation">Anim:ON</button>
+                    <button class="tb-btn tb-on" id="btn-sound" title="Toggle sound effects">🔊</button>
+                </div>
+                <div class="tb-sep"></div>
+                <div class="tb-group">
+                    <span class="tb-label">Solver</span>
+                    <select id="solver-select" title="Solver"></select>
+                </div>
+                <div class="tb-sep"></div>
+                <div class="tb-group">
+                    <span class="tb-label">Size</span>
+                    <select id="size-select" title="Cube size"></select>
+                </div>
+                <div class="tb-sep"></div>
+                <div class="tb-group">
+                    <span class="tb-label">Spd</span>
+                    <select id="speed-select" title="Animation speed"></select>
+                </div>
+                <div class="tb-sep"></div>
+                <div class="tb-group">
+                    <button class="tb-btn tb-icon" id="btn-info" title="About CubeSolve">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="12" cy="12" r="10" stroke="#ccc" stroke-width="2" fill="none"/>
+                            <text x="12" y="17" text-anchor="middle" fill="#ccc" font-size="14" font-weight="bold" font-family="serif">i</text>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <!-- Paint mode toolbar (hidden by default) -->
+            <div id="paint-toolbar" style="display:none">
+                <button class="pt-btn pt-cancel-btn" id="pt-cancel">Cancel</button>
+                <div id="paint-palette" class="pt-palette"></div>
+                <button class="pt-btn pt-action-btn" id="pt-check">Check</button>
+                <button class="pt-btn pt-apply-btn pt-apply-red" id="pt-apply" disabled>Apply</button>
+            </div>
+            <div id="canvas-wrapper">
+                <canvas id="canvas"></canvas>
+                <div id="anim-overlay"></div>
+                <div id="status-overlay"></div>
+            </div>
+            <div id="move-buttons">
+                <div class="mv-row">
+                    <button class="mv-btn mv-shift" id="btn-shift" title="Shift: tap=once, hold=lock">⇧</button>
+                    <button class="mv-btn" data-key="x">X</button>
+                    <button class="mv-btn" data-key="y">Y</button>
+                    <button class="mv-btn" data-key="z">Z</button>
+                    <button class="mv-btn" data-key="e">E</button>
+                    <button class="mv-btn" data-key="s">S</button>
+                    <button class="mv-btn" data-key="m">M</button>
+                </div>
+                <div class="mv-row">
+                    <button class="mv-btn" data-key="f">F</button>
+                    <button class="mv-btn" data-key="u">U</button>
+                    <button class="mv-btn" data-key="r">R</button>
+                    <button class="mv-btn" data-key="l">L</button>
+                    <button class="mv-btn" data-key="d">D</button>
+                    <button class="mv-btn" data-key="b">B</button>
+                </div>
+            </div>
+            <div id="status"><span class="status-dot"></span>Connecting...</div>
+            <p id="seo-tagline">NxN Rubik's Cube Solver — 2x2 to 10x10 — Animated Step-by-Step</p>
+        </div>
+    </div><!-- /app-layout -->
+    <noscript>
+        <div style="text-align:center;padding:40px 20px;color:#ccc;font-family:sans-serif;">
+            <h1>NxN Rubik's Cube Solver</h1>
+            <p>A free online 3D Rubik's Cube solver supporting sizes from 2x2 to 10x10.
+               Scramble any cube, watch it solve step-by-step with animated algorithms,
+               and learn how each stage works. Built with WebGL for smooth 3D rendering.</p>
+            <p>Please enable JavaScript to use this application.</p>
+        </div>
+    </noscript>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.134.0/build/three.module.js"
+        }
+    }
+    </script>
+    <script type="module" src="js/main.js"></script>
+</body>
+
+</html>

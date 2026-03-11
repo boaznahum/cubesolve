@@ -109,7 +109,7 @@ class Logger(ILogger):
         step_log.debug(None, "verbose", level=5)  # Hidden: 5 > 3
     """
 
-    __slots__ = ["_delegate", "_root", "_prefix", "_debug_flag", "_level", "_quiet_all", "_debug_all"]
+    __slots__ = ["_delegate", "_root", "_prefix", "_debug_flag", "_level", "_quiet_all", "_debug_all", "_streams"]
 
     def __init__(
         self,
@@ -150,12 +150,14 @@ class Logger(ILogger):
             self._quiet_all = env_quiet if env_quiet is not None else quiet_all
             self._debug_all = env_debug if env_debug is not None else debug_all
             self._root: Logger = self
+            self._streams: list[Callable[[str], None]] = []
         else:
             # Child logger: shares root's state
             # Access _root from delegate (works for Logger, may need cast for other ILogger)
             self._root = getattr(delegate, "_root", self)  # type: ignore[assignment]
             self._quiet_all = False  # Not used, but slot must be initialized
             self._debug_all = False  # Not used, but slot must be initialized
+            self._streams = []  # Not used, but slot must be initialized
 
     def _resolve_debug_flag(self, debug_on: bool | None) -> bool:
         """Resolve the effective debug_on value.
@@ -192,6 +194,42 @@ class Logger(ILogger):
     def quiet_all(self, value: bool) -> None:
         """Set quiet_all mode on root logger."""
         self._root._quiet_all = value
+
+    # --- Stream methods ---
+
+    def add_stream(self, callback: Callable[[str], None]) -> None:
+        """Register a stream callback on the root logger.
+
+        Every debug line produced by this logger or any child logger
+        will be forwarded to the callback as a single string.
+        """
+        self._root._streams.append(callback)
+
+    def remove_stream(self, callback: Callable[[str], None]) -> None:
+        """Unregister a previously registered stream callback."""
+        try:
+            self._root._streams.remove(callback)
+        except ValueError:
+            pass
+
+    def _emit_to_streams(self, *args: object) -> None:
+        """Forward a formatted line to all registered stream callbacks."""
+        streams = self._root._streams
+        if not streams:
+            return
+        line = " ".join(str(a) for a in args)
+        for cb in streams:
+            try:
+                cb(line)
+            except Exception as e:
+                import traceback
+                print(f"[Logger] Stream callback error: {e}", flush=True)
+                traceback.print_exc()
+
+    def _print_line(self, *args: object) -> None:
+        """Print a line to stdout and forward to all stream callbacks."""
+        print(*args, flush=True)
+        self._emit_to_streams(*args)
 
     # --- Debug methods ---
 
@@ -248,10 +286,9 @@ class Logger(ILogger):
         resolved_args = [_resolve_arg(a) for a in args]
         # Print directly with prefix
         if self._prefix:
-            print("DEBUG:", f"{self._prefix}:", *resolved_args, flush=True)
+            self._print_line("DEBUG:", f"{self._prefix}:", *resolved_args)
         else:
-
-            print("DEBUG:", *resolved_args, flush=True)
+            self._print_line("DEBUG:", *resolved_args)
 
     # --- Prefix operations ---
 
@@ -329,9 +366,9 @@ class Logger(ILogger):
         if headline_str:
             # Print headline with current prefix
             if self._prefix:
-                print("DEBUG:", f"{self._prefix}:", f"── {headline_str} ──", flush=True)
+                self._print_line("DEBUG:", f"{self._prefix}:", f"── {headline_str} ──")
             else:
-                print("DEBUG:", f"── {headline_str} ──", flush=True)
+                self._print_line("DEBUG:", f"── {headline_str} ──")
 
         # Save current prefix and add indent
         saved_prefix = self._prefix
@@ -356,20 +393,20 @@ class Logger(ILogger):
                     # Exception is propagating
                     if TAB_EXCEPTION_MODE == TabExceptionMode.ABORTED:
                         if self._prefix:
-                            print("DEBUG:", f"{self._prefix}:", f"── ❌ ABORTED: {headline_str} ──", flush=True)
+                            self._print_line("DEBUG:", f"{self._prefix}:", f"── ❌ ABORTED: {headline_str} ──")
                         else:
-                            print("DEBUG:", f"── ❌ ABORTED: {headline_str} ──", flush=True)
+                            self._print_line("DEBUG:", f"── ❌ ABORTED: {headline_str} ──")
                     elif TAB_EXCEPTION_MODE == TabExceptionMode.NORMAL:
                         if self._prefix:
-                            print("DEBUG:", f"{self._prefix}:", f"── end: {headline_str} ──", flush=True)
+                            self._print_line("DEBUG:", f"{self._prefix}:", f"── end: {headline_str} ──")
                         else:
-                            print("DEBUG:", f"── end: {headline_str} ──", flush=True)
+                            self._print_line("DEBUG:", f"── end: {headline_str} ──")
                     # SILENT: don't print anything
                 else:
                     # Normal exit
                     if self._prefix:
-                        print("DEBUG:", f"{self._prefix}:", f"── end: {headline_str} ──", flush=True)
+                        self._print_line("DEBUG:", f"{self._prefix}:", f"── end: {headline_str} ──")
                     else:
-                        print("DEBUG:", f"── end: {headline_str} ──", flush=True)
+                        self._print_line("DEBUG:", f"── end: {headline_str} ──")
 
 

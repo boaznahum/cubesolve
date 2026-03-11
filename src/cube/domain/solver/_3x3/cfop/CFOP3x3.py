@@ -184,11 +184,11 @@ class CFOP3x3(BaseSolver, Solver3x3Protocol):
 
     # Required by Solver ABC - delegate to status_3x3
     @property
-    def status(self) -> str:
+    def _status_impl(self) -> str:
         """Human-readable solver status."""
         return self.status_3x3
 
-    def supported_steps(self) -> list[SolveStep]:
+    def _supported_steps_impl(self) -> list[SolveStep]:
         """Return list of solve steps this solver supports.
 
         CFOP method uses: Cross (L1x), F2L, OLL, PLL.

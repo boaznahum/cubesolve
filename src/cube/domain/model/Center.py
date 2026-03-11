@@ -2,6 +2,8 @@ from collections.abc import Iterable, Iterator, Sequence
 from typing import TYPE_CHECKING, Self, TypeAlias
 
 from cube.domain.model._elements import CenterSliceIndex, SliceIndex
+from cube.domain.model.Color import Color
+from cube.domain.model.Colorable import Colorable
 from cube.domain.model.PartSlice import CenterSlice
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.Part import Part
@@ -14,25 +16,36 @@ if TYPE_CHECKING:
 _Face: TypeAlias = "Face"
 
 
-class Center(Part):
-    __slots__ = "_slices"
+class Center(Part, Colorable):
+    __slots__ = ("_slices", "_face_ref")
 
-    def __init__(self, center_slices: Sequence[Sequence[CenterSlice]]) -> None:
+    def __init__(self, center_slices: Sequence[Sequence[CenterSlice]], face: "_Face | None" = None) -> None:
         # assign before call to init because _edges is called from ctor
         self._slices: Sequence[Sequence[CenterSlice]] = center_slices
+        self._face_ref: "_Face | None" = face
+        if not center_slices or not center_slices[0]:
+            # 2x2: no center slices, provide cube for Part.__init__ fallback
+            if face is not None:
+                self._cube = face.cube
         super().__init__()
 
     @property
     def face(self) -> _Face:
+        if self._face_ref is not None and not self._slices:
+            return self._face_ref
         return self._slices[0][0].edges[0].face
 
     @property
     def _3x3_representative_edges(self) -> Sequence[PartEdge]:
+        if not self._slices:
+            return ()  # 2x2: no center slices
         n2 = self.n_slices // 2
         return self._slices[n2][n2].edges
 
     @property
     def is3x3(self) -> bool:
+        assert self._slices, "is3x3 should not be called on 2x2 center with no slices"
+
         slices: Iterator[CenterSlice] = self.all_slices
 
         c = next(slices).color
@@ -98,14 +111,20 @@ class Center(Part):
         return (slices[p[0]][p[1]] for p in points)
 
     def edg(self) -> PartEdge:
-        return self._3x3_representative_edges[0]
+        rep = self._3x3_representative_edges
+        if not rep:
+            raise ValueError("Center has no slices (2x2 cube)")
+        return rep[0]
 
     @property
-    def color(self):
+    def color(self) -> Color:
         """
-        Meaningfully only for 3x3
+        For 3x3+: returns the center sticker color.
+        For 2x2: returns UNCOLORED — no physical centers exist.
         :return:
         """
+        if not self._slices:
+            return Color.UNCOLORED
         return self.edg().color
 
     def clone(self) -> "Center":
@@ -115,7 +134,7 @@ class Center(Part):
 
         _slices = [[my[i][j].clone() for j in range(n)] for i in range(n)]
 
-        return Center(_slices)
+        return Center(_slices, face=self._face_ref)
 
     def copy_colors(self, other: "Center",
                     index: CenterSliceIndex | None = None,
@@ -124,6 +143,8 @@ class Center(Part):
         self._replace_colors(other, (other.face, self.face), index=index, source_index=source_index)
 
     def __str__(self):
+        if not self._slices:
+            return f"Center({self.face.name}:empty)"
         s = str(self.face.name)
         for r in range(self.n_slices):
             for c in range(self.n_slices):

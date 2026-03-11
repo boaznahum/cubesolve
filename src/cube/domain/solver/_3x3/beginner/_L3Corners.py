@@ -26,7 +26,7 @@ class L3Corners(SolverHelper):
 
         yf: Face = self.white_face.opposite
 
-        return self.cqr.rotate_face_and_check(yf, self._is_solved) >= 0
+        return self.cqr.rotate_face_and_check(yf, self._is_solved, self.op) >= 0
 
     def solve(self):
 
@@ -158,14 +158,68 @@ class L3Corners(SolverHelper):
 
         raise ValueError(f"Corner {c} is not on {yf}")
 
-    def _do_orientation(self, yf: Face):
+    def _do_orientation(self, yf: Face) -> None:
+        """Orient all last-layer corners so yellow faces up.
 
-        for _ in range(0, 4):
+        Searches CCW for unoriented corners, skipping already-oriented ones.
+        Computes exact twist count (1 or 2) instead of iterating.
+        """
 
+        twist: Alg = Algs.alg(None, Algs.R.prime, Algs.D.prime, Algs.R, Algs.D) * 2
+
+        total_u: int = 0
+
+        for _ in range(4):
+            n: int = self._find_next_unoriented_ccw(yf)
+            if n < 0:
+                break  # all oriented
+
+            if n > 0:
+                self.op.play((Algs.U.prime * n).simplify())
+                total_u += n
+
+            twist_n: int = self._twist_count(yf, self.cube.front, self.cube.right)
+            assert twist_n > 0
             with self.ann.annotate((yf.corner_bottom_right, AnnWhat.Both)):
-                # we can't check all_match because we rotate the cube
-                while not yf.corner_bottom_right.match_face(yf):
-                    self.op.play(Algs.alg(None, Algs.R.prime, Algs.D.prime, Algs.R, Algs.D) * 2)
+                self.op.play((twist * twist_n).simplify())
 
-            # before U'
-            self.op.play(Algs.U.prime)
+        # Realign U layer
+        remaining: int = (4 - total_u % 4) % 4
+        if remaining > 0:
+            self.op.play((Algs.U.prime * remaining).simplify())
+
+    @staticmethod
+    def _find_next_unoriented_ccw(yf: Face) -> int:
+        """Find the next unoriented corner searching CCW from FRU.
+
+        Returns 0-3 (number of U' rotations to bring it to FRU) or -1 if all oriented.
+        CCW order: FRU(0), FLU(1), BLU(2), BRU(3).
+        """
+        corners: list[Corner] = [
+            yf.corner_bottom_right,  # FRU
+            yf.corner_bottom_left,   # FLU
+            yf.corner_top_left,      # BLU
+            yf.corner_top_right,     # BRU
+        ]
+        for i, corner in enumerate(corners):
+            if not corner.match_face(yf):
+                return i
+        return -1
+
+    @staticmethod
+    def _twist_count(yf: Face, cube_front: Face, cube_right: Face) -> int:
+        """Compute how many (R' D' R D)*2 twists FRU needs so yellow faces up.
+
+        The twist rotates the FRU corner 120 degrees clockwise (viewed from corner).
+        - Yellow on UP    -> 0 (already oriented)
+        - Yellow on Right -> 1 twist
+        - Yellow on Front -> 2 twists
+        """
+        fru: Corner = yf.corner_bottom_right
+        yellow = yf.color
+        if fru.face_color(yf) == yellow:
+            return 0
+        if fru.face_color(cube_right) == yellow:
+            return 1
+        assert fru.face_color(cube_front) == yellow
+        return 2

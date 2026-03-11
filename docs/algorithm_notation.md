@@ -7,12 +7,15 @@ This document describes the algorithm notation used in this Rubik's cube solver.
 ## Quick Reference Card
 
 ```
-FACES:  R L U D F B    (clockwise when looking at face)
-PRIME:  R' L' U' ...   (counter-clockwise)
-DOUBLE: R2 L2 U2 ...   (180° turn)
-SLICE:  M E S          (middle layers)
-WIDE:   Rw Lw Uw ...   (2 layers)
-CUBE:   X Y Z          (rotate whole cube)
+FACES:    R L U D F B          (clockwise when looking at face)
+PRIME:    R' L' U' ...         (counter-clockwise)
+DOUBLE:   R2 L2 U2 ...         (180 turn)
+SLICE:    M E S                (single middle slice)
+ALL:      [:]M [:]E [:]S       (all middle slices)
+WIDE:     Rw r (2 layers)      (WCA standard)
+N-WIDE:   3Rw 3r (3 layers)    (WCA standard, n layers)
+ADAPTIVE: [:-1]Rw [:-1]r       (all-but-last, adapts to cube size)
+CUBE:     X Y Z                (rotate whole cube)
 ```
 
 ---
@@ -20,22 +23,22 @@ CUBE:   X Y Z          (rotate whole cube)
 ## Cube Orientation
 
 ```
-                    ┌─────────────┐
-                    │             │
-                    │      U      │   U = Up (White)
-                    │    (top)    │
-                    │             │
-        ┌───────────┼─────────────┼───────────┬─────────────┐
-        │           │             │           │             │
-        │     L     │      F      │     R     │      B      │
-        │  (left)   │  (front)    │  (right)  │   (back)    │
-        │           │             │           │             │
-        └───────────┼─────────────┼───────────┴─────────────┘
-                    │             │
-                    │      D      │   D = Down (Yellow)
-                    │  (bottom)   │
-                    │             │
-                    └─────────────┘
+                    +-------------+
+                    |             |
+                    |      U      |   U = Up (White)
+                    |    (top)    |
+                    |             |
+        +-----------+-------------+-----------+-------------+
+        |           |             |           |             |
+        |     L     |      F      |     R     |      B      |
+        |  (left)   |  (front)    |  (right)  |   (back)    |
+        |           |             |           |             |
+        +-----------+-------------+-----------+-------------+
+                    |             |
+                    |      D      |   D = Down (Yellow)
+                    |  (bottom)   |
+                    |             |
+                    +-------------+
 
 Default colors:  F=Green  B=Blue  R=Red  L=Orange  U=White  D=Yellow
 ```
@@ -54,31 +57,31 @@ Default colors:  F=Green  B=Blue  R=Red  L=Orange  U=White  D=Yellow
     Imagine you are standing to the RIGHT of the cube,
     looking directly at the R face:
 
-         ↻  ← You see this when looking at R face
-        ┌───┐
-        │ R │  Arrows show movement direction
-        └───┘
+         clockwise
+        +---+
+        | R |  Arrows show movement direction
+        +---+
 
     From the normal front view, R moves:
-        Front-right edge → Top-right edge
-        Top-right edge → Back-right edge
-        Back-right edge → Bottom-right edge
-        Bottom-right edge → Front-right edge
+        Front-right edge -> Top-right edge
+        Top-right edge -> Back-right edge
+        Back-right edge -> Bottom-right edge
+        Bottom-right edge -> Front-right edge
 ```
 
 ### All Six Face Moves
 
 ```
-┌─────────┬─────────────────────────────────────────────────────┐
-│  Move   │  How to Remember                                    │
-├─────────┼─────────────────────────────────────────────────────┤
-│   R     │  Right hand turns right layer AWAY from you (↻)     │
-│   L     │  Left hand turns left layer TOWARD you (↻)          │
-│   U     │  Top layer turns LEFT when viewed from above (↻)    │
-│   D     │  Bottom layer turns RIGHT when viewed from below    │
-│   F     │  Front layer turns clockwise like a clock (↻)       │
-│   B     │  Back layer turns clockwise (opposite of F view)    │
-└─────────┴─────────────────────────────────────────────────────┘
++---------+-------------------------------------------------------------+
+|  Move   |  How to Remember                                            |
++---------+-------------------------------------------------------------+
+|   R     |  Right hand turns right layer AWAY from you                 |
+|   L     |  Left hand turns left layer TOWARD you                      |
+|   U     |  Top layer turns LEFT when viewed from above                |
+|   D     |  Bottom layer turns RIGHT when viewed from below            |
+|   F     |  Front layer turns clockwise like a clock                   |
+|   B     |  Back layer turns clockwise (opposite of F view)            |
++---------+-------------------------------------------------------------+
 ```
 
 ### Prime (Inverse) Moves
@@ -87,18 +90,12 @@ Add `'` to reverse the direction:
 
 ```
     R' = R counter-clockwise
-
-         ↺  ← Counter-clockwise when looking at R face
-        ┌───┐
-        │ R │
-        └───┘
-
     R + R' = cube unchanged (they cancel out)
 ```
 
 ### Double Moves
 
-`R2` = Do R twice (180° turn). Same as R + R. Direction doesn't matter for 180°.
+`R2` = Do R twice (180 turn). Same as R + R. Direction doesn't matter for 180.
 
 ---
 
@@ -110,49 +107,49 @@ The outer faces DON'T move - only the inner slices rotate.
 ### The Three Slice Moves
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│                        M SLICE (Middle)                          │
-│                                                                  │
-│  The slice BETWEEN L and R faces. Rotates like L does.          │
-│                                                                  │
-│       ┌───┬───┬───┐                                              │
-│       │   │ ↑ │   │     Front view of 3x3:                       │
-│       ├───┼───┼───┤     - Left column = L face                   │
-│       │   │ M │   │     - Middle column = M slice                │
-│       ├───┼───┼───┤     - Right column = R face                  │
-│       │   │ ↓ │   │                                              │
-│       └───┴───┴───┘     M moves the middle column UP             │
-│        L   M   R                                                 │
-└──────────────────────────────────────────────────────────────────┘
++------------------------------------------------------------------+
+|                        M SLICE (Middle)                           |
+|                                                                   |
+|  The slice BETWEEN L and R faces. Rotates like L does.           |
+|                                                                   |
+|       +---+---+---+                                               |
+|       |   | ^ |   |     Front view of 3x3:                       |
+|       +---+---+---+     - Left column = L face                   |
+|       |   | M |   |     - Middle column = M slice                |
+|       +---+---+---+     - Right column = R face                  |
+|       |   | v |   |                                               |
+|       +---+---+---+     M moves the middle column UP             |
+|        L   M   R                                                  |
++------------------------------------------------------------------+
 
-┌──────────────────────────────────────────────────────────────────┐
-│                        E SLICE (Equator)                         │
-│                                                                  │
-│  The slice BETWEEN U and D faces. Rotates like D does.          │
-│                                                                  │
-│       ┌───┬───┬───┐                                              │
-│       │   │   │   │  ← U (top row)                               │
-│       ├───┼───┼───┤                                              │
-│       │ ← │ E │ → │  ← E slice (middle row)                      │
-│       ├───┼───┼───┤     E moves the middle row to the RIGHT      │
-│       │   │   │   │  ← D (bottom row)                            │
-│       └───┴───┴───┘                                              │
-└──────────────────────────────────────────────────────────────────┘
++------------------------------------------------------------------+
+|                        E SLICE (Equator)                          |
+|                                                                   |
+|  The slice BETWEEN U and D faces. Rotates like D does.           |
+|                                                                   |
+|       +---+---+---+                                               |
+|       |   |   |   |  <- U (top row)                              |
+|       +---+---+---+                                               |
+|       | < | E | > |  <- E slice (middle row)                     |
+|       +---+---+---+     E moves the middle row to the RIGHT     |
+|       |   |   |   |  <- D (bottom row)                           |
+|       +---+---+---+                                               |
++------------------------------------------------------------------+
 
-┌──────────────────────────────────────────────────────────────────┐
-│                        S SLICE (Standing)                        │
-│                                                                  │
-│  The slice BETWEEN F and B faces. Rotates like F does.          │
-│                                                                  │
-│  Top view (looking down):                                        │
-│       ┌───┬───┬───┐                                              │
-│       │   │   │   │  ← B (back)                                  │
-│       ├───┼───┼───┤                                              │
-│       │   │ S │   │  ← S slice (middle depth)                    │
-│       ├───┼───┼───┤     S rotates clockwise (like F)             │
-│       │   │   │   │  ← F (front)                                 │
-│       └───┴───┴───┘                                              │
-└──────────────────────────────────────────────────────────────────┘
++------------------------------------------------------------------+
+|                        S SLICE (Standing)                         |
+|                                                                   |
+|  The slice BETWEEN F and B faces. Rotates like F does.           |
+|                                                                   |
+|  Top view (looking down):                                         |
+|       +---+---+---+                                               |
+|       |   |   |   |  <- B (back)                                 |
+|       +---+---+---+                                               |
+|       |   | S |   |  <- S slice (middle depth)                   |
+|       +---+---+---+     S rotates clockwise (like F)             |
+|       |   |   |   |  <- F (front)                                |
+|       +---+---+---+                                               |
++------------------------------------------------------------------+
 ```
 
 ### Slice Direction Reference
@@ -160,14 +157,27 @@ The outer faces DON'T move - only the inner slices rotate.
 **Remember:** Each slice rotates in the SAME direction as its reference face.
 
 ```
-┌─────────┬────────────────┬─────────────────────────────────────┐
-│ Slice   │ Reference Face │ Movement Description                │
-├─────────┼────────────────┼─────────────────────────────────────┤
-│   M     │      L         │ Front→Up→Back→Down (like L)         │
-│   E     │      D         │ Front→Left→Back→Right (like D)      │
-│   S     │      F         │ Up→Right→Down→Left (like F)         │
-└─────────┴────────────────┴─────────────────────────────────────┘
++---------+----------------+-------------------------------------+
+| Slice   | Reference Face | Movement Description                |
++---------+----------------+-------------------------------------+
+|   M     |      L         | Front->Up->Back->Down (like L)      |
+|   E     |      D         | Front->Left->Back->Right (like D)   |
+|   S     |      F         | Up->Right->Down->Left (like F)      |
++---------+----------------+-------------------------------------+
 ```
+
+### Single vs All-Slices
+
+On any cube, `M` means the single center slice. For big cubes with multiple inner slices, use `[:]M` for all of them:
+
+| Notation | Code | Meaning | Sliceable |
+|----------|------|---------|-----------|
+| `M` | `Algs.M` | Single center slice (MiddleSliceAlg) | No |
+| `[:]M` | `Algs.MM` | All inner slices (SliceAlg) | Yes |
+| `E` | `Algs.E` | Single center slice | No |
+| `[:]E` | `Algs.EE` | All inner slices | Yes |
+| `S` | `Algs.S` | Single center slice | No |
+| `[:]S` | `Algs.SS` | All inner slices | Yes |
 
 ---
 
@@ -179,12 +189,12 @@ You can control which slices move using index notation.
 ### CRITICAL: Indexing is 1-Based (NOT 0!)
 
 ```
-┌────────────────────────────────────────────────────────────────┐
-│  ⚠️  WARNING: Indices start at 1, NOT 0!                        │
-│                                                                │
-│     M[0]  ← INVALID! This will cause an error!                 │
-│     M[1]  ← VALID. First inner slice.                          │
-└────────────────────────────────────────────────────────────────┘
++------------------------------------------------------------+
+|  WARNING: Indices start at 1, NOT 0!                       |
+|                                                             |
+|     M[0]  <- INVALID! This will cause an error!            |
+|     M[1]  <- VALID. First inner slice.                     |
++------------------------------------------------------------+
 ```
 
 ### How Many Slices?
@@ -192,15 +202,15 @@ You can control which slices move using index notation.
 ```
 Formula: n_slices = Cube Size - 2
 
-┌─────────────┬────────────┬─────────────────────────────────────┐
-│ Cube Size   │ n_slices   │ Valid Indices                       │
-├─────────────┼────────────┼─────────────────────────────────────┤
-│    3x3      │     1      │ [1] only                            │
-│    4x4      │     2      │ [1], [2]                            │
-│    5x5      │     3      │ [1], [2], [3]                       │
-│    6x6      │     4      │ [1], [2], [3], [4]                  │
-│    7x7      │     5      │ [1], [2], [3], [4], [5]             │
-└─────────────┴────────────┴─────────────────────────────────────┘
++-------------+------------+-------------------------------------+
+| Cube Size   | n_slices   | Valid Indices                       |
++-------------+------------+-------------------------------------+
+|    3x3      |     1      | [1] only                            |
+|    4x4      |     2      | [1], [2]                            |
+|    5x5      |     3      | [1], [2], [3]                       |
+|    6x6      |     4      | [1], [2], [3], [4]                  |
+|    7x7      |     5      | [1], [2], [3], [4], [5]             |
++-------------+------------+-------------------------------------+
 ```
 
 ### Where Does Slice[1] Start?
@@ -208,135 +218,42 @@ Formula: n_slices = Cube Size - 2
 **Slice[1] is ALWAYS closest to the reference face!**
 
 ```
-┌─────────┬────────────────┬─────────────────────────────────────┐
-│ Slice   │ Reference Face │ Slice[1] is closest to...           │
-├─────────┼────────────────┼─────────────────────────────────────┤
-│   M     │      L         │ L face (left side)                  │
-│   E     │      D         │ D face (bottom)                     │
-│   S     │      F         │ F face (front)                      │
-└─────────┴────────────────┴─────────────────────────────────────┘
++---------+----------------+-------------------------------------+
+| Slice   | Reference Face | Slice[1] is closest to...           |
++---------+----------------+-------------------------------------+
+|   M     |      L         | L face (left side)                  |
+|   E     |      D         | D face (bottom)                     |
+|   S     |      F         | F face (front)                      |
++---------+----------------+-------------------------------------+
 ```
 
-### Visual Example: 5x5 Cube M Slices (Side View)
+### Visual Example: 5x5 Cube M Slices (Top View)
 
 ```
-    Looking at the cube from ABOVE (bird's eye view):
-
-    ┌─────┬─────┬─────┬─────┬─────┐
-    │     │     │     │     │     │
-    │  L  │M[1] │M[2] │M[3] │  R  │   ← Row of the cube
-    │face │     │     │     │face │
-    └─────┴─────┴─────┴─────┴─────┘
-      ↑                       ↑
+    +-----+-----+-----+-----+-----+
+    |     |     |     |     |     |
+    |  L  |M[1] |M[2] |M[3] |  R  |
+    |face |     |     |     |face |
+    +-----+-----+-----+-----+-----+
+      ^                       ^
     Left                   Right
     face                   face
-    (doesn't               (doesn't
-     move)                  move)
 
     M[1] = slice closest to L (reference face for M)
     M[2] = middle slice (true center)
     M[3] = slice closest to R
 ```
 
-### Visual Example: 6x6 Cube E Slices (Front View)
-
-```
-    ┌─────────────────────────────────────┐
-    │                                     │
-    │              U face                 │  ← Top (doesn't move)
-    │                                     │
-    ├─────────────────────────────────────┤
-    │                                     │ ← E[4] (closest to U)
-    ├─────────────────────────────────────┤
-    │                                     │ ← E[3]
-    ├─────────────────────────────────────┤
-    │                                     │ ← E[2]
-    ├─────────────────────────────────────┤
-    │                                     │ ← E[1] (closest to D)
-    ├─────────────────────────────────────┤
-    │                                     │
-    │              D face                 │  ← Bottom (doesn't move)
-    │                                     │
-    └─────────────────────────────────────┘
-
-    E[1] = closest to D (reference face for E)
-    E[4] = closest to U
-```
-
-### Visual Example: 7x7 Cube S Slices (Side View)
-
-```
-    Looking at cube from the RIGHT side:
-
-    ┌─────┬─────┬─────┬─────┬─────┬─────┬─────┐
-    │     │     │     │     │     │     │     │
-    │  F  │S[1] │S[2] │S[3] │S[4] │S[5] │  B  │
-    │face │     │     │     │     │     │face │
-    └─────┴─────┴─────┴─────┴─────┴─────┴─────┘
-      ↑                                   ↑
-    Front                               Back
-    face                                face
-    (doesn't                           (doesn't
-     move)                              move)
-
-    S[1] = closest to F (reference face for S)
-    S[3] = true center slice
-    S[5] = closest to B
-```
-
 ### Slice Range Notation
 
-Move multiple slices at once using various notations:
-
-#### Output Formats (as generated by algorithms)
+Move multiple slices at once:
 
 | Format | Meaning | Example |
 |--------|---------|---------|
 | `[start:stop]CODE` | Slices from `start` to `stop` inclusive | `[1:2]M` |
 | `[start:]CODE` | Slices from `start` to max | `[1:]M` |
-| `[1:stop]CODE` | Slices from 1 to `stop` (default start) | `[1:3]M` |
+| `[:]CODE` | All slices | `[:]M` |
 | `[i1,i2,...]CODE` | Specific slice indices | `[1,3]M` |
-
-#### Parser Input Formats (can be parsed)
-
-```
-M[1:2]  - Move slices 1 and 2 together
-M[1:3]  - Move slices 1, 2, and 3 together
-E[2:4]  - Move slices 2, 3, and 4 together
-M[1:]   - Move slices 1 through max
-M[1,3]  - Move specific slices 1 and 3
-```
-
-**Note:** The output format places brackets BEFORE the algorithm (`[1:2]M`), but this is parsed correctly.
-
-### Examples by Cube Size
-
-**4x4 Cube (2 inner slices):**
-```
-M[1]    - Inner slice near L
-M[2]    - Inner slice near R
-M[1:2]  - Both inner slices (equivalent to M on 3x3)
-```
-
-**5x5 Cube (3 inner slices):**
-```
-M[1]    - First inner slice (near L)
-M[2]    - Middle slice (true center)
-M[3]    - Third inner slice (near R)
-M[1:2]  - First two slices
-M       - All slices together
-```
-
-**7x7 Cube (5 inner slices):**
-```
-E[1]    - First inner slice (near D)
-E[2]    - Second slice
-E[3]    - Middle slice (true center)
-E[4]    - Fourth slice
-E[5]    - Fifth slice (near U)
-E[1:3]  - Bottom three inner slices
-E[3:5]  - Top three inner slices
-```
 
 ---
 
@@ -350,36 +267,121 @@ Rotate the entire cube (no pieces move relative to each other, but orientation c
 | `Y` | U | Rotate cube as if doing U (but entire cube) |
 | `Z` | F | Rotate cube as if doing F (but entire cube) |
 
-**Agreement with standard:** Full agreement
-
 ---
 
 ## Wide Moves
 
-### Double-Layer Moves (Nw notation)
+Wide moves turn multiple outermost layers from one face side.
 
-| Move | Meaning |
-|------|---------|
-| `Rw` | R + adjacent M' (two layers) |
-| `Uw` | U + adjacent E' (two layers) |
-| `Fw` | F + adjacent S (two layers) |
+### WCA Standard Wide Moves (Rw / r)
 
-**Agreement with standard:** Full agreement
+**WCA standard:** `Rw` = `r` = 2 outermost layers. Both notations are equivalent.
+`Rw` is the official WCA form, `r` (lowercase) is the informal equivalent.
 
-### Adaptive Wide Moves (lowercase)
+| Move | Layers | Meaning |
+|------|--------|---------|
+| `Rw` or `r` | 2 | R face + 1 inner layer (default, `n=2` omitted) |
+| `3Rw` or `3r` | 3 | R face + 2 inner layers |
+| `nRw` or `nr` | n | R face + (n-1) inner layers |
 
-These moves are specific to this solver and adapt to cube size:
+Same for all 6 faces: `Lw`/`l`, `Uw`/`u`, `Dw`/`d`, `Fw`/`f`, `Bw`/`b`.
 
-| Move | On 3x3 | On NxN |
-|------|--------|--------|
-| `r` | Same as R | R + all inner layers (L stays fixed) |
-| `l` | Same as L | L + all inner layers (R stays fixed) |
-| `u` | Same as U | U + all inner layers (D stays fixed) |
-| `d` | Same as D | D + all inner layers (U stays fixed) |
-| `f` | Same as F | F + all inner layers (B stays fixed) |
-| `b` | Same as B | B + all inner layers (F stays fixed) |
+Modifiers work as expected: `Rw'`, `Rw2`, `3Rw'`, `3r2`, etc.
 
-**Difference from standard:** In standard notation, lowercase `r` often means `Rw` (2 layers). Our lowercase moves adapt to cube size, moving N-1 layers.
+**Default layer count:** `2Rw` and `Rw` are identical (2 is default, omitted in output).
+
+```
+5x5 Cube - Rw (2 layers):
+
+    +-----+-----+-----+-----+-----+
+    |     |     |     |     |#####|
+    |  L  | M3  | M2  | M1  |# R #|  <- Rw turns R + M1 (2 outermost layers)
+    |     |     |     |     |#####|
+    +-----+-----+-----+-----+-----+
+                              ^^^^
+                         These 2 layers turn
+
+5x5 Cube - 3Rw (3 layers):
+
+    +-----+-----+-----+-----+-----+
+    |     |     |     |#####|#####|
+    |  L  | M3  | M2  |# M1#|# R #|  <- 3Rw turns R + M1 + M2 (3 outermost)
+    |     |     |     |#####|#####|
+    +-----+-----+-----+-----+-----+
+                        ^^^^^^^^^^^
+                    These 3 layers turn
+```
+
+**Code:**
+
+| Notation | Code | Type |
+|----------|------|------|
+| `Rw` | `Algs.Rw` | `WideLayerAlg(R, layers=2)` |
+| `r` | `Algs.r` | `WideLayerAlg(R, layers=2, lowercase=True)` |
+| `3Rw` | `Algs.parse("3Rw")` | `WideLayerAlg(R, layers=3)` |
+
+**Layer clamping:** On a 2x2 cube, `Rw` (layers=2) clamps to `min(2, size-1) = 1` layer.
+
+### Adaptive Wide Moves: [:-1]Rw / [:-1]r (All-But-Last)
+
+These special wide moves adapt to cube size at play time, always turning
+ALL layers except the opposite face (`cube.size - 1` layers).
+
+| Move | str() | On 3x3 | On 4x4 | On 5x5 | On NxN |
+|------|-------|--------|--------|--------|--------|
+| `[:-1]Rw` | `[:-1]Rw` | 2 layers | 3 layers | 4 layers | N-1 layers |
+| `[:-1]r` | `[:-1]r` | 2 layers | 3 layers | 4 layers | N-1 layers |
+
+**`[:-1]Rw` and `[:-1]r` are functionally identical** - they differ only in display notation.
+Both use `WideLayerAlg` with `layers=ALL_BUT_LAST` (-1 sentinel).
+
+```
+5x5 Cube - [:-1]Rw (4 layers, all but L):
+
+    +-----+-----+-----+-----+-----+
+    |     |#####|#####|#####|#####|
+    |  L  |# M3#|# M2#|# M1#|# R #|  <- Turns everything except L face
+    |     |#####|#####|#####|#####|
+    +-----+-----+-----+-----+-----+
+     ^
+     Only L stays fixed
+```
+
+**Why this exists:** CFOP F2L algorithms use wide moves to manipulate corner-edge
+pairs while keeping the cross layer intact. On a 3x3, `Rw` (2 layers) works fine.
+On bigger cubes, you need to move ALL inner layers together to preserve edge pairing.
+The `[:-1]` notation computes the layer count at play time, so the same algorithm
+works on any cube size.
+
+**Code:**
+
+| Notation | Code | Sugar | Notes |
+|----------|------|-------|-------|
+| `[:-1]Rw` | `Algs.RRw` | uppercase+w form | Used in commands/registry |
+| `[:-1]r` | `Algs.rr` | lowercase form | Used in CFOP solver (`Algs.dd`, etc.) |
+| `[:-1]Lw` | `Algs.LLw` | | |
+| `[:-1]l` | `Algs.ll` | | |
+| `[:-1]Uw` | `Algs.UUw` | | |
+| `[:-1]u` | `Algs.uu` | | |
+| `[:-1]Dw` | `Algs.DDw` | | |
+| `[:-1]d` | `Algs.dd` | | |
+| `[:-1]Fw` | `Algs.FFw` | | |
+| `[:-1]f` | `Algs.ff` | | |
+| `[:-1]Bw` | `Algs.BBw` | | |
+| `[:-1]b` | `Algs.bb` | | |
+
+### Parser: compat_3x3 Mode
+
+The parser has a `compat_3x3` flag for CFOP solver algorithms that were written
+for 3x3 but need to work on bigger cubes:
+
+| Input | `compat_3x3=False` (default) | `compat_3x3=True` |
+|-------|------------------------------|-------------------|
+| `Rw` | `WideLayerAlg(R, 2)` — standard 2-layer | `WideLayerAlg(R, ALL_BUT_LAST)` — adaptive |
+| `r` | `WideLayerAlg(R, 2, lowercase)` | `WideLayerAlg(R, ALL_BUT_LAST, lowercase)` |
+| `M` | `MiddleSliceAlg` — single center | `SliceAlg` — all middle slices |
+| `[:-1]Rw` | `WideLayerAlg(R, ALL_BUT_LAST)` | same |
+| `3Rw` | `WideLayerAlg(R, 3)` | same |
 
 ---
 
@@ -405,17 +407,6 @@ R U R' U'    # Space-separated moves
 R2             # R twice (special case for single move)
 ```
 
-**Agreement with standard:** Mostly agrees. Some notations use `(...)2` others use `(...)×2`.
-
----
-
-## Parser Limitations
-
-The current parser (`_parser.py`) has these limitations:
-
-1. **No exponent N support**: `R3` is not supported (use `R'` instead)
-2. **Case sensitivity**: `r` vs `R` have different meanings (see Adaptive Wide Moves)
-
 ---
 
 ## String Output Format
@@ -435,21 +426,41 @@ Named sequences are output as: `{name}`
 
 ---
 
-## Examples
+## Implementation: WideLayerAlg
 
-### Input → Parsed → Output
+All wide moves (standard, n-layer, and adaptive) are implemented by a single class:
 
-| Input | Parsed OK | Output |
-|-------|-----------|--------|
-| `R` | Yes | `R` |
-| `R'` | Yes | `R'` |
-| `R2` | Yes | `R2` |
-| `R U R' U'` | Yes | `[R U R' U']` |
-| `(R U)2` | Yes | `[R U]2` |
-| `M` | Yes | `M` |
-| `M[1]` | No (not supported) | - |
-| `Rw` | Yes | `Rw` |
-| `r` | Yes | `r` (adaptive wide) |
+```python
+class WideLayerAlg(AnimationAbleAlg):
+    """
+    layers=2:  Rw / r          (standard 2-layer, WCA default)
+    layers=3:  3Rw / 3r        (3 outermost layers)
+    layers=n:  nRw / nr        (n outermost layers)
+    layers=-1: [:-1]Rw / [:-1]r (adaptive, all-but-last)
+    """
+    __slots__ = ("_face", "_layers", "_lowercase")
+```
+
+At play time, `_effective_layers(cube)` computes the actual count:
+- Fixed layers: `min(self._layers, cube.size - 1)` (clamped)
+- `ALL_BUT_LAST` (-1): `cube.size - 1` (adaptive)
+
+---
+
+## Summary Table
+
+| Move | 3x3 | 5x5 | Standard | Sliceable | Code |
+|------|-----|-----|----------|-----------|------|
+| `R` | 1 layer | 1 layer | 1 layer | Yes | `Algs.R` |
+| `Rw` / `r` | 2 layers | 2 layers | 2 layers | No | `Algs.Rw` / `Algs.r` |
+| `3Rw` / `3r` | 2 layers* | 3 layers | 3 layers | No | `Algs.parse("3Rw")` |
+| `[:-1]Rw` / `[:-1]r` | 2 layers | 4 layers | N/A | No | `Algs.RRw` / `Algs.rr` |
+| `M` | 1 slice | 1 slice | 1 slice | No | `Algs.M` |
+| `[:]M` | 1 slice | 3 slices | N/A | Yes | `Algs.MM` |
+| `R[1:2]` | 2 layers | 2 layers | = Rw | - | `Algs.R[1:2]` |
+| `X` | whole cube | whole cube | whole cube | No | `Algs.X` |
+
+*On 3x3, `3Rw` clamps to `min(3, 2)` = 2 layers.
 
 ---
 
@@ -457,170 +468,18 @@ Named sequences are output as: `{name}`
 
 | File | Purpose |
 |------|---------|
-| `src/cube/domain/algs/_parser.py` | `parse_alg(s)` - String to Alg |
+| `src/cube/domain/algs/WideLayerAlg.py` | Wide moves: Rw, r, nRw, nr, [:-1]Rw, [:-1]r |
+| `src/cube/domain/algs/MiddleSliceAlg.py` | Single middle slice (M, E, S) |
+| `src/cube/domain/algs/SliceAlg.py` | All middle slices ([:]M, [:]E, [:]S) — sliceable |
+| `src/cube/domain/algs/FaceAlg.py` | Face moves (R, L, U, D, F, B) — sliceable |
+| `src/cube/domain/algs/_parser.py` | `parse_alg(s, compat_3x3=False)` — string to Alg |
+| `src/cube/domain/algs/Algs.py` | `Algs.parse(s)`, move constants, Simple list |
 | `src/cube/domain/algs/Alg.py` | Base class, `__str__()` |
-| `src/cube/domain/algs/Algs.py` | `Algs.parse(s)`, move constants |
 | `src/cube/domain/algs/SimpleAlg.py` | `atomic_str()` implementation |
 
 ---
 
-## Complete Move Reference
-
-This section explains ALL moves, what they do, and how slicing works.
-
-### Understanding Slice Indexing
-
-**Rule:** Slices are numbered starting from the **reference face** (the face whose direction the move follows).
-
-![Cube Slice Overview 3D](images/cube_slice_overview_3d.png)
-
-#### Face Moves (R, L, U, D, F, B)
-
-- `R[1]` = R face layer (closest to R)
-- `R[2]` = first inner layer from R
-- `R[1:2]` = 2 layers = **standard Rw**
-- `R[1:4]` = 4 layers = **our Rw** on 5x5 (differs from standard!)
-
-#### Slice Moves (M, E, S)
-
-Slices start from the **reference face** (the face whose direction the move follows):
-
-| Move | Reference | Direction | M[1] is closest to |
-|------|-----------|-----------|-------------------|
-| M | L | Like L | L face |
-| E | D | Like D | D face |
-| S | F | Like F | F face |
-
-- `M[2]` = center slice only = **standard M** on 5x5
-- `M[1:3]` = all 3 inner slices = **our M** on 5x5 (BUG!)
-
-#### Slice Range Notation: [start:stop]
-
-| Notation | Meaning | Layers on 5x5 |
-|----------|---------|---------------|
-| `R` or `R[1]` | Face only | 1 |
-| `R[1:2]` | Face + 1 inner | 2 (standard Rw) |
-| `R[1:4]` | Face + 3 inner | 4 (our Rw) |
-| `M[2]` | Center slice | 1 (standard M) |
-| `M[1:3]` | All inner | 3 (our M) |
-
-#### Key Formulas
-
-- `n_slices = cube_size - 2` (inner slices only)
-- 3x3 has 1 inner slice, 5x5 has 3, 7x7 has 5
-
-#### External References
-
-- [Ruwix - Interactive 3D Widget](https://ruwix.com/the-rubiks-cube/notation/) - animated demos
-- [Ruwix - Advanced Notation](https://ruwix.com/the-rubiks-cube/notation/advanced/) - more diagrams
-
----
-
-### Face Moves: R, L, U, D, F, B
-
-| Property | Value |
-|----------|-------|
-| **What it does** | Rotates one face layer |
-| **3x3** | 1 layer |
-| **5x5** | 1 layer |
-| **Standard** | 1 layer |
-| **Sliceable?** | YES |
-
-**Slicing examples on 5x5:**
-```
-R       = R[1]    = layer 1 only (the R face)
-R[2]              = layer 2 only (first inner layer)
-R[1:2]            = layers 1-2 (R face + first inner) = standard Rw
-R[1:4]            = layers 1-4 (all but L face)
-```
-
----
-
-### Wide Moves: Rw, Lw, Uw, Dw, Fw, Bw
-
-| Property | Value |
-|----------|-------|
-| **What it does** | Face + inner layers |
-| **3x3 (ours)** | 2 layers |
-| **3x3 (standard)** | 2 layers |
-| **5x5 (ours)** | 4 layers (all but opposite face) |
-| **5x5 (standard)** | 2 layers |
-| **Sliceable?** | NO (computed dynamically) |
-
-**Our implementation:** `Rw = R[1 : size-1]` = all layers except opposite face
-**Standard:** `Rw` = always 2 layers = `R[1:2]`
-
-**⚠️ DIFFERS FROM STANDARD ON BIG CUBES**
-
-To get standard 2-layer wide on big cubes, use: `R[1:2]`
-
----
-
-### Adaptive Wide Moves: r, l, u, d, f, b (lowercase)
-
-| Property | Value |
-|----------|-------|
-| **What it does** | Face + ALL inner layers (opposite face stays) |
-| **3x3** | 2 layers |
-| **5x5** | 4 layers |
-| **Standard** | Same as Rw (2 layers) |
-| **Sliceable?** | NO (computed dynamically) |
-
-**Our implementation:** Same as `Rw` - they are identical!
-
-**Why it exists:** Added for CFOP on NxN cubes. Moving only 2 layers breaks edge pairing on big cubes, so we move ALL inner layers to keep edges paired.
-
----
-
-### Slice Moves: M, E, S
-
-| Property | M | E | S |
-|----------|---|---|---|
-| **Axis** | Between L-R | Between U-D | Between F-B |
-| **Direction** | Like L | Like D | Like F |
-| **3x3 (ours)** | 1 slice | 1 slice | 1 slice |
-| **3x3 (standard)** | 1 slice | 1 slice | 1 slice |
-| **5x5 (ours)** | 3 slices (ALL) | 3 slices (ALL) | 3 slices (ALL) |
-| **5x5 (standard)** | 1 slice (center) | 1 slice (center) | 1 slice (center) |
-| **Sliceable?** | YES | YES | YES |
-
-**Our implementation:** `M = M[1 : n_slices]` = ALL inner slices
-**Standard:** `M` = center slice only
-
-**⚠️ BUG: DIFFERS FROM STANDARD ON BIG CUBES**
-
-**Slicing examples on 5x5 (3 inner slices):**
-```
-M rotates like L, so M[1] starts from L face:
-
-    L    M[1]  M[2]  M[3]   R
-    |     |     |     |     |
-         1st   center 3rd
-
-M       = M[1:3]  = all 3 inner slices (OUR behavior - wrong!)
-M[1]              = first inner slice (closest to L)
-M[2]              = center slice (STANDARD M on 5x5)
-M[3]              = third inner slice (closest to R)
-```
-
-To get standard center-slice M on 5x5, use: `M[2]`
-
----
-
-### Summary Table
-
-| Move | 3x3 | 5x5 Ours | 5x5 Standard | Sliceable | Notes |
-|------|-----|----------|--------------|-----------|-------|
-| `R` | 1 | 1 | 1 | Yes | ✓ Correct |
-| `Rw` | 2 | 4 | 2 | No | ⚠️ Differs |
-| `r` | 2 | 4 | 2 | No | Same as Rw |
-| `M` | 1 | 3 | 1 | Yes | ⚠️ BUG |
-| `R[1:2]` | 2 | 2 | 2 | - | Standard Rw |
-| `M[2]` | 1 | 1 | 1 | - | Standard M |
-
----
-
-### Sources
+## Sources
 
 - [Speedsolving Wiki - NxNxN Notation](https://www.speedsolving.com/wiki/index.php/NxNxN_Notation)
 - [Ruwix - Advanced Notation](https://ruwix.com/the-rubiks-cube/notation/advanced/)

@@ -307,7 +307,7 @@ class NxNEdges(SolverHelper):
                                h2="Flip on same edge"
                                ):
 
-            slice_alg = Algs.E[[ltr + 1 for ltr in ltrs]]
+            slice_alg = Algs.EE[[ltr + 1 for ltr in ltrs]]
 
             self.op.play(slice_alg)  # move me to opposite E begin from D, slice begin with 1
             self.op.play(self.rf)
@@ -422,7 +422,7 @@ class NxNEdges(SolverHelper):
         # now slice them all
         with self.ann.annotate((source_slices, AnnWhat.Moved), (target_slices, AnnWhat.FixedPosition)):
 
-            slice_alg = Algs.E[[i + 1 for i in target_indices]]
+            slice_alg = Algs.EE[[i + 1 for i in target_indices]]
 
             # for target_index in target_indices:
             #     # slice me
@@ -516,9 +516,9 @@ class NxNEdges(SolverHelper):
                 if not self._advanced_edge_parity:
                     self.debug( f"*** Doing parity on M {plus_one}", level=2)
                     for _ in range(4):
-                        self.op.play(Algs.M[plus_one].prime)
+                        self.op.play(Algs.MM[plus_one].prime)
                         self.op.play(Algs.U * 2)
-                    self.op.play(Algs.M[plus_one].prime)
+                    self.op.play(Algs.MM[plus_one].prime)
                 else:
                     # in case of R/L we need to add 1, because 1 is R, and slices begin with 2
                     plus_one = [i + 1 for i in plus_one]

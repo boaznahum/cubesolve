@@ -439,7 +439,7 @@ def run_benchmark(
     import datetime
 
     # Set cache mode
-    cfg.ENABLE_CUBE_CACHE = cache_enabled
+    cfg.CONFIG_DEFAULTS.enable_cube_cache = cache_enabled
 
     # Default solvers and sizes
     if solvers is None:

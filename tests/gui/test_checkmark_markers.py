@@ -15,14 +15,13 @@ Run for 5 seconds viewing time:
 
 import pytest
 
+pytestmark = pytest.mark.gui
+
 from cube.application import _config as config
 from cube.application.exceptions.app_exceptions import AppExit
 from cube.main_any_backend import create_app_window
 from cube.presentation.gui.commands import Commands
 from tests.gui.tester.GUITestResult import GUITestResult
-
-
-pytestmark = pytest.mark.gui
 
 
 def test_checkmark_markers_on_centers(backend: str):
@@ -38,13 +37,13 @@ def test_checkmark_markers_on_centers(backend: str):
         Backend to use, parametrized from conftest.py.
     """
     # Save original config
-    original_test_mode = config.GUI_TEST_MODE
+    original_test_mode = config.CONFIG_DEFAULTS.gui_test_mode
 
     event_loop = None
     view_duration = 0.1  # seconds to view markers before quit
 
     try:
-        config.GUI_TEST_MODE = True
+        config.CONFIG_DEFAULTS.gui_test_mode = True
 
         # Single point of creation: app + backend wired together
         win = create_app_window(backend, cube_size=5, animation=False,
@@ -101,7 +100,7 @@ def test_checkmark_markers_on_centers(backend: str):
         except:
             pass
 
-        config.GUI_TEST_MODE = original_test_mode
+        config.CONFIG_DEFAULTS.gui_test_mode = original_test_mode
 
     assert result.success, f"Test failed: {result.message}. Error: {result.error}"
 
@@ -121,12 +120,12 @@ def test_checkmark_markers_on_nxn_centers(cube_size: int, backend: str):
     backend : str
         Backend to use.
     """
-    original_test_mode = config.GUI_TEST_MODE
+    original_test_mode = config.CONFIG_DEFAULTS.gui_test_mode
     event_loop = None
     view_duration = 3.0
 
     try:
-        config.GUI_TEST_MODE = True
+        config.CONFIG_DEFAULTS.gui_test_mode = True
 
         # Single point of creation: app + backend wired together
         win = create_app_window(backend, cube_size=cube_size, animation=False,
@@ -170,6 +169,6 @@ def test_checkmark_markers_on_nxn_centers(cube_size: int, backend: str):
                 win.close()
         except:
             pass
-        config.GUI_TEST_MODE = original_test_mode
+        config.CONFIG_DEFAULTS.gui_test_mode = original_test_mode
 
     assert result.success, f"Test failed: {result.message}. Error: {result.error}"

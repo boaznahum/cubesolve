@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
+from cube.domain.model.Color import Color
+from cube.domain.model.Face import Face
 from cube.domain.solver._3x3.shared.L1Cross import L1Cross
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.protocols import OperatorProtocol
@@ -18,6 +21,99 @@ from ._L1Corners import L1Corners
 from ._L2 import L2
 from ._L3Corners import L3Corners
 from ._L3Cross import L3Cross
+
+
+def _is_cross_on_face(face: Face) -> bool:
+    """Check if L1 cross is solved on face (Co).
+
+    Cross = all 4 edge stickers on face are face color, AND the edge
+    stickers on adjacent faces follow the color scheme (cyclic rotation).
+    No cube rotation — just compares color tuples.
+
+    Uses face.color (center color) to look up the scheme face, NOT face.name,
+    because whole-cube rotations move colors to different face positions.
+    """
+    # All edge face-side stickers must be face color
+    if not all(e.match_face(face) for e in face.edges):
+        return False
+    # Adjacent-side colors must be a cyclic rotation of the color scheme
+    scheme = face.cube.original_scheme
+    scheme_face = scheme.find_face_by_color(face.color)
+    return scheme.is_valid_neighbor_cycle(
+        scheme_face, face.edge_neighbor_colors_cw()
+    )
+
+
+def _is_corners_on_face(face: Face) -> bool:
+    """Check if L1 corners are solved on face (Cr). Requires cross solved.
+
+    Corners = all 4 corner stickers on face are face color, AND each
+    corner's adjacent-face sticker matches the edge's adjacent-face sticker
+    on that same face.
+    """
+    # All corner face-side stickers must be face color
+    if not all(c.match_face(face) for c in face.corners):
+        return False
+    # Each corner's adjacent colors must match the adjacent edge colors
+    for corner in face.corners:
+        edge1, edge2 = face.edges_of_corner(corner)
+        other1 = edge1.get_other_face(face)
+        other2 = edge2.get_other_face(face)
+        if corner.face_color(other1) != edge1.face_color(other1):
+            return False
+        if corner.face_color(other2) != edge2.face_color(other2):
+            return False
+    return True
+
+
+def _face_l1_grade(face: Face) -> int:
+    """Grade how solved L1 is on this face.
+
+    Returns:
+        0 = nothing, 1 = cross only, 2 = cross + corners (full L1).
+    """
+    if not _is_cross_on_face(face):
+        return 0
+    return 2 if _is_corners_on_face(face) else 1
+
+
+def _find_best_l1_face(faces: Iterable[Face], default_color: Color) -> tuple[Face | None, int]:
+    """Find the face with the highest L1 grade, preferring default_color.
+
+    Scans all faces, picks the one with the highest grade.
+    On tie, the face matching default_color wins.
+
+    Returns:
+        (best_face, grade) or (None, 0) if no face has even a cross.
+    """
+    best_face: Face | None = None
+    best_grade: int = 0
+    for face in faces:
+        grade = _face_l1_grade(face)
+        if grade == 0:
+            continue
+        # Higher grade wins; on tie, prefer default color
+        if grade > best_grade or (grade == best_grade and face.color == default_color):
+            best_face = face
+            best_grade = grade
+        if best_grade == 2 and best_face is not None and best_face.color == default_color:
+            break  # Can't do better
+    return best_face, best_grade
+
+
+def _is_l2_solved(l1_face: Face) -> bool:
+    """Check if L2 edges are solved relative to given L1 face.
+
+    L2 edges = edges between adjacent faces that are NOT on L1 or L1.opposite.
+    Each edge must have both stickers matching their respective faces.
+    """
+    opposite = l1_face.opposite
+    for adj_face in l1_face.adjusted_faces():
+        for e in adj_face.edges:
+            if not e.on_face(l1_face) and not e.on_face(opposite):
+                if not e.match_faces:
+                    return False
+    return True
 
 
 class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
@@ -64,6 +160,11 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
         self.l3_cross = L3Cross(self)
         self.l3_corners = L3Corners(self)
 
+        # All sub-solvers must share parent's CommonOp so _start_color
+        # is a single source of truth (solvers must be stateless).
+        for helper in (self.l1_cross, self.l1_corners, self.l2, self.l3_cross, self.l3_corners):
+            helper._cmn = self.cmn
+
     @property
     def get_code(self) -> SolverName:
         """Return solver identifier."""
@@ -100,6 +201,8 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
 
         if what is None:
             what = SolveStep.ALL
+
+        self._select_best_start_color()
 
         # Execute appropriate solve steps
         # Note: L3 steps may raise parity exceptions on even cubes
@@ -139,41 +242,63 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
 
     @property
     def status_3x3(self) -> str:
-        """Human-readable 3x3 solving status."""
+        """Human-readable 3x3 solving status.
+
+        Purely read-only — does NOT mutate solver state.
+        Finds L1 face by checking face colors + adjacent scheme order,
+        then checks L2/L3 relative to that face. All parametric.
+        """
         if self._cube.solved:
             return "Solved"
 
-        cross = self.l1_cross.is_cross_rotate_and_check()
-        corners = self.l1_corners.is_corners(self.l1_cross)
+        # Find best L1 face — no state mutation
+        l1_face, grade = _find_best_l1_face(self._cube.faces, self.cmn.white)
 
-        if cross and corners:
-            s = "L1"
-        elif cross:
-            s = "L1-Cross"
-        elif corners:
-            s = "L1-Corners"
+        if l1_face is not None:
+            label = l1_face.color.name[0]
+            s = f"L1({label})" if grade == 2 else f"L1x({label})"
         else:
             s = "No-L1"
 
-        if self.l2.solved():
+        # L2: 4 edges between adjacent faces (not on L1 or L1.opposite)
+        if l1_face is not None and _is_l2_solved(l1_face):
             s += ", L2"
         else:
             s += ", No L2"
 
-        if self.l3_cross.solved() and self.l3_corners.solved():
-            s += ", L3"
-        elif self.l3_cross.solved():
-            s += ", L3-Cross"
-        elif self.l3_corners.solved():
-            s += ", L3-Corners"
+        # L3: opposite face of L1
+        if l1_face is not None:
+            l3_face = l1_face.opposite
+            l3_cross = _is_cross_on_face(l3_face)
+            if l3_cross and _is_corners_on_face(l3_face):
+                s += ", L3"
+            elif l3_cross:
+                s += ", L3x"
+            else:
+                s += ", No L3"
         else:
             s += ", No L3"
 
         return s
 
+    def _select_best_start_color(self) -> None:
+        """Pick the best starting color for L1.
+
+        Grades all 6 faces (0=none, 1=cross, 2=full L1) and picks the highest.
+        Prefers white on tie. Only called before solving.
+        """
+        white: Color = self.cmn.white
+        best_face, grade = _find_best_l1_face(self._cube.faces, white)
+
+        if best_face is not None and best_face.color != white:
+            self._logger.debug(None, f"L1 grade {grade} on {best_face.color}, using as start color")
+            self.cmn._start_color = best_face.color
+        else:
+            self.cmn._start_color = white
+
     # Required by Solver ABC - delegate to status_3x3
     @property
-    def status(self) -> str:
+    def _status_impl(self) -> str:
         """Human-readable solver status."""
         return self.status_3x3
 
@@ -190,7 +315,7 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
         """
         return self.solve_3x3(self._is_debug_enabled, what)
 
-    def supported_steps(self) -> list[SolveStep]:
+    def _supported_steps_impl(self) -> list[SolveStep]:
         """Return list of solve steps this solver supports.
 
         BeginnerSolver3x3 uses layer-by-layer method with these steps:

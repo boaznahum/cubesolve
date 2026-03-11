@@ -24,8 +24,37 @@ class Solvers:
 
     @classmethod
     def default(cls, op: OperatorProtocol) -> Solver:
-        """Get the default solver based on config setting."""
+        """Get the default solver based on config setting.
+
+        Note: 2x2 delegation is handled at solve-time by AbstractSolver.solve(),
+        not at construction time. The factory creates whatever solver is configured.
+        """
         solver_name = SolverName.lookup(op.app_state.config.default_solver)
+        return cls.by_name(solver_name, op)
+
+    @staticmethod
+    def two_by_two_ida(op: OperatorProtocol) -> Solver:
+        """Get the IDA* optimal 2x2 cube solver."""
+        from ._2x2_ida_optimal.Solver2x2IDA import Solver2x2IDA
+
+        parent_logger = op.cube.sp.logger
+        return Solver2x2IDA(op, parent_logger)
+
+    @staticmethod
+    def two_by_two_beginner(op: OperatorProtocol) -> Solver:
+        """Get the beginner layer-by-layer 2x2 cube solver."""
+        from ._2x2_beginner.Solver2x2Beginner import Solver2x2Beginner
+
+        parent_logger = op.cube.sp.logger
+        return Solver2x2Beginner(op, parent_logger)
+
+    @classmethod
+    def default_2x2(cls, op: OperatorProtocol) -> Solver:
+        """Get the configured default 2x2 solver.
+
+        Reads `default_2x2_solver` from config and creates the appropriate solver.
+        """
+        solver_name = SolverName.lookup(op.app_state.config.default_2x2_solver)
         return cls.by_name(solver_name, op)
 
     @staticmethod
@@ -113,43 +142,50 @@ class Solvers:
         return CageNxNSolver(op, parent_logger)
 
     @staticmethod
-    def lbl_big(op: OperatorProtocol) -> Solver:
+    def direct_big_lbl(op: OperatorProtocol) -> Solver:
         """
-        Get Layer-by-Layer solver for big (NxN) cubes.
+        Get Big LBL solver for NxN cubes.
 
-        Solves the cube one horizontal layer at a time:
-        - Layer 1: Centers → Edges → Corners (on configured face)
-        - Layer 2 to n-1: Centers ring → Edge wings
-        - Layer n: Centers → Edges → Corners
-
-        Unlike reduction method, each layer is fully solved before
-        moving to the next.
+        Layer-by-layer approach for big cubes.
         """
-        from .direct.lbl.LayerByLayerNxNSolver import LayerByLayerNxNSolver
+        from .direct.lbl.DirectLayerByLayerNxNSolver import DirectLayerByLayerNxNSolver
 
         parent_logger = op.cube.sp.logger
-        return LayerByLayerNxNSolver(op, parent_logger)
+        return DirectLayerByLayerNxNSolver(op, parent_logger)
 
     @classmethod
     def next_solver(cls, current: SolverName, op: OperatorProtocol) -> Solver:
-        """Get the next solver in rotation (skips unimplemented solvers)."""
+        """Get the next solver in rotation (skips hidden, unimplemented, and incompatible solvers)."""
+        cube_size = op.cube.size
         all_solvers = [*SolverName]
         index = all_solvers.index(current)
 
-        # Find next implemented solver
+        # Find next user-visible, implemented, and compatible solver
         for _ in range(len(all_solvers)):
             index = (index + 1) % len(all_solvers)
             candidate = all_solvers[index]
-            if candidate.meta.implemented:
+            if (candidate.meta.implemented
+                    and candidate.meta.user_visible
+                    and candidate.meta.get_skip_reason(cube_size) is None):
                 return cls.by_name(candidate, op)
 
-        # All solvers are unimplemented (shouldn't happen)
-        raise InternalSWError("No implemented solvers available")
+        # All solvers are incompatible — fall back to current
+        return cls.by_name(current, op)
 
     @classmethod
     def by_name(cls, solver_id: SolverName, op: OperatorProtocol) -> Solver:
-        """Get a solver by its name."""
+        """Get a solver by its name.
+
+        Note: 2x2 delegation is handled by AbstractSolver.solve(), not here.
+        This factory simply creates the requested solver.
+        """
         match solver_id:
+
+            case SolverName.TWO_BY_TWO_IDA:
+                return cls.two_by_two_ida(op)
+
+            case SolverName.TWO_BY_TWO_BEGINNER:
+                return cls.two_by_two_beginner(op)
 
             case SolverName.LBL:
                 return cls.beginner(op)
@@ -164,7 +200,7 @@ class Solvers:
                 return cls.cage(op)
 
             case SolverName.LBL_BIG:
-                return cls.lbl_big(op)
+                return cls.direct_big_lbl(op)
 
             case _:
                 raise InternalSWError(f"Unknown solver: {solver_id}")

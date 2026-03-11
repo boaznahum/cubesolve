@@ -62,7 +62,7 @@ def profile_scramble(cube_size: int = 5, n_moves: int = 1000, seed: int = 42,
     """Profile scramble and print results."""
 
     # Set cache mode
-    cfg.ENABLE_CUBE_CACHE = with_cache
+    cfg.CONFIG_DEFAULTS.enable_cube_cache = with_cache
 
     print(f"\n{'='*70}")
     print(f"Profiling {cube_size}x{cube_size} cube, {n_moves} moves, cache={'ON' if with_cache else 'OFF'}")

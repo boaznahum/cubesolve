@@ -30,6 +30,13 @@ if TYPE_CHECKING:
     from cube.domain.algs import AnimationAbleAlg
 
 
+def _ease_in_out_cubic(t: float) -> float:
+    """Cubic ease-in-out matching WebGL animation curve."""
+    if t < 0.5:
+        return 4.0 * t * t * t
+    return 1.0 - (-2.0 * t + 2.0) ** 3 / 2.0
+
+
 class GCubeViewer(AnimatableViewer):
     """3D cube viewer using legacy OpenGL (display lists).
 
@@ -210,7 +217,7 @@ class GCubeViewer(AnimatableViewer):
             n = -1
         target_angle = math.radians(90 * n)
         animation_speed = vs.get_speed
-        angle_delta = target_angle / float(animation_speed.number_of_steps) / math.fabs(n)
+        duration_s: float = animation_speed.duration_s * math.fabs(n)
 
         # Compute rotation axis transformation matrices
         # Reference: https://www.eng.uc.edu/~beaucag/Classes/Properties/OptionalProjects/
@@ -254,27 +261,24 @@ class GCubeViewer(AnimatableViewer):
         animation.done = False
         animation._animation_cleanup = lambda: self.unhidden_all()
 
-        last_update = time.time()
+        start_time: float = time.time()
 
         def _update() -> bool:
             nonlocal current_angle
-            nonlocal last_update
 
-            if (time.time() - last_update) > animation.delay:
-                _angle = current_angle + angle_delta
-
-                if abs(_angle) > abs(target_angle):
-                    if current_angle < target_angle:
-                        current_angle = target_angle
-                    else:
-                        animation.done = True
-                else:
-                    current_angle = _angle
-
-                last_update = time.time()
-                return True
+            elapsed = time.time() - start_time
+            if duration_s <= 0:
+                t = 1.0
             else:
-                return False
+                t = min(elapsed / duration_s, 1.0)
+            eased = _ease_in_out_cubic(t)
+            current_angle = target_angle * eased
+
+            if t >= 1.0:
+                current_angle = target_angle
+                animation.done = True
+
+            return True
 
         def _draw() -> None:
             nonlocal current_angle

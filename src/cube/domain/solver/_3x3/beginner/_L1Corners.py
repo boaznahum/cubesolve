@@ -49,7 +49,7 @@ class L1Corners(SolverHelper):
 
         wf: Face = self.white_face
 
-        return self.cqr.rotate_face_and_check(wf, lambda: self._is_corners() and l1_cross.is_cross()) >= 0
+        return self.cqr.rotate_face_and_check(wf, lambda: self._is_corners() and l1_cross.is_cross(), self.op) >= 0
 
     def solve(self, l1_cross: L1Cross) -> None:
         """Solve Layer 1 corners using the beginner method.
@@ -81,12 +81,13 @@ class L1Corners(SolverHelper):
         wf: Face = self.white_face
 
         # the colors ID of 4 corners
-
+        # the ids of where the corner are , not the color of the corners, so all must have some l1 on them
         # we use codes because maybe position will be changed during the algorithm
         color_codes: Sequence[PartColorsID] = Part.parts_id_by_pos(wf.corners)
 
         for code in color_codes:
-            self._solve_corner(code)
+            with self._logger.tab(lambda : f"Corner:{code}"):
+                self._solve_corner(code)
 
     def _solve_corner(self, corner_id: PartColorsID):
 
@@ -122,7 +123,7 @@ class L1Corners(SolverHelper):
 
         wf: Face = self.cube.up
 
-        self._bring_top_corner_to_front_right_up(tc())
+        self._bring_l1_target_corner_to_front_right_up(tc())
 
         if sc().on_face(wf):
             self.debug(f"LO-Corners C1. source {sc()} is on top")
@@ -134,20 +135,20 @@ class L1Corners(SolverHelper):
         assert self.cube.front.corner_bottom_right is sc()
 
         # is the white is on the down
-        if sc().f_color(wf.opposite) == wf.color:
+        if sc().face_color(wf.opposite) == wf.color:
             self.debug(f"LO-Corners C3.  {wf.color} is on bottom")
             self.op.play(Algs.R.prime + Algs.D.prime * 2 + Algs.R + Algs.D)
             assert self.cube.front.corner_bottom_right is sc()
-            assert sc().f_color(wf.opposite) != wf.color
+            assert sc().face_color(wf.opposite) != wf.color
 
-        if sc().f_color(wf.cube.front) == wf.color:
+        if sc().face_color(wf.cube.front) == wf.color:
             self.op.play(Algs.D.prime + Algs.R.prime + Algs.D + Algs.R)
         else:
             self.op.play(Algs.D + Algs.F + Algs.D.prime + Algs.F.prime)
 
         assert sc().match_faces
 
-    def _bring_top_corner_to_front_right_up(self, c: Corner):
+    def _bring_l1_target_corner_to_front_right_up(self, c: Corner):
         """
         Preservers top layer cross
 

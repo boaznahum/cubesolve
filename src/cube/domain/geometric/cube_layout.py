@@ -39,8 +39,9 @@ if TYPE_CHECKING:
 # CubeLayout Protocol
 # ============================================================================
 #
-# All geometry tables (_OPPOSITE, _ADJACENT, _SLICE_ROTATION_FACE, _AXIS_FACE)
-# are defined in _CubeLayout.py and accessed ONLY through protocol methods.
+# Fundamental axioms (SLICE_ROTATION_FACE, AXIS_FACE) are in geometry_fundamentals.py.
+# Opposite/adjacent facts (_OPPOSITE, _ADJACENT) are in schematic_cube.py.
+# All accessed through protocol methods.
 #
 # Key methods:
 #   - opposite(face) → opposite face

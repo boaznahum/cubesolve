@@ -15,6 +15,7 @@ from .PartSlice import CenterSlice, PartSlice
 from .Center import Center
 from .Corner import Corner
 from cube.domain.model.Color import Color
+from cube.domain.model.Colorable import Colorable
 from cube.domain.model.FaceName import FaceName
 from .Edge import Edge
 from .Part import Part
@@ -26,7 +27,7 @@ _Face: TypeAlias = "Face"
 _Cube: TypeAlias = "cube.Cube"  # type: ignore  # noqa: F821
 
 
-class Face(SuperElement, Hashable):
+class Face(SuperElement, Hashable, Colorable):
     """
     Faces never chane position, only the color of the parts
     """
@@ -93,7 +94,7 @@ class Face(SuperElement, Hashable):
         slices: list[list[CenterSlice]]
         slices = [[CenterSlice((i, j), PartEdge(f, color)) for j in range(n)] for i in range(n)]
 
-        return Center(slices)
+        return Center(slices, face=self)
 
     def __hash__(self) -> int:
         # we use faces in set in nxn_centers
@@ -144,29 +145,41 @@ class Face(SuperElement, Hashable):
         }
 
 
-        self.set_parts(self._center, *self._edges, *self._corners)
+        n = self.cube.n_slices
+
+        if n:
+            self.set_parts(self._center, *self._edges, *self._corners)
+        else:
+            # 2x2: no center or edges — only corners are real parts
+            self.set_parts(*self._corners)
+
         super().finish_init()
         self._init_finished = True
 
+
         markers_cfg = self.config.markers_config
-        draw_markers = markers_cfg.GUI_DRAW_MARKERS
-        sample_markers = markers_cfg.GUI_DRAW_SAMPLE_MARKERS
         draw_ltr_cords = markers_cfg.GUI_DRAW_LTR_ORIGIN_ARROWS
         mf = self.cube.sp.marker_factory
         mm = self.cube.sp.marker_manager
 
-        n = self.cube.n_slices
+        if draw_ltr_cords:
+            # Origin marker on bottom-left corner (works for all cube sizes including 2x2)
+            corner_bl = self._corner_bottom_left.slice.get_face_edge(self)
+            mm.add_fixed_marker(corner_bl, "ltr_origin", mf.ltr_origin())
+
+        if n == 0:
+            # 2x2: no edges or centers — remaining markers need edges/centers
+            return
+
+        draw_markers = markers_cfg.GUI_DRAW_MARKERS
+        sample_markers = markers_cfg.GUI_DRAW_SAMPLE_MARKERS
+
         n1 = n - 1
 
         if draw_ltr_cords:
-            # LTR Coordinate System Markers:
-            # - Origin (bottom-left corner): filled black circle
+            # LTR Coordinate System Markers (edge-based — 3x3+ only):
             # - X-axis (bottom edge, pointing right): red arrow
             # - Y-axis (left edge, pointing up): blue arrow
-
-            # Origin marker on bottom-left corner
-            corner_bl = self._corner_bottom_left.slice.get_face_edge(self)
-            mm.add_fixed_marker(corner_bl, "ltr_origin", mf.ltr_origin())
 
             # X-axis arrow on bottom edge (LTR index 0 = nearest to origin)
             # Each edge has its own conversion - use the specific edge's method
@@ -305,6 +318,20 @@ class Face(SuperElement, Hashable):
     def edge_bottom(self) -> Edge:
         return self._edge_bottom
 
+    def edge_neighbor_colors_cw(self) -> tuple[Color, ...]:
+        """Get the 4 edge adjacent-side colors in CW order (top, right, bottom, left).
+
+        For each edge on this face, returns the color of the sticker on the
+        OTHER face (the adjacent face). Useful for checking if edges follow
+        the color scheme cycle without rotating the cube.
+        """
+        return (
+            self._edge_top.face_color(self._edge_top.get_other_face(self)),
+            self._edge_right.face_color(self._edge_right.get_other_face(self)),
+            self._edge_bottom.face_color(self._edge_bottom.get_other_face(self)),
+            self._edge_left.face_color(self._edge_left.get_other_face(self)),
+        )
+
     def get_edge(self, position: EdgePosition) -> Edge:
         """
         Get the edge at the specified position on this face.
@@ -374,7 +401,10 @@ class Face(SuperElement, Hashable):
         Returns:
             String in format "COLOR@FACE" like "WHITE@D"
         """
-        return f"{self.color}@{self.name}"
+        c = self.color
+        if c == Color.UNCOLORED:
+            return self._name.value
+        return f"{c}@{self._name.value}"
 
 
     @property
@@ -405,15 +435,17 @@ class Face(SuperElement, Hashable):
         self._color_provider = provider
 
     def __str__(self) -> str:
-        # return f"{self._center.edg().color.name}/{self._original_color.name}@{self._name.value}"
-        return f"{self._center.edg().color.name}@{self._name.value}"
+        c = self.color
+        if c == Color.UNCOLORED:
+            return self._name.value
+        return f"{c.name}@{self._name.value}"
 
     def __repr__(self):
         return self.__str__()
 
     # for constructing only, valid only after ctor
     def create_part(self) -> PartEdge:
-        e: PartEdge = PartEdge(self, self.color)
+        e: PartEdge = PartEdge(self, self._original_color)
         return e
 
     def _get_other_face(self, e: Edge) -> _Face:
@@ -637,22 +669,31 @@ class Face(SuperElement, Hashable):
 
     @property
     def solved(self):
+        if self.cube.n_slices == 0:
+            # 2x2: no centers, no edges — solved iff all 4 corner stickers share one color
+            c = self._corners[0].face_color(self)
+            return all(corner.face_color(self) == c for corner in self._corners[1:])
+
         if not self.is3x3:
             return False
 
-        return (self.center.color ==
-                self._edge_top.f_color(self) ==
-                self._edge_right.f_color(self) ==
-                self._edge_bottom.f_color(self) ==
-                self._edge_left.f_color(self) ==
-                self._corner_top_left.f_color(self) ==
-                self._corner_top_right.f_color(self) ==
-                self._corner_bottom_left.f_color(self) ==
-                self._corner_bottom_right.f_color(self)
+        c = self.color
+
+        return (c ==
+                self._edge_top.face_color(self) ==
+                self._edge_right.face_color(self) ==
+                self._edge_bottom.face_color(self) ==
+                self._edge_left.face_color(self) ==
+                self._corner_top_left.face_color(self) ==
+                self._corner_top_right.face_color(self) ==
+                self._corner_bottom_left.face_color(self) ==
+                self._corner_bottom_right.face_color(self)
                 )
 
     @property
     def is3x3(self):
+        if self.cube.n_slices == 0:
+            return True  # 2x2: no edges/centers, trivially reduced
         return all(p.is3x3 for p in self.edges) and self.center.is3x3
 
     def reset_after_faces_changes(self):

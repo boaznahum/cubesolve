@@ -1297,3 +1297,151 @@ class TkinterWindow:
 - 2D only (isometric projection instead of true 3D)
 - Simpler visuals (no textures, lighting)
 - Suitable for debugging, education, and lightweight usage
+
+---
+
+## 10. WebGL Backend
+
+> **Added:** 2026-03 — Full-featured browser-based backend with 3D rendering via Three.js.
+
+### 10.1 Architecture Overview
+
+Unlike other backends that run in-process, the WebGL backend is a **client-server architecture**:
+
+```
+Python Server (aiohttp)                  Browser Client (Three.js)
+    ├── WebglEventLoop (asyncio)              ├── CubeModel.js (3D rendering)
+    ├── ClientSession (per connection)        ├── MarkerRenderer.js (annotations)
+    │   ├── AbstractApp (cube + solver)       └── WebSocket client
+    │   ├── WebglAnimationManager
+    │   └── FlowStateMachine
+    └── WebSocket server
+         ↕ JSON messages ↕
+```
+
+**Key difference from pyglet/tkinter:** No server-side rendering. The server sends cube state (face colors + markers) and animation events; the client renders everything in Three.js.
+
+### 10.2 Key Components
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| `ClientSession` | `backends/webgl/ClientSession.py` | Per-connection session: app, AM, FSM, message handling |
+| `WebglAnimationManager` | `backends/webgl/WebglAnimationManager.py` | Queue mode + blocking mode for animation |
+| `FlowStateMachine` | `backends/webgl/FlowStateMachine.py` | Explicit state machine for flow control |
+| `WebglEventLoop` | `backends/webgl/WebglEventLoop.py` | asyncio-based event loop, thread-safe sends |
+| `CubeStateSerializer` | `backends/webgl/CubeStateSerializer.py` | Extracts face colors + markers from cube model |
+| `SessionState` | `backends/webgl/SessionState.py` | State snapshot schema sent to client |
+
+### 10.3 Flow State Machine
+
+The WebGL backend replaces scattered boolean flags with an explicit FSM:
+
+```
+States: IDLE → SOLVING → PLAYING → REWINDING → ANIMATING → STOPPING → READY
+
+Key transitions:
+    IDLE ──SCRAMBLE──→ ANIMATING ──ANIM_DONE──→ IDLE
+    IDLE ──SOLVE──→ SOLVING ──SOLVE_DONE──→ READY
+    IDLE ──SOLVE_AND_PLAY──→ SOLVING ──SOLVE_DONE──→ PLAYING
+    READY ──PLAY_ALL──→ PLAYING ──QUEUE_EMPTY──→ IDLE/READY
+    any ──RESET_SESSION──→ IDLE (always allowed)
+    SOLVING/PLAYING/REWINDING/ANIMATING ──STOP──→ STOPPING
+```
+
+Button enable/disable is a static table lookup, not if/else chains.
+
+### 10.4 Animation: Two Modes
+
+The `WebglAnimationManager` operates in two modes:
+
+**Queue Mode** (default — redo/undo playback):
+```
+run_animation() → queue move → _process_next() dequeues → send animation_start
+                                                         → WAIT for client
+client animation_done → on_client_animation_done() → _process_next() (loop)
+```
+
+**Blocking Mode** (one-phase solve with markers):
+```
+Solver Thread                          Main Async Thread
+    run_animation() called                   |
+    → AnnotationAlg: apply + send_state → markers visible in client
+      return immediately                     |
+    → AnimationAbleAlg: apply +              |
+      send_animation_start ──────────→  client animates
+      _blocking_event.wait() [BLOCKED]       |
+                                      ←── animation_done
+                                          _blocking_event.set()
+    → unblocks, continues solving            |
+```
+
+Key: `asyncio.to_thread()` runs solver in worker thread. `threading.Event` for synchronization. `call_soon_threadsafe()` for all WebSocket sends from solver thread.
+
+### 10.5 WebSocket Reconnection
+
+Mobile browsers (iOS Safari) suspend tabs, killing the WebSocket. The session survives as "dormant" for 30 minutes. On reconnect:
+
+```python
+def reattach(self, ws):
+    self._ws = ws  # swap to new WebSocket
+
+    if am._blocking_mode:
+        # Solve in progress — unblock solver thread so it
+        # continues on the new WebSocket. Skip one animation.
+        am._blocking_event.set()
+        self.on_client_connected()
+        return
+
+    # Normal reconnect: cancel animations, reset FSM
+    am.cancel_animation()
+    self._fsm.send_reconnect(has_redo=...)
+    self.on_client_connected()
+```
+
+Safety net: `_blocking_event.wait(timeout=60.0)` prevents permanent hang if no reconnect occurs.
+
+### 10.6 Solve Commands: Two-Phase vs One-Phase
+
+| Command | Method | Mode | Markers Visible | Moves Go To |
+|---------|--------|------|-----------------|-------------|
+| "Solution" | `_two_phase_solve()` | Queue | No | Redo queue |
+| "Solve" | `_start_one_phase_solve()` | Blocking | Yes | History |
+
+**Two-phase** (`_two_phase_solve`): Computes solution synchronously, enqueues bare moves to redo queue. Fast, no annotations visible.
+
+**One-phase** (`_one_phase_solve`): Runs solver in worker thread with `am.set_blocking_mode(True)`. Solver's `annotate()` contexts stay active → markers visible during animation. Moves recorded in history (user can undo).
+
+### 10.7 Cancel/Abort During One-Phase Solve
+
+1. User clicks Stop → FSM: SOLVING → STOPPING
+2. `am.cancel_animation()` → `operator.abort()` + `_blocking_event.set()`
+3. Solver thread unblocks → `check_clear_rais_abort()` → `OpAborted`
+4. `AbstractSolver.solve()` catches `OpAborted`, returns cleanly
+5. `_one_phase_solve` finally: `set_blocking_mode(False)`, sends `SOLVE_DONE`
+6. FSM: STOPPING → READY/IDLE
+
+### 10.8 Marker Rendering Pipeline
+
+```
+Python (server)                           JavaScript (client)
+    CubeStateSerializer                       CubeModel.js
+    ├── extract_cube_state()                  ├── updateFaceColors()
+    │   ├── face colors (NxN RGB grid)        └── updateFaceMarkers()
+    │   └── markers (type, color, params)         ├── clearAllMarkers()
+    └── _serialize_marker()                       └── MarkerRenderer.js
+        ├── FilledCircleMarker → "filled_circle"      ├── createFilledCircle()
+        ├── RingMarker → "ring"                       ├── createRing()
+        ├── ArrowMarker → "arrow"                     ├── createArrow()
+        ├── BoldCrossMarker → "bold_cross"            ├── createBoldCross()
+        └── ... (8 marker types)                      └── ... (all types)
+```
+
+### 10.9 Deployment
+
+| Branch | App | Environment |
+|--------|-----|-------------|
+| `webgl-dev` | `cubesolve-dev` | Development (default deploy target) |
+| `main` | `cubesolve` | Production |
+| `staging` | `cubesolve-staging` | Staging |
+
+Deploy via `gh_acreate_pr.ps1` which pushes to target branch, triggering GitHub Actions → Fly.io.

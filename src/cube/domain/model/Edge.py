@@ -45,14 +45,17 @@ class Edge(Part):
         """
         # assign before call to init because _edges is called from ctor
         self._slices: Sequence[EdgeWing] = slices
-        super().__init__()
         self._f1: _Face = f1
         self._f2: _Face = f2
         self.right_top_left_same_direction = right_top_left_same_direction
+        if not slices:
+            self._cube = f1.cube  # 2x2: provide cube for Part.__init__ fallback
+        super().__init__()
 
         assert f1 is not f2
-        assert f1 is self.e1.face or f1 is self.e2.face
-        assert f2 is self.e1.face or f2 is self.e2.face
+        if slices:
+            assert f1 is self.e1.face or f1 is self.e2.face
+            assert f2 is self.e1.face or f2 is self.e2.face
 
         # FU, FR
         self._name: str = str(f1.name) + str(f2.name)
@@ -75,6 +78,8 @@ class Edge(Part):
 
     @property
     def _3x3_representative_edges(self) -> Sequence[PartEdge]:
+        if not self._slices:
+            return ()  # 2x2: no edge slices
         return self._slices[self.n_slices // 2].edges
 
     @property
@@ -95,6 +100,8 @@ class Edge(Part):
 
         See: design2/model-id-system.md section "Evolution: Big Cube → 3x3 Reduction"
         """
+        assert self._slices, f"is3x3 should not be called on 2x2 edge {self._name} with no slices"
+
         slices = self.all_slices
 
         s0 = next(slices)
@@ -317,10 +324,17 @@ class Edge(Part):
         :param f:
         :return:
         """
+        if not self._slices:
+            raise ValueError(f"Edge {self._name} has no slices (2x2 cube)")
         return self._slices[0].get_other_face_edge(f)
 
     def get_other_face(self, f: _Face) -> _Face:
-
+        if not self._slices:
+            # 2x2: use stored face references
+            if f is self._f1:
+                return self._f2
+            else:
+                return self._f1
         return self.get_other_face_edge(f).face
 
     def get_position_on_face(self, face: _Face) -> EdgePosition:
@@ -462,6 +476,8 @@ class Edge(Part):
         :param other:
         :return:
         """
+        if not self._slices or not other._slices:
+            raise ValueError("Edge has no slices (2x2 cube)")
 
         return self._slices[0].single_shared_face(other._slices[0])
 
@@ -532,6 +548,9 @@ class Edge(Part):
 
     @property
     def name(self) -> EdgeName:
+        if not self._slices:
+            # 2x2: use stored face references instead of slices
+            return faces_to_edge_name((self._f1.name, self._f2.name))
         return faces_to_edge_name((self.e1.face.name, self.e2.face.name))
 
     @property

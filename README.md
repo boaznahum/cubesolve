@@ -15,8 +15,12 @@ viewer are totally seperated from other layers(as should be :wink:)
 
 ## Credits:
 [Ruwix](https://ruwix.com/the-rubiks-cube/notation/advanced)
-        
+
 [cubing](https://alg.cubing.net/?alg=mx)
+
+[Daniel Walton (dwalton76)](https://github.com/dwalton76/rubiks-cube-NxNxN-solver) — The Dwalton solver is inspired by his rubiks-cube-NxNxN-solver project, which uses precomputed lookup/pruning tables with IDA* search based on Herbert Kociemba's two-phase algorithm.
+
+[Herbert Kociemba](http://kociemba.org/cube.htm) — Two-phase algorithm for optimal 3x3 cube solving, the foundation of the Dwalton table-based solver.
 
 ## Installing and running
 
@@ -66,11 +70,12 @@ https://user-images.githubusercontent.com/3913990/172692615-eb9aacf8-bc06-4a95-9
 
     R, L, F, B, U, D - As usual - rotate faces
     X, Y, Z - Entire cube over R, U and F axes
-    M, E, S - Middle slice over L, D and F
+    M, E, S - Single middle slice over L, D and F
+    [:]M, [:]E, [:]S - All middle slices (MM, EE, SS in code)
 
 According to: [Ruwix](https://ruwix.com/the-rubiks-cube/notation/advanced) and [cubing](https://alg.cubing.net/?alg=mx)
 
-    Ctrl+R/L/F/B/U/D - Wide (double-layer) rotations (Rw, Lw, Fw, Bw, Uw, Dw)
+    Ctrl+R/L/F/B/U/D - Adaptive wide rotations ([:-1]Rw, all-but-last layers)
 
     Shift + Face key - Rotate face counterclockwise (inverse)
 
@@ -222,28 +227,28 @@ python -m cube.main_any_backend -c "SPEED_UP+SPEED_UP+SCRAMBLE_1+SOLVE_ALL+QUIT"
 |----------|-----|-----------|---------|-------------|
 | **Face Rotations** | R | - | `ROTATE_R` | Rotate right face clockwise |
 | | R | Shift | `ROTATE_R_PRIME` | Rotate right face counter-clockwise |
-| | R | Ctrl | `ROTATE_RW` | Wide rotation (Rw) - right two layers |
-| | R | Ctrl+Shift | `ROTATE_RW_PRIME` | Wide rotation (Rw') counter-clockwise |
+| | R | Ctrl | `ROTATE_RW` | Wide rotation ([:-1]Rw) - all-but-last layers |
+| | R | Ctrl+Shift | `ROTATE_RW_PRIME` | Wide rotation ([:-1]Rw') counter-clockwise |
 | | L | - | `ROTATE_L` | Rotate left face clockwise |
 | | L | Shift | `ROTATE_L_PRIME` | Rotate left face counter-clockwise |
-| | L | Ctrl | `ROTATE_LW` | Wide rotation (Lw) - left two layers |
-| | L | Ctrl+Shift | `ROTATE_LW_PRIME` | Wide rotation (Lw') counter-clockwise |
+| | L | Ctrl | `ROTATE_LW` | Wide rotation ([:-1]Lw) - all-but-last layers |
+| | L | Ctrl+Shift | `ROTATE_LW_PRIME` | Wide rotation ([:-1]Lw') counter-clockwise |
 | | U | - | `ROTATE_U` | Rotate up face clockwise |
 | | U | Shift | `ROTATE_U_PRIME` | Rotate up face counter-clockwise |
-| | U | Ctrl | `ROTATE_UW` | Wide rotation (Uw) - top two layers |
-| | U | Ctrl+Shift | `ROTATE_UW_PRIME` | Wide rotation (Uw') counter-clockwise |
+| | U | Ctrl | `ROTATE_UW` | Wide rotation ([:-1]Uw) - all-but-last layers |
+| | U | Ctrl+Shift | `ROTATE_UW_PRIME` | Wide rotation ([:-1]Uw') counter-clockwise |
 | | D | - | `ROTATE_D` | Rotate down face clockwise |
 | | D | Shift | `ROTATE_D_PRIME` | Rotate down face counter-clockwise |
-| | D | Ctrl | `ROTATE_DW` | Wide rotation (Dw) - bottom two layers |
-| | D | Ctrl+Shift | `ROTATE_DW_PRIME` | Wide rotation (Dw') counter-clockwise |
+| | D | Ctrl | `ROTATE_DW` | Wide rotation ([:-1]Dw) - all-but-last layers |
+| | D | Ctrl+Shift | `ROTATE_DW_PRIME` | Wide rotation ([:-1]Dw') counter-clockwise |
 | | F | - | `ROTATE_F` | Rotate front face clockwise |
 | | F | Shift | `ROTATE_F_PRIME` | Rotate front face counter-clockwise |
-| | F | Ctrl | `ROTATE_FW` | Wide rotation (Fw) - front two layers |
-| | F | Ctrl+Shift | `ROTATE_FW_PRIME` | Wide rotation (Fw') counter-clockwise |
+| | F | Ctrl | `ROTATE_FW` | Wide rotation ([:-1]Fw) - all-but-last layers |
+| | F | Ctrl+Shift | `ROTATE_FW_PRIME` | Wide rotation ([:-1]Fw') counter-clockwise |
 | | B | - | `ROTATE_B` | Rotate back face clockwise |
 | | B | Shift | `ROTATE_B_PRIME` | Rotate back face counter-clockwise |
-| | B | Ctrl | `ROTATE_BW` | Wide rotation (Bw) - back two layers |
-| | B | Ctrl+Shift | `ROTATE_BW_PRIME` | Wide rotation (Bw') counter-clockwise |
+| | B | Ctrl | `ROTATE_BW` | Wide rotation ([:-1]Bw) - all-but-last layers |
+| | B | Ctrl+Shift | `ROTATE_BW_PRIME` | Wide rotation ([:-1]Bw') counter-clockwise |
 | **Slice Moves** | M | - | `SLICE_M` | Middle slice (parallel to L) |
 | | M | Shift | `SLICE_M_PRIME` | Middle slice counter-clockwise |
 | | E | - | `SLICE_E` | Equatorial slice (parallel to D) |
@@ -358,7 +363,7 @@ def rf(self) -> algs.Alg:
 
 ....
 
-slice_alg = Algs.E[[ltr + 1 for ltr in ltrs]]
+slice_alg = Algs.EE[[ltr + 1 for ltr in ltrs]]
    ```
 
 ![Algs](/readme_files/algs.png)

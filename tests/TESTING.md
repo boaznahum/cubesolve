@@ -480,6 +480,52 @@ def test_solve():
 7. **Use fixtures** for common setup code
 8. **Keep tests independent** - each test should work alone
 
+## WebGL E2E Tests (Playwright)
+
+WebGL E2E tests live in `tests/webgl/` and use Playwright to drive a real browser against a live WebGL server. Each test starts a fresh server on a random port and connects a browser to it.
+
+### Setup
+
+```bash
+# Install playwright and browser binaries
+pip install playwright
+playwright install chromium
+```
+
+### Running WebGL Tests
+
+```bash
+# Headed (see the browser — recommended for development)
+CUBE_QUIET_ALL=1 python -m pytest tests/webgl/ -v -n0 --headed
+
+# Headless (CI mode, no visible browser) — must use -n0 (no parallelism)
+CUBE_QUIET_ALL=1 python -m pytest tests/webgl/ -v -n0
+
+# Use a specific browser engine
+CUBE_QUIET_ALL=1 python -m pytest tests/webgl/ -v -n0 --browser-type=firefox
+
+# Run a single test
+CUBE_QUIET_ALL=1 python -m pytest tests/webgl/test_e2e_solve.py::TestScrambleSolutionPlayback -v -n0
+
+# Increase timeout for slow machines
+CUBE_QUIET_ALL=1 python -m pytest tests/webgl/ -v -n0 --webgl-timeout=120
+```
+
+### WebGL Test Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--headed` | False | Show browser window during tests |
+| `--browser-type` | chromium | Browser engine: chromium, firefox, webkit |
+| `--webgl-timeout` | 60 | Default timeout (seconds) for assertions |
+| `-n0` | (required) | Disable xdist parallelism |
+
+### Architecture
+
+- `conftest.py` — Server fixture (function-scoped), Playwright browser/page fixtures
+- `helpers.py` — `WebGLPageHelper` class with all UI interaction methods
+- `test_e2e_solve.py` — End-to-end solve tests (scramble, solution, play, stop, etc.)
+
 ## Useful Links
 
 - [pytest documentation](https://docs.pytest.org/)

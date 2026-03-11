@@ -12,7 +12,7 @@ from tests.tetser import TestRunner
 
 @pytest.mark.slow
 @pytest.mark.parametrize("solver_name", list(SolverName), ids=lambda s: s.display_name)
-@pytest.mark.parametrize("cube_size", config.AGGRESSIVE_2_TEST_NUMBER_SIZES, ids=lambda s: f"size_{s}")
+@pytest.mark.parametrize("cube_size", config.CONFIG_DEFAULTS.aggressive_2_test_number_sizes, ids=lambda s: f"size_{s}")
 def test_aggressive_all_solvers(solver_name: SolverName, cube_size: int) -> None:
     """Test all solvers across multiple sizes."""
     # Check if solver supports this cube size
@@ -20,7 +20,7 @@ def test_aggressive_all_solvers(solver_name: SolverName, cube_size: int) -> None
     if skip_reason:
         pytest.skip(skip_reason)
 
-    first_scramble_key = config.AGGRESSIVE_2_TEST_NUMBER_OF_SCRAMBLE_START
-    number_of_loops = ceil(config.AGGRESSIVE_2_TEST_NUMBER_OF_SCRAMBLE_ITERATIONS / len(SolverName))
+    first_scramble_key = config.CONFIG_DEFAULTS.aggressive_2_test_number_of_scramble_start
+    number_of_loops = ceil(config.CONFIG_DEFAULTS.aggressive_2_test_number_of_scramble_iterations / len(SolverName))
 
     TestRunner.run_solvers_sizes([solver_name], [cube_size], first_scramble_key, number_of_loops, debug=False)

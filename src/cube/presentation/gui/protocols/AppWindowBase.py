@@ -458,7 +458,7 @@ class AppWindowBase(ABC):
         s += f"S={cube.size}, Is 3x3:{'Yes' if cube.is3x3 else 'No'}"
         s += f", Slices  [{vs.slice_start}, {vs.slice_stop}]"
         s += f", {vs.slice_alg(cube, Algs.L)}"
-        s += f", {vs.slice_alg(cube, Algs.M)}"
+        s += f", {vs.slice_alg(cube, Algs.MM)}"
         self._status_labels.append(TextLabel(
             s, x=10, y=y, font_size=10, color=(0, 255, 0, 255), bold=True
         ))

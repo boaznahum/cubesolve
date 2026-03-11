@@ -57,6 +57,7 @@ class Color(Enum):
     LIGHT_SEAFOAM_GREEN = "lsgrn"
     LIGHTISH_PURPLE = "LPnk"
     ELECTRIC_PINK = "EPnk"
+    UNCOLORED = "N/A"  # sentinel for parts with no physical color (e.g., 2x2 virtual centers)
 
     def __str__(self) -> str:
         return self.name ## see below
@@ -70,6 +71,11 @@ class Color(Enum):
         With this, it shows: frozenset({GREEN, RED})
         """
         return self.name
+
+    @property
+    def color(self) -> Color:
+        """Return self — a Color is its own color (implements Colorable)."""
+        return self
 
     @property
     def long(self) -> str:
@@ -122,6 +128,8 @@ def _n2c(n: str) -> tuple[float, float, float]:
     ambient + diffuse exceeds 1.0 on all channels.
     """
     _n = n.lower().replace("_", " ")
+    if _n == "uncolored":
+        return (0.5, 0.5, 0.5)  # gray sentinel — should never be rendered
     mapping = mplcolors.get_named_colors_mapping()
 
     if _n not in mapping:

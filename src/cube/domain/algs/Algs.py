@@ -1,17 +1,17 @@
-import warnings
 from typing import Sequence
 
 from cube.domain.algs._parser import parse_alg
 from cube.domain.algs.Alg import Alg
 from cube.domain.algs.AnnotationAlg import AnnotationAlg
-from cube.domain.algs.DoubleLayerAlg import DoubleLayerAlg
-from cube.domain.algs.FaceAlg import _B, _D, _F, _L, _R, _U, FaceAlg
+from cube.domain.algs.FaceAlg import FaceAlg
 from cube.domain.algs.Scramble import _Scramble, _scramble
 from cube.domain.algs.SeqAlg import SeqAlg
 from cube.domain.algs.SimpleAlg import NSimpleAlg
-from cube.domain.algs.SliceAlg import _E, _M, _S, SliceAlg
+from cube.domain.algs.MiddleSliceAlg import MiddleSliceAlg
+from cube.domain.algs.SliceAlg import SliceAlg
+from cube.domain.geometric.geometry_fundamentals import SLICE_ROTATION_FACE
 from cube.domain.algs.WholeCubeAlg import _X, _Y, _Z
-from cube.domain.algs.WideFaceAlg import _wb, _wd, _wf, _wl, _wr, _wu
+from cube.domain.algs.WideLayerAlg import ALL_BUT_LAST, WideLayerAlg
 from cube.domain.exceptions import InternalSWError
 from cube.domain.model import FaceName
 from cube.domain.model.cube_slice import SliceName
@@ -34,7 +34,7 @@ class Algs:
     │  S   │  F ↔ B     │  U, R, D, L    │ Like F (clockwise when viewing F)     │
     └──────┴────────────┴────────────────┴───────────────────────────────────────┘
 
-    API: Algs.M.get_face_name() → L, Algs.E.get_face_name() → D, Algs.S.get_face_name() → F
+    API: Algs.MM.get_face_name() → L, Algs.EE.get_face_name() → D, Algs.SS.get_face_name() → F
 
     Slice Traversal (content movement during rotation):
         M: F → U → B → D → F  (vertical cycle, like L rotation)
@@ -91,58 +91,88 @@ class Algs:
     # So it used by annotation tools, after they changed some model(text, cube)
     AN = AnnotationAlg()
 
-    L = _L()
+    # =========================================================================
+    # Face algorithms — one per FaceName
+    # =========================================================================
+    _face_by_name: dict[FaceName, FaceAlg] = {fn: FaceAlg(fn) for fn in FaceName}
+    L: FaceAlg = _face_by_name[FaceName.L]
+    R: FaceAlg = _face_by_name[FaceName.R]
+    U: FaceAlg = _face_by_name[FaceName.U]
+    D: FaceAlg = _face_by_name[FaceName.D]
+    F: FaceAlg = _face_by_name[FaceName.F]
+    B: FaceAlg = _face_by_name[FaceName.B]
+
     # noinspection PyPep8Naming
-    Lw = DoubleLayerAlg(L)
+    LLw = WideLayerAlg(FaceName.L, ALL_BUT_LAST)
+    BBw = WideLayerAlg(FaceName.B, ALL_BUT_LAST)
+    DDw = WideLayerAlg(FaceName.D, ALL_BUT_LAST)
+    RRw = WideLayerAlg(FaceName.R, ALL_BUT_LAST)
+    UUw = WideLayerAlg(FaceName.U, ALL_BUT_LAST)
+    FFw = WideLayerAlg(FaceName.F, ALL_BUT_LAST)
 
-    B = _B()
-    Bw = DoubleLayerAlg(B)
-
-    D = _D()
-    Dw = DoubleLayerAlg(D)
-
-    R = _R()
-    Rw = DoubleLayerAlg(R)
     # X, Y, Z: Identity/naming only - _X() binds to AxisName.X (just gives the alg its name).
     # Geometric relationships (X↔R axis, direction) are defined in CubeLayout.get_axis_face()
     X = _X()
-    M = _M()  # Middle slice over L axis. See class docstring for M/E/S details.
-    _MM = _M().simple_mul(-1)  # Middle over L
-
-    # noinspection PyPep8Naming
-    @staticmethod
-    def MM() -> SliceAlg:
-        warnings.warn("Use M'", DeprecationWarning, 2)
-
-        return Algs._MM
-
-    U = _U()
-    Uw = DoubleLayerAlg(U)
-    Y = _Y()  # See X comment above for X/Y/Z design notes
-    E = _E()  # Middle slice over D axis. See class docstring for M/E/S details.
-
-    F = _F()
-    Fw = DoubleLayerAlg(F)
-    Z = _Z()  # See X comment above for X/Y/Z design notes
-    S = _S()  # Middle slice over F axis. See class docstring for M/E/S details.
+    Y = _Y()
+    Z = _Z()
 
     # =========================================================================
-    # Adaptive Wide Moves (lowercase notation)
+    # Slice algorithms — derived from geometry_fundamentals.SLICE_ROTATION_FACE
+    # =========================================================================
+    # SLICE_ROTATION_FACE defines which slices exist (M, E, S).
+    # SliceBaseAlgs is the canonical collection, built from that axiom.
+    # MM/EE/SS are convenience aliases into the same objects.
+    # =========================================================================
+    SliceBaseAlgs: Sequence[SliceAlg] = [SliceAlg(sn) for sn in SLICE_ROTATION_FACE]
+    _slice_by_name: dict[SliceName, SliceAlg] = {a._slice_name: a for a in SliceBaseAlgs}
+    MM: SliceAlg = _slice_by_name[SliceName.M]
+    EE: SliceAlg = _slice_by_name[SliceName.E]
+    SS: SliceAlg = _slice_by_name[SliceName.S]
+    M = MiddleSliceAlg(SliceName.M)
+    E = MiddleSliceAlg(SliceName.E)
+    S = MiddleSliceAlg(SliceName.S)
+
+    # =========================================================================
+    # Adaptive Wide Moves — all-but-last layers
     # =========================================================================
     # These move face + ALL inner layers, adapting to cube size at play time.
-    # See WideFaceAlg.py for detailed documentation.
+    # str() = "[:-1]Rw" / "[:-1]r"
     #
-    # On 3x3: same as uppercase (no inner layers)
+    # RRw and rr are identical in behavior (both use WideLayerAlg with ALL_BUT_LAST).
+    # RRw uses uppercase+w form: [:-1]Rw (WCA official notation)
+    # rr uses lowercase form: [:-1]r (informal notation)
+    # Both kept as sugar for readability in solver code.
+    #
+    # On 3x3: moves 2 layers (face + 1 inner)
     # On NxN: moves N-1 layers (face + all inner), opposite face stays fixed
     #
     # Used by CFOP F2L to work correctly on shadow 3x3 AND real NxN cubes.
     # =========================================================================
-    d = _wd()  # D + all inner layers (U stays fixed)
-    u = _wu()  # U + all inner layers (D stays fixed)
-    r = _wr()  # R + all inner layers (L stays fixed)
-    l = _wl()  # L + all inner layers (R stays fixed)  # noqa: E741 TODO: fix
-    f = _wf()  # F + all inner layers (B stays fixed)
-    b = _wb()  # B + all inner layers (F stays fixed)
+    dd = WideLayerAlg(FaceName.D, ALL_BUT_LAST, lowercase=True)
+    uu = WideLayerAlg(FaceName.U, ALL_BUT_LAST, lowercase=True)
+    rr = WideLayerAlg(FaceName.R, ALL_BUT_LAST, lowercase=True)
+    ll = WideLayerAlg(FaceName.L, ALL_BUT_LAST, lowercase=True)  # noqa: E741
+    ff = WideLayerAlg(FaceName.F, ALL_BUT_LAST, lowercase=True)
+    bb = WideLayerAlg(FaceName.B, ALL_BUT_LAST, lowercase=True)
+
+    # =========================================================================
+    # Standard Wide Moves (WCA notation)
+    # =========================================================================
+    # Rw = r = 2 outermost layers (default). 3Rw = 3r = 3 layers.
+    # See WideLayerAlg.py for detailed documentation.
+    # =========================================================================
+    Rw = WideLayerAlg(FaceName.R)
+    Lw = WideLayerAlg(FaceName.L)
+    Uw = WideLayerAlg(FaceName.U)
+    Dw = WideLayerAlg(FaceName.D)
+    Fw = WideLayerAlg(FaceName.F)
+    Bw = WideLayerAlg(FaceName.B)
+    r = WideLayerAlg(FaceName.R, lowercase=True)
+    l = WideLayerAlg(FaceName.L, lowercase=True)  # noqa: E741
+    u = WideLayerAlg(FaceName.U, lowercase=True)
+    d = WideLayerAlg(FaceName.D, lowercase=True)
+    f = WideLayerAlg(FaceName.F, lowercase=True)
+    b = WideLayerAlg(FaceName.B, lowercase=True)
 
     _NO_OP = SeqAlg(None)
     NOOP = _NO_OP  # Public alias for no-op algorithm
@@ -156,13 +186,15 @@ class Algs:
         return SeqAlg(None, *algs)
 
     Simple: Sequence[NSimpleAlg] = [L, Lw,
-                                    R, Rw, X, M,
-                                    U, Uw, E, Y,
-                                    F, Fw, Z, S,
+                                    R, Rw, X, *SliceBaseAlgs,
+                                    U, Uw, Y,
+                                    F, Fw, Z,
                                     B, Bw,
                                     D, Dw,
-                                    # Adaptive wide moves (lowercase)
+                                    # Standard wide moves (lowercase form)
                                     f, u, r, l, d, b,
+                                    # WCA single middle slices
+                                    M, E, S,
                                     ]
 
     RU = SeqAlg("RU(top)", R, U, -R, U, R, U * 2, -R, U)
@@ -204,54 +236,26 @@ class Algs:
 
     @classmethod
     def of_face(cls, face: FaceName) -> FaceAlg:
+        alg = cls._face_by_name.get(face)
+        if alg is None:
+            raise InternalSWError(f"Unknown face name {face}")
+        return alg
 
-        match face:
-
-            case FaceName.F:
-                return cls.F
-
-            case FaceName.B:
-                return cls.B
-
-            case FaceName.L:
-                return cls.L
-
-            case FaceName.R:
-                return cls.R
-
-            case FaceName.U:
-                return cls.U
-
-            case FaceName.D:
-                return cls.D
-
-            case _:
-                raise InternalSWError(f"Unknown face name {face}")
 
     @classmethod
     def of_slice(cls, slice_name: SliceName) -> SliceAlg:
-
-        match slice_name:
-
-            case SliceName.E:
-                return cls.E
-
-            case SliceName.S:
-                return cls.S
-
-            case SliceName.M:
-                return cls.M
-
-            case _:
-                raise InternalSWError(f"Unknown slice name {slice_name}")
+        alg = cls._slice_by_name.get(slice_name)
+        if alg is None:
+            raise InternalSWError(f"Unknown slice name {slice_name}")
+        return alg
 
     @classmethod
     def no_op(cls) -> Alg:
         return Algs._NO_OP
 
     @classmethod
-    def parse(cls, alg: str) -> Alg:
-        return parse_alg(alg)
+    def parse(cls, alg: str, *, compat_3x3: bool = False) -> Alg:
+        return parse_alg(alg, compat_3x3=compat_3x3)
 
     @classmethod
     def parse_multiline(cls, text: str) -> Alg:

@@ -262,6 +262,8 @@ class _Board:
 
             f: Face = fb.cube_face
             for p in f.parts:
+                if not p.has_slices:
+                    continue  # 2x2: edges/centers have no slices, skip
                 _id = p.fixed_id
                 cell: _Cell = fb.get_cell(_id)
                 cells[_id].append(cell)

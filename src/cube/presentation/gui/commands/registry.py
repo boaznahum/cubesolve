@@ -44,6 +44,7 @@ from .concrete import (
     ShadowToggleAllCommand,
     ShadowToggleCommand,
     SingleStepToggleCommand,
+    SetSizeCommand,
     SizeDecCommand,
     # Size
     SizeIncCommand,
@@ -115,28 +116,28 @@ class Commands:
     # =========================================================================
     # WIDE ROTATIONS
     # =========================================================================
-    ROTATE_RW = RotateWideCommand(Algs.Rw, False)
-    ROTATE_RW_PRIME = RotateWideCommand(Algs.Rw, True)
-    ROTATE_LW = RotateWideCommand(Algs.Lw, False)
-    ROTATE_LW_PRIME = RotateWideCommand(Algs.Lw, True)
-    ROTATE_UW = RotateWideCommand(Algs.Uw, False)
-    ROTATE_UW_PRIME = RotateWideCommand(Algs.Uw, True)
-    ROTATE_DW = RotateWideCommand(Algs.Dw, False)
-    ROTATE_DW_PRIME = RotateWideCommand(Algs.Dw, True)
-    ROTATE_FW = RotateWideCommand(Algs.Fw, False)
-    ROTATE_FW_PRIME = RotateWideCommand(Algs.Fw, True)
-    ROTATE_BW = RotateWideCommand(Algs.Bw, False)
-    ROTATE_BW_PRIME = RotateWideCommand(Algs.Bw, True)
+    ROTATE_RW = RotateWideCommand(Algs.RRw, False)
+    ROTATE_RW_PRIME = RotateWideCommand(Algs.RRw, True)
+    ROTATE_LW = RotateWideCommand(Algs.LLw, False)
+    ROTATE_LW_PRIME = RotateWideCommand(Algs.LLw, True)
+    ROTATE_UW = RotateWideCommand(Algs.UUw, False)
+    ROTATE_UW_PRIME = RotateWideCommand(Algs.UUw, True)
+    ROTATE_DW = RotateWideCommand(Algs.DDw, False)
+    ROTATE_DW_PRIME = RotateWideCommand(Algs.DDw, True)
+    ROTATE_FW = RotateWideCommand(Algs.FFw, False)
+    ROTATE_FW_PRIME = RotateWideCommand(Algs.FFw, True)
+    ROTATE_BW = RotateWideCommand(Algs.BBw, False)
+    ROTATE_BW_PRIME = RotateWideCommand(Algs.BBw, True)
 
     # =========================================================================
     # SLICE MOVES
     # =========================================================================
-    SLICE_M = RotateCommand(Algs.M, False)
-    SLICE_M_PRIME = RotateCommand(Algs.M, True)
-    SLICE_E = RotateCommand(Algs.E, False)
-    SLICE_E_PRIME = RotateCommand(Algs.E, True)
-    SLICE_S = RotateCommand(Algs.S, False)
-    SLICE_S_PRIME = RotateCommand(Algs.S, True)
+    SLICE_M = RotateCommand(Algs.MM, False)
+    SLICE_M_PRIME = RotateCommand(Algs.MM, True)
+    SLICE_E = RotateCommand(Algs.EE, False)
+    SLICE_E_PRIME = RotateCommand(Algs.EE, True)
+    SLICE_S = RotateCommand(Algs.SS, False)
+    SLICE_S_PRIME = RotateCommand(Algs.SS, True)
 
     # =========================================================================
     # CUBE ROTATIONS
@@ -232,6 +233,10 @@ class Commands:
     # =========================================================================
     SIZE_INC = SizeIncCommand()
     SIZE_DEC = SizeDecCommand()
+    SIZE_2 = SetSizeCommand(size=2)
+    SIZE_3 = SetSizeCommand(size=3)
+    SIZE_4 = SetSizeCommand(size=4)
+    SIZE_5 = SetSizeCommand(size=5)
 
     # =========================================================================
     # SLICE SELECTION

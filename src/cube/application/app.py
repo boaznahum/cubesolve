@@ -68,6 +68,7 @@ class _App(AbstractApp, IServiceProvider):
     def reset(self, cube_size: int | None = None):
         self.cube.reset(cube_size)
         self.op.reset()
+        self._slv = Solvers.default(self.op)
         self._error = None
 
     def set_error(self, _error: str):
@@ -115,6 +116,11 @@ class _App(AbstractApp, IServiceProvider):
 
     def switch_to_next_solver(self) -> Solver:
         self._slv = Solvers.next_solver(self._slv.get_code, self.op)
+        return self._slv
+
+    def switch_to_solver(self, name: SolverName) -> Solver:
+        """Switch to a specific solver by name."""
+        self._slv = Solvers.by_name(name, self.op)
         return self._slv
 
     @property

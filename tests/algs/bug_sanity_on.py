@@ -9,7 +9,7 @@ from tests.test_utils import _test_sp
 
 def test_sanity_check_enabled():
     """Test basic operation with sanity check enabled."""
-    config.CHECK_CUBE_SANITY = True
+    config.CONFIG_DEFAULTS.check_cube_sanity = True
 
     cube = Cube(3, sp=_test_sp)
 

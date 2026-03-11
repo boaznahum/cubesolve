@@ -75,7 +75,7 @@ class Scrambler(ScramblerProtocol):
             for face_alg in [Algs.R, Algs.L, Algs.U, Algs.D, Algs.F, Algs.B]:
                 moves.extend([face_alg, face_alg.inv(), face_alg * 2])
         if ScrambleWhat.SLICE in what:
-            for slice_alg in [Algs.M, Algs.E, Algs.S]:
+            for slice_alg in Algs.SliceBaseAlgs:
                 moves.extend([slice_alg, slice_alg.inv(), slice_alg * 2])
 
         if not moves:

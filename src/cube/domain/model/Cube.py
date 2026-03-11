@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Rubik's Cube Virtual Model
 ===========================
@@ -136,6 +138,7 @@ from contextlib import contextmanager
 from typing import TYPE_CHECKING, Collection, Protocol, Tuple
 
 from cube.domain.exceptions import InternalSWError
+from cube.utils.Cache import CacheManager
 from cube.utils.config_protocol import ConfigProtocol
 from cube.utils.service_provider import IServiceProvider
 
@@ -338,6 +341,7 @@ class Cube(CubeSupplier):
         "_has_visible_presentation",
         "_has_textures",
         "_is_moves_visible",
+        "_mutation_cache",
     ]
 
     _front: Face
@@ -367,6 +371,7 @@ class Cube(CubeSupplier):
         self._is_moves_visible: bool = False  # Computed: visible AND textures AND NOT query_mode
         self._listeners: list["CubeListener"] = []
         self._is_even_cube_shadow: bool = False
+        self._mutation_cache: CacheManager = CacheManager.create(sp.config)
 
         from cube.domain.geometric.cube_layout import CubeLayout as CL
         from cube.domain.geometric._SizedCubeLayout import _SizedCubeLayout
@@ -375,7 +380,8 @@ class Cube(CubeSupplier):
             self._original_scheme = scheme
         else:
             #self._original_scheme = cube_color_schemes.random_scheme()
-            self._original_scheme = cube_color_schemes.purple_pink()
+            #self._original_scheme = cube_color_schemes.purple_pink()
+            self._original_scheme = cube_color_schemes.boy_scheme()
         self._layout: CubeLayout = CL.create_layout(self._original_scheme.faces, self._sp)
         self._sized_layout: SizedCubeLayout = _SizedCubeLayout(self)
         self._reset()
@@ -394,6 +400,7 @@ class Cube(CubeSupplier):
         assert self._size >= 2
         self._modify_counter = 0
         self._last_sanity_counter = 0
+        self._mutation_cache.clear()
 
         self._color_2_face = {}
 
@@ -505,6 +512,30 @@ class Cube(CubeSupplier):
         """Get the configuration (convenience property)."""
         assert self._sp is not None, "Cube requires a service provider (sp parameter)"
         return self._sp.config
+
+    @property
+    def mutation_cache(self) -> CacheManager:
+        """Cache that is automatically cleared on every cube modification.
+
+        Use this for solver-computed values that depend on cube state.
+
+        **Cleared automatically by:**
+        - ``modified()`` — called after every face rotation / color change
+        - ``_reset()`` — called on cube reset or size change
+
+        Any cached value becomes stale after a rotation, scramble, or reset.
+
+        **Why this matters:** In the GUI and other interactive contexts,
+        ``status`` and ``is_solved`` are called repeatedly between
+        modifications (status bar refreshes, animation frames, etc.).
+        Without caching, expensive computations would re-run on every
+        call even though the cube hasn't changed.
+
+        **Usage:** Call ``mutation_cache.get(key, type)`` each time —
+        do NOT store the returned ``Cache`` reference, because
+        ``clear()`` removes entries from the manager's dict.
+        """
+        return self._mutation_cache
 
     @property
     def cqr(self) -> "CubeQueries2":
@@ -1432,8 +1463,9 @@ class Cube(CubeSupplier):
 
         return parts
 
-    def modified(self):
+    def modified(self) -> None:
         self._modify_counter += 1
+        self._mutation_cache.clear()
 
     def is_sanity(self, force_check=False) -> bool:
         # noinspection PyBroadException
@@ -1947,6 +1979,7 @@ class Cube(CubeSupplier):
 
         For NxN cubes, uses the representative edge slices (middle slice for edges).
         Does NOT require cube to actually be 3x3 - works on any NxN cube.
+        For 2x2 cubes: edges are empty, centers use face original colors.
 
         Returns:
             Cube3x3Colors containing the colors of all edges, corners, and centers.
@@ -1954,21 +1987,21 @@ class Cube(CubeSupplier):
         """
         from .part_names import (
             CornerName,
-            EdgeName,
             faces_to_corner_name,
             faces_to_edge_name,
         )
         from .Cube3x3Colors import CornerColors, Cube3x3Colors, EdgeColors
 
         edges_dict: dict[EdgeName, EdgeColors] = {}
-        for edge in self.edges:
-            # e1 and e2 are PartEdges, each belongs to a face
-            edge_colors: dict[FaceName, Color] = {
-                edge.e1.face.name: edge.e1.color,
-                edge.e2.face.name: edge.e2.color,
-            }
-            edge_name = faces_to_edge_name(edge_colors.keys())
-            edges_dict[edge_name] = EdgeColors(edge_colors)
+        if self.n_slices > 0:
+            for edge in self.edges:
+                # e1 and e2 are PartEdges, each belongs to a face
+                edge_colors: dict[FaceName, Color] = {
+                    edge.e1.face.name: edge.e1.color,
+                    edge.e2.face.name: edge.e2.color,
+                }
+                edge_name = faces_to_edge_name(edge_colors.keys())
+                edges_dict[edge_name] = EdgeColors(edge_colors)
 
         corners_dict: dict[CornerName, CornerColors] = {}
         for corner in self.corners:
@@ -1983,7 +2016,7 @@ class Cube(CubeSupplier):
 
         centers_dict: dict[FaceName, Color] = {}
         for face in self.faces:
-            centers_dict[face.name] = face.center.get_slice((0, 0)).edges[0].color
+            centers_dict[face.name] = face.color
 
         return Cube3x3Colors(edges=edges_dict, corners=corners_dict, centers=centers_dict)
 
@@ -2034,6 +2067,10 @@ class Cube(CubeSupplier):
 
         # Validate
         assert self.is_sanity(force_check=True), "Invalid cube state after set_3x3_colors"
+
+    @property
+    def in_query_mode(self):
+        return self._in_query_mode
 
 
 def _create_edge(edges: list[Edge], f1: Face, f2: Face, right_top_left_same_direction: bool) -> Edge:

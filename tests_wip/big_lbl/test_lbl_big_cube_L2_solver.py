@@ -11,7 +11,7 @@ import pytest
 
 from cube.application.AbstractApp import AbstractApp
 from cube.domain.algs import Algs
-from cube.domain.solver.direct.lbl.LayerByLayerNxNSolver import LayerByLayerNxNSolver
+from cube.domain.solver.direct.lbl.DirectLayerByLayerNxNSolver import DirectLayerByLayerNxNSolver
 from cube.domain.solver.solver import SolveStep
 
 from conftest import CUBE_SIZES_ALL, get_scramble_params, CUBE_SIZES_EVEN
@@ -38,7 +38,7 @@ class TestLBLBigCubeSolver:
 
         app = AbstractApp.create_app(cube_size=cube_size)
 
-        solver = LayerByLayerNxNSolver(app.op, app.op.sp.logger)
+        solver = DirectLayerByLayerNxNSolver(app.op, app.op.sp.logger)
 
         app.scramble(actual_seed, None, animation=False, verbose=False)
 
@@ -66,7 +66,7 @@ class TestLBLBigCubeSolver:
 
         app = AbstractApp.create_app(cube_size=cube_size)
 
-        solver = LayerByLayerNxNSolver(app.op, app.op.sp.logger)
+        solver = DirectLayerByLayerNxNSolver(app.op, app.op.sp.logger)
 
         app.scramble(actual_seed, None, animation=False, verbose=False)
 
@@ -98,7 +98,7 @@ class TestLBLBigCubeSolver:
         Algs.E[6:6].play(cube)
         assert not cube.solved
 
-        solver = LayerByLayerNxNSolver(app.op, app.op.sp.logger)
+        solver = DirectLayerByLayerNxNSolver(app.op, app.op.sp.logger)
         solver.solve(what=SolveStep.LBL_L2_SLICES, debug=False, animation=False)
 
         assert solver._is_l2_slices_solved(), "15x15 single E-slice not solved"
@@ -136,7 +136,7 @@ class TestLBLBigCubeSolver:
 
         op_count_before = app.op.count
 
-        solver = LayerByLayerNxNSolver(app.op, app.op.sp.logger)
+        solver = DirectLayerByLayerNxNSolver(app.op, app.op.sp.logger)
         solver.solve(what=SolveStep.LBL_L2_SLICES, debug=False, animation=False)
 
         assert solver._is_l2_slices_solved(), "15x15 center E-slice not solved"
@@ -174,7 +174,7 @@ class TestLBLBigCubeSolver:
 
         app = AbstractApp.create_app(cube_size=cube_size)
 
-        solver = LayerByLayerNxNSolver(app.op, app.op.sp.logger)
+        solver = DirectLayerByLayerNxNSolver(app.op, app.op.sp.logger)
 
         app.scramble(actual_seed, None, animation=False, verbose=False)
 

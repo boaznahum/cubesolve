@@ -1,0 +1,1735 @@
+/* ============================================================
+   CubeSolve WebGL — Styles
+   Modern glassmorphism dark theme with Inter font
+   ============================================================ */
+
+/* ── Reset ── */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* ── Body ── */
+body {
+    background: radial-gradient(ellipse at 50% 40%, #2e2e36 0%, #1a1a22 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    overflow: hidden;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+/* ── App Layout ── */
+#app-layout {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    max-width: calc(100vw - 16px);
+    width: 100%;
+    padding: 0 8px;
+}
+
+#container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+}
+
+/* ============================================================
+   History Panel
+   ============================================================ */
+#history-panel {
+    width: 220px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 40px);
+    background: rgba(22, 22, 28, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 12px;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.hp-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.hp-title {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.6px;
+}
+
+.hp-header-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.25);
+    cursor: pointer;
+    font-size: 13px;
+    padding: 3px 7px;
+    border-radius: 5px;
+    transition: all 0.2s ease;
+}
+
+.hp-header-btn:hover {
+    color: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+/* ── History List ── */
+#history-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 8px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+}
+
+#history-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+#history-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#history-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+}
+
+#history-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* ── History Items ── */
+.hp-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 10px;
+    margin: 2px 0;
+    border-radius: 6px;
+    font-size: 12px;
+    transition: all 0.2s ease;
+    cursor: default;
+}
+
+.hp-item:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+/* Done items */
+.hp-done {
+    background: rgba(70, 130, 180, 0.10);
+    border: 1px solid rgba(70, 130, 180, 0.12);
+}
+
+.hp-done.hp-last-done {
+    background: rgba(70, 130, 180, 0.22);
+    border: 1px solid rgba(70, 130, 180, 0.30);
+    box-shadow: 0 0 12px rgba(70, 130, 180, 0.12);
+}
+
+.hp-done .hp-item-num {
+    color: rgba(130, 180, 220, 0.45);
+    font-size: 10px;
+    font-weight: 600;
+    min-width: 18px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.hp-done .hp-item-alg {
+    color: rgba(255, 255, 255, 0.85);
+    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-weight: 500;
+    font-size: 11.5px;
+    flex: 1;
+}
+
+/* Redo items */
+.hp-redo {
+    background: rgba(255, 255, 255, 0.015);
+    border: 1px dashed rgba(255, 255, 255, 0.07);
+}
+
+.hp-redo.hp-next-redo {
+    background: rgba(255, 160, 50, 0.20);
+    border: 1px solid rgba(255, 160, 50, 0.50);
+    box-shadow: 0 0 12px rgba(255, 160, 50, 0.15);
+}
+
+.hp-redo.hp-next-redo .hp-item-num {
+    color: rgba(255, 160, 50, 0.9);
+}
+
+.hp-redo.hp-next-redo .hp-item-alg {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.hp-redo .hp-item-num {
+    color: rgba(255, 255, 255, 0.18);
+    font-size: 10px;
+    font-weight: 600;
+    min-width: 18px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.hp-redo .hp-item-alg {
+    color: rgba(255, 255, 255, 0.30);
+    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-weight: 500;
+    font-size: 11.5px;
+    flex: 1;
+}
+
+/* ── Type Badges ── */
+.hp-item-badge {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.hp-badge-face {
+    background: rgba(70, 130, 180, 0.25);
+    color: rgba(130, 180, 220, 0.8);
+}
+
+.hp-badge-slice {
+    background: rgba(180, 130, 70, 0.25);
+    color: rgba(220, 180, 130, 0.8);
+}
+
+.hp-badge-rotation {
+    background: rgba(130, 70, 180, 0.25);
+    color: rgba(180, 140, 220, 0.8);
+}
+
+.hp-badge-scramble {
+    background: rgba(180, 70, 70, 0.25);
+    color: rgba(220, 130, 130, 0.8);
+}
+
+.hp-badge-solve {
+    background: rgba(70, 180, 100, 0.25);
+    color: rgba(130, 220, 150, 0.8);
+}
+
+.hp-badge-move {
+    display: none;
+}
+
+/* ── NOW Marker ── */
+.hp-marker {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 4px;
+    margin: 4px 0;
+}
+
+.hp-marker-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 160, 50, 0.5), transparent);
+}
+
+.hp-marker-text {
+    color: rgba(255, 160, 50, 0.75);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+
+.hp-marker-warn {
+    color: #e44;
+    font-size: 13px;
+    cursor: help;
+}
+
+/* ── Heading Separator ── */
+.hp-heading {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 8px;
+    margin: 3px 0;
+}
+
+.hp-heading.hp-redo {
+    opacity: 0.55;
+}
+
+.hp-heading-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(120, 180, 255, 0.4), transparent);
+}
+
+.hp-heading-text {
+    color: rgba(120, 180, 255, 0.85);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+.hp-heading-h2 {
+    display: block;
+    color: rgba(120, 180, 255, 0.55);
+    font-size: 8px;
+    font-weight: 400;
+    letter-spacing: 0.3px;
+}
+
+/* ── Footer (undo/redo/play) ── */
+.hp-footer {
+    display: flex;
+    gap: 4px;
+    padding: 8px 10px 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.hp-action-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 7px 0;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 7px;
+    background: rgba(255, 255, 255, 0.03);
+    color: rgba(255, 255, 255, 0.70);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.hp-action-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.16);
+    color: rgba(255, 255, 255, 0.95);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.hp-action-btn:active:not(:disabled) {
+    background: rgba(255, 255, 255, 0.12);
+    transform: scale(0.97);
+    box-shadow: none;
+}
+
+.hp-action-btn:disabled {
+    opacity: 0.25;
+    cursor: default;
+}
+
+.hp-action-btn .icon {
+    font-size: 14px;
+    line-height: 1;
+}
+
+.hp-btn-play {
+    background: rgba(70, 180, 100, 0.12);
+    border-color: rgba(70, 180, 100, 0.18);
+    color: rgba(130, 220, 150, 0.9);
+}
+
+.hp-btn-play:hover:not(:disabled) {
+    background: rgba(70, 180, 100, 0.22);
+    border-color: rgba(70, 180, 100, 0.32);
+}
+
+/* ============================================================
+   Toolbar
+   ============================================================ */
+#toolbar {
+    width: 100%;
+    background: rgba(28, 28, 34, 0.90);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 12px 12px 0 0;
+    padding: 7px 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 -2px 16px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.tb-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.tb-sep {
+    width: 1px;
+    height: 20px;
+    background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.12), transparent);
+    margin: 0 4px;
+}
+
+.tb-label {
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 11px;
+    font-weight: 500;
+    padding: 0 3px;
+    white-space: nowrap;
+}
+
+/* ── Toolbar Buttons ── */
+.tb-btn {
+    background: linear-gradient(135deg, rgba(70, 130, 180, 0.85), rgba(55, 110, 160, 0.85));
+    color: #fff;
+    border: 1px solid rgba(100, 160, 210, 0.25);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 500;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.tb-btn:hover {
+    background: linear-gradient(135deg, rgba(90, 150, 200, 0.95), rgba(70, 130, 180, 0.95));
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(70, 130, 180, 0.25);
+}
+
+.tb-btn:active {
+    background: linear-gradient(135deg, rgba(50, 100, 150, 0.95), rgba(40, 90, 140, 0.95));
+    transform: scale(0.97);
+    box-shadow: none;
+}
+
+/* Toggle ON */
+.tb-btn.tb-on {
+    background: linear-gradient(135deg, rgba(60, 170, 70, 0.85), rgba(45, 140, 55, 0.85));
+    border-color: rgba(80, 200, 90, 0.25);
+    box-shadow: inset 0 0 8px rgba(100, 220, 110, 0.08);
+}
+
+.tb-btn.tb-on:hover {
+    background: linear-gradient(135deg, rgba(75, 190, 85, 0.95), rgba(60, 165, 70, 0.95));
+    box-shadow: 0 3px 10px rgba(60, 170, 70, 0.25);
+}
+
+/* Toggle OFF */
+.tb-btn.tb-off {
+    background: rgba(70, 70, 78, 0.7);
+    border-color: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.tb-btn.tb-off:hover {
+    background: rgba(85, 85, 95, 0.8);
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* Disabled */
+.tb-btn:disabled {
+    background: rgba(50, 50, 56, 0.5);
+    color: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.04);
+    cursor: default;
+    pointer-events: none;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Icon buttons (SVG) */
+.tb-btn.tb-icon {
+    padding: 3px 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tb-compass {
+    padding: 2px 5px;
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+}
+
+/* Shadow face toggle buttons — compact square style */
+.tb-shadow {
+    padding: 3px 6px !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    min-width: 24px;
+    text-align: center;
+}
+
+/* ── Dropdowns ── */
+#solver-select,
+#speed-select,
+#size-select,
+#scramble-seed {
+    background: rgba(35, 35, 42, 0.85);
+    color: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 6px;
+    padding: 3px 6px;
+    font-size: 11px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.2s ease;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='rgba(255,255,255,0.4)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 6px center;
+    padding-right: 20px;
+}
+
+#solver-select:hover,
+#speed-select:hover,
+#size-select:hover,
+#scramble-seed:hover {
+    border-color: rgba(255, 255, 255, 0.20);
+    background-color: rgba(45, 45, 54, 0.9);
+}
+
+#solver-select:focus,
+#speed-select:focus,
+#size-select:focus,
+#scramble-seed:focus {
+    border-color: rgba(70, 130, 180, 0.6);
+    box-shadow: 0 0 0 2px rgba(70, 130, 180, 0.15);
+}
+
+#size-select {
+    max-height: 200px;
+}
+
+/* ============================================================
+   Canvas
+   ============================================================ */
+#canvas-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+#canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-top: none;
+    border-radius: 0;
+    background: #222228;
+    touch-action: none; /* prevent browser zoom/scroll — let OrbitControls handle touch */
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+}
+
+/* ============================================================
+   Overlays
+   ============================================================ */
+
+/* Animation text overlay */
+#anim-overlay {
+    position: absolute;
+    top: 8px;
+    left: 12px;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.anim-line {
+    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+    text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.8);
+    line-height: 1.3;
+    white-space: nowrap;
+}
+
+/* Status overlay */
+#status-overlay {
+    position: absolute;
+    bottom: 8px;
+    left: 12px;
+    pointer-events: none;
+    z-index: 10;
+    display: flex;
+    gap: 6px;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.2px;
+}
+
+#status-overlay .seg {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 100px;
+    background: rgba(0, 0, 0, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    white-space: nowrap;
+}
+
+#status-overlay .seg-label {
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+#status-overlay .seg-value {
+    color: rgba(255, 255, 255, 0.95);
+    font-weight: 600;
+}
+
+#status-overlay .seg-solver .seg-label {
+    color: rgba(130, 190, 255, 0.55);
+}
+
+#status-overlay .seg-status .seg-label {
+    color: rgba(140, 220, 140, 0.55);
+}
+
+#status-overlay .seg-moves .seg-label {
+    color: rgba(255, 200, 120, 0.55);
+}
+
+/* Debug overlay */
+#debug-overlay {
+    position: absolute;
+    bottom: 8px;
+    right: 12px;
+    pointer-events: none;
+    z-index: 10;
+    display: flex;
+    gap: 6px;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.2px;
+}
+
+#debug-overlay .seg {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 100px;
+    background: rgba(0, 0, 0, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    white-space: nowrap;
+}
+
+#debug-overlay .seg-label {
+    color: rgba(130, 190, 255, 0.55);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+#debug-overlay .seg-value {
+    color: rgba(255, 255, 255, 0.95);
+    font-weight: 600;
+}
+
+/* ============================================================
+   Move Buttons
+   ============================================================ */
+#move-buttons {
+    width: 100%;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 10px 10px;
+    background: rgba(28, 28, 34, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+}
+
+.mv-row {
+    display: flex;
+    gap: 5px;
+    justify-content: center;
+}
+
+.mv-btn {
+    flex: 1;
+    max-width: 56px;
+    min-height: 44px;
+    padding: 10px 0;
+    background: linear-gradient(135deg, rgba(70, 130, 180, 0.25), rgba(55, 110, 160, 0.18));
+    color: rgba(180, 210, 240, 0.95);
+    border: 1px solid rgba(70, 130, 180, 0.22);
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.mv-btn:hover {
+    background: linear-gradient(135deg, rgba(70, 130, 180, 0.4), rgba(55, 110, 160, 0.3));
+    border-color: rgba(70, 130, 180, 0.4);
+    box-shadow: 0 3px 10px rgba(70, 130, 180, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.mv-btn:active {
+    background: linear-gradient(135deg, rgba(70, 130, 180, 0.55), rgba(55, 110, 160, 0.45));
+    transform: scale(0.94);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* Shift button states */
+.mv-shift {
+    font-size: 18px;
+    max-width: 44px !important;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.mv-shift.mv-shift-once {
+    background: linear-gradient(135deg, rgba(255, 180, 50, 0.45), rgba(220, 150, 30, 0.35));
+    color: rgba(255, 220, 130, 0.95);
+    border-color: rgba(255, 180, 50, 0.4);
+    box-shadow: 0 2px 8px rgba(255, 180, 50, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.mv-shift.mv-shift-locked {
+    background: linear-gradient(135deg, rgba(255, 120, 50, 0.55), rgba(220, 90, 30, 0.45));
+    color: rgba(255, 200, 150, 0.95);
+    border-color: rgba(255, 120, 50, 0.5);
+    box-shadow: 0 2px 10px rgba(255, 120, 50, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    text-decoration: underline;
+}
+
+/* X/Y/Z rotation buttons — purple/violet tint */
+.mv-row:first-child .mv-btn {
+    max-width: 72px;
+    background: linear-gradient(135deg, rgba(120, 80, 180, 0.28), rgba(100, 60, 160, 0.2));
+    color: rgba(200, 180, 240, 0.95);
+    border-color: rgba(120, 80, 180, 0.25);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(200, 180, 240, 0.06);
+}
+
+.mv-row:first-child .mv-btn:hover {
+    background: linear-gradient(135deg, rgba(120, 80, 180, 0.42), rgba(100, 60, 160, 0.32));
+    border-color: rgba(140, 100, 200, 0.4);
+    box-shadow: 0 3px 10px rgba(120, 80, 180, 0.2), inset 0 1px 0 rgba(200, 180, 240, 0.1);
+}
+
+.mv-row:first-child .mv-btn:active {
+    background: linear-gradient(135deg, rgba(130, 90, 190, 0.55), rgba(110, 70, 170, 0.45));
+    transform: scale(0.94);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(200, 180, 240, 0.04);
+}
+
+/* ============================================================
+   Connection Status
+   ============================================================ */
+#status {
+    margin-top: 8px;
+    color: rgba(255, 255, 255, 0.35);
+    font-size: 11px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    justify-content: center;
+}
+
+.status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.25);
+    display: inline-block;
+    transition: background 0.3s ease;
+}
+
+#status.connected {
+    color: rgba(100, 200, 120, 0.75);
+}
+
+#status .status-version {
+    color: #fbbf24;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+#status.connected .status-dot {
+    background: #4ade80;
+    box-shadow: 0 0 6px rgba(74, 222, 128, 0.5);
+    animation: pulse-dot 2s ease-in-out infinite;
+}
+
+#status.error {
+    color: rgba(220, 100, 100, 0.75);
+}
+
+#status.error .status-dot {
+    background: #ef4444;
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
+}
+
+@keyframes pulse-dot {
+
+    0%,
+    100% {
+        opacity: 1;
+        box-shadow: 0 0 6px rgba(74, 222, 128, 0.5);
+    }
+
+    50% {
+        opacity: 0.6;
+        box-shadow: 0 0 3px rgba(74, 222, 128, 0.3);
+    }
+}
+
+/* ============================================================
+   Paint Mode
+   ============================================================ */
+#paint-toolbar {
+    width: 100%;
+    background: rgba(28, 28, 34, 0.90);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 12px 12px 0 0;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 -2px 16px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.pt-palette {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.pt-swatch {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 2.5px solid rgba(255, 255, 255, 0.15);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    outline: none;
+    padding: 0;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.pt-swatch:hover {
+    transform: scale(1.15);
+    border-color: rgba(255, 255, 255, 0.45);
+}
+
+.pt-swatch.pt-selected {
+    border-color: #fff;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3), 0 0 14px rgba(255, 255, 255, 0.15);
+    transform: scale(1.12);
+}
+
+.pt-btn {
+    background: linear-gradient(135deg, rgba(70, 130, 180, 0.85), rgba(55, 110, 160, 0.85));
+    color: #fff;
+    border: 1px solid rgba(100, 160, 210, 0.25);
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.pt-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+}
+
+.pt-btn:active {
+    transform: scale(0.97);
+    box-shadow: none;
+}
+
+.pt-cancel-btn {
+    background: rgba(70, 70, 78, 0.7);
+    border-color: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.pt-cancel-btn:hover {
+    background: rgba(85, 85, 95, 0.8);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.pt-apply-btn {
+    border-color: rgba(80, 80, 80, 0.25);
+    transition: background 0.3s, opacity 0.3s;
+}
+
+/* Apply button 3 states */
+.pt-apply-btn.pt-apply-red {
+    background: linear-gradient(135deg, rgba(200, 40, 40, 0.9), rgba(160, 30, 30, 0.9));
+    border-color: rgba(220, 50, 50, 0.3);
+    opacity: 0.8;
+    cursor: not-allowed;
+}
+
+.pt-apply-btn.pt-apply-orange {
+    background: linear-gradient(135deg, rgba(255, 200, 0, 0.9), rgba(230, 170, 0, 0.9));
+    border-color: rgba(255, 220, 50, 0.4);
+    color: #333;
+    opacity: 0.9;
+    cursor: not-allowed;
+}
+
+.pt-apply-btn.pt-apply-green {
+    background: linear-gradient(135deg, rgba(60, 170, 70, 0.85), rgba(45, 140, 55, 0.85));
+    border-color: rgba(80, 200, 90, 0.25);
+}
+
+.pt-apply-btn.pt-apply-green:hover {
+    background: linear-gradient(135deg, rgba(75, 190, 85, 0.95), rgba(60, 165, 70, 0.95));
+    box-shadow: 0 3px 10px rgba(60, 170, 70, 0.25);
+}
+
+/* Hide history panel in paint mode */
+#history-panel.hp-hidden {
+    display: none !important;
+}
+
+/* Paint mode body — cursor hint */
+body.paint-mode #canvas {
+    cursor: crosshair;
+}
+
+/* ============================================================
+   Assist Checkbox
+   ============================================================ */
+
+/* ============================================================
+   Info Popup — terminal-style modal
+   ============================================================ */
+
+/* Backdrop — dims everything behind the dialog */
+.info-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+/* Dialog container — terminal window */
+.info-dialog {
+    background: rgba(8, 12, 8, 0.96);
+    border: 1px solid rgba(0, 255, 65, 0.2);
+    border-radius: 10px;
+    width: 90%;
+    max-width: 520px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow:
+        0 0 40px rgba(0, 255, 65, 0.06),
+        0 8px 32px rgba(0, 0, 0, 0.6),
+        inset 0 1px 0 rgba(0, 255, 65, 0.08);
+    overflow: hidden;
+}
+
+/* Header — terminal title bar */
+.info-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    border-bottom: 1px solid rgba(0, 255, 65, 0.12);
+    background: rgba(0, 20, 0, 0.5);
+}
+
+.info-header-title {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(0, 255, 65, 0.8);
+    letter-spacing: 0.5px;
+}
+
+.info-header-close {
+    background: none;
+    border: 1px solid rgba(0, 255, 65, 0.2);
+    border-radius: 4px;
+    color: rgba(0, 255, 65, 0.5);
+    font-size: 14px;
+    padding: 2px 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.info-header-close:hover {
+    color: rgba(0, 255, 65, 0.9);
+    border-color: rgba(0, 255, 65, 0.5);
+    background: rgba(0, 255, 65, 0.08);
+}
+
+/* Content — scrollable area */
+.info-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 255, 65, 0.15) transparent;
+}
+
+.info-content::-webkit-scrollbar {
+    width: 4px;
+}
+
+.info-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.info-content::-webkit-scrollbar-thumb {
+    background: rgba(0, 255, 65, 0.15);
+    border-radius: 4px;
+}
+
+/* Project header block */
+.info-project-header {
+    text-align: center;
+    padding-bottom: 14px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid rgba(0, 255, 65, 0.12);
+}
+
+.info-project-name {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: rgba(0, 255, 65, 0.9);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    text-shadow: 0 0 12px rgba(0, 255, 65, 0.15);
+}
+
+.info-project-meta {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 11px;
+    color: rgba(0, 255, 65, 0.5);
+    margin-top: 4px;
+}
+
+/* Section */
+.info-section {
+    margin-bottom: 18px;
+}
+
+.info-section:last-child {
+    margin-bottom: 0;
+}
+
+.info-section-title {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(0, 255, 65, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 10px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(0, 255, 65, 0.08);
+}
+
+/* Item row */
+.info-item {
+    padding: 5px 0 5px 12px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    border-left: 2px solid rgba(0, 255, 65, 0.08);
+    margin-bottom: 2px;
+}
+
+.info-item-name {
+    color: rgba(0, 255, 65, 0.9);
+    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-weight: 600;
+    font-size: 12px;
+}
+
+a.info-item-name {
+    text-decoration: none;
+    border-bottom: 1px dashed rgba(0, 255, 65, 0.3);
+    transition: all 0.2s ease;
+}
+
+a.info-item-name:hover {
+    color: rgba(0, 255, 65, 1);
+    border-bottom-color: rgba(0, 255, 65, 0.7);
+    text-shadow: 0 0 8px rgba(0, 255, 65, 0.3);
+}
+
+.info-item-desc {
+    color: rgba(0, 255, 65, 0.45);
+    font-size: 11.5px;
+    margin-left: 4px;
+}
+
+/* Footer — OK button */
+.info-footer {
+    padding: 10px 16px;
+    border-top: 1px solid rgba(0, 255, 65, 0.12);
+    display: flex;
+    justify-content: flex-end;
+    background: rgba(0, 20, 0, 0.3);
+}
+
+.info-ok-btn {
+    background: rgba(0, 255, 65, 0.1);
+    border: 1px solid rgba(0, 255, 65, 0.25);
+    border-radius: 5px;
+    color: rgba(0, 255, 65, 0.8);
+    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    letter-spacing: 1px;
+}
+
+.info-ok-btn:hover {
+    background: rgba(0, 255, 65, 0.18);
+    border-color: rgba(0, 255, 65, 0.5);
+    color: rgba(0, 255, 65, 1);
+    box-shadow: 0 0 12px rgba(0, 255, 65, 0.1);
+}
+
+/* ============================================================
+   Settings Dialog (reuses info-dialog theme)
+   ============================================================ */
+
+.settings-dialog {
+    max-width: 400px;
+}
+
+.settings-content {
+    padding: 14px 20px;
+}
+
+.settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(0, 255, 65, 0.06);
+}
+
+.settings-row:last-child {
+    border-bottom: none;
+}
+
+.settings-label-wrap {
+    flex: 1;
+    margin-right: 16px;
+}
+
+.settings-label {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(0, 255, 65, 0.85);
+    cursor: pointer;
+}
+
+.settings-desc {
+    font-size: 11px;
+    color: rgba(0, 255, 65, 0.4);
+    margin-top: 2px;
+}
+
+/* Toggle switch */
+.settings-toggle {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 22px;
+    flex-shrink: 0;
+}
+
+.settings-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.settings-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 255, 65, 0.1);
+    border: 1px solid rgba(0, 255, 65, 0.2);
+    border-radius: 22px;
+    transition: all 0.25s ease;
+}
+
+.settings-slider::before {
+    content: '';
+    position: absolute;
+    height: 16px;
+    width: 16px;
+    left: 2px;
+    bottom: 2px;
+    background: rgba(0, 255, 65, 0.4);
+    border-radius: 50%;
+    transition: all 0.25s ease;
+}
+
+.settings-toggle input:checked + .settings-slider {
+    background: rgba(0, 255, 65, 0.2);
+    border-color: rgba(0, 255, 65, 0.5);
+}
+
+.settings-toggle input:checked + .settings-slider::before {
+    transform: translateX(18px);
+    background: rgba(0, 255, 65, 0.9);
+    box-shadow: 0 0 8px rgba(0, 255, 65, 0.3);
+}
+
+/* Cancel button */
+.settings-cancel-btn {
+    background: none;
+    border: 1px solid rgba(0, 255, 65, 0.15);
+    border-radius: 5px;
+    color: rgba(0, 255, 65, 0.5);
+    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    letter-spacing: 1px;
+    margin-right: 8px;
+}
+
+.settings-cancel-btn:hover {
+    border-color: rgba(0, 255, 65, 0.3);
+    color: rgba(0, 255, 65, 0.7);
+}
+
+/* Settings gear button */
+#btn-settings {
+    font-size: 18px;
+    line-height: 1;
+    padding: 2px 6px;
+}
+
+/* ============================================================
+   Console Panel — bottom-docked terminal log viewer
+   ============================================================ */
+#console-panel {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 200px;
+    z-index: 900;
+    display: flex;
+    flex-direction: column;
+    background: rgba(8, 12, 8, 0.96);
+    border-top: 1px solid rgba(0, 255, 65, 0.25);
+    overflow: hidden;
+    box-shadow:
+        0 -4px 20px rgba(0, 0, 0, 0.5),
+        0 0 20px rgba(0, 255, 65, 0.04);
+}
+
+.console-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 12px;
+    border-bottom: 1px solid rgba(0, 255, 65, 0.1);
+    background: rgba(0, 20, 0, 0.4);
+    flex-shrink: 0;
+}
+
+.console-title {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(0, 255, 65, 0.7);
+    letter-spacing: 0.5px;
+}
+
+.console-controls {
+    display: flex;
+    gap: 6px;
+}
+
+.console-ctrl-btn {
+    background: none;
+    border: 1px solid rgba(0, 255, 65, 0.15);
+    border-radius: 3px;
+    color: rgba(0, 255, 65, 0.45);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 1px 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.console-ctrl-btn:hover {
+    color: rgba(0, 255, 65, 0.8);
+    border-color: rgba(0, 255, 65, 0.4);
+    background: rgba(0, 255, 65, 0.06);
+}
+
+.console-content {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding: 6px 10px;
+    min-height: 0;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 255, 65, 0.12) transparent;
+}
+
+.console-content::-webkit-scrollbar {
+    width: 4px;
+}
+
+.console-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.console-content::-webkit-scrollbar-thumb {
+    background: rgba(0, 255, 65, 0.12);
+    border-radius: 4px;
+}
+
+.console-line {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 11px;
+    line-height: 1.45;
+    color: rgba(0, 255, 65, 0.75);
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+/* When console is open, shrink app to fit above the panel */
+body.console-open #app-layout {
+    max-height: calc(100vh - 200px);
+}
+
+/* ============================================================
+   SEO Tagline
+   ============================================================ */
+#seo-tagline {
+    text-align: center;
+    color: #666;
+    font-size: 11px;
+    margin: 4px 0 0;
+    opacity: 0.7;
+}
+
+/* ============================================================
+   Assist Checkbox
+   ============================================================ */
+.tb-label input[type="checkbox"] {
+    accent-color: rgb(70, 180, 100);
+    cursor: pointer;
+    vertical-align: middle;
+    margin-right: 2px;
+}
+
+/* ============================================================
+   Mobile / Tablet
+   ============================================================ */
+@media (max-width: 768px) {
+    body {
+        align-items: flex-start;
+        overflow: hidden;
+        height: 100vh;
+        height: 100dvh;
+    }
+
+    #app-layout {
+        padding: 2px;
+        gap: 4px;
+        height: 100vh;
+        height: 100dvh;
+        align-items: stretch;
+        max-width: 100vw;
+    }
+
+    /* Narrow history panel on left */
+    #history-panel {
+        width: 58px;
+        max-height: none;
+        border-radius: 8px;
+    }
+
+    .hp-header {
+        order: 0;
+        padding: 2px 4px 1px;
+    }
+
+    .hp-title {
+        display: none;
+    }
+
+    .hp-header-btn {
+        font-size: 11px;
+        padding: 1px 3px;
+    }
+
+    /* Buttons above scrollable list */
+    .hp-footer {
+        order: 1;
+        border-top: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        padding: 3px 4px;
+        gap: 3px;
+        flex-wrap: wrap;
+    }
+
+    .hp-action-btn {
+        flex: 0 0 calc(50% - 2px);
+        padding: 5px 0;
+        font-size: 9px;
+    }
+
+    .hp-action-btn .icon {
+        font-size: 11px;
+    }
+
+    #history-list {
+        order: 2;
+        padding: 2px 3px;
+    }
+
+    /* Compact items */
+    .hp-item-badge {
+        display: none;
+    }
+
+    .hp-item-num {
+        display: none;
+    }
+
+    .hp-item {
+        padding: 2px 4px;
+        margin: 1px 0;
+        gap: 2px;
+        font-size: 10px;
+    }
+
+    .hp-done .hp-item-alg,
+    .hp-redo .hp-item-alg {
+        font-size: 10px;
+    }
+
+    .hp-marker {
+        padding: 2px 1px;
+        margin: 1px 0;
+        gap: 3px;
+    }
+
+    .hp-marker-text {
+        font-size: 7px;
+        letter-spacing: 0.8px;
+    }
+
+    .hp-heading {
+        padding: 1px 4px;
+        margin: 1px 0;
+        gap: 3px;
+    }
+
+    .hp-heading-text {
+        font-size: 7px;
+    }
+
+    .hp-heading-h2 {
+        font-size: 6px;
+    }
+
+    #container {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    #canvas-wrapper {
+        flex: 1;
+        min-height: 0;
+    }
+
+    #status {
+        font-size: 9px;
+        margin-top: 2px;
+        text-align: center;
+        opacity: 0.6;
+    }
+
+    /* Toolbar: multi-row wrapping */
+    #toolbar {
+        padding: 3px 2px;
+        gap: 2px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .tb-sep {
+        display: none;
+    }
+
+    .tb-group {
+        gap: 2px;
+    }
+
+    .tb-btn {
+        padding: 3px 5px;
+        font-size: 11px;
+    }
+
+    .tb-label {
+        font-size: 10px;
+        padding: 0 1px;
+    }
+
+    #solver-select,
+    #size-select,
+    #speed-select,
+    #scramble-seed {
+        font-size: 11px;
+        padding: 3px 4px;
+    }
+
+    /* Status overlays — compact on mobile */
+    #status-overlay {
+        flex-wrap: wrap;
+        gap: 3px;
+        left: 6px;
+        right: 6px;
+        bottom: 4px;
+        font-size: 10px;
+    }
+
+    #status-overlay .seg {
+        padding: 2px 6px;
+        gap: 3px;
+    }
+
+    #status-overlay .seg-label {
+        font-size: 8px;
+        letter-spacing: 0.3px;
+    }
+
+    #status-overlay .seg-value {
+        font-size: 10px;
+    }
+
+    #debug-overlay {
+        flex-wrap: wrap;
+        gap: 3px;
+        right: 6px;
+        left: 6px;
+        bottom: auto;
+        top: 6px;
+        font-size: 10px;
+        justify-content: flex-end;
+    }
+
+    #debug-overlay .seg {
+        padding: 2px 6px;
+        gap: 3px;
+    }
+
+    #debug-overlay .seg-label {
+        font-size: 8px;
+    }
+
+    #debug-overlay .seg-value {
+        font-size: 10px;
+    }
+
+    /* Info popup — compact on mobile */
+    .info-dialog {
+        width: 95%;
+        max-height: 85vh;
+    }
+
+    .info-content {
+        padding: 12px 14px;
+    }
+
+    .info-header-title {
+        font-size: 11px;
+    }
+
+    .info-item {
+        font-size: 11.5px;
+        padding: 4px 0 4px 8px;
+    }
+
+    .info-item-name {
+        font-size: 11px;
+    }
+
+    .info-item-desc {
+        font-size: 10.5px;
+    }
+
+    /* Settings dialog — compact on mobile */
+    .settings-dialog {
+        max-width: 95%;
+    }
+
+    .settings-content {
+        padding: 10px 14px;
+    }
+
+    .settings-row {
+        padding: 8px 0;
+    }
+
+    .settings-label {
+        font-size: 11px;
+    }
+
+    .settings-desc {
+        font-size: 9px;
+    }
+
+    .settings-toggle {
+        width: 36px;
+        height: 20px;
+    }
+
+    .settings-slider::before {
+        height: 14px;
+        width: 14px;
+    }
+
+    .settings-toggle input:checked + .settings-slider::before {
+        transform: translateX(16px);
+    }
+
+    /* Console panel — compact on mobile */
+    #console-panel {
+        height: 35vh;
+    }
+
+    body.console-open #app-layout {
+        max-height: calc(100dvh - 35vh);
+    }
+
+    .console-header {
+        padding: 3px 8px;
+    }
+
+    .console-title {
+        font-size: 10px;
+    }
+
+    .console-content {
+        padding: 4px 6px;
+    }
+
+    .console-line {
+        font-size: 9px;
+        line-height: 1.35;
+    }
+}
+
+    /* Paint mode — compact on mobile */
+    #paint-toolbar {
+        padding: 6px 8px;
+        gap: 6px;
+    }
+
+    .pt-swatch {
+        width: 30px;
+        height: 30px;
+    }
+
+    .pt-btn {
+        padding: 5px 10px;
+        font-size: 11px;
+    }
+
+/* Very small screens — hide debug overlay entirely */
+@media (max-width: 480px) {
+    #debug-overlay {
+        display: none !important;
+    }
+}

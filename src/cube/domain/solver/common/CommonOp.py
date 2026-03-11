@@ -166,11 +166,14 @@ class CommonOp(SolverHelper):
         if source.name == target.name:
             return  # Already at target, nothing to do
 
-        self.debug("Need to bring ", source, 'to', target.name)
+        silent = self.cube.in_query_mode
+
+        if not silent:
+            self.debug("Need to bring ", source, 'to', target.name)
 
         with self.ann.annotate(h2=f"Bringing face {source.color_at_face_str} to {target.name.value}"):
             # Use CubeLayout's cached method to get the rotation algorithm
-            alg = self.cube.layout.get_bring_face_alg(target.name, source.name)
+            alg = self.cube.layout.get_bring_face_alg(target.name, source.name).simplify()
             self.op.play(alg)
 
     def bring_face_to_preserve(self, target: Face, source: Face, preserve: Face) -> None:
@@ -229,12 +232,12 @@ class CommonOp(SolverHelper):
             return None  # nothing to do
 
         if cube.right.edge_right is edge:
-            alg = -Algs.E
+            alg = -Algs.EE
             self.slv.op.play(alg)
             return alg
 
         if cube.left.edge_left is edge:
-            alg = Algs.E
+            alg = Algs.EE
             self.slv.op.play(alg)
             return alg
 

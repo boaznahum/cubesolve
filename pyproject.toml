@@ -57,6 +57,8 @@ dev = [
     "types-keyboard",
     "Pillow",  # For generating test face textures (resources/faces/generate_images.py)
     "tabulate",  # For formatting test failure tables
+    "playwright",  # WebGL E2E browser tests
+    "watchfiles>=1.1.1",
 ]
 
 [project.urls]
@@ -81,6 +83,7 @@ markers = [
     "benchmark: marks tests as benchmarks",
     "gui: marks tests as GUI tests (require display, run with 'pytest tests/gui -v')",
     "console: marks tests as console tests (run with 'pytest tests/console -v')",
+    "webgl: marks tests as WebGL browser E2E tests (run with 'pytest tests/webgl -v -n0')",
 ]
 addopts = "-n auto"
 
@@ -114,7 +117,13 @@ disable_error_code = ["import-untyped"]
 # Exclude test/experimental directories
 exclude = [
     "^__try/",
+    ".*_archive/",
 ]
+
+# Skip archived solver code entirely
+[[tool.mypy.overrides]]
+module = "cube.domain.solver._3x3._archive.*"
+follow_imports = "skip"
 
 # Ignore errors in experimental code
 [[tool.mypy.overrides]]
@@ -126,8 +135,13 @@ ignore_errors = true
 module = "kociemba"
 ignore_missing_imports = true
 
+[tool.ruff.lint.per-file-ignores]
+# Cube.py has a long module docstring after `from __future__ import annotations`,
+# which pushes all other imports past line 134. This is not a real issue.
+"src/cube/domain/model/Cube.py" = ["E402"]
+
 [tool.pyright]
 pythonVersion = "3.14"
 typeCheckingMode = "standard"
 reportUnsupportedDunderAll = "error"
-exclude = ["src/cube/domain/solver/direct"]
+exclude = ["src/cube/domain/solver/direct", "**/_archive"]

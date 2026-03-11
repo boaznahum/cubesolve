@@ -45,7 +45,7 @@ SLICE DEFINITIONS:
     │  S   │  F ↔ B     │  U, R, D, L    │ Like F (clockwise when viewing F)     │
     └──────┴────────────┴────────────────┴───────────────────────────────────────┘
 
-    API: Algs.M.get_face_name() → L, Algs.E.get_face_name() → D, Algs.S.get_face_name() → F
+    API: Algs.MM.get_face_name() → L, Algs.EE.get_face_name() → D, Algs.SS.get_face_name() → F
 
 SLICE TRAVERSAL (content movement during rotation):
     M: F → U → B → D → F  (vertical cycle, like L rotation)
@@ -252,6 +252,30 @@ class Face2FaceTranslator:
     IMPLEMENTATION:
         Uses rotation cycle analysis to derive whole-cube algorithms dynamically.
     """
+
+    @staticmethod
+    def derive_whole_cube_alg_source_to_target(
+            layout: "CubeLayout",
+            source: FaceName,
+            target: FaceName
+    ) -> list[Tuple[WholeCubeAlg, int, Alg]]:
+        """
+        Derive whole-cube rotation(s) that move the ``source`` face to the ``target`` position.
+
+        This is a convenience wrapper around :meth:`derive_whole_cube_alg` with
+        swapped arguments, because ``derive_whole_cube_alg`` internally brings
+        ``dest`` to ``source`` (i.e. the opposite direction from what the parameter
+        names suggest). This method provides the intuitive "source → target" semantics.
+
+        :param layout: CubeLayout for deriving rotation cycles.
+        :param source: The face whose content should be moved.
+        :param target: The face position where the content should end up.
+        :returns: List of (WholeCubeAlg, count, Alg) tuples — one entry for adjacent
+                  faces, two for opposite faces (e.g. X2 and Y2).
+        """
+
+        return Face2FaceTranslator.derive_whole_cube_alg(layout, target, source)
+
 
     @staticmethod
     def derive_whole_cube_alg(
@@ -750,17 +774,10 @@ class Face2FaceTranslator:
         source_face = cube.face(source_name)
         target_face = cube.face(target_name)
 
-        # Map slice names to algorithm objects
-        slice_name_to_alg: dict[SliceName, SliceAlg] = {
-            SliceName.M: Algs.M,
-            SliceName.E: Algs.E,
-            SliceName.S: Algs.S,
-        }
-
         sized_layout = cube.sized_layout
 
         for slice_name in connecting_slices:
-            slice_alg = slice_name_to_alg[slice_name]
+            slice_alg = Algs.of_slice(slice_name)
 
             # Get walking info for this slice
             walk_info = sized_layout.create_walking_info(slice_name)

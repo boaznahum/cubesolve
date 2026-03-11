@@ -1,7 +1,7 @@
 from enum import Enum
 
 from cube.domain.algs import Alg, Algs
-from cube.domain.algs.WideFaceAlg import WideFaceAlg
+from cube.domain.algs.WideLayerAlg import ALL_BUT_LAST, WideLayerAlg
 from cube.domain.exceptions import InternalSWError
 from cube.domain.model import Color, Corner, Edge, Part
 from cube.domain.model.CubeQueries2 import Pred0
@@ -36,9 +36,9 @@ class F2L(SolverHelper):
 
     @staticmethod
     def _contains_wide_move(alg: Alg) -> bool:
-        """Check if the algorithm contains any WideFaceAlg (d, u, r, l, f, b)."""
+        """Check if the algorithm contains any all-but-last WideLayerAlg ([:-1]Rw, [:-1]r)."""
         from cube.domain.algs.SeqAlg import SeqAlg
-        if isinstance(alg, WideFaceAlg):
+        if isinstance(alg, WideLayerAlg) and alg.layers == ALL_BUT_LAST:
             return True
         if isinstance(alg, SeqAlg):
             return any(F2L._contains_wide_move(a) for a in alg.algs)
@@ -132,7 +132,7 @@ class F2L(SolverHelper):
             after_brought_up = False
             for _ in range(8):
 
-                n = self.cqr.rotate_and_check(Algs.Y, need_n_can_work)
+                n = self.cqr.rotate_and_check(Algs.Y, need_n_can_work, self.op)
 
                 if n < 0:
                     assert not after_brought_up
@@ -312,7 +312,7 @@ class F2L(SolverHelper):
 
             self.debug(f"Case corner is {corner.actual.name}, edge is {edge.actual.name}, Running alg:{alg}")
 
-            # Pause before wide move so user can observe WideFaceAlg behavior
+            # Pause before wide move so user can observe WideLayerAlg behavior
             if self._contains_wide_move(alg):
                 self.op.enter_single_step_mode(SSCode.F2L_WIDE_MOVE)
 
@@ -385,8 +385,8 @@ class F2L(SolverHelper):
         # Use adaptive wide move 'd' (lowercase) - moves D + all inner layers.
         # This adapts to cube size at play time, so algorithms from shadow 3x3
         # work correctly when applied to NxN cubes without breaking edge pairing.
-        # See WideFaceAlg.py for detailed explanation.
-        d = Algs.d
+        # See WideLayerAlg.py for detailed explanation.
+        d = Algs.dd
 
         ################################################################
         # 1st: Easy cases: edge at top
@@ -551,9 +551,9 @@ class F2L(SolverHelper):
 
         e_matches_front = e_up_cc == r_color
         if e_matches_front:
-            pre = self.cqr.rotate_face_and_check_get_alg(up, lambda: edge.actual is u_bottom)
+            pre = self.cqr.rotate_face_and_check_get_alg(up, lambda: edge.actual is u_bottom, self.op)
         else:
-            pre = self.cqr.rotate_face_and_check_get_alg(up, lambda: edge.actual is u_right)
+            pre = self.cqr.rotate_face_and_check_get_alg(up, lambda: edge.actual is u_right, self.op)
 
         assert pre
 
@@ -623,7 +623,7 @@ class F2L(SolverHelper):
         U = Algs.U
         U2 = U * 2
         # Adaptive wide move - see comment in _4th_case_corner_edge_up
-        d = Algs.d
+        d = Algs.dd
 
         e_front_c = e.get_face_edge(front).color
 
@@ -775,7 +775,7 @@ class F2L(SolverHelper):
         U = Algs.U
         U2 = U * 2
         # Adaptive wide move - see comment in _4th_case_corner_edge_up
-        d = Algs.d
+        d = Algs.dd
 
         c_front_color = c.get_face_edge(front).color
         c_right_color = c.get_face_edge(right).color
@@ -855,7 +855,7 @@ class F2L(SolverHelper):
             def preserve_cond() -> bool:
                 return True
 
-        pre = self.cqr.rotate_face_and_check_get_alg(cube.up, preserve_cond)
+        pre = self.cqr.rotate_face_and_check_get_alg(cube.up, preserve_cond, self.op)
 
         return pre
 
