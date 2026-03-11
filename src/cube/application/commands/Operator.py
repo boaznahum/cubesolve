@@ -521,6 +521,7 @@ class Operator(OperatorProtocol):
         # Save original states
         was_in_query_mode = cube._in_query_mode
         history_len_before = len(self._history)
+        saved_redo_queue = [*self._redo_queue]
 
         # CLAUDE [#8]: move the query mode context manager to cube itself, this is not OOP programming
         cube._in_query_mode = True
@@ -532,6 +533,9 @@ class Operator(OperatorProtocol):
                 # Rollback: undo all moves made during query
                 while len(self._history) > history_len_before:
                     self.undo(animation=False)
+
+                # Restore redo queue — undo() above pollutes it with query moves
+                self._redo_queue[:] = saved_redo_queue
 
                 cube._in_query_mode = was_in_query_mode
 
