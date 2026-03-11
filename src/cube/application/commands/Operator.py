@@ -441,46 +441,6 @@ class Operator(OperatorProtocol):
             self._buffer = saved_buffer
 
     @contextmanager
-    def with_buffer(self):
-        """Context manager for buffered play.
-
-        Yields an OperatorBuffer handle for explicit flush control::
-
-            with op.with_buffer() as buffer:
-                op.play(R)
-                op.play(R)
-                buffer.flush()   # simplify + play, cube state now current
-                # safe to query cube here
-                op.play(L)
-            # auto-flush on exit
-
-        Auto-flush on AnnotationAlg and context exit still happen.
-        If config.operator_buffer_mode is False, this is a transparent no-op
-        (buffer.flush() is harmless).
-        Nestable: inner flush pushes to outer buffer (only outermost flushes to play).
-        """
-        buf_handle = OperatorBuffer(self)
-
-        if not self._app_state.config.operator_buffer_mode:
-            yield buf_handle
-            return
-
-        self._buffer_depth += 1
-        if self._buffer is None:
-            # Outermost: create the buffer
-            self._buffer = []
-
-        try:
-            yield buf_handle
-        finally:
-            buf_handle._deactivate()
-            self._buffer_depth -= 1
-            if self._buffer_depth == 0:
-                # Outermost exit: flush and play
-                self._flush_buffer()
-                self._buffer = None
-
-    @contextmanager
     def with_query_restore_state(self):
         """
         Context manager for "what-if" queries that auto-rollback cube state.

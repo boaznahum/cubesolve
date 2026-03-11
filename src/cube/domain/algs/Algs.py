@@ -3,7 +3,7 @@ from typing import Sequence
 from cube.domain.algs._parser import parse_alg
 from cube.domain.algs.Alg import Alg
 from cube.domain.algs.AnnotationAlg import AnnotationAlg
-from cube.domain.algs.FaceAlg import _B, _D, _F, _L, _R, _U, FaceAlg
+from cube.domain.algs.FaceAlg import FaceAlg
 from cube.domain.algs.Scramble import _Scramble, _scramble
 from cube.domain.algs.SeqAlg import SeqAlg
 from cube.domain.algs.SimpleAlg import NSimpleAlg
@@ -91,21 +91,31 @@ class Algs:
     # So it used by annotation tools, after they changed some model(text, cube)
     AN = AnnotationAlg()
 
-    L = _L()
+    # =========================================================================
+    # Face algorithms — one per FaceName
+    # =========================================================================
+    _face_by_name: dict[FaceName, FaceAlg] = {fn: FaceAlg(fn) for fn in FaceName}
+    L: FaceAlg = _face_by_name[FaceName.L]
+    R: FaceAlg = _face_by_name[FaceName.R]
+    U: FaceAlg = _face_by_name[FaceName.U]
+    D: FaceAlg = _face_by_name[FaceName.D]
+    F: FaceAlg = _face_by_name[FaceName.F]
+    B: FaceAlg = _face_by_name[FaceName.B]
+
     # noinspection PyPep8Naming
     LLw = WideLayerAlg(FaceName.L, ALL_BUT_LAST)
-
-    B = _B()
     BBw = WideLayerAlg(FaceName.B, ALL_BUT_LAST)
-
-    D = _D()
     DDw = WideLayerAlg(FaceName.D, ALL_BUT_LAST)
-
-    R = _R()
     RRw = WideLayerAlg(FaceName.R, ALL_BUT_LAST)
+    UUw = WideLayerAlg(FaceName.U, ALL_BUT_LAST)
+    FFw = WideLayerAlg(FaceName.F, ALL_BUT_LAST)
+
     # X, Y, Z: Identity/naming only - _X() binds to AxisName.X (just gives the alg its name).
     # Geometric relationships (X↔R axis, direction) are defined in CubeLayout.get_axis_face()
     X = _X()
+    Y = _Y()
+    Z = _Z()
+
     # =========================================================================
     # Slice algorithms — derived from geometry_fundamentals.SLICE_ROTATION_FACE
     # =========================================================================
@@ -115,23 +125,12 @@ class Algs:
     # =========================================================================
     SliceBaseAlgs: Sequence[SliceAlg] = [SliceAlg(sn) for sn in SLICE_ROTATION_FACE]
     _slice_by_name: dict[SliceName, SliceAlg] = {a._slice_name: a for a in SliceBaseAlgs}
-    MM: SliceAlg = _slice_by_name[SliceName.M]   # All middle slices (sliceable). str() = "[:]M".
-    EE: SliceAlg = _slice_by_name[SliceName.E]   # All middle slices over D axis. str() = "[:]E".
-    SS: SliceAlg = _slice_by_name[SliceName.S]   # All middle slices over F axis. str() = "[:]S".
-    M = MiddleSliceAlg(SliceName.M)   # Single middle slice. str() = "M".
-    E = MiddleSliceAlg(SliceName.E)   # Single middle slice over D axis. str() = "E".
-    S = MiddleSliceAlg(SliceName.S)   # Single middle slice over F axis. str() = "S".
-
-    U = _U()
-    UUw = WideLayerAlg(FaceName.U, ALL_BUT_LAST)
-    Y = _Y()  # See X comment above for X/Y/Z design notes
-
-    F = _F()
-    FFw = WideLayerAlg(FaceName.F, ALL_BUT_LAST)
-    Z = _Z()  # See X comment above for X/Y/Z design notes
-
-    FACE_ALGS: Sequence[FaceAlg] = [L, R, U, D, F, B]
-    _face_name_to_alg: dict[FaceName, FaceAlg] = {a._face: a for a in FACE_ALGS}
+    MM: SliceAlg = _slice_by_name[SliceName.M]
+    EE: SliceAlg = _slice_by_name[SliceName.E]
+    SS: SliceAlg = _slice_by_name[SliceName.S]
+    M = MiddleSliceAlg(SliceName.M)
+    E = MiddleSliceAlg(SliceName.E)
+    S = MiddleSliceAlg(SliceName.S)
 
     # =========================================================================
     # Adaptive Wide Moves — all-but-last layers
@@ -186,7 +185,6 @@ class Algs:
     def seq(*algs: Alg) -> SeqAlg:
         return SeqAlg(None, *algs)
 
-    # claude: you can replace MM/EE/SS here with *SliceBaseAlgs
     Simple: Sequence[NSimpleAlg] = [L, Lw,
                                     R, Rw, X, *SliceBaseAlgs,
                                     U, Uw, Y,
@@ -238,7 +236,7 @@ class Algs:
 
     @classmethod
     def of_face(cls, face: FaceName) -> FaceAlg:
-        alg = cls._face_name_to_alg.get(face)
+        alg = cls._face_by_name.get(face)
         if alg is None:
             raise InternalSWError(f"Unknown face name {face}")
         return alg
