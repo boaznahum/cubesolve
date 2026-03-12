@@ -218,6 +218,10 @@ The history panel sits on the left side and shows all executed and queued moves.
 If you manually turn a face while solver moves are queued, a **⚠** warning icon appears.
 This means the queued moves may no longer produce a correct solution for the current cube position.
 
+#### Copy to Clipboard
+
+Tap the **📋** (clipboard) icon in the history header to copy all executed moves to the clipboard as a single algorithm string (e.g., `U L R' F2`). The icon flashes green on success. Disabled when no moves have been made.
+
 #### Clear History
 
 Tap the **✕** button in the history header to clear all history.
