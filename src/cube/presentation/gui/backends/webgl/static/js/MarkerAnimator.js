@@ -38,21 +38,7 @@ export class MarkerAnimator {
             }
         }
 
-        // Animate moveable marker groups — faster pulse opacity
-        for (const faceName of Object.keys(this.cubeModel.markerGroups)) {
-            const groups = this.cubeModel.markerGroups[faceName];
-            if (!groups) continue;
-            for (const group of groups) {
-                if (!group) continue;
-                // Faster opacity pulse: 0.6 – 1.0 over ~1.5 seconds
-                const opacity = 0.8 + 0.2 * Math.sin(this._time * 4.2);
-                group.traverse((child) => {
-                    if (child.material && child.material.transparent) {
-                        child.material.opacity = opacity;
-                    }
-                });
-            }
-        }
+        // Moveable markers: static full opacity (animation only during meet)
     }
 
     /**
