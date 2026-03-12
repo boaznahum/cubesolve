@@ -15,7 +15,8 @@ npm install          # installs Vite, Three.js, and other dependencies
 ```powershell
 # Terminal 1: Python backend with auto-reload on .py changes
 $env:PYTHONIOENCODING="utf-8"; watchfiles ".venv\Scripts\python.exe -m cube.main_webgl" src/cube/
-
+```
+```powershell
 # Terminal 2: Vite dev server (HMR for JS changes)
 cd src/cube/presentation/gui/backends/webgl
 npm run dev
