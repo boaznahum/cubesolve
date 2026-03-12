@@ -157,3 +157,29 @@ class CharacterMarker(MarkerCreator):
 
     def draw(self, toolkit: "MarkerToolkit") -> None:
         toolkit.draw_character(self.character, self.color, self.radius_factor)
+
+
+@dataclass(frozen=True)
+class BracketCornersMarker(MarkerCreator):
+    """Four L-shaped bracket corners framing the sticker — reads as 'target/destination'.
+
+    Each bracket is an L-shape at a sticker corner. The visual metaphor is
+    a drop-zone or viewfinder frame, signaling "place piece here".
+    """
+
+    color: ColorRGB | None = None
+    use_complementary_color: bool = False
+    radius_factor: float = 0.85
+    arm_length: float = 0.35
+    arm_thickness: float = 0.12
+    height_offset: float = 0.15
+    z_order: int = 0
+
+    def get_z_order(self) -> int:
+        return self.z_order
+
+    def draw(self, toolkit: "MarkerToolkit") -> None:
+        c = _resolve_color(self.color, self.use_complementary_color, toolkit)
+        # Fallback: draw as a ring on non-WebGL backends
+        inner = self.radius_factor * 0.7
+        toolkit.draw_ring(inner, self.radius_factor, c, self.height_offset)

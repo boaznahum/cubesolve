@@ -3,6 +3,7 @@ from .Alg import Alg as Alg
 from .Algs import Algs as Algs
 from .AnimationAbleAlg import AnimationAbleAlg as AnimationAbleAlg
 from .AnnotationAlg import AnnotationAlg as AnnotationAlg
+from .MarkerMeetAlg import MarkerMeetAlg as MarkerMeetAlg
 from .FaceAlg import FaceAlg as FaceAlg
 from .FaceAlgBase import FaceAlgBase as FaceAlgBase
 from .SeqAlg import SeqAlg as SeqAlg

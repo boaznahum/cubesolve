@@ -76,17 +76,25 @@ function _lineMat(color) {
  * Dispatch to the appropriate builder for each marker type.
  */
 function _createMarkerMesh(desc, scale, zOff) {
+    let mesh;
     switch (desc.type) {
-        case 'filled_circle': return _filledCircle(desc, scale, zOff);
-        case 'ring':          return _ring(desc, scale, zOff);
-        case 'cross':         return _cross(desc, scale, zOff);
-        case 'bold_cross':    return _boldCross(desc, scale, zOff);
-        case 'checkmark':     return _checkmark(desc, scale, zOff);
-        case 'arrow':         return _arrow(desc, scale, zOff);
-        case 'character':     return _character(desc, scale, zOff);
-        case 'outlined_circle': return _outlinedCircle(desc, scale, zOff);
-        default:              return null;
+        case 'filled_circle': mesh = _filledCircle(desc, scale, zOff); break;
+        case 'ring':          mesh = _ring(desc, scale, zOff); break;
+        case 'cross':         mesh = _cross(desc, scale, zOff); break;
+        case 'bold_cross':    mesh = _boldCross(desc, scale, zOff); break;
+        case 'checkmark':     mesh = _checkmark(desc, scale, zOff); break;
+        case 'arrow':         mesh = _arrow(desc, scale, zOff); break;
+        case 'character':     mesh = _character(desc, scale, zOff); break;
+        case 'outlined_circle': mesh = _outlinedCircle(desc, scale, zOff); break;
+        case 'bracket_corners': mesh = _bracketCorners(desc, scale, zOff); break;
+        default:              mesh = null;
     }
+    // Tag marker meshes with animation metadata for the render loop
+    if (mesh) {
+        mesh.userData.markerType = desc.type;
+        mesh.userData.moveable = desc.moveable !== false;
+    }
+    return mesh;
 }
 
 // ── Filled circle ──────────────────────────────────────────────────────
@@ -256,6 +264,41 @@ function _character(desc, scale, zOff) {
     const mesh = new THREE.Mesh(geo, mat);
     mesh.position.set(0, 0, zOff);
     return mesh;
+}
+
+// ── Bracket corners (four L-shaped brackets framing the sticker) ─────
+
+function _bracketCorners(desc, scale, zOff) {
+    const r = (desc.radius || 0.85) * scale;
+    const armLen = (desc.arm_length || 0.35) * scale;
+    const armT = (desc.arm_thickness || 0.12) * scale;
+
+    const group = new THREE.Group();
+    const mat = _markerMat(desc.color);
+
+    // Four corners: each is two PlaneGeometry arms forming an L
+    const corners = [
+        { x: -r, y: -r, dx: 1, dy: 1 },   // bottom-left
+        { x:  r, y: -r, dx: -1, dy: 1 },   // bottom-right
+        { x: -r, y:  r, dx: 1, dy: -1 },   // top-left
+        { x:  r, y:  r, dx: -1, dy: -1 },   // top-right
+    ];
+
+    for (const c of corners) {
+        // Horizontal arm
+        const hGeo = new THREE.PlaneGeometry(armLen, armT);
+        const hMesh = new THREE.Mesh(hGeo, mat);
+        hMesh.position.set(c.x + c.dx * armLen / 2, c.y + c.dy * armT / 2, zOff);
+        group.add(hMesh);
+
+        // Vertical arm
+        const vGeo = new THREE.PlaneGeometry(armT, armLen);
+        const vMesh = new THREE.Mesh(vGeo, mat);
+        vMesh.position.set(c.x + c.dx * armT / 2, c.y + c.dy * armLen / 2, zOff);
+        group.add(vMesh);
+    }
+
+    return group;
 }
 
 // ── Outlined circle (ring + filled circle) ──────────────────────────────

@@ -1,6 +1,6 @@
 import functools
 import warnings
-from collections.abc import MutableSequence, Reversible, Sequence
+from collections.abc import Generator, MutableSequence, Reversible, Sequence
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any, Callable
 
@@ -441,7 +441,7 @@ class Operator(OperatorProtocol):
             self._buffer = saved_buffer
 
     @contextmanager
-    def with_buffer(self):
+    def with_buffer(self) -> Generator[OperatorBuffer, None, None]:  # type: ignore[override]
         """Context manager for buffered play.
 
         Yields an OperatorBuffer handle for explicit flush control::

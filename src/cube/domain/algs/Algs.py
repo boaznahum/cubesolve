@@ -3,6 +3,7 @@ from typing import Sequence
 from cube.domain.algs._parser import parse_alg
 from cube.domain.algs.Alg import Alg
 from cube.domain.algs.AnnotationAlg import AnnotationAlg
+from cube.domain.algs.MarkerMeetAlg import MarkerMeetAlg
 from cube.domain.algs.FaceAlg import _B, _D, _F, _L, _R, _U, FaceAlg
 from cube.domain.algs.Scramble import _Scramble, _scramble
 from cube.domain.algs.SeqAlg import SeqAlg
@@ -89,6 +90,9 @@ class Algs:
     # When played, it simply refreshes GUI
     # So it used by annotation tools, after they changed some model(text, cube)
     AN = AnnotationAlg()
+
+    # Annotation Meet — signals that source and target markers have met
+    AM = MarkerMeetAlg()
 
     L = _L()
     # noinspection PyPep8Naming

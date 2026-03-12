@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from cube.domain.model.PartEdge import PartEdge
 
 from ._complementary_colors import get_complementary_color
-from ._marker_creators import color_255_to_float, color_float_to_255
+from ._marker_creators import color_255_to_float, color_float_to_255, BracketCornersMarker
 from ._marker_creator_protocol import MarkerCreator
 from ._marker_toolkit import MarkerToolkit
 from ._outlined_circle_marker import OutlinedCircleMarker
@@ -87,6 +87,7 @@ def get_markers_from_part_edge(part_edge: "PartEdge") -> list[MarkerCreator]:
 
 
 __all__ = [
+    "BracketCornersMarker",
     "IMarkerFactory",
     "IMarkerManager",
     "MarkerCreator",

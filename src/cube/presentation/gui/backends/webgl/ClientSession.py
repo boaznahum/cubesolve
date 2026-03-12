@@ -437,6 +437,17 @@ class ClientSession:
             "state": state,
         }))
 
+    def send_marker_meet(self, duration_ms: int) -> None:
+        """Tell client that source and target markers have met.
+
+        The client plays a brief flash/pulse animation, then sends
+        animation_done to unblock the solver thread.
+        """
+        self._send(json.dumps({
+            "type": "marker_meet",
+            "duration_ms": duration_ms,
+        }))
+
     def send_play_empty(self) -> None:
         """Tell client there are no more moves to play."""
         self._send(json.dumps({"type": "play_empty"}))

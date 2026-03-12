@@ -6,7 +6,7 @@ how to draw itself using abstract toolkit primitives.
 
 Concrete implementations: RingMarker, FilledCircleMarker, CrossMarker,
 ArrowMarker, CheckmarkMarker, BoldCrossMarker, CharacterMarker,
-OutlinedCircleMarker.
+OutlinedCircleMarker, BracketCornersMarker.
 """
 from __future__ import annotations
 

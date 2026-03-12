@@ -30,6 +30,7 @@ from typing import TYPE_CHECKING
 
 from cube.application.animation.AnimationManager import AnimationManager
 from cube.domain import algs
+from cube.domain.algs.MarkerMeetAlg import MarkerMeetAlg
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -173,6 +174,20 @@ class WebglAnimationManager(AnimationManager):
         """
         move = _QueuedMove(cube, op, alg)
 
+        # Marker meet: send state (markers still present) + meet event, BLOCK
+        if isinstance(alg, MarkerMeetAlg):
+            self._apply_model_change(move)
+            if self._web_window:
+                self._web_window.send_state()
+                self._web_window.send_marker_meet(alg.duration_ms)
+            # Block solver thread until client finishes meet animation
+            timeout = self._vs._config.animation_speed_config.blocking_timeout
+            self._blocking_event.clear()
+            signaled = self._blocking_event.wait(timeout=timeout)
+            if not signaled:
+                self._operator.abort()
+            return
+
         # Non-animatable moves: apply and return immediately
         if isinstance(alg, algs.AnnotationAlg):
             self._apply_model_change(move)
@@ -226,6 +241,15 @@ class WebglAnimationManager(AnimationManager):
                 return
 
             alg = move.alg
+
+            # Marker meet: send state + meet event, wait for client
+            if isinstance(alg, MarkerMeetAlg):
+                self._apply_model_change(move)
+                if self._web_window:
+                    self._web_window.send_state()
+                    self._web_window.send_marker_meet(alg.duration_ms)
+                self._waiting_for_client = True
+                return
 
             # Non-animatable moves: apply and continue immediately
             if isinstance(alg, algs.AnnotationAlg):

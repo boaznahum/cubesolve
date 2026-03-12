@@ -7,6 +7,7 @@ from .IMarkerFactory import IMarkerFactory
 from ._marker_creator_protocol import MarkerCreator
 from ._marker_creators import (
     ArrowMarker,
+    BracketCornersMarker,
     color_255_to_float,
     BoldCrossMarker,
     CharacterMarker,
@@ -66,12 +67,13 @@ class MarkerFactory(IMarkerFactory):
         return MarkerFactory._cache[key]
 
     def c2(self) -> MarkerCreator:
-        """C2 marker - destination slot indicator."""
+        """C2 marker - destination slot indicator (bracket corners)."""
         key = ("c2",)
         if key not in MarkerFactory._cache:
-            MarkerFactory._cache[key] = RingMarker(
-                radius_factor=1.0,
-                thickness=0.3,
+            MarkerFactory._cache[key] = BracketCornersMarker(
+                radius_factor=0.85,
+                arm_length=0.35,
+                arm_thickness=0.12,
                 height_offset=0.15,
                 use_complementary_color=True,
             )

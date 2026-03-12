@@ -21,6 +21,7 @@ import { ColorPicker } from './ColorPicker.js';
 import { InfoPopup } from './InfoPopup.js';
 import { SettingsPopup } from './SettingsPopup.js';
 import { ConsolePanel } from './ConsolePanel.js';
+import { MarkerAnimator } from './MarkerAnimator.js';
 
 // ── Application state ──
 const state = new AppState();
@@ -55,6 +56,7 @@ scene.add(dirLight2);
 
 // ── Cube model ──
 const cubeModel = new CubeModel(scene);
+const markerAnimator = new MarkerAnimator(cubeModel);
 
 // ── WebSocket client ──
 const wsClient = new WsClient(handleMessage);
@@ -379,6 +381,13 @@ function handleMessage(msg) {
             animQueue.flush(state.latestState);
             break;
 
+        case 'marker_meet':
+            // Markers have met — play flash animation, then ack
+            markerAnimator.playMeetAnimation(cubeModel, msg.duration_ms).then(() => {
+                send({ type: 'animation_done' });
+            });
+            break;
+
         case 'color_map':
             cubeModel.buildColorCorrections(msg.colors);
             colorPicker.setColorMap(msg.colors);
@@ -411,6 +420,7 @@ function animate() {
     lastTime = now;
 
     animQueue.update();
+    markerAnimator.update(dt);
     moveIndicator.updatePulse(dt);
     renderer.render(scene, camera);
 }

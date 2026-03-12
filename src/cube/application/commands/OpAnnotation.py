@@ -130,6 +130,15 @@ class OpAnnotation(AnnotationProtocol):
 
             cqr = self.cube.cqr
 
+            # Context finished — solver moved piece to target.
+            # Play marker meet animation while markers are still present.
+            # Wrapped in try/except: if operator is aborting, play() raises
+            # OpAborted — we must not let that skip marker cleanup.
+            try:
+                op.play(Algs.AM)
+            except Exception:
+                pass
+
             if has_text:
                 op.app_state.animation_text.pop_heads()
 
