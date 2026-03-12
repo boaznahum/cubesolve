@@ -138,7 +138,8 @@ export class AlgEditor {
         document.getElementById('edit-ok')?.addEventListener('click', () => {
             if (!this._valid) return;
             this._send({ type: 'edit_ok', text: this._text });
-            this.exit();
+            // Don't call exit() here — server will send editMode=false
+            // when it exits EDITING state, and applyState() will call exit()
         });
     }
 

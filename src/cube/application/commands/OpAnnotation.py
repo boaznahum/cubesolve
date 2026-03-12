@@ -132,15 +132,18 @@ class OpAnnotation(AnnotationProtocol):
 
             # Context finished — solver moved piece to target.
             # Play marker meet animation while markers are still present.
+            # Only play MarkerMeetAlg when there are actual markers to animate;
+            # otherwise the spurious AM queue item breaks the pull-model rewind.
             # If operator is aborting, play() raises OpAborted — save it
             # so marker cleanup still runs, then re-raise after.
             _saved_abort: BaseException | None = None
-            try:
-                op.play(Algs.AM)
-            except OpAborted as _abort_exc:
-                _saved_abort = _abort_exc
-            except Exception:
-                pass
+            if slots:
+                try:
+                    op.play(Algs.AM)
+                except OpAborted as _abort_exc:
+                    _saved_abort = _abort_exc
+                except Exception:
+                    pass
 
             if has_text:
                 op.app_state.animation_text.pop_heads()
@@ -188,7 +191,8 @@ class OpAnnotation(AnnotationProtocol):
                     mm.remove_marker(e, marker_name, moveable=True)
                     del e.moveable_attributes[key]
 
-            op.play(Algs.AN)
+            if slots:
+                op.play(Algs.AN)
 
             # Re-raise OpAborted after cleanup so the solver stops
             if _saved_abort is not None:

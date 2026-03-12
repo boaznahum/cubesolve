@@ -153,6 +153,7 @@ class ClientSession:
         self._edit_snapshot_history_len: int = 0
         self._edit_snapshot_redo: list[Alg] | None = None
         self._edit_ok_pending: bool = False  # exit editing when animations finish
+        self._edit_preview_text: str | None = None  # text currently previewed on cube (None = at snapshot)
 
     @property
     def app(self) -> "AbstractApp":
@@ -1598,6 +1599,7 @@ class ClientSession:
         op = self._app.op
         self._edit_snapshot_history_len = len(op._history)
         self._edit_snapshot_redo = list(op._redo_queue)
+        self._edit_preview_text = None  # no preview yet
         self.send_state()
 
     def _restore_edit_snapshot(self) -> None:
@@ -1617,6 +1619,7 @@ class ClientSession:
         # Restore the original redo queue
         op._redo_queue.clear()
         op._redo_queue.extend(self._edit_snapshot_redo or [])
+        self._edit_preview_text = None
 
     def _handle_edit_play(self, text: str) -> None:
         """Preview algorithm: restore to initial state, execute with animation if enabled."""
@@ -1659,6 +1662,7 @@ class ClientSession:
                 for move in moves:
                     op.play(move, animation=False)
                 self.send_state()
+            self._edit_preview_text = self._edit_alg_text.strip()
         except (InternalSWError, Exception) as e:
             print(f"Edit play error: {e}", flush=True)
             self._restore_edit_snapshot()
@@ -1723,7 +1727,19 @@ class ClientSession:
                 self.send_state()
                 return
 
-            # Restore to initial state (always instant)
+            # If this algorithm was already played (preview is current), just accept and exit
+            already_played = (self._edit_preview_text == text)
+
+            if already_played:
+                # Cube already shows the result — just exit edit mode
+                self._edit_snapshot_redo = None
+                has_redo = bool(self._app.op.redo_queue())
+                has_history = bool(self._app.op.history())
+                self._fsm.send(FlowEvent.EXIT_EDIT, has_redo=has_redo, has_history=has_history)
+                self.send_state()
+                return
+
+            # Not previewed yet — restore and replay
             self._restore_edit_snapshot()
 
             op = self._app.op
