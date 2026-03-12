@@ -211,7 +211,11 @@ export class Toolbar {
         banner.id = 'error-banner';
         banner.style.cssText = 'display:none;position:fixed;left:0;right:0;bottom:60px;z-index:9999;' +
             'background:#cc0000;color:#fff;font-weight:bold;font-size:14px;' +
-            'padding:6px 16px;text-align:center;box-shadow:0 -2px 8px rgba(0,0,0,0.5)';
+            'padding:6px 16px;text-align:center;box-shadow:0 -2px 8px rgba(0,0,0,0.5);cursor:pointer';
+        banner.title = 'Click to dismiss';
+        banner.addEventListener('click', () => {
+            banner.style.display = 'none';
+        });
         document.body.appendChild(banner);
         return banner;
     }
