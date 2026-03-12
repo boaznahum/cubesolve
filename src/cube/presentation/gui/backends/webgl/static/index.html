@@ -65,7 +65,15 @@
         <div id="history-panel">
             <div class="hp-header">
                 <span class="hp-title">History</span>
-                <button class="hp-header-btn" id="btn-history-clear" title="Clear history">&#x2715;</button>
+                <div class="hp-header-actions">
+                    <button class="hp-header-btn" id="btn-history-copy" title="Copy queue to clipboard">
+                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="8" y="3" width="12" height="15" rx="1.5" stroke="currentColor" stroke-width="2" fill="none"/>
+                            <path d="M4 7v12a1.5 1.5 0 001.5 1.5H16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                    <button class="hp-header-btn" id="btn-history-clear" title="Clear history">&#x2715;</button>
+                </div>
             </div>
             <div id="history-list"></div>
             <div class="hp-footer">

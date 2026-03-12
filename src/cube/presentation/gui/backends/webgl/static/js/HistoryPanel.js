@@ -19,6 +19,7 @@ export class HistoryPanel {
         this._btnPlay = document.getElementById('btn-fastplay');
         this._btnRewind = document.getElementById('btn-fastrewind');
         this._btnClear = document.getElementById('btn-history-clear');
+        this._btnCopy = document.getElementById('btn-history-copy');
 
         // State
         this._doneItems = [];    // [{alg, type, index}, ...]
@@ -60,6 +61,35 @@ export class HistoryPanel {
                 this._send({ type: 'command', name: 'clear_history' });
             });
         }
+        if (this._btnCopy) {
+            this._btnCopy.addEventListener('click', () => this._copyQueueToClipboard());
+        }
+    }
+
+    _copyQueueToClipboard() {
+        const moves = this._doneItems
+            .filter(item => item.type !== 'heading' && item.type !== 'scramble')
+            .map(item => item.alg);
+        const text = moves.join(' ');
+        if (!text) return;
+
+        navigator.clipboard.writeText(text).then(() => {
+            // Brief green flash to confirm copy
+            if (this._btnCopy) {
+                this._btnCopy.classList.add('hp-copy-ok');
+                setTimeout(() => this._btnCopy.classList.remove('hp-copy-ok'), 600);
+            }
+        }).catch(() => {
+            // Fallback for older browsers / insecure contexts
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+        });
     }
 
     /** Update from unified AppState snapshot. */
@@ -214,6 +244,9 @@ export class HistoryPanel {
         if (this._btnRedo) this._btnRedo.disabled = !a.play_next;
         if (this._btnPlay) this._btnPlay.disabled = !a.play_all;
         if (this._btnRewind) this._btnRewind.disabled = !a.rewind_all;
+
+        const hasDoneMoves = this._doneItems.some(item => item.type !== 'heading' && item.type !== 'scramble');
+        if (this._btnCopy) this._btnCopy.disabled = !hasDoneMoves;
 
         // Context-aware labels: solver steps → Play/Play All, manual → Redo/Redo All
         const isSolver = this._redoSource === 'solver';

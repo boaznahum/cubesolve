@@ -75,6 +75,12 @@ body {
     letter-spacing: 1.6px;
 }
 
+.hp-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
 .hp-header-btn {
     background: none;
     border: none;
@@ -84,11 +90,36 @@ body {
     padding: 3px 7px;
     border-radius: 5px;
     transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .hp-header-btn:hover {
     color: rgba(255, 255, 255, 0.8);
     background: rgba(255, 255, 255, 0.08);
+}
+
+.hp-header-btn.hp-copy-ok {
+    color: rgba(100, 220, 100, 0.8);
+}
+
+#btn-history-copy {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+#btn-history-copy:hover {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.hp-header-btn:disabled {
+    color: rgba(255, 255, 255, 0.12) !important;
+    cursor: default;
+}
+
+.hp-header-btn:disabled:hover {
+    color: rgba(255, 255, 255, 0.12) !important;
+    background: none;
 }
 
 /* ── History List ── */
