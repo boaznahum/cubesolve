@@ -19,7 +19,11 @@ Deploy current changes via GitHub Actions + Fly.io.
 | `staging` | `cubesolve-staging` | `gh_acreate_pr.ps1 -branch staging` |
 
 When the user says "deploy" without specifying, deploy to **dev** (default).
-When the user says "deploy production", "deploy official", or "deploy to main", use `-branch main`.
+
+**CRITICAL — Production Safety:**
+NEVER deploy to `main` (production) unless the user EXPLICITLY says "deploy production", "deploy to main", or "deploy official".
+If there is ANY ambiguity, ASK the user to confirm before deploying to production.
+Do NOT infer production deployment from context — the user must say it directly.
 
 ## Workflow
 
