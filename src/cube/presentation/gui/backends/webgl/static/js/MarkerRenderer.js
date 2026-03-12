@@ -88,6 +88,7 @@ function _createMarkerMesh(desc, scale, zOff) {
         case 'outlined_circle': mesh = _outlinedCircle(desc, scale, zOff); break;
         case 'bracket_corners': mesh = _bracketCorners(desc, scale, zOff); break;
         case 'crosshair':     mesh = _crosshair(desc, scale, zOff); break;
+        case 'star':          mesh = _star(desc, scale, zOff); break;
         default:              mesh = null;
     }
     // Tag marker meshes with animation metadata for the render loop
@@ -300,6 +301,37 @@ function _bracketCorners(desc, scale, zOff) {
     }
 
     return group;
+}
+
+// ── Star (multi-pointed star shape) ───────────────────────────────────
+
+function _star(desc, scale, zOff) {
+    const outerR = (desc.radius || 0.65) * scale;
+    const innerR = (desc.inner_radius || 0.35) * scale;
+    const pts = desc.points || 5;
+
+    const shape = new THREE.Shape();
+    const totalPoints = pts * 2;
+
+    for (let i = 0; i < totalPoints; i++) {
+        // Offset by -90° so first point faces up
+        const angle = (i * Math.PI) / pts - Math.PI / 2;
+        const r = i % 2 === 0 ? outerR : innerR;
+        const x = Math.cos(angle) * r;
+        const y = Math.sin(angle) * r;
+        if (i === 0) {
+            shape.moveTo(x, y);
+        } else {
+            shape.lineTo(x, y);
+        }
+    }
+    shape.closePath();
+
+    const geo = new THREE.ShapeGeometry(shape);
+    const mat = _markerMat(desc.color);
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(0, 0, zOff);
+    return mesh;
 }
 
 // ── Crosshair / reticle (circle + 4 cross lines extending outward) ────

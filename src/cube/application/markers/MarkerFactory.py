@@ -8,6 +8,7 @@ from ._marker_creator_protocol import MarkerCreator
 from ._marker_creators import (
     ArrowMarker,
     CrosshairMarker,
+    StarMarker,
     color_255_to_float,
     BoldCrossMarker,
     CharacterMarker,
@@ -56,11 +57,13 @@ class MarkerFactory(IMarkerFactory):
         return MarkerFactory._cache[key]
 
     def animation_moveable(self) -> MarkerCreator:
-        """Animation marker for the moved piece (filled circle)."""
+        """Animation marker for the moved piece (star)."""
         key = ("animation_moveable",)
         if key not in MarkerFactory._cache:
-            MarkerFactory._cache[key] = FilledCircleMarker(
-                radius_factor=0.6,
+            MarkerFactory._cache[key] = StarMarker(
+                radius_factor=0.65,
+                inner_radius_factor=0.35,
+                points=5,
                 height_offset=0.15,
                 use_complementary_color=True,
             )

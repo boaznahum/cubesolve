@@ -209,3 +209,27 @@ class CrosshairMarker(MarkerCreator):
         # Fallback: draw as a ring on non-WebGL backends
         inner = self.radius_factor * 0.7
         toolkit.draw_ring(inner, self.radius_factor, c, self.height_offset)
+
+
+@dataclass(frozen=True)
+class StarMarker(MarkerCreator):
+    """Star marker — multi-pointed star shape.
+
+    Visual metaphor: highlights the source piece being tracked/moved.
+    """
+
+    color: ColorRGB | None = None
+    use_complementary_color: bool = False
+    radius_factor: float = 0.65
+    inner_radius_factor: float = 0.35
+    points: int = 5
+    height_offset: float = 0.15
+    z_order: int = 0
+
+    def get_z_order(self) -> int:
+        return self.z_order
+
+    def draw(self, toolkit: "MarkerToolkit") -> None:
+        c = _resolve_color(self.color, self.use_complementary_color, toolkit)
+        # Fallback: draw as a filled circle on non-WebGL backends
+        toolkit.draw_filled_circle(self.radius_factor, c, self.height_offset)
