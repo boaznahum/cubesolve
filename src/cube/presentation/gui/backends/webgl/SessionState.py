@@ -87,6 +87,10 @@ class SessionStateSnapshot:
     move_count: int = 0
     error_text: str = ""
 
+    # -- Edit mode --
+    edit_mode: bool = False
+    edit_alg_text: str = ""
+
     # -- Meta --
     version: str = ""
     client_count: int = 0
@@ -149,6 +153,9 @@ class SessionStateSnapshot:
                 "moves": self.move_count,
                 "error": self.error_text,
             },
+
+            "edit_mode": self.edit_mode,
+            "edit_alg_text": self.edit_alg_text,
 
             "version": self.version,
             "client_count": self.client_count,

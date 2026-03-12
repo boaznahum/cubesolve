@@ -42,6 +42,7 @@ class FlowState(str, Enum):
     REWINDING = "rewinding"
     ANIMATING = "animating"
     STOPPING = "stopping"
+    EDITING = "editing"
 
 
 class FlowEvent(str, Enum):
@@ -59,6 +60,9 @@ class FlowEvent(str, Enum):
     RESET = "reset"
     RESET_SESSION = "reset_session"
     SIZE_CHANGE = "size_change"
+
+    ENTER_EDIT = "enter_edit"
+    EXIT_EDIT = "exit_edit"
 
     # System events
     SOLVE_DONE = "solve_done"
@@ -79,6 +83,7 @@ _TRANSITIONS: dict[FlowState, dict[FlowEvent, FlowState | None]] = {
         FlowEvent.SOLVE_AND_PLAY: FlowState.SOLVING,
         FlowEvent.FACE_TURN: FlowState.ANIMATING,
         FlowEvent.SIZE_CHANGE: FlowState.IDLE,
+        FlowEvent.ENTER_EDIT: FlowState.EDITING,
         FlowEvent.RESET_SESSION: FlowState.IDLE,
     },
     FlowState.SOLVING: {
@@ -97,6 +102,7 @@ _TRANSITIONS: dict[FlowState, dict[FlowEvent, FlowState | None]] = {
         FlowEvent.SOLVE_AND_PLAY: FlowState.SOLVING,
         FlowEvent.RESET: FlowState.IDLE,
         FlowEvent.SIZE_CHANGE: FlowState.IDLE,
+        FlowEvent.ENTER_EDIT: FlowState.EDITING,
         FlowEvent.RESET_SESSION: FlowState.IDLE,
     },
     FlowState.PLAYING: {
@@ -122,6 +128,11 @@ _TRANSITIONS: dict[FlowState, dict[FlowEvent, FlowState | None]] = {
         FlowEvent.SOLVE_DONE: None,  # guard: one-phase solve aborted → IDLE or READY
         FlowEvent.RESET_SESSION: FlowState.IDLE,
     },
+    FlowState.EDITING: {
+        FlowEvent.EXIT_EDIT: None,  # guard: → IDLE or READY
+        FlowEvent.STOP: FlowState.EDITING,  # cancel animation, stay in editing
+        FlowEvent.RESET_SESSION: FlowState.IDLE,
+    },
 }
 
 
@@ -138,13 +149,14 @@ _BUTTON_TABLE: dict[str, set[FlowState]] = {
     "undo":           {FlowState.READY},
     "redo":           {FlowState.READY},
     "rewind_all":     {FlowState.READY},
-    "stop":           {FlowState.ANIMATING, FlowState.PLAYING, FlowState.REWINDING, FlowState.SOLVING},
+    "stop":           {FlowState.ANIMATING, FlowState.PLAYING, FlowState.REWINDING, FlowState.SOLVING, FlowState.EDITING},
     "reset":          {FlowState.IDLE, FlowState.READY},
     "reset_session":  set(FlowState),  # all states
     "face_turn":      {FlowState.IDLE, FlowState.READY},
     "size_change":    {FlowState.IDLE, FlowState.READY},
     "speed_change":   set(FlowState),  # all states
     "clear_history":  {FlowState.IDLE, FlowState.READY},
+    "enter_edit":     {FlowState.IDLE, FlowState.READY},
 }
 
 # Actions that additionally require data guards
@@ -308,6 +320,11 @@ class FlowStateMachine:
 
         if event == FlowEvent.ANIM_DONE:
             # Single animation done — go to READY if anything remains
+            if has_redo or has_history:
+                return FlowState.READY
+            return FlowState.IDLE
+
+        if event == FlowEvent.EXIT_EDIT:
             if has_redo or has_history:
                 return FlowState.READY
             return FlowState.IDLE

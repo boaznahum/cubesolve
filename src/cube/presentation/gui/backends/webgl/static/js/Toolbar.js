@@ -43,10 +43,12 @@ export class Toolbar {
             btn.disabled = !canTurn;
         }
 
-        // Paint button + size/solver selects: disable during solving/playing
+        // Paint button + edit button + size/solver selects: disable during solving/playing
         const canModify = !!a.scramble;  // proxy: scramble is allowed only in IDLE/READY
         const btnPaint = document.getElementById('btn-paint');
         if (btnPaint) btnPaint.disabled = !canModify;
+        const btnEdit = document.getElementById('btn-edit');
+        if (btnEdit) btnEdit.disabled = !a.enter_edit;
         document.getElementById('size-select').disabled = !a.size_change;
         document.getElementById('solver-select').disabled = !canModify;
         document.getElementById('scramble-seed').disabled = !canModify;

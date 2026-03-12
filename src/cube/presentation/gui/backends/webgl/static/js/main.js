@@ -18,6 +18,7 @@ import { HistoryPanel } from './HistoryPanel.js';
 import { MoveIndicator } from './MoveIndicator.js';
 import { SoundManager } from './SoundManager.js';
 import { ColorPicker } from './ColorPicker.js';
+import { AlgEditor } from './AlgEditor.js';
 import { InfoPopup } from './InfoPopup.js';
 import { SettingsPopup } from './SettingsPopup.js';
 import { ConsolePanel } from './ConsolePanel.js';
@@ -118,6 +119,17 @@ colorPicker.onCheck = (faces, gen) => {
 colorPicker.canEnter = () => {
     return !animQueue.isBusy && !state.isPlaying && state.latestState != null;
 };
+
+// ── Algorithm editor ──
+const algEditor = new AlgEditor(send);
+
+// Edit button in toolbar — enter edit mode
+document.getElementById('btn-edit')?.addEventListener('click', () => {
+    if (algEditor.active) return;
+    if (colorPicker.active) return;  // can't edit during paint mode
+    if (animQueue.isBusy || state.isPlaying) return;
+    algEditor.enter();
+});
 
 // ── Info popup ──
 const infoPopup = new InfoPopup();
@@ -281,8 +293,9 @@ wsClient.onConnected = () => {
     controls.reset();
     _lastAspect = 0;  // force fitToView recalc
     resize();
-    // Force-exit paint mode on reconnect — server state may have changed
+    // Force-exit paint mode and edit mode on reconnect — server state may have changed
     if (colorPicker.active) colorPicker.exit(true);
+    if (algEditor.active) algEditor.exit();
 };
 
 // ── Message handler ──
@@ -315,6 +328,9 @@ function handleMessage(msg) {
             // Update all UI components from the single state
             toolbar.updateFromState(state);
             historyPanel.updateFromState(state);
+
+            // Sync algorithm editor state
+            algEditor.applyState(state.editMode, state.editAlgText);
 
             // Update assist delay from state (skip if user locally overrode assist checkbox)
             if (toolbar._assistLocalOverride === undefined) {
@@ -399,6 +415,10 @@ function handleMessage(msg) {
 
         case 'full_check_result':
             colorPicker.onFullCheckResult(msg.valid, msg.error, msg.gen);
+            break;
+
+        case 'parse_alg_result':
+            algEditor.onParseResult(msg.valid, msg.error);
             break;
 
         case 'console_snapshot':

@@ -1289,6 +1289,89 @@ a.info-item-name:hover {
 }
 
 /* ============================================================
+   Algorithm Editor
+   ============================================================ */
+#edit-toolbar {
+    width: 100%;
+    background: rgba(28, 28, 34, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px 12px 0 0;
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 -2px 16px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+#edit-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 12px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 15px;
+    letter-spacing: 0.5px;
+    color: #e0e0e0;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1.5px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    outline: none;
+    transition: border-color 0.2s ease;
+}
+
+#edit-input:focus {
+    border-color: rgba(100, 180, 255, 0.5);
+    box-shadow: 0 0 8px rgba(100, 180, 255, 0.15);
+}
+
+#edit-input::placeholder {
+    color: rgba(255, 255, 255, 0.25);
+}
+
+.edit-buttons {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+}
+
+.edit-btn {
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #fff;
+    background: linear-gradient(135deg, rgba(70, 130, 180, 0.85), rgba(55, 110, 160, 0.85));
+    min-width: 56px;
+}
+
+.edit-btn:hover:not(:disabled) {
+    filter: brightness(1.15);
+}
+
+.edit-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.edit-btn-green {
+    background: linear-gradient(135deg, rgba(50, 180, 80, 0.9), rgba(40, 150, 65, 0.9)) !important;
+    opacity: 1 !important;
+}
+
+.edit-btn-red {
+    background: linear-gradient(135deg, rgba(180, 50, 50, 0.7), rgba(150, 40, 40, 0.7)) !important;
+}
+
+.edit-btn-cancel {
+    background: linear-gradient(135deg, rgba(100, 100, 110, 0.85), rgba(80, 80, 90, 0.85));
+}
+
+/* ============================================================
    Console Panel — bottom-docked terminal log viewer
    ============================================================ */
 #console-panel {

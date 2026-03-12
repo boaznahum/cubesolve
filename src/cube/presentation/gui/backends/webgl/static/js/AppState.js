@@ -60,6 +60,10 @@ export class AppState extends EventTarget {
         this.moveCount = 0;
         this.errorText = '';
 
+        // -- Edit mode --
+        this.editMode = false;
+        this.editAlgText = '';
+
         // -- Meta --
         this.version = '';
         this.clientCount = 0;
@@ -148,6 +152,10 @@ export class AppState extends EventTarget {
             patch.moveCount = msg.text.moves || 0;
             patch.errorText = msg.text.error || '';
         }
+
+        // Edit mode
+        if (msg.edit_mode !== undefined) patch.editMode = msg.edit_mode;
+        if (msg.edit_alg_text !== undefined) patch.editAlgText = msg.edit_alg_text;
 
         // Meta
         if (msg.version !== undefined) patch.version = msg.version;

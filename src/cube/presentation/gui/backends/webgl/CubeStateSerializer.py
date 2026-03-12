@@ -398,6 +398,73 @@ def _serialize_marker(marker: _MC, face_color_float: _ColorF) -> dict[str, Any]:
     }
 
 
+def extract_cube_color_names(cube: "Cube") -> dict[str, list[str]]:
+    """Extract all sticker color names from a cube.
+
+    Returns a dict mapping face name ("U","D",...) to a flat list of
+    N*N color names (e.g., "yellow", "blue") in row-major order.
+    This is the inverse of apply_cube_colors.
+    """
+    from cube.domain.model import Corner, Edge
+
+    n = cube.size
+    result: dict[str, list[str]] = {}
+
+    for face in cube.faces:
+        face_name = face.name.name
+        # Initialize with empty names
+        names: list[str] = [""] * (n * n)
+
+        def _set_name(row: int, col: int, part_edge: "PartEdge") -> None:
+            names[row * n + col] = part_edge.color.name.lower()
+
+        if n >= 2:
+            for row, col, corner_attr in [
+                (0, 0, "corner_bottom_left"),
+                (0, n - 1, "corner_bottom_right"),
+                (n - 1, 0, "corner_top_left"),
+                (n - 1, n - 1, "corner_top_right"),
+            ]:
+                corner = getattr(face, corner_attr)
+                assert isinstance(corner, Corner)
+                edge_on_face = corner.slice.get_face_edge(face)
+                _set_name(row, col, edge_on_face)
+
+        if n >= 3:
+            edge_count = n - 2
+            for edge_attr, row, col_start, along_row in [
+                ("edge_bottom", 0, 1, True),
+                ("edge_top", n - 1, 1, True),
+                ("edge_left", 1, 0, False),
+                ("edge_right", 1, n - 1, False),
+            ]:
+                edge = getattr(face, edge_attr)
+                assert isinstance(edge, Edge)
+                for i in range(edge_count):
+                    edge_wing = edge.get_slice_by_ltr_index(face, i)
+                    edge_on_face = edge_wing.get_face_edge(face)
+                    if along_row:
+                        _set_name(row, col_start + i, edge_on_face)
+                    else:
+                        _set_name(row + i, col_start, edge_on_face)
+
+            center = face.center
+            if n < 4:
+                center_slice = center.get_slice((0, 0))
+                edge_on_face = center_slice.get_face_edge(face)
+                _set_name(1, 1, edge_on_face)
+            else:
+                center_n = center.n_slices
+                for cy in range(center_n):
+                    for cx in range(center_n):
+                        center_slice = center.get_slice((cy, cx))
+                        edge_on_face = center_slice.get_face_edge(face)
+                        _set_name(1 + cy, 1 + cx, edge_on_face)
+
+        result[face_name] = names
+    return result
+
+
 def apply_cube_colors(cube: "Cube", faces: dict[str, list[str]]) -> None:
     """Set sticker colors on a cube from face color name data.
 

@@ -126,6 +126,14 @@ class ClientSession:
                 has_history = bool(self._app.op.history())
                 self._fsm.send(FlowEvent.ANIM_DONE, has_redo=has_redo, has_history=has_history)
                 self.send_state()
+            elif self._fsm.state == FlowState.EDITING and self._edit_ok_pending:
+                # OK animation finished — exit edit mode
+                self._edit_ok_pending = False
+                self._edit_snapshot_redo = None
+                has_redo = bool(self._app.op.redo_queue())
+                has_history = bool(self._app.op.history())
+                self._fsm.send(FlowEvent.EXIT_EDIT, has_redo=has_redo, has_history=has_history)
+                self.send_state()
 
         am.set_on_queue_drained(_on_am_queue_drained)
 
@@ -139,6 +147,12 @@ class ClientSession:
 
         # Client count — set externally by SessionManager
         self._client_count: int = 0
+
+        # Edit mode state
+        self._edit_alg_text: str = ""  # remembered across open/close
+        self._edit_snapshot_history_len: int = 0
+        self._edit_snapshot_redo: list[Alg] | None = None
+        self._edit_ok_pending: bool = False  # exit editing when animations finish
 
     @property
     def app(self) -> "AbstractApp":
@@ -348,6 +362,9 @@ class ClientSession:
             solver_text=app.slv.name,
             move_count=op.count,
             error_text=app.error or "",
+            # Edit mode
+            edit_mode=fsm.state == FlowState.EDITING,
+            edit_alg_text=self._edit_alg_text,
             # Meta
             version=get_version(),
             client_count=self._client_count,
@@ -657,6 +674,24 @@ class ClientSession:
 
         elif msg_type == "console_unsubscribe":
             self._handle_console_unsubscribe()
+
+        elif msg_type == "parse_alg":
+            self._handle_parse_alg(data.get("text", ""))
+
+        elif msg_type == "enter_edit_mode":
+            self._handle_enter_edit_mode()
+
+        elif msg_type == "edit_play":
+            self._handle_edit_play(data.get("text", ""))
+
+        elif msg_type == "edit_apply":
+            self._handle_edit_apply()
+
+        elif msg_type == "edit_cancel":
+            self._handle_edit_cancel()
+
+        elif msg_type == "edit_ok":
+            self._handle_edit_ok(data.get("text", ""))
 
         elif msg_type == "resize":
             pass
@@ -1531,6 +1566,193 @@ class ClientSession:
     def show_popup(self, title: str, lines: list[str],
                    line_colors: list[tuple[int, int, int, int]] | None = None) -> None:
         pass
+
+    # -- Edit mode (algorithm editor) handlers --
+
+    def _handle_parse_alg(self, text: str) -> None:
+        """Validate algorithm text and return parse result to client."""
+        from cube.domain.algs._parser import parse_alg
+        from cube.domain.exceptions import InternalSWError
+
+        text = text.strip()
+        if not text:
+            self._send(json.dumps({"type": "parse_alg_result", "valid": False, "error": ""}))
+            return
+
+        try:
+            alg = parse_alg(text)
+            # Check that it actually contains moves (not just whitespace that parsed to empty)
+            moves = list(alg.flatten())
+            valid = len(moves) > 0
+            self._send(json.dumps({"type": "parse_alg_result", "valid": valid, "error": ""}))
+        except (InternalSWError, Exception) as e:
+            self._send(json.dumps({"type": "parse_alg_result", "valid": False, "error": str(e)}))
+
+    def _handle_enter_edit_mode(self) -> None:
+        """Enter algorithm editor mode — snapshot current cube state."""
+        if not self._fsm.send(FlowEvent.ENTER_EDIT):
+            self.send_state()
+            return
+
+        # Snapshot: remember history length and redo queue
+        op = self._app.op
+        self._edit_snapshot_history_len = len(op._history)
+        self._edit_snapshot_redo = list(op._redo_queue)
+        self.send_state()
+
+    def _restore_edit_snapshot(self) -> None:
+        """Restore cube to the snapshot taken when entering edit mode.
+
+        Undoes all moves added since the snapshot by calling op.undo()
+        without animation. This properly reverses Part rotations, unlike
+        apply_cube_colors which only repaints stickers.
+        """
+        op = self._app.op
+        # Cancel any in-flight animations first
+        self._animation_manager.cancel_animation()
+        # Undo all moves added since entering edit mode
+        target_len = self._edit_snapshot_history_len
+        while len(op._history) > target_len:
+            op.undo(animation=False)
+        # Restore the original redo queue
+        op._redo_queue.clear()
+        op._redo_queue.extend(self._edit_snapshot_redo or [])
+
+    def _handle_edit_play(self, text: str) -> None:
+        """Preview algorithm: restore to initial state, execute with animation if enabled."""
+        if self._fsm.state != FlowState.EDITING:
+            return
+
+        from cube.domain.algs._parser import parse_alg
+        from cube.domain.exceptions import InternalSWError
+
+        self._edit_alg_text = text
+        text = text.strip()
+        if not text:
+            # Empty text: just restore to initial state
+            self._restore_edit_snapshot()
+            self.send_state()
+            return
+
+        try:
+            alg = parse_alg(text)
+            moves = list(alg.flatten())
+            if not moves:
+                self._restore_edit_snapshot()
+                self.send_state()
+                return
+
+            # Restore to initial state first (always instant)
+            self._restore_edit_snapshot()
+
+            op = self._app.op
+            animate = op.animation_enabled
+
+            if animate:
+                # Send restored state so client shows initial state before animations
+                self.send_state()
+                # Execute with animation — AM queues and plays one at a time
+                for move in moves:
+                    op.play(move, animation=True)
+            else:
+                # Execute instantly
+                for move in moves:
+                    op.play(move, animation=False)
+                self.send_state()
+        except (InternalSWError, Exception) as e:
+            print(f"Edit play error: {e}", flush=True)
+            self._restore_edit_snapshot()
+            self.send_state()
+
+    def _handle_edit_apply(self) -> None:
+        """Make current cube state the new initial state (new snapshot)."""
+        if self._fsm.state != FlowState.EDITING:
+            return
+
+        op = self._app.op
+        self._edit_snapshot_history_len = len(op._history)
+        self._edit_snapshot_redo = list(op._redo_queue)
+        self.send_state()
+
+    def _handle_edit_cancel(self) -> None:
+        """Cancel editing: restore to initial state, exit edit mode."""
+        if self._fsm.state != FlowState.EDITING:
+            return
+
+        self._restore_edit_snapshot()
+        has_redo = bool(self._app.op.redo_queue())
+        has_history = bool(self._app.op.history())
+        self._fsm.send(FlowEvent.EXIT_EDIT, has_redo=has_redo, has_history=has_history)
+        self._edit_snapshot_redo = None
+        self.send_state()
+
+    def _handle_edit_ok(self, text: str) -> None:
+        """Apply algorithm with animation and exit edit mode.
+
+        Stays in EDITING while animations play. The on_queue_drained
+        callback auto-exits EDITING when all animations finish.
+        If animation is off, exits immediately.
+        """
+        if self._fsm.state != FlowState.EDITING:
+            return
+
+        from cube.domain.algs._parser import parse_alg
+        from cube.domain.exceptions import InternalSWError
+
+        self._edit_alg_text = text
+        text = text.strip()
+
+        if not text:
+            self._restore_edit_snapshot()
+            self._edit_snapshot_redo = None
+            has_redo = bool(self._app.op.redo_queue())
+            has_history = bool(self._app.op.history())
+            self._fsm.send(FlowEvent.EXIT_EDIT, has_redo=has_redo, has_history=has_history)
+            self.send_state()
+            return
+
+        try:
+            alg = parse_alg(text)
+            moves = list(alg.flatten())
+            if not moves:
+                self._restore_edit_snapshot()
+                self._edit_snapshot_redo = None
+                has_redo = bool(self._app.op.redo_queue())
+                has_history = bool(self._app.op.history())
+                self._fsm.send(FlowEvent.EXIT_EDIT, has_redo=has_redo, has_history=has_history)
+                self.send_state()
+                return
+
+            # Restore to initial state (always instant)
+            self._restore_edit_snapshot()
+
+            op = self._app.op
+
+            if op.animation_enabled:
+                # Play with animation, stay in EDITING — auto-exit on queue drained
+                self._edit_ok_pending = True
+                self.send_state()  # show restored state before animations
+                for move in moves:
+                    op.play(move, animation=True)
+            else:
+                # No animation: play instantly, exit immediately
+                for move in moves:
+                    op.play(move, animation=False)
+                self._edit_snapshot_redo = None
+                has_redo = bool(op.redo_queue())
+                has_history = bool(op.history())
+                self._fsm.send(FlowEvent.EXIT_EDIT, has_redo=has_redo, has_history=has_history)
+                self.send_state()
+        except (InternalSWError, Exception) as e:
+            print(f"Edit OK error: {e}", flush=True)
+            self._edit_ok_pending = False
+            self._restore_edit_snapshot()
+            self._edit_snapshot_redo = None
+            has_redo = bool(self._app.op.redo_queue())
+            has_history = bool(self._app.op.history())
+            self._fsm.send(FlowEvent.EXIT_EDIT, has_redo=has_redo, has_history=has_history)
+            self._app.set_error(f"Algorithm error: {e}")
+            self.send_state()
 
     # -- Paint mode handlers --
 

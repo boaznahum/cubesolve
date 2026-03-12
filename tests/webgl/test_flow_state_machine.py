@@ -198,6 +198,12 @@ class TestResetSession:
         assert fsm.send(FlowEvent.RESET_SESSION)
         assert fsm.state == FlowState.IDLE
 
+    def test_reset_session_from_editing(self, fsm: FlowStateMachine) -> None:
+        fsm.send(FlowEvent.ENTER_EDIT)
+        assert fsm.state == FlowState.EDITING
+        assert fsm.send(FlowEvent.RESET_SESSION)
+        assert fsm.state == FlowState.IDLE
+
     def test_reset_session_clears_metadata(self, fsm: FlowStateMachine) -> None:
         fsm.redo_source = "solver"
         fsm.redo_tainted = True
@@ -382,3 +388,97 @@ class TestTransitionListener:
         fsm.send_reconnect(has_redo=True)
         assert len(calls) == 1
         assert calls[0] == (FlowState.READY, FlowState.IDLE, FlowEvent.RECONNECT)
+
+
+# -- Edit mode tests --
+
+class TestEditMode:
+    """Test EDITING state transitions and gating."""
+
+    def test_idle_to_editing(self, fsm: FlowStateMachine) -> None:
+        assert fsm.send(FlowEvent.ENTER_EDIT)
+        assert fsm.state == FlowState.EDITING
+
+    def test_ready_to_editing(self, fsm: FlowStateMachine) -> None:
+        _advance_to_ready(fsm)
+        assert fsm.send(FlowEvent.ENTER_EDIT)
+        assert fsm.state == FlowState.EDITING
+
+    def test_editing_exit_to_idle(self, fsm: FlowStateMachine) -> None:
+        fsm.send(FlowEvent.ENTER_EDIT)
+        assert fsm.send(FlowEvent.EXIT_EDIT, has_redo=False, has_history=False)
+        assert fsm.state == FlowState.IDLE
+
+    def test_editing_exit_to_ready_with_redo(self, fsm: FlowStateMachine) -> None:
+        fsm.send(FlowEvent.ENTER_EDIT)
+        assert fsm.send(FlowEvent.EXIT_EDIT, has_redo=True, has_history=False)
+        assert fsm.state == FlowState.READY
+
+    def test_editing_exit_to_ready_with_history(self, fsm: FlowStateMachine) -> None:
+        fsm.send(FlowEvent.ENTER_EDIT)
+        assert fsm.send(FlowEvent.EXIT_EDIT, has_redo=False, has_history=True)
+        assert fsm.state == FlowState.READY
+
+    def test_editing_blocks_scramble(self, fsm: FlowStateMachine) -> None:
+        fsm.send(FlowEvent.ENTER_EDIT)
+        assert not fsm.send(FlowEvent.SCRAMBLE)
+        assert fsm.state == FlowState.EDITING
+
+    def test_editing_blocks_solve(self, fsm: FlowStateMachine) -> None:
+        fsm.send(FlowEvent.ENTER_EDIT)
+        assert not fsm.send(FlowEvent.SOLVE)
+        assert fsm.state == FlowState.EDITING
+
+    def test_editing_blocks_face_turn(self, fsm: FlowStateMachine) -> None:
+        fsm.send(FlowEvent.ENTER_EDIT)
+        assert not fsm.send(FlowEvent.FACE_TURN)
+        assert fsm.state == FlowState.EDITING
+
+    def test_editing_blocks_play_all(self, fsm: FlowStateMachine) -> None:
+        fsm.send(FlowEvent.ENTER_EDIT)
+        assert not fsm.send(FlowEvent.PLAY_ALL)
+        assert fsm.state == FlowState.EDITING
+
+    def test_editing_blocks_undo(self, fsm: FlowStateMachine) -> None:
+        fsm.send(FlowEvent.ENTER_EDIT)
+        assert not fsm.send(FlowEvent.UNDO)
+        assert fsm.state == FlowState.EDITING
+
+    def test_editing_allows_reset_session(self, fsm: FlowStateMachine) -> None:
+        fsm.send(FlowEvent.ENTER_EDIT)
+        assert fsm.send(FlowEvent.RESET_SESSION)
+        assert fsm.state == FlowState.IDLE
+
+    def test_editing_enter_edit_allowed_in_button_table(self, fsm: FlowStateMachine) -> None:
+        a = fsm.allowed_actions(has_redo=False, has_history=False)
+        assert a["enter_edit"] is True
+
+    def test_editing_enter_edit_blocked_during_editing(self, fsm: FlowStateMachine) -> None:
+        fsm.send(FlowEvent.ENTER_EDIT)
+        a = fsm.allowed_actions(has_redo=False, has_history=False)
+        assert a["enter_edit"] is False
+
+    def test_editing_blocks_all_cube_actions(self, fsm: FlowStateMachine) -> None:
+        """No cube manipulation actions should be allowed in EDITING."""
+        fsm.send(FlowEvent.ENTER_EDIT)
+        a = fsm.allowed_actions(has_redo=True, has_history=True)
+        assert a["scramble"] is False
+        assert a["solve"] is False
+        assert a["play_all"] is False
+        assert a["undo"] is False
+        assert a["face_turn"] is False
+        assert a["size_change"] is False
+        # But these should work
+        assert a["reset_session"] is True
+        assert a["speed_change"] is True
+
+    def test_full_edit_cycle(self, fsm: FlowStateMachine) -> None:
+        """Full cycle: IDLE → EDITING → EXIT → READY → PLAY_ALL."""
+        assert fsm.send(FlowEvent.ENTER_EDIT)
+        assert fsm.state == FlowState.EDITING
+        # Exit with redo (algorithm was enqueued)
+        assert fsm.send(FlowEvent.EXIT_EDIT, has_redo=True, has_history=False)
+        assert fsm.state == FlowState.READY
+        # Can now play the algorithm
+        assert fsm.send(FlowEvent.PLAY_ALL)
+        assert fsm.state == FlowState.PLAYING
