@@ -129,7 +129,7 @@ class WebglEventLoop(EventLoop):
 
         # WebSocket handler
         async def websocket_handler(request: web.Request) -> web.WebSocketResponse:
-            ws = web.WebSocketResponse()
+            ws = web.WebSocketResponse(heartbeat=25.0)
             await ws.prepare(request)
 
             session = None
