@@ -1385,12 +1385,34 @@ class ClientSession:
             return
 
         try:
-            from cube.presentation.gui.commands.concrete import NewSessionCommand, RotateCommand
+            from cube.presentation.gui.commands.concrete import (
+                NewSessionCommand, RotateCommand,
+                ScrambleCommand, ScrambleF9Command, ScrambleFromFileCommand,
+                UndoCommand, ResetCubeAndViewCommand,
+                SetSizeCommand, SizeIncCommand, SizeDecCommand,
+            )
 
-            # Gate face rotations by FSM — only allowed in IDLE/READY.
-            # Without this, keyboard shortcuts bypass the button disable logic.
+            # Gate cube-mutating commands by FSM — only allowed in IDLE/READY.
+            # Without this, keyboard shortcuts bypass the button disable logic
+            # and can corrupt solver state during replay.
             if isinstance(command, RotateCommand):
                 if not self._fsm.send(FlowEvent.FACE_TURN):
+                    self.send_state()
+                    return
+            elif isinstance(command, (ScrambleCommand, ScrambleF9Command, ScrambleFromFileCommand)):
+                if not self._fsm.send(FlowEvent.SCRAMBLE):
+                    self.send_state()
+                    return
+            elif isinstance(command, UndoCommand):
+                if not self._fsm.send(FlowEvent.UNDO):
+                    self.send_state()
+                    return
+            elif isinstance(command, ResetCubeAndViewCommand):
+                if not self._fsm.send(FlowEvent.RESET):
+                    self.send_state()
+                    return
+            elif isinstance(command, (SetSizeCommand, SizeIncCommand, SizeDecCommand)):
+                if not self._fsm.send(FlowEvent.SIZE_CHANGE):
                     self.send_state()
                     return
 
