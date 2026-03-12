@@ -241,9 +241,11 @@ export class CubeModel {
             // Create fixed marker group — child of cubeGroup (stays at position)
             if (fixedDescs.length > 0) {
                 const group = createMarkerGroup(fixedDescs, this.cellSize);
-                // Position and orient the group to match the sticker's location
-                group.position.copy(meshes[i].position);
-                group.quaternion.copy(meshes[i].quaternion);
+                // Use canonical position (not current mesh position which may be
+                // mid-animation after a face rotation, causing markers to jump)
+                const canonical = this._canonicalPose(faceName, meshes[i].userData.row, meshes[i].userData.col);
+                group.position.copy(canonical.position);
+                group.quaternion.copy(canonical.quaternion);
                 this.cubeGroup.add(group);
                 this.fixedMarkerGroups[faceName][i] = group;
             }
@@ -454,6 +456,41 @@ export class CubeModel {
                 this._buildShadowFace(faceName);
             }
         }
+    }
+
+    /**
+     * Compute the canonical (rest) position and quaternion for a sticker
+     * from its face definition and grid coordinates.  This is independent
+     * of the mesh's current transform, so it is safe to call mid-animation.
+     */
+    _canonicalPose(faceName, row, col) {
+        const def = FACE_DEFS[faceName];
+        const size = this.size;
+        const half = size * this.cellSize / 2;
+        const stickerDepth = this.cellSize * 0.45;
+        const STICKER_LIFT = 0.005;
+
+        const right = new THREE.Vector3(...def.right);
+        const up = new THREE.Vector3(...def.up);
+        const normal = new THREE.Vector3();
+        if (def.axis === 'x') normal.set(def.sign, 0, 0);
+        else if (def.axis === 'y') normal.set(0, def.sign, 0);
+        else normal.set(0, 0, def.sign);
+
+        const cx = (col + 0.5) * this.cellSize - half;
+        const cy = (row + 0.5) * this.cellSize - half;
+
+        const position = new THREE.Vector3();
+        position.addScaledVector(right, cx);
+        position.addScaledVector(up, cy);
+        position.addScaledVector(normal, half + STICKER_LIFT - stickerDepth);
+
+        const mat4 = new THREE.Matrix4();
+        mat4.makeBasis(right, up, normal);
+        const quaternion = new THREE.Quaternion();
+        quaternion.setFromRotationMatrix(mat4);
+
+        return { position, quaternion };
     }
 
     /**
