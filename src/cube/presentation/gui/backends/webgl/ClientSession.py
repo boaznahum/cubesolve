@@ -1745,11 +1745,14 @@ class ClientSession:
             op = self._app.op
 
             if op.animation_enabled:
-                # Play with animation, stay in EDITING — auto-exit on queue drained
-                self._edit_ok_pending = True
+                # Play with animation, stay in EDITING — auto-exit on queue drained.
+                # Set ok_pending AFTER queueing all moves, not before — the
+                # annotation system's AnnotationAlg can trigger _on_queue_drained
+                # prematurely (queue empties momentarily between annotation and move).
                 self.send_state()  # show restored state before animations
                 for move in moves:
                     op.play(move, animation=True)
+                self._edit_ok_pending = True
             else:
                 # No animation: play instantly, exit immediately
                 for move in moves:
