@@ -79,10 +79,11 @@ class OperatorProtocol(Protocol, metaclass=ABCMeta):
         - Query mode (_in_query_mode = True, skips texture updates)
         - Animation disabled
         - Auto-rollback: undoes all moves on exit
-        - If inside with_buffer(): flushes buffer first, disables buffering during query
         - Supports nesting
         """
+        ...
 
+    @property
     def annotation(self) -> "AnnotationProtocol":
         """Get the annotation object."""
         ...
