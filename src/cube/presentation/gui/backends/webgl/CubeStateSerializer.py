@@ -24,7 +24,7 @@ from cube.application.markers._complementary_colors import get_complementary_col
 from cube.application.markers._marker_creators import (
     RingMarker, FilledCircleMarker, CrossMarker, ArrowMarker,
     CheckmarkMarker, BoldCrossMarker, CharacterMarker,
-    BracketCornersMarker,
+    BracketCornersMarker, CrosshairMarker,
     color_float_to_255,
 )
 from cube.application.markers._outlined_circle_marker import OutlinedCircleMarker
@@ -363,6 +363,18 @@ def _serialize_marker(marker: _MC, face_color_float: _ColorF) -> dict[str, Any]:
             "radius": marker.radius_factor,
             "arm_length": marker.arm_length,
             "arm_thickness": marker.arm_thickness,
+            "height": marker.height_offset,
+            "z_order": marker.z_order,
+        }
+
+    if isinstance(marker, CrosshairMarker):
+        c = _resolve_marker_color(marker.color, marker.use_complementary_color, complementary)
+        return {
+            "type": "crosshair",
+            "color": list(color_float_to_255(c)),
+            "radius": marker.radius_factor,
+            "line_length": marker.line_length,
+            "line_thickness": marker.line_thickness,
             "height": marker.height_offset,
             "z_order": marker.z_order,
         }

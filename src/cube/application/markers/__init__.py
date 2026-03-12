@@ -17,10 +17,10 @@ Usage:
     factory = cube.sp.marker_factory
 
     # Add a moveable marker (follows piece during rotation)
-    manager.add_marker(part_edge, "c1", factory.c1(), moveable=True)
+    manager.add_marker(part_edge, "c1", factory.animation_moveable(), moveable=True)
 
     # Add a fixed position marker
-    manager.add_marker(part_edge, "c2", factory.c2(), moveable=False)
+    manager.add_marker(part_edge, "c2", factory.animation_fixed(), moveable=False)
 
     # Get all markers for rendering (deduplicated, sorted by z_order)
     markers = manager.get_markers(part_edge)
@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from cube.domain.model.PartEdge import PartEdge
 
 from ._complementary_colors import get_complementary_color
-from ._marker_creators import color_255_to_float, color_float_to_255, BracketCornersMarker
+from ._marker_creators import color_255_to_float, color_float_to_255, BracketCornersMarker, CrosshairMarker
 from ._marker_creator_protocol import MarkerCreator
 from ._marker_toolkit import MarkerToolkit
 from ._outlined_circle_marker import OutlinedCircleMarker
@@ -88,6 +88,7 @@ def get_markers_from_part_edge(part_edge: "PartEdge") -> list[MarkerCreator]:
 
 __all__ = [
     "BracketCornersMarker",
+    "CrosshairMarker",
     "IMarkerFactory",
     "IMarkerManager",
     "MarkerCreator",

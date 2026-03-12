@@ -7,7 +7,7 @@ from .IMarkerFactory import IMarkerFactory
 from ._marker_creator_protocol import MarkerCreator
 from ._marker_creators import (
     ArrowMarker,
-    BracketCornersMarker,
+    CrosshairMarker,
     color_255_to_float,
     BoldCrossMarker,
     CharacterMarker,
@@ -25,7 +25,7 @@ class MarkerFactory(IMarkerFactory):
     Implements IMarkerFactory protocol.
 
     This factory provides all standard markers used in the application:
-    - Animation markers: C0, C1, C2
+    - Animation markers: C0, animation_moveable, animation_fixed
     - Coordinate markers: ORIGIN, ON_X, ON_Y
     - Debug/sample markers
 
@@ -55,9 +55,9 @@ class MarkerFactory(IMarkerFactory):
             )
         return MarkerFactory._cache[key]
 
-    def c1(self) -> MarkerCreator:
-        """C1 marker - moved piece indicator."""
-        key = ("c1",)
+    def animation_moveable(self) -> MarkerCreator:
+        """Animation marker for the moved piece (filled circle)."""
+        key = ("animation_moveable",)
         if key not in MarkerFactory._cache:
             MarkerFactory._cache[key] = FilledCircleMarker(
                 radius_factor=0.6,
@@ -66,14 +66,14 @@ class MarkerFactory(IMarkerFactory):
             )
         return MarkerFactory._cache[key]
 
-    def c2(self) -> MarkerCreator:
-        """C2 marker - destination slot indicator (bracket corners)."""
-        key = ("c2",)
+    def animation_fixed(self) -> MarkerCreator:
+        """Animation marker for the destination slot (crosshair reticle)."""
+        key = ("animation_fixed",)
         if key not in MarkerFactory._cache:
-            MarkerFactory._cache[key] = BracketCornersMarker(
-                radius_factor=0.85,
-                arm_length=0.35,
-                arm_thickness=0.12,
+            MarkerFactory._cache[key] = CrosshairMarker(
+                radius_factor=0.55,
+                line_length=0.35,
+                line_thickness=0.08,
                 height_offset=0.15,
                 use_complementary_color=True,
             )

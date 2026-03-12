@@ -87,6 +87,7 @@ function _createMarkerMesh(desc, scale, zOff) {
         case 'character':     mesh = _character(desc, scale, zOff); break;
         case 'outlined_circle': mesh = _outlinedCircle(desc, scale, zOff); break;
         case 'bracket_corners': mesh = _bracketCorners(desc, scale, zOff); break;
+        case 'crosshair':     mesh = _crosshair(desc, scale, zOff); break;
         default:              mesh = null;
     }
     // Tag marker meshes with animation metadata for the render loop
@@ -296,6 +297,48 @@ function _bracketCorners(desc, scale, zOff) {
         const vMesh = new THREE.Mesh(vGeo, mat);
         vMesh.position.set(c.x + c.dx * armT / 2, c.y + c.dy * armLen / 2, zOff);
         group.add(vMesh);
+    }
+
+    return group;
+}
+
+// ── Crosshair / reticle (circle + 4 cross lines extending outward) ────
+
+function _crosshair(desc, scale, zOff) {
+    const r = (desc.radius || 0.55) * scale;
+    const lineLen = (desc.line_length || 0.35) * scale;
+    const lineT = (desc.line_thickness || 0.08) * scale;
+
+    const group = new THREE.Group();
+    const mat = _markerMat(desc.color);
+
+    // Central circle (ring) — thin ring at radius r
+    const ringThickness = lineT;
+    const innerR = Math.max(r - ringThickness, r * 0.7);
+    const ringGeo = new THREE.RingGeometry(innerR, r, 32);
+    const ring = new THREE.Mesh(ringGeo, mat);
+    ring.position.set(0, 0, zOff);
+    group.add(ring);
+
+    // Four cross lines extending outward from the circle edge
+    // Each line starts at distance r from center and extends outward by lineLen
+    const directions = [
+        { x: 1, y: 0 },   // right
+        { x: -1, y: 0 },  // left
+        { x: 0, y: 1 },   // up
+        { x: 0, y: -1 },  // down
+    ];
+
+    for (const dir of directions) {
+        const geo = new THREE.PlaneGeometry(
+            dir.x !== 0 ? lineLen : lineT,
+            dir.y !== 0 ? lineLen : lineT
+        );
+        const mesh = new THREE.Mesh(geo, mat);
+        // Position at midpoint of the line segment (from r to r+lineLen)
+        const midDist = r + lineLen / 2;
+        mesh.position.set(dir.x * midDist, dir.y * midDist, zOff);
+        group.add(mesh);
     }
 
     return group;

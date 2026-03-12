@@ -38,10 +38,10 @@ class MarkerManager(IMarkerManager):
         manager = MarkerManager()
 
         # Add a moveable marker (follows piece during rotation)
-        manager.add_marker(part_edge, "c1", MarkerFactory.c1(), moveable=True)
+        manager.add_marker(part_edge, "c1", MarkerFactory.animation_moveable(), moveable=True)
 
         # Add a fixed marker (stays at position)
-        manager.add_marker(part_edge, "c2", MarkerFactory.c2(), moveable=False)
+        manager.add_marker(part_edge, "c2", MarkerFactory.animation_fixed(), moveable=False)
 
         # Get all markers for rendering (deduplicated, sorted)
         markers = manager.get_markers(part_edge)

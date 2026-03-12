@@ -43,10 +43,10 @@ class NoopMarkerFactory(IMarkerFactory):
     def c0(self) -> MarkerCreator:
         return _NOOP
 
-    def c1(self) -> MarkerCreator:
+    def animation_moveable(self) -> MarkerCreator:
         return _NOOP
 
-    def c2(self) -> MarkerCreator:
+    def animation_fixed(self) -> MarkerCreator:
         return _NOOP
 
     def at_risk(self) -> MarkerCreator:

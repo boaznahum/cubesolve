@@ -259,9 +259,9 @@ class OpAnnotation(AnnotationProtocol):
             if custom_marker:
                 marker = custom_marker
             elif by_position:
-                marker = mf.c2()  # Destination marker (stays at position)
+                marker = mf.animation_fixed()  # Destination marker (stays at position)
             else:
-                marker = mf.c1()  # Moved marker (follows piece)
+                marker = mf.animation_moveable()  # Moved marker (follows piece)
 
             edges.append((_e, by_position, marker))
 

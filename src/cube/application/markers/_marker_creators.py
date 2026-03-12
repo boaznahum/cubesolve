@@ -183,3 +183,29 @@ class BracketCornersMarker(MarkerCreator):
         # Fallback: draw as a ring on non-WebGL backends
         inner = self.radius_factor * 0.7
         toolkit.draw_ring(inner, self.radius_factor, c, self.height_offset)
+
+
+@dataclass(frozen=True)
+class CrosshairMarker(MarkerCreator):
+    """Crosshair/reticle marker — circle with four cross lines extending outward.
+
+    Visual metaphor: a targeting reticle, signaling "target destination".
+    The circle has a gap at each cardinal direction where the cross lines extend.
+    """
+
+    color: ColorRGB | None = None
+    use_complementary_color: bool = False
+    radius_factor: float = 0.55
+    line_length: float = 0.35
+    line_thickness: float = 0.08
+    height_offset: float = 0.15
+    z_order: int = 0
+
+    def get_z_order(self) -> int:
+        return self.z_order
+
+    def draw(self, toolkit: "MarkerToolkit") -> None:
+        c = _resolve_color(self.color, self.use_complementary_color, toolkit)
+        # Fallback: draw as a ring on non-WebGL backends
+        inner = self.radius_factor * 0.7
+        toolkit.draw_ring(inner, self.radius_factor, c, self.height_offset)

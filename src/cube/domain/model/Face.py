@@ -215,8 +215,8 @@ class Face(SuperElement, Hashable, Colorable):
         for i in range(n):
             if sample_markers:
                 # Sample markers for debugging: C1 on left edge, C2 on right edge
-                mm.add_marker(self._edge_left.get_slice(i).get_face_edge(self), f"sample_c1_{i}", mf.c1(), moveable=True)
-                mm.add_marker(self._edge_right.get_slice(i).get_face_edge(self), f"sample_c2_{i}", mf.c2(), moveable=False)
+                mm.add_marker(self._edge_left.get_slice(i).get_face_edge(self), f"sample_c1_{i}", mf.animation_moveable(), moveable=True)
+                mm.add_marker(self._edge_right.get_slice(i).get_face_edge(self), f"sample_c2_{i}", mf.animation_fixed(), moveable=False)
 
             self._edge_left.get_slice(i).get_face_edge(self).fixed_attributes["cw"] = i
             self._edge_top.get_slice(i).get_face_edge(self).fixed_attributes["cw"] = i

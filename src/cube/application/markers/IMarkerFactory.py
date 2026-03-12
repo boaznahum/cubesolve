@@ -25,12 +25,12 @@ class IMarkerFactory(Protocol):
         """C0 marker - tracker anchor indicator."""
         ...
 
-    def c1(self) -> MarkerCreator:
-        """C1 marker - moved piece indicator."""
+    def animation_moveable(self) -> MarkerCreator:
+        """Animation marker for the moved piece (follows piece during rotation)."""
         ...
 
-    def c2(self) -> MarkerCreator:
-        """C2 marker - destination slot indicator."""
+    def animation_fixed(self) -> MarkerCreator:
+        """Animation marker for the destination slot (stays at target position)."""
         ...
 
     def at_risk(self) -> MarkerCreator:

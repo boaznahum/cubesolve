@@ -149,7 +149,7 @@ mm = cube.sp.marker_manager
 mf = cube.sp.marker_factory
 
 # Add animation markers with name
-mm.add_marker(part_edge, "c1", mf.c1(), moveable=True)
+mm.add_marker(part_edge, "c1", mf.animation_moveable(), moveable=True)
 
 # Add coordinate markers (fixed)
 mm.add_fixed_marker(corner_edge, "ltr_origin", mf.ltr_origin())
