@@ -95,6 +95,9 @@ class ClientSession:
         from cube.presentation.gui.backends.webgl.WebglAnimationManager import WebglAnimationManager
         am = WebglAnimationManager(self._app.vs, self._app.op)
         self._app.enable_animation(am)
+        # Rebuild cube so Face.finish_init() runs with the real MarkerManager
+        # (the initial build in _App.__init__ used NoopMarkerManager)
+        self._app.cube.reset()
         am.set_event_loop(self._event_loop)
         am.set_window(self)  # type: ignore[arg-type]
         am.set_web_window(self)

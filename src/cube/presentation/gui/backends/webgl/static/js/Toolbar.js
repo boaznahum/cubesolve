@@ -286,6 +286,14 @@ export class Toolbar {
             });
         });
 
+        // New session button (nuclear reset — full page reload with fresh session)
+        const btnNewSession = document.getElementById('btn-new-session');
+        if (btnNewSession) {
+            btnNewSession.addEventListener('click', () => {
+                window.location.href = '/?new';
+            });
+        }
+
         // View reset button (client-side only — resets OrbitControls camera)
         const btnViewReset = document.getElementById('btn-view-reset');
         if (btnViewReset) {
