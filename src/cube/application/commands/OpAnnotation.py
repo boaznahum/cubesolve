@@ -12,7 +12,7 @@ from typing import (
     TypeAlias,
 )
 
-from cube.application.exceptions.app_exceptions import InternalSWError
+from cube.application.exceptions.app_exceptions import InternalSWError, OpAborted
 from cube.application.markers._marker_creator_protocol import MarkerCreator
 from cube.domain.algs.Algs import Algs
 from cube.domain.model import Corner, Edge, Part, PartColorsID, PartEdge, PartSlice
@@ -132,10 +132,13 @@ class OpAnnotation(AnnotationProtocol):
 
             # Context finished — solver moved piece to target.
             # Play marker meet animation while markers are still present.
-            # Wrapped in try/except: if operator is aborting, play() raises
-            # OpAborted — we must not let that skip marker cleanup.
+            # If operator is aborting, play() raises OpAborted — save it
+            # so marker cleanup still runs, then re-raise after.
+            _saved_abort: BaseException | None = None
             try:
                 op.play(Algs.AM)
+            except OpAborted as _abort_exc:
+                _saved_abort = _abort_exc
             except Exception:
                 pass
 
@@ -186,6 +189,10 @@ class OpAnnotation(AnnotationProtocol):
                     del e.moveable_attributes[key]
 
             op.play(Algs.AN)
+
+            # Re-raise OpAborted after cleanup so the solver stops
+            if _saved_abort is not None:
+                raise _saved_abort
 
     def annotate(self, *elements: Tuple[SupportsAnnotation, AnnWhat],
                  additional_markers: list[Tuple[SupportsAnnotation, AnnWhat, Callable[[], MarkerCreator]]] | None = None,

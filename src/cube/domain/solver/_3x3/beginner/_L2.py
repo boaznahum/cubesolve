@@ -70,8 +70,12 @@ class L2(SolverHelper):
             self.debug(f"L2-C0. {st.position} matches")
             return
 
-        with self.ann.annotate((edge_id, AnnWhat.Moved), (self.cube.front.edge_top, AnnWhat.FixedPosition),
-                               h2=lambda: f"Bring {st.actual.name_n_colors} to FU"):
+
+        cube = self.cube
+
+        # at this point we still don't know where target is, how do we figure if will come to fron right or front left ?
+        with self.ann.annotate((edge_id, AnnWhat.Moved), (cube.fr, AnnWhat.FixedPosition), (cube.fl, AnnWhat.FixedPosition),
+                               h2=lambda: f"Bring {st.actual.name_n_colors} to {cube.fr.name} / {cube.fl.name}"):
             self.__solve_edge(st)
 
     def __solve_edge(self, st: EdgeTracker):
@@ -79,9 +83,7 @@ class L2(SolverHelper):
         up: Face = self.cube.up
         down: Face = up.opposite
 
-        if st.actual.on_face(down):
-            print()
-
+        # it cannot be on down because L1 is solved and we bring it down
         assert not st.actual.on_face(down)
 
         if not st.actual.on_face(up):
