@@ -16,6 +16,7 @@ Live at **[cubesolve.fly.dev](https://cubesolve.fly.dev/)**
   - [Drag-to-Turn](#drag-to-turn)
   - [Camera Controls](#camera-controls)
   - [Paint Mode](#paint-mode)
+  - [Algorithm Editor](#algorithm-editor)
   - [History Panel](#history-panel)
   - [Shadow Faces (LDB)](#shadow-faces-ldb)
   - [Assist Mode](#assist-mode)
@@ -189,6 +190,31 @@ The **Apply** button changes color to show status:
 - Press **Escape** to cancel (on keyboard)
 
 The history panel is hidden during paint mode to give more space.
+
+---
+
+### Algorithm Editor
+
+The **⌨ (Keyboard)** button opens an algorithm text editor where you can type cube notation directly.
+
+#### How to Use
+
+1. Tap the **⌨** button on the toolbar
+2. Type an algorithm in standard notation (e.g., `R U R' U'`, `F2 L D'`)
+3. The text is validated in real-time — **Play** and **OK** buttons turn green when valid, red when invalid
+
+#### Buttons
+
+| Button | What it does |
+|--------|-------------|
+| **Play** | Restores to initial state and executes the algorithm (preview) |
+| **Apply** | Makes the current cube state the new initial state |
+| **Cancel** | Restores to initial state and closes the editor |
+| **OK** | Accepts the result and closes the editor (with animation if not already previewed) |
+
+- **Enter** key triggers Play (preview)
+- **Escape** key triggers Cancel
+- The editor remembers your text between open/close
 
 ---
 

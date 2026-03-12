@@ -130,6 +130,7 @@ const SECTIONS = [
             { name: 'Paint (🎨)', desc: 'Set sticker colors to match your physical cube' },
             { name: '🔊 Sound', desc: 'Toggle mechanical cube-turning sound effects' },
             { name: 'Spd dropdown', desc: 'Control animation speed (0=slow, 7=fast)' },
+            { name: 'Editor (⌨)', desc: 'Type algorithms directly (e.g. R U R\' U\') — Play to preview, OK to accept' },
             { name: 'Copy (📋)', desc: 'Copy executed moves to clipboard (icon in History panel header)' },
         ],
     },
