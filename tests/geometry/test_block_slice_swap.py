@@ -262,11 +262,9 @@ class TestSliceSwapSixBlocks:
 class TestSliceSwapValid:
     """Test that validity checking works correctly."""
 
-    @pytest.mark.parametrize("cube_size", [5, 6, 7])
+    @pytest.mark.parametrize("cube_size", [5, 7])
     def test_center_block_invalid_for_odd(self, cube_size: int):
         """On odd cubes, the center cell cannot be swapped (invariant under rotation)."""
-        if cube_size % 2 == 0:
-            pytest.skip("Even cubes have no single center")
 
         app = AbstractApp.create_app(cube_size)
         helper = _create_helper(app)
