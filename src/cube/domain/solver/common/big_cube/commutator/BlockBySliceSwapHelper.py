@@ -525,28 +525,23 @@ class BlockBySliceSwapHelper(SolverHelper):
 
 
 def get_largest_blocks_containing_point(n: int, point: Point) -> list[Block]:
-    """Return the largest valid blocks that contain the given point.
+    """Return the largest valid blocks starting from the given point.
 
-    Based on the "doesn't cross the middle" rule: a block is valid if it
-    doesn't cross the middle in at least one direction.
+    Given point (r,c) as the top-left corner, extends down-right as far as
+    possible while staying valid (not crossing the middle in at least one
+    direction after 180° rotation).
 
-    For 180° rotation, the block's range [a, b] must not overlap with
-    [n-1-b, n-1-a]. This means b < (n-1)/2 or a > (n-1)/2, i.e.:
-        lower half: [0, lower_max]  where lower_max = (n-2) // 2
-        upper half: [upper_min, n-1] where upper_min = (n+1) // 2
+    For 180° rotation, the range [a, b] must not overlap with [n-1-b, n-1-a]:
+        lower half boundary: lower_max = (n-2) // 2
+        upper half boundary: upper_min = (n+1) // 2
 
-    For even n: lower_max = n/2 - 1, upper_min = n/2 (halves touch).
-    For odd n:  lower_max = mid - 1, upper_min = mid + 1 (middle excluded).
+    Returns up to 2 blocks starting from (r,c):
+        1. Row-safe: rows constrained to the half containing r, cols extend to n-1
+        2. Col-safe: cols constrained to the half containing c, rows extend to n-1
 
-    The 4 maximal half-face blocks:
-        1. Bottom half, full width: Block((0,0), (lower_max, n-1))
-        2. Top half, full width:    Block((upper_min, 0), (n-1, n-1))
-        3. Left half, full height:  Block((0,0), (n-1, lower_max))
-        4. Right half, full height: Block((0, upper_min), (n-1, n-1))
-
-    Returns those that contain the point, sorted by size descending.
-    On odd cubes, points on the middle row/col may have fewer blocks,
-    and the center point (mid, mid) has none (it's always invalid).
+    Sorted by size descending.
+    On odd cubes, if r or c is on the middle row/col, that direction yields
+    no block. The center point (mid, mid) returns empty.
     """
     lower_max = (n - 2) // 2  # last row/col of lower half
     upper_min = (n + 1) // 2  # first row/col of upper half
@@ -554,26 +549,37 @@ def get_largest_blocks_containing_point(n: int, point: Point) -> list[Block]:
 
     candidates: list[Block] = []
 
-    # Bottom half (rows 0..lower_max), full width
+    # Row-safe block: rows stay within half, cols extend to n-1
     if r <= lower_max:
-        candidates.append(Block(Point(0, 0), Point(lower_max, n - 1)))
+        # r is in lower half → rows r..lower_max, cols c..n-1
+        candidates.append(Block(Point(r, c), Point(lower_max, n - 1)))
+    elif r >= upper_min:
+        # r is in upper half → rows r..n-1, cols c..n-1
+        candidates.append(Block(Point(r, c), Point(n - 1, n - 1)))
+    # else: r is on the middle (odd cube) — no row-safe block
 
-    # Top half (rows upper_min..n-1), full width
-    if r >= upper_min:
-        candidates.append(Block(Point(upper_min, 0), Point(n - 1, n - 1)))
-
-    # Left half (cols 0..lower_max), full height
+    # Col-safe block: cols stay within half, rows extend to n-1
     if c <= lower_max:
-        candidates.append(Block(Point(0, 0), Point(n - 1, lower_max)))
+        # c is in left half → rows r..n-1, cols c..lower_max
+        candidates.append(Block(Point(r, c), Point(n - 1, lower_max)))
+    elif c >= upper_min:
+        # c is in right half → rows r..n-1, cols c..n-1
+        candidates.append(Block(Point(r, c), Point(n - 1, n - 1)))
+    # else: c is on the middle (odd cube) — no col-safe block
 
-    # Right half (cols upper_min..n-1), full height
-    if c >= upper_min:
-        candidates.append(Block(Point(0, upper_min), Point(n - 1, n - 1)))
+    # Deduplicate (both may produce the same block when r >= upper_min and c >= upper_min)
+    seen: set[tuple[int, int, int, int]] = set()
+    unique: list[Block] = []
+    for b in candidates:
+        key = (b.start.row, b.start.col, b.end.row, b.end.col)
+        if key not in seen:
+            seen.add(key)
+            unique.append(b)
 
     # Sort by size descending
-    candidates.sort(key=lambda b: b.size, reverse=True)
+    unique.sort(key=lambda b: b.size, reverse=True)
 
-    return candidates
+    return unique
 
 
 def _1d_intersect(range_1: tuple[int, int], range_2: tuple[int, int]) -> bool:

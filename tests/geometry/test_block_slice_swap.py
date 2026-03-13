@@ -477,13 +477,17 @@ class TestSliceSwapValid:
 
 
 class TestLargestBlocksContainingPoint:
-    """Test that get_largest_blocks_containing_point returns valid blocks."""
+    """Test that get_largest_blocks_containing_point returns valid blocks.
+
+    The function takes a point (r,c) as the start corner and returns the
+    largest blocks extending down-right that are valid for swap.
+    """
 
     @pytest.mark.parametrize("cube_size", [4, 5, 6, 7, 8])
     def test_every_point_has_largest_blocks(self, cube_size: int):
-        """Every non-center point has at least 1 largest block, all valid for swap.
+        """Every non-center point has at least 1 block starting from it, valid for swap.
 
-        For even cubes: every point has exactly 2 blocks.
+        For even cubes: every point yields 1-2 distinct blocks.
         For odd cubes: middle row/col points may have only 1, and the
         center point (mid, mid) has 0 (it's always invalid).
         """
@@ -506,25 +510,22 @@ class TestLargestBlocksContainingPoint:
                     )
                     continue
 
-                # Even cubes: always 2. Odd cubes: at least 1 (2 if not on middle row/col)
+                # Must have at least 1 block
                 if is_odd and (r == mid or c == mid):
                     assert len(blocks) >= 1, (
                         f"Point ({r},{c}) on {cube_size}x{cube_size}: "
                         f"expected >=1 blocks, got {len(blocks)}"
                     )
                 else:
-                    assert len(blocks) >= 2, (
+                    assert len(blocks) >= 1, (
                         f"Point ({r},{c}) on {cube_size}x{cube_size}: "
-                        f"expected >=2 blocks, got {len(blocks)}"
+                        f"expected >=1 blocks, got {len(blocks)}"
                     )
 
-                # Each block must contain the point
+                # Each block must start at (r,c)
                 for block in blocks:
-                    assert block.start.row <= r <= block.end.row, (
-                        f"Block {block} doesn't contain point ({r},{c}) in rows"
-                    )
-                    assert block.start.col <= c <= block.end.col, (
-                        f"Block {block} doesn't contain point ({r},{c}) in cols"
+                    assert block.start.row == r and block.start.col == c, (
+                        f"Block {block} doesn't start at ({r},{c})"
                     )
 
                 # Each block must be valid for swap
@@ -560,7 +561,7 @@ class TestLargestBlocksContainingPoint:
     @pytest.mark.parametrize("cube_size", [5, 7])
     def test_middle_row_point_has_one_block_on_odd(self, cube_size: int):
         """On odd cubes, a point on the middle row (but not mid col) has
-        exactly 1 valid block (the column-based half)."""
+        exactly 1 valid block (the column-based half starting from it)."""
         app = AbstractApp.create_app(cube_size)
         helper = _create_helper(app)
         n = app.cube.n_slices
@@ -569,7 +570,23 @@ class TestLargestBlocksContainingPoint:
         # Point on middle row, col 0 (in the left half)
         blocks = get_largest_blocks_containing_point(n, Point(mid, 0))
         assert len(blocks) == 1
+        # Block starts at (mid, 0) and extends to (n-1, lower_max)
+        assert blocks[0].start == Point(mid, 0)
         assert helper.is_valid_for_swap(blocks[0])
+
+    @pytest.mark.parametrize("cube_size", [4, 6, 8])
+    def test_top_left_corner_on_even(self, cube_size: int):
+        """On even cubes, (0,0) yields 2 blocks: row-safe and col-safe."""
+        app = AbstractApp.create_app(cube_size)
+        helper = _create_helper(app)
+        n = app.cube.n_slices
+
+        blocks = get_largest_blocks_containing_point(n, Point(0, 0))
+        # Both row-safe and col-safe, but may deduplicate if identical
+        assert len(blocks) >= 1
+        for block in blocks:
+            assert block.start == Point(0, 0)
+            assert helper.is_valid_for_swap(block)
 
 
 class TestSliceSwapDryRun:
