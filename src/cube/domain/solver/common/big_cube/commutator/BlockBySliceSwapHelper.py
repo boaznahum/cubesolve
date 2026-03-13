@@ -81,16 +81,19 @@ class BlockBySliceSwapHelper(SolverHelper):
     def is_valid_for_swap(self, target_block: Block) -> bool:
         """Check if a target block can be swapped (no self-intersection).
 
-        A block is valid if at least one rotation (90° CW, 90° CCW, or 180°)
+        A block is valid if at least one rotation (90° CW or 180°)
         doesn't cause the block to overlap with itself on the slice-cut axis.
 
         For the slice swap, we need the block not to overlap with its rotated
         image on the axis perpendicular to the slices.
+
+        Note: 90° CCW is provably equivalent to 90° CW for self-intersection:
+        if CW overlaps on both axes, CCW must also overlap on both axes.
         """
         n = self.n_slices
         block = target_block.normalize
 
-        for rot_n in [1, -1, 2]:
+        for rot_n in [1, 2]:
             rotated = block.rotate_clockwise(n, rot_n % 4)
             # Check if rows don't overlap (for vertical slice case)
             r1, r2 = block.start.row, block.end.row
