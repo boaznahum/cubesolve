@@ -98,14 +98,13 @@ def _read_block_markers(
 # Tests
 # =============================================================================
 
-# Representative face pairs for testing (adjacent and opposite)
+# All 30 source/target face pair combinations (6 faces × 5 sources each)
+_ALL_FACES = [FaceName.F, FaceName.B, FaceName.U, FaceName.D, FaceName.L, FaceName.R]
 _FACE_PAIRS = [
-    (FaceName.U, FaceName.F),  # Adjacent: Up -> Front
-    (FaceName.R, FaceName.F),  # Adjacent: Right -> Front
-    (FaceName.D, FaceName.F),  # Adjacent: Down -> Front
-    (FaceName.L, FaceName.F),  # Adjacent: Left -> Front
-    (FaceName.U, FaceName.R),  # Adjacent: Up -> Right
-    (FaceName.B, FaceName.F),  # Opposite: Back -> Front (two slice options)
+    (source, target)
+    for target in _ALL_FACES
+    for source in _ALL_FACES
+    if source != target
 ]
 
 
