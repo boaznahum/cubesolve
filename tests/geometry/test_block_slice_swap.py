@@ -314,13 +314,18 @@ def _get_adjacent(face: FaceName) -> tuple[FaceName, ...]:
 
 
 def _full_slice_test_cases() -> list[tuple[int, FaceName, FaceName, Block]]:
-    """Generate all (cube_size, target, source, block) for full-slice tests."""
+    """Generate all (cube_size, target, source, block) for full-slice tests.
+
+    30 face pairs (6 targets × 5 sources) per cube size.
+    """
     cases = []
     for cube_size in [4, 5, 6, 7]:
         n = cube_size - 2  # n_slices
         blocks = _get_full_slice_blocks(n)
         for target_fn in _ALL_FACES:
-            for source_fn in _get_adjacent(target_fn):
+            for source_fn in _ALL_FACES:
+                if source_fn == target_fn:
+                    continue
                 for block in blocks:
                     cases.append((cube_size, target_fn, source_fn, block))
     return cases
