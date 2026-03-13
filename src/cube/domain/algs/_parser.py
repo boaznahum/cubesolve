@@ -31,6 +31,10 @@ def parse_alg(s: str, *, compat_3x3: bool = False) -> _Alg:
             When False (default), bare "M" returns MiddleSliceAlg (single middle slice).
     """
 
+    # Normalize Unicode quotes to ASCII apostrophe (common when pasting from
+    # rich-text sources: right single quote U+2019, prime U+2032, etc.)
+    s = s.replace('\u2019', "'").replace('\u2018', "'").replace('\u2032', "'").replace('\u02BC', "'")
+
     # We capture, so we get the splitters two, such as '(' ')', we need to ignore the spaces
     # Empty matches for the pattern split the string only when not adjacent to a previous empty match.
     # https://docs.python.org/3/library/re.html#re.split
