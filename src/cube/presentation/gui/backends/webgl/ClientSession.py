@@ -1584,11 +1584,10 @@ class ClientSession:
             return
 
         try:
-            alg = parse_alg(text)
-            # Check that it actually contains moves (not just whitespace that parsed to empty)
-            moves = list(alg.flatten())
-            valid = len(moves) > 0
-            self._send(json.dumps({"type": "parse_alg_result", "valid": valid, "error": ""}))
+            parse_alg(text)
+            # If parse_alg succeeds, the algorithm is valid (even if it reduces
+            # to identity, e.g. U4, U8, U20 — these are valid no-op algorithms)
+            self._send(json.dumps({"type": "parse_alg_result", "valid": True, "error": ""}))
         except (InternalSWError, Exception) as e:
             self._send(json.dumps({"type": "parse_alg_result", "valid": False, "error": str(e)}))
 
