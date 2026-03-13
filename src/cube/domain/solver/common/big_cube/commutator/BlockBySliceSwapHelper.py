@@ -115,8 +115,15 @@ class BlockBySliceSwapHelper(SolverHelper):
     ) -> list[SliceSwapResult]:
         """Return all valid slice swap combinations (dry run).
 
-        Tries all valid rotation types and slice types for the given
+        Tries all 4 combinations (H/V slice × 180° rotation) for the given
         source/target face pair and target block.
+
+        The 4 combinations come from:
+        - Direct slice + 180° rotation (no setup)
+        - Setup 90° CW + 180° rotation (converts H↔V strip direction)
+
+        When the slice is horizontal on the target face, a 90° CW setup of the
+        target face effectively converts it to a vertical strip, and vice versa.
 
         Returns:
             List of SliceSwapResult with geometry computed but not executed.
@@ -133,13 +140,16 @@ class BlockBySliceSwapHelper(SolverHelper):
             slice_name = trans_result.slice_algorithm.whole_slice_alg.slice_name
             slice_n = trans_result.slice_algorithm.n  # direction multiplier
 
-            for rotation_type in [2]:  # Only 180° — clean 3-pair swap
-                result = self._try_combination(
-                    source_face, target_face, target_block,
-                    slice_name, slice_n, rotation_type, trans_result,
-                )
-                if result is not None:
-                    results.append(result)
+            # Try all 4 combinations: 2 rotation types × 2 setup options
+            for setup_rotation in [0, 1]:  # 0=no setup, 1=90° CW setup
+                for rotation_type in [2]:  # 180° — clean 3-pair swap
+                    result = self._try_combination(
+                        source_face, target_face, target_block,
+                        slice_name, slice_n, rotation_type, trans_result,
+                        setup_rotation=setup_rotation,
+                    )
+                    if result is not None:
+                        results.append(result)
 
         return results
 
@@ -178,7 +188,7 @@ class BlockBySliceSwapHelper(SolverHelper):
                 )
             result = combinations[0]
         else:
-            # Use specified rotation
+            # Use specified rotation — try with and without setup
             trans_results = Face2FaceTranslator.translate_source_from_target(
                 target_face, source_face, target_block.start
             )
@@ -186,10 +196,14 @@ class BlockBySliceSwapHelper(SolverHelper):
             for trans_result in trans_results:
                 slice_name = trans_result.slice_algorithm.whole_slice_alg.slice_name
                 slice_n = trans_result.slice_algorithm.n
-                result = self._try_combination(
-                    source_face, target_face, target_block,
-                    slice_name, slice_n, rotation_type, trans_result,
-                )
+                for setup_rotation in [0, 1]:
+                    result = self._try_combination(
+                        source_face, target_face, target_block,
+                        slice_name, slice_n, rotation_type, trans_result,
+                        setup_rotation=setup_rotation,
+                    )
+                    if result is not None:
+                        break
                 if result is not None:
                     break
             if result is None:
@@ -211,8 +225,13 @@ class BlockBySliceSwapHelper(SolverHelper):
         slice_n: int,
         rotation_type: int,
         trans_result: FaceTranslationResult,
+        setup_rotation: int = 0,
     ) -> SliceSwapResult | None:
         """Try a specific slice + rotation combination.
+
+        Args:
+            setup_rotation: 0 = no setup, 1 = 90° CW pre-rotation of target face.
+                           A setup converts a horizontal strip to vertical and vice versa.
 
         Returns SliceSwapResult if valid, None if self-intersection.
         """
@@ -223,18 +242,24 @@ class BlockBySliceSwapHelper(SolverHelper):
         slice_layout = cube.layout.get_slice(slice_name)
         cuts_rows = slice_layout.does_slice_cut_rows_or_columns(target_face.name) == CLGColRow.ROW
 
-        # Rotate the target block
+        # Apply setup rotation to get the effective block position
+        if setup_rotation:
+            effective_block = target_block.rotate_clockwise(n, setup_rotation)
+        else:
+            effective_block = target_block
+
+        # Rotate the effective block by the face rotation
         rot_n = rotation_type % 4  # Normalize: 2 stays 2, 1 stays 1, -1 becomes 3
-        rotated_block = target_block.rotate_clockwise(n, rot_n)
+        rotated_block = effective_block.rotate_clockwise(n, rot_n)
 
         # Check self-intersection on the slice-cut axis
         if cuts_rows:
             # Slice cuts rows (vertical on face), so we check column overlap
-            t_range = (target_block.start.col, target_block.end.col)
+            t_range = (effective_block.start.col, effective_block.end.col)
             r_range = (rotated_block.start.col, rotated_block.end.col)
         else:
             # Slice cuts columns (horizontal on face), so we check row overlap
-            t_range = (target_block.start.row, target_block.end.row)
+            t_range = (effective_block.start.row, effective_block.end.row)
             r_range = (rotated_block.start.row, rotated_block.end.row)
 
         if _1d_intersect(t_range, r_range):
@@ -244,77 +269,22 @@ class BlockBySliceSwapHelper(SolverHelper):
         # slices as the original. A 90° rotation of a rectangular block swaps
         # dimensions, changing the slice count — reject in that case.
         if cuts_rows:
-            orig_slice_count = abs(target_block.end.col - target_block.start.col) + 1
+            orig_slice_count = abs(effective_block.end.col - effective_block.start.col) + 1
             rot_slice_count = abs(rotated_block.end.col - rotated_block.start.col) + 1
         else:
-            orig_slice_count = abs(target_block.end.row - target_block.start.row) + 1
+            orig_slice_count = abs(effective_block.end.row - effective_block.start.row) + 1
             rot_slice_count = abs(rotated_block.end.row - rotated_block.start.row) + 1
 
         if orig_slice_count != rot_slice_count:
             return None  # Dimension mismatch after rotation
 
-        # Compute all 6 blocks
+        # Compute all 6 blocks in SETUP coordinates (effective block positions)
+        target_prefix, target_suffix = self._compute_strip_blocks(
+            effective_block, n, cuts_rows
+        )
 
-        # The "strip" on the target face covered by the slices
-        # For vertical slices (cuts_rows): full row range 0..n-1, columns c1..c2
-        # For horizontal slices (cuts_columns): rows r1..r2, full column range 0..n-1
-        if cuts_rows:
-            # Vertical: the strip spans all rows, columns of target block
-            strip_start_row, strip_end_row = 0, n - 1
-            strip_start_col = target_block.start.col
-            strip_end_col = target_block.end.col
-
-            t_r1, t_r2 = target_block.start.row, target_block.end.row
-
-            # Prefix: rows 0..t_r1-1 on same columns
-            if t_r1 > 0:
-                target_prefix = Block(
-                    Point(strip_start_row, strip_start_col),
-                    Point(t_r1 - 1, strip_end_col)
-                )
-            else:
-                target_prefix = None
-
-            # Suffix: rows t_r2+1..n-1 on same columns
-            if t_r2 < n - 1:
-                target_suffix = Block(
-                    Point(t_r2 + 1, strip_start_col),
-                    Point(strip_end_row, strip_end_col)
-                )
-            else:
-                target_suffix = None
-        else:
-            # Horizontal: the strip spans rows of target block, all columns
-            strip_start_col, strip_end_col = 0, n - 1
-            strip_start_row = target_block.start.row
-            strip_end_row = target_block.end.row
-
-            t_c1, t_c2 = target_block.start.col, target_block.end.col
-
-            # Prefix: cols 0..t_c1-1 on same rows
-            if t_c1 > 0:
-                target_prefix = Block(
-                    Point(strip_start_row, 0),
-                    Point(strip_end_row, t_c1 - 1)
-                )
-            else:
-                target_prefix = None
-
-            # Suffix: cols t_c2+1..n-1 on same rows
-            if t_c2 < n - 1:
-                target_suffix = Block(
-                    Point(strip_start_row, t_c2 + 1),
-                    Point(strip_end_row, strip_end_col)
-                )
-            else:
-                target_suffix = None
-
-        # Compute source blocks by rotating each original target block, then translating
-        # to source face. The rotation maps each target block to where it ends up on
-        # the target face after the face rotation, and those rotated positions sit on
-        # the slices that get moved to source.
-
-        # Rotate each target block individually
+        # Compute source blocks by rotating each target block, then translating
+        # to source face
         rotated_main = rotated_block  # already computed above
         rotated_prefix = (
             target_prefix.rotate_clockwise(n, rot_n)
@@ -338,23 +308,78 @@ class BlockBySliceSwapHelper(SolverHelper):
             if rotated_suffix is not None else None
         )
 
+        # Convert target blocks from setup coordinates back to original coordinates
+        if setup_rotation:
+            inv_setup = (4 - setup_rotation) % 4  # Inverse: 1 → 3 (90° CCW)
+            orig_target_block = target_block  # Already in original coords
+            orig_target_prefix = (
+                target_prefix.rotate_clockwise(n, inv_setup)
+                if target_prefix is not None else None
+            )
+            orig_target_suffix = (
+                target_suffix.rotate_clockwise(n, inv_setup)
+                if target_suffix is not None else None
+            )
+        else:
+            orig_target_block = target_block
+            orig_target_prefix = target_prefix
+            orig_target_suffix = target_suffix
+
         # Build the algorithm
         algorithm = self._build_algorithm(
-            source_face, target_face, target_block, rotated_block,
+            source_face, target_face, effective_block, rotated_block,
             slice_name, slice_n, rotation_type, cuts_rows,
+            setup_rotation=setup_rotation,
         )
 
         return SliceSwapResult(
             slice_name=slice_name,
             algorithm=algorithm,
             rotation_type=rotation_type,
-            target_prefix_block=target_prefix,
-            target_block=target_block,
-            target_suffix_block=target_suffix,
+            target_prefix_block=orig_target_prefix,
+            target_block=orig_target_block,
+            target_suffix_block=orig_target_suffix,
             source_prefix_block=source_prefix,
             source_block=source_block,
             source_suffix_block=source_suffix,
         )
+
+    @staticmethod
+    def _compute_strip_blocks(
+        block: Block, n: int, cuts_rows: bool
+    ) -> tuple[Block | None, Block | None]:
+        """Compute prefix and suffix blocks for a strip around the given block.
+
+        The strip spans the full range perpendicular to the slice direction.
+        """
+        if cuts_rows:
+            # Vertical strip: full rows, at block's columns
+            t_r1, t_r2 = block.start.row, block.end.row
+            c1, c2 = block.start.col, block.end.col
+
+            prefix = (
+                Block(Point(0, c1), Point(t_r1 - 1, c2))
+                if t_r1 > 0 else None
+            )
+            suffix = (
+                Block(Point(t_r2 + 1, c1), Point(n - 1, c2))
+                if t_r2 < n - 1 else None
+            )
+        else:
+            # Horizontal strip: full columns, at block's rows
+            t_c1, t_c2 = block.start.col, block.end.col
+            r1, r2 = block.start.row, block.end.row
+
+            prefix = (
+                Block(Point(r1, 0), Point(r2, t_c1 - 1))
+                if t_c1 > 0 else None
+            )
+            suffix = (
+                Block(Point(r1, t_c2 + 1), Point(r2, n - 1))
+                if t_c2 < n - 1 else None
+            )
+
+        return prefix, suffix
 
     def _translate_block_to_source(
         self,
@@ -412,16 +437,19 @@ class BlockBySliceSwapHelper(SolverHelper):
         slice_n: int,
         rotation_type: int,
         cuts_rows: bool,
+        setup_rotation: int = 0,
     ) -> Alg:
-        """Build the slice swap algorithm: slice → face_rotate → slice'."""
+        """Build the slice swap algorithm.
+
+        Without setup: slice → face_rotate → slice'
+        With setup:    face_setup → slice → face_rotate → slice' → face_setup'
+        """
         cube = self.cube
 
         # Get the base slice algorithm
         base_slice_alg = Algs.of_slice(slice_name)
 
         # Build slice sub-algorithm covering the ROTATED target block's slice range
-        # We bring slices at the rotated position, so that after face rotation
-        # the target block moves onto those slices and gets carried back
         slice_alg = self._get_slice_alg(
             base_slice_alg, rotated_block, target_face.name, cuts_rows
         ) * slice_n
@@ -429,12 +457,23 @@ class BlockBySliceSwapHelper(SolverHelper):
         # Face rotation
         face_rotate = Algs.of_face(target_face.name) * rotation_type
 
-        # Combine: slice → rotate → slice'
-        return Algs.seq_alg(None,
-            slice_alg,
-            face_rotate,
-            slice_alg.prime,
-        )
+        if setup_rotation:
+            # Setup: pre-rotate target face
+            face_setup = Algs.of_face(target_face.name) * setup_rotation
+            return Algs.seq_alg(None,
+                face_setup,
+                slice_alg,
+                face_rotate,
+                slice_alg.prime,
+                face_setup.prime,
+            )
+        else:
+            # No setup: slice → rotate → slice'
+            return Algs.seq_alg(None,
+                slice_alg,
+                face_rotate,
+                slice_alg.prime,
+            )
 
     def _get_slice_alg(
         self,
