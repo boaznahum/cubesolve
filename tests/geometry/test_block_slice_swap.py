@@ -116,7 +116,7 @@ def _face_pair_id(pair: tuple[FaceName, FaceName]) -> str:
 class TestSliceSwapSixBlocks:
     """Test that all 6 blocks swap correctly using marker-based verification."""
 
-    @pytest.mark.parametrize("cube_size", [5, 7])
+    @pytest.mark.parametrize("cube_size", [4, 5, 6, 7])
     @pytest.mark.parametrize("face_pair", _FACE_PAIRS, ids=[_face_pair_id(p) for p in _FACE_PAIRS])
     def test_slice_swap_markers(self, cube_size: int, face_pair: tuple[FaceName, FaceName]):
         """Verify all 6 blocks swap correctly with markers.
