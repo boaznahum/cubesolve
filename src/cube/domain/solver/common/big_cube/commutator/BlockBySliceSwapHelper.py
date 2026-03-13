@@ -524,6 +524,58 @@ class BlockBySliceSwapHelper(SolverHelper):
         self.op.play(result.algorithm)
 
 
+def get_largest_blocks_containing_point(n: int, point: Point) -> list[Block]:
+    """Return the largest valid blocks that contain the given point.
+
+    Based on the "doesn't cross the middle" rule: a block is valid if it
+    doesn't cross the middle in at least one direction.
+
+    For 180° rotation, the block's range [a, b] must not overlap with
+    [n-1-b, n-1-a]. This means b < (n-1)/2 or a > (n-1)/2, i.e.:
+        lower half: [0, lower_max]  where lower_max = (n-2) // 2
+        upper half: [upper_min, n-1] where upper_min = (n+1) // 2
+
+    For even n: lower_max = n/2 - 1, upper_min = n/2 (halves touch).
+    For odd n:  lower_max = mid - 1, upper_min = mid + 1 (middle excluded).
+
+    The 4 maximal half-face blocks:
+        1. Bottom half, full width: Block((0,0), (lower_max, n-1))
+        2. Top half, full width:    Block((upper_min, 0), (n-1, n-1))
+        3. Left half, full height:  Block((0,0), (n-1, lower_max))
+        4. Right half, full height: Block((0, upper_min), (n-1, n-1))
+
+    Returns those that contain the point, sorted by size descending.
+    On odd cubes, points on the middle row/col may have fewer blocks,
+    and the center point (mid, mid) has none (it's always invalid).
+    """
+    lower_max = (n - 2) // 2  # last row/col of lower half
+    upper_min = (n + 1) // 2  # first row/col of upper half
+    r, c = point.row, point.col
+
+    candidates: list[Block] = []
+
+    # Bottom half (rows 0..lower_max), full width
+    if r <= lower_max:
+        candidates.append(Block(Point(0, 0), Point(lower_max, n - 1)))
+
+    # Top half (rows upper_min..n-1), full width
+    if r >= upper_min:
+        candidates.append(Block(Point(upper_min, 0), Point(n - 1, n - 1)))
+
+    # Left half (cols 0..lower_max), full height
+    if c <= lower_max:
+        candidates.append(Block(Point(0, 0), Point(n - 1, lower_max)))
+
+    # Right half (cols upper_min..n-1), full height
+    if c >= upper_min:
+        candidates.append(Block(Point(0, upper_min), Point(n - 1, n - 1)))
+
+    # Sort by size descending
+    candidates.sort(key=lambda b: b.size, reverse=True)
+
+    return candidates
+
+
 def _1d_intersect(range_1: tuple[int, int], range_2: tuple[int, int]) -> bool:
     """Check if two 1D ranges intersect."""
     x1, x2 = range_1

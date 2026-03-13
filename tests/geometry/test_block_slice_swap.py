@@ -29,6 +29,7 @@ from cube.domain.model.Face import Face
 from cube.domain.solver.common.big_cube.commutator.BlockBySliceSwapHelper import (
     BlockBySliceSwapHelper,
     SliceSwapResult,
+    get_largest_blocks_containing_point,
 )
 from cube.domain.solver.direct.cage.CageNxNSolver import CageNxNSolver
 from cube.domain.solver.Solvers import Solvers
@@ -473,6 +474,102 @@ class TestSliceSwapValid:
         # Top-left corner of center grid
         corner_block = Block(Point(0, 0), Point(0, 0))
         assert helper.is_valid_for_swap(corner_block)
+
+
+class TestLargestBlocksContainingPoint:
+    """Test that get_largest_blocks_containing_point returns valid blocks."""
+
+    @pytest.mark.parametrize("cube_size", [4, 5, 6, 7, 8])
+    def test_every_point_has_largest_blocks(self, cube_size: int):
+        """Every non-center point has at least 1 largest block, all valid for swap.
+
+        For even cubes: every point has exactly 2 blocks.
+        For odd cubes: middle row/col points may have only 1, and the
+        center point (mid, mid) has 0 (it's always invalid).
+        """
+        app = AbstractApp.create_app(cube_size)
+        helper = _create_helper(app)
+        n = app.cube.n_slices
+        mid = n // 2
+        is_odd = n % 2 == 1
+
+        for r in range(n):
+            for c in range(n):
+                point = Point(r, c)
+                blocks = get_largest_blocks_containing_point(n, point)
+
+                # On odd cubes, center point has no valid block
+                if is_odd and r == mid and c == mid:
+                    assert len(blocks) == 0, (
+                        f"Center ({r},{c}) on {cube_size}x{cube_size}: "
+                        f"expected 0 blocks, got {len(blocks)}"
+                    )
+                    continue
+
+                # Even cubes: always 2. Odd cubes: at least 1 (2 if not on middle row/col)
+                if is_odd and (r == mid or c == mid):
+                    assert len(blocks) >= 1, (
+                        f"Point ({r},{c}) on {cube_size}x{cube_size}: "
+                        f"expected >=1 blocks, got {len(blocks)}"
+                    )
+                else:
+                    assert len(blocks) >= 2, (
+                        f"Point ({r},{c}) on {cube_size}x{cube_size}: "
+                        f"expected >=2 blocks, got {len(blocks)}"
+                    )
+
+                # Each block must contain the point
+                for block in blocks:
+                    assert block.start.row <= r <= block.end.row, (
+                        f"Block {block} doesn't contain point ({r},{c}) in rows"
+                    )
+                    assert block.start.col <= c <= block.end.col, (
+                        f"Block {block} doesn't contain point ({r},{c}) in cols"
+                    )
+
+                # Each block must be valid for swap
+                for block in blocks:
+                    assert helper.is_valid_for_swap(block), (
+                        f"Point ({r},{c}) on {cube_size}x{cube_size}: "
+                        f"block {block} is NOT valid for swap"
+                    )
+
+    @pytest.mark.parametrize("cube_size", [4, 5, 6, 7, 8])
+    def test_blocks_sorted_by_size(self, cube_size: int):
+        """Returned blocks are sorted by size descending."""
+        n = cube_size - 2
+
+        for r in range(n):
+            for c in range(n):
+                blocks = get_largest_blocks_containing_point(n, Point(r, c))
+                sizes = [b.size for b in blocks]
+                assert sizes == sorted(sizes, reverse=True), (
+                    f"Point ({r},{c}): sizes {sizes} not sorted descending"
+                )
+
+    @pytest.mark.parametrize("cube_size", [5, 7])
+    def test_center_point_has_no_blocks_on_odd(self, cube_size: int):
+        """On odd cubes, the center point (mid, mid) has no valid blocks —
+        it's on the middle in both directions, so every rotation overlaps."""
+        n = cube_size - 2
+        mid = n // 2
+
+        blocks = get_largest_blocks_containing_point(n, Point(mid, mid))
+        assert len(blocks) == 0
+
+    @pytest.mark.parametrize("cube_size", [5, 7])
+    def test_middle_row_point_has_one_block_on_odd(self, cube_size: int):
+        """On odd cubes, a point on the middle row (but not mid col) has
+        exactly 1 valid block (the column-based half)."""
+        app = AbstractApp.create_app(cube_size)
+        helper = _create_helper(app)
+        n = app.cube.n_slices
+        mid = n // 2
+
+        # Point on middle row, col 0 (in the left half)
+        blocks = get_largest_blocks_containing_point(n, Point(mid, 0))
+        assert len(blocks) == 1
+        assert helper.is_valid_for_swap(blocks[0])
 
 
 class TestSliceSwapDryRun:
