@@ -119,24 +119,41 @@ def _get_test_blocks(n: int) -> list[Block]:
 
 
 def _get_full_slice_blocks(n: int) -> list[Block]:
-    """Generate all full-slice blocks for an n×n center grid.
+    """Generate all full-slice blocks that have valid swap combinations.
 
-    - n vertical full-column strips: Block((0,c), (n-1,c)) for c in 0..n-1
-    - n horizontal full-row strips: Block((r,0), (r,n-1)) for r in 0..n-1
+    Uses BlockBySliceSwapHelper to determine which blocks are valid,
+    rather than hardcoding geometric rules in the test.
 
-    On odd n, the center column/row is skipped (self-intersects under
-    all rotations because 180° maps center to itself).
+    For each width w from 1 to n-1:
+    - Vertical: n rows × w cols at each column position
+    - Horizontal: w rows × n cols at each row position
+
+    Only includes blocks that have at least one valid combination
+    (checked against F←U as representative pair).
     """
-    mid = n // 2
+    from cube.domain.solver.common.big_cube.commutator.BlockBySliceSwapHelper import (
+        BlockBySliceSwapHelper,
+    )
+
+    # Use a real cube to check validity via geometry (not hardcoded rules)
+    app = AbstractApp.create_app(n + 2)
+    cube = app.cube
+    solver = Solvers.cage(app.op)
+    helper = BlockBySliceSwapHelper(solver)
+
     blocks = []
-    for c in range(n):
-        if n % 2 == 1 and c == mid:
-            continue
-        blocks.append(Block(Point(0, c), Point(n - 1, c)))
-    for r in range(n):
-        if n % 2 == 1 and r == mid:
-            continue
-        blocks.append(Block(Point(r, 0), Point(r, n - 1)))
+
+    for w in range(1, n):
+        for c in range(n - w + 1):
+            block = Block(Point(0, c), Point(n - 1, c + w - 1))
+            if helper.is_valid_for_swap(block):
+                blocks.append(block)
+
+        for r in range(n - w + 1):
+            block = Block(Point(r, 0), Point(r + w - 1, n - 1))
+            if helper.is_valid_for_swap(block):
+                blocks.append(block)
+
     return blocks
 
 
