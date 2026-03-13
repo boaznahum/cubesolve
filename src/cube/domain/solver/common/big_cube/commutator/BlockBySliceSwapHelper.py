@@ -525,19 +525,21 @@ class BlockBySliceSwapHelper(SolverHelper):
 
 
 def get_largest_blocks_containing_point(n: int, point: Point) -> list[Block]:
-    """Return the largest valid blocks starting from the given point.
+    """Return the largest valid blocks with (r,c) as bottom-left corner.
 
-    Given point (r,c) as the top-left corner, extends down-right as far as
-    possible while staying valid (not crossing the middle in at least one
-    direction after 180° rotation).
+    Given point (r,c), extends UP (smaller rows) and RIGHT (larger cols)
+    as far as possible while staying valid (not crossing the middle in at
+    least one direction after 180° rotation).
+
+    Face coordinate system: left-top-right (row 0 is top, col 0 is left).
 
     For 180° rotation, the range [a, b] must not overlap with [n-1-b, n-1-a]:
         lower half boundary: lower_max = (n-2) // 2
         upper half boundary: upper_min = (n+1) // 2
 
-    Returns up to 2 blocks starting from (r,c):
-        1. Row-safe: rows constrained to the half containing r, cols extend to n-1
-        2. Col-safe: cols constrained to the half containing c, rows extend to n-1
+    Returns up to 2 blocks with (r,c) at bottom-left:
+        1. Row-safe: rows constrained to the half containing r, cols c..n-1
+        2. Col-safe: cols constrained to the half containing c, rows 0..r
 
     Sorted by size descending.
     On odd cubes, if r or c is on the middle row/col, that direction yields
@@ -549,25 +551,25 @@ def get_largest_blocks_containing_point(n: int, point: Point) -> list[Block]:
 
     candidates: list[Block] = []
 
-    # Row-safe block: rows stay within half, cols extend to n-1
+    # Row-safe block: rows stay within half, cols extend right to n-1
     if r <= lower_max:
-        # r is in lower half → rows r..lower_max, cols c..n-1
-        candidates.append(Block(Point(r, c), Point(lower_max, n - 1)))
+        # r is in lower half → rows 0..r, cols c..n-1
+        candidates.append(Block(Point(0, c), Point(r, n - 1)))
     elif r >= upper_min:
-        # r is in upper half → rows r..n-1, cols c..n-1
-        candidates.append(Block(Point(r, c), Point(n - 1, n - 1)))
+        # r is in upper half → rows upper_min..r, cols c..n-1
+        candidates.append(Block(Point(upper_min, c), Point(r, n - 1)))
     # else: r is on the middle (odd cube) — no row-safe block
 
-    # Col-safe block: cols stay within half, rows extend to n-1
+    # Col-safe block: cols stay within half, rows extend up to 0
     if c <= lower_max:
-        # c is in left half → rows r..n-1, cols c..lower_max
-        candidates.append(Block(Point(r, c), Point(n - 1, lower_max)))
+        # c is in left half → rows 0..r, cols c..lower_max
+        candidates.append(Block(Point(0, c), Point(r, lower_max)))
     elif c >= upper_min:
-        # c is in right half → rows r..n-1, cols c..n-1
-        candidates.append(Block(Point(r, c), Point(n - 1, n - 1)))
+        # c is in right half → rows 0..r, cols c..n-1
+        candidates.append(Block(Point(0, c), Point(r, n - 1)))
     # else: c is on the middle (odd cube) — no col-safe block
 
-    # Deduplicate (both may produce the same block when r >= upper_min and c >= upper_min)
+    # Deduplicate (both may produce the same block, e.g. when r <= lower_max and c >= upper_min)
     seen: set[tuple[int, int, int, int]] = set()
     unique: list[Block] = []
     for b in candidates:

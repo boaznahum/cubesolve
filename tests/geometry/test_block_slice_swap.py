@@ -522,10 +522,13 @@ class TestLargestBlocksContainingPoint:
                         f"expected >=1 blocks, got {len(blocks)}"
                     )
 
-                # Each block must start at (r,c)
+                # (r,c) must be at the bottom-left corner of each block
                 for block in blocks:
-                    assert block.start.row == r and block.start.col == c, (
-                        f"Block {block} doesn't start at ({r},{c})"
+                    assert block.end.row == r, (
+                        f"Block {block}: end.row={block.end.row} != r={r}"
+                    )
+                    assert block.start.col == c, (
+                        f"Block {block}: start.col={block.start.col} != c={c}"
                     )
 
                 # Each block must be valid for swap
@@ -570,8 +573,9 @@ class TestLargestBlocksContainingPoint:
         # Point on middle row, col 0 (in the left half)
         blocks = get_largest_blocks_containing_point(n, Point(mid, 0))
         assert len(blocks) == 1
-        # Block starts at (mid, 0) and extends to (n-1, lower_max)
-        assert blocks[0].start == Point(mid, 0)
+        # (mid, 0) is bottom-left: block extends up to row 0, right to lower_max
+        assert blocks[0].end.row == mid
+        assert blocks[0].start.col == 0
         assert helper.is_valid_for_swap(blocks[0])
 
     @pytest.mark.parametrize("cube_size", [4, 6, 8])
@@ -585,7 +589,9 @@ class TestLargestBlocksContainingPoint:
         # Both row-safe and col-safe, but may deduplicate if identical
         assert len(blocks) >= 1
         for block in blocks:
-            assert block.start == Point(0, 0)
+            # (0,0) is bottom-left corner
+            assert block.end.row == 0
+            assert block.start.col == 0
             assert helper.is_valid_for_swap(block)
 
 
