@@ -524,7 +524,7 @@ class BlockBySliceSwapHelper(SolverHelper):
         self.op.play(result.algorithm)
 
 
-def get_largest_blocks_containing_point(n: int, point: Point) -> list[Block]:
+def get_largest_blocks_from_point(n: int, point: Point) -> list[Block]:
     """Return the largest valid blocks with (r,c) as bottom-left corner.
 
     Given point (r,c), extends UP (smaller rows) and RIGHT (larger cols)

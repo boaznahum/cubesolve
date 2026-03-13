@@ -29,7 +29,7 @@ from cube.domain.model.Face import Face
 from cube.domain.solver.common.big_cube.commutator.BlockBySliceSwapHelper import (
     BlockBySliceSwapHelper,
     SliceSwapResult,
-    get_largest_blocks_containing_point,
+    get_largest_blocks_from_point,
 )
 from cube.domain.solver.direct.cage.CageNxNSolver import CageNxNSolver
 from cube.domain.solver.Solvers import Solvers
@@ -476,10 +476,10 @@ class TestSliceSwapValid:
         assert helper.is_valid_for_swap(corner_block)
 
 
-class TestLargestBlocksContainingPoint:
-    """Test that get_largest_blocks_containing_point returns valid blocks.
+class TestLargestBlocksFromPoint:
+    """Test that get_largest_blocks_from_point returns valid blocks.
 
-    The function takes a point (r,c) as the start corner and returns the
+    The function takes a point (r,c) as the bottom-left corner and returns the
     largest blocks extending down-right that are valid for swap.
     """
 
@@ -500,7 +500,7 @@ class TestLargestBlocksContainingPoint:
         for r in range(n):
             for c in range(n):
                 point = Point(r, c)
-                blocks = get_largest_blocks_containing_point(n, point)
+                blocks = get_largest_blocks_from_point(n, point)
 
                 # On odd cubes, center point has no valid block
                 if is_odd and r == mid and c == mid:
@@ -545,7 +545,7 @@ class TestLargestBlocksContainingPoint:
 
         for r in range(n):
             for c in range(n):
-                blocks = get_largest_blocks_containing_point(n, Point(r, c))
+                blocks = get_largest_blocks_from_point(n, Point(r, c))
                 sizes = [b.size for b in blocks]
                 assert sizes == sorted(sizes, reverse=True), (
                     f"Point ({r},{c}): sizes {sizes} not sorted descending"
@@ -558,7 +558,7 @@ class TestLargestBlocksContainingPoint:
         n = cube_size - 2
         mid = n // 2
 
-        blocks = get_largest_blocks_containing_point(n, Point(mid, mid))
+        blocks = get_largest_blocks_from_point(n, Point(mid, mid))
         assert len(blocks) == 0
 
     @pytest.mark.parametrize("cube_size", [5, 7])
@@ -571,7 +571,7 @@ class TestLargestBlocksContainingPoint:
         mid = n // 2
 
         # Point on middle row, col 0 (in the left half)
-        blocks = get_largest_blocks_containing_point(n, Point(mid, 0))
+        blocks = get_largest_blocks_from_point(n, Point(mid, 0))
         assert len(blocks) == 1
         # (mid, 0) is bottom-left: block extends up to row 0, right to lower_max
         assert blocks[0].end.row == mid
@@ -585,7 +585,7 @@ class TestLargestBlocksContainingPoint:
         helper = _create_helper(app)
         n = app.cube.n_slices
 
-        blocks = get_largest_blocks_containing_point(n, Point(0, 0))
+        blocks = get_largest_blocks_from_point(n, Point(0, 0))
         # Both row-safe and col-safe, but may deduplicate if identical
         assert len(blocks) >= 1
         for block in blocks:
