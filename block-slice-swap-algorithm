@@ -68,5 +68,7 @@ plan, give tonreview, ask till yiu have all the answers, most hard  think
 
 caller has a target block, he wants to call the commutator
 
+YOU MUST STSRT WITH SETS OF TESTS THAT PUT MARKERS ON SIX BLOCKS AND MAKE SURE EACH ONE MOVE ACCORDINGLY, SE COMMUTATOR TESTS UNDER TESTS/geometry
+
 
 '
