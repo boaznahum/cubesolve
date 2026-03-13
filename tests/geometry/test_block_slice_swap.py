@@ -98,6 +98,48 @@ def _read_block_markers(
 # Tests
 # =============================================================================
 
+# =============================================================================
+# Block generators (must be before test case generation)
+# =============================================================================
+
+def _get_test_blocks(n: int) -> list[Block]:
+    """Generate representative test blocks for an n×n center grid."""
+    blocks = []
+    blocks.append(Block(Point(0, 0), Point(0, 0)))
+    blocks.append(Block(Point(n - 1, n - 1), Point(n - 1, n - 1)))
+    blocks.append(Block(Point(0, n - 1), Point(0, n - 1)))
+    if n >= 3:
+        blocks.append(Block(Point(1, 0), Point(1, 0)))
+        blocks.append(Block(Point(0, 0), Point(1, 0)))
+        blocks.append(Block(Point(0, 0), Point(0, 1)))
+    if n >= 5:
+        blocks.append(Block(Point(0, 0), Point(1, 1)))
+        blocks.append(Block(Point(1, 1), Point(2, 2)))
+    return blocks
+
+
+def _get_full_slice_blocks(n: int) -> list[Block]:
+    """Generate all full-slice blocks for an n×n center grid.
+
+    - n vertical full-column strips: Block((0,c), (n-1,c)) for c in 0..n-1
+    - n horizontal full-row strips: Block((r,0), (r,n-1)) for r in 0..n-1
+
+    On odd n, the center column/row is skipped (self-intersects under
+    all rotations because 180° maps center to itself).
+    """
+    mid = n // 2
+    blocks = []
+    for c in range(n):
+        if n % 2 == 1 and c == mid:
+            continue
+        blocks.append(Block(Point(0, c), Point(n - 1, c)))
+    for r in range(n):
+        if n % 2 == 1 and r == mid:
+            continue
+        blocks.append(Block(Point(r, 0), Point(r, n - 1)))
+    return blocks
+
+
 # All 30 source/target face pair combinations (6 faces × 5 sources each)
 _ALL_FACES = [FaceName.F, FaceName.B, FaceName.U, FaceName.D, FaceName.L, FaceName.R]
 _FACE_PAIRS = [
@@ -259,132 +301,128 @@ class TestSliceSwapSixBlocks:
         )
 
 
-class TestFullSliceBlocks:
-    """Test all full-slice blocks: n vertical + n horizontal = 2n blocks.
+# Adjacent faces for each face (used by full-slice block tests)
+_ADJACENT: dict[FaceName, tuple[FaceName, ...]] = {}
 
-    For each target face, every full-row and full-column strip must have
-    a valid swap combination with each of the 4 adjacent source faces.
-    None can be skipped — if any is skipped, we have a bug.
+
+def _get_adjacent(face: FaceName) -> tuple[FaceName, ...]:
+    """Lazily compute and cache adjacent faces."""
+    if face not in _ADJACENT:
+        app = AbstractApp.create_app(4)
+        _ADJACENT[face] = app.cube.layout.get_adjacent_faces(face)
+    return _ADJACENT[face]
+
+
+def _full_slice_test_cases() -> list[tuple[int, FaceName, FaceName, Block]]:
+    """Generate all (cube_size, target, source, block) for full-slice tests."""
+    cases = []
+    for cube_size in [4, 5, 6, 7]:
+        n = cube_size - 2  # n_slices
+        blocks = _get_full_slice_blocks(n)
+        for target_fn in _ALL_FACES:
+            for source_fn in _get_adjacent(target_fn):
+                for block in blocks:
+                    cases.append((cube_size, target_fn, source_fn, block))
+    return cases
+
+
+_FULL_SLICE_CASES = _full_slice_test_cases()
+
+
+def _full_slice_id(case: tuple[int, FaceName, FaceName, Block]) -> str:
+    cube_size, target, source, block = case
+    br, bc = block.start.row, block.start.col
+    er, ec = block.end.row, block.end.col
+    return f"{cube_size}-{target.name}<-{source.name}-({br},{bc})-({er},{ec})"
+
+
+class TestFullSliceBlocks:
+    """Test all full-slice blocks: n vertical + n horizontal strips.
+
+    Each strip is tested against each of its 4 adjacent source faces.
+    Every combination must produce a valid swap — none can be skipped.
     """
 
-    @pytest.mark.parametrize("cube_size", [4, 5, 6, 7])
-    @pytest.mark.parametrize("target_face_name", _ALL_FACES,
-                             ids=[f.name for f in _ALL_FACES])
-    def test_full_slice_blocks(self, cube_size: int, target_face_name: FaceName):
-        """Every full-slice block must swap with all 4 adjacent sources."""
+    @pytest.mark.parametrize("case", _FULL_SLICE_CASES,
+                             ids=[_full_slice_id(c) for c in _FULL_SLICE_CASES])
+    def test_full_slice_swap(self, case: tuple[int, FaceName, FaceName, Block]):
+        """Single full-slice block swap with marker verification."""
+        cube_size, target_face_name, source_face_name, target_block = case
+
         app = AbstractApp.create_app(cube_size)
         cube = app.cube
-        n = cube.n_slices
-
         helper = _create_helper(app)
         target_face = cube.face(target_face_name)
+        source_face = cube.face(source_face_name)
 
-        # Get 4 adjacent source faces
-        adjacent = cube.layout.get_adjacent_faces(target_face_name)
+        # Must find at least one valid combination
+        results = helper.get_all_combinations(source_face, target_face, target_block)
+        assert results, (
+            f"No valid combination for {cube_size}x{cube_size} "
+            f"{target_face_name.name}<-{source_face_name.name} block={target_block}"
+        )
 
-        # Generate all 2n full-slice blocks
-        full_slice_blocks = _get_full_slice_blocks(n)
+        result = results[0]
+
+        # Reset and verify with markers
+        cube.reset()
+        helper = _create_helper(app)
+        target_face = cube.face(target_face_name)
+        source_face = cube.face(source_face_name)
+
+        marker_key = f"fs_{uuid.uuid4().hex[:8]}"
+
+        t_prefix_markers = _place_block_markers(
+            target_face, result.target_prefix_block, marker_key, "tp"
+        )
+        t_main_markers = _place_block_markers(
+            target_face, result.target_block, marker_key, "tm"
+        )
+        t_suffix_markers = _place_block_markers(
+            target_face, result.target_suffix_block, marker_key, "ts"
+        )
+        s_prefix_markers = _place_block_markers(
+            source_face, result.source_prefix_block, marker_key, "sp"
+        )
+        s_main_markers = _place_block_markers(
+            source_face, result.source_block, marker_key, "sm"
+        )
+        s_suffix_markers = _place_block_markers(
+            source_face, result.source_suffix_block, marker_key, "ss"
+        )
+
+        helper.execute_swap(
+            source_face, target_face, target_block,
+            rotation_type=result.rotation_type,
+            dry_run=False,
+            preserve_state=True,
+        )
 
         failures = []
-        successes = []
 
-        for source_face_name in adjacent:
-            for target_block in full_slice_blocks:
-                cube.reset()
-                helper = _create_helper(app)
-                target_face = cube.face(target_face_name)
-                source_face = cube.face(source_face_name)
-
-                # Must find at least one valid combination
-                results = helper.get_all_combinations(
-                    source_face, target_face, target_block
+        def _check(label, src_markers, dest_face, dest_block):
+            if not src_markers or dest_block is None:
+                return
+            found = _read_block_markers(dest_face, dest_block, marker_key)
+            expected_set = set(src_markers.values())
+            found_set = {v for v in found.values() if v is not None}
+            if found_set != expected_set:
+                failures.append(
+                    f"{label}: expected={sorted(expected_set)} "
+                    f"found={sorted(found_set)}"
                 )
 
-                if not results:
-                    failures.append(
-                        f"{target_face_name.name}<-{source_face_name.name} "
-                        f"block={target_block}: NO VALID COMBINATION"
-                    )
-                    continue
+        _check("tm->sm", t_main_markers, source_face, result.source_block)
+        _check("tp->sp", t_prefix_markers, source_face, result.source_prefix_block)
+        _check("ts->ss", t_suffix_markers, source_face, result.source_suffix_block)
+        _check("sm->tm", s_main_markers, target_face, result.target_block)
+        _check("sp->tp", s_prefix_markers, target_face, result.target_prefix_block)
+        _check("ss->ts", s_suffix_markers, target_face, result.target_suffix_block)
 
-                result = results[0]
-
-                # Reset and verify with markers
-                cube.reset()
-                helper = _create_helper(app)
-                target_face = cube.face(target_face_name)
-                source_face = cube.face(source_face_name)
-
-                marker_key = f"fs_{uuid.uuid4().hex[:8]}"
-
-                t_prefix_markers = _place_block_markers(
-                    target_face, result.target_prefix_block, marker_key, "tp"
-                )
-                t_main_markers = _place_block_markers(
-                    target_face, result.target_block, marker_key, "tm"
-                )
-                t_suffix_markers = _place_block_markers(
-                    target_face, result.target_suffix_block, marker_key, "ts"
-                )
-                s_prefix_markers = _place_block_markers(
-                    source_face, result.source_prefix_block, marker_key, "sp"
-                )
-                s_main_markers = _place_block_markers(
-                    source_face, result.source_block, marker_key, "sm"
-                )
-                s_suffix_markers = _place_block_markers(
-                    source_face, result.source_suffix_block, marker_key, "ss"
-                )
-
-                helper.execute_swap(
-                    source_face, target_face, target_block,
-                    rotation_type=result.rotation_type,
-                    dry_run=False,
-                    preserve_state=True,
-                )
-
-                ok = True
-
-                def _check(label, src_markers, dest_face, dest_block):
-                    nonlocal ok
-                    if not src_markers or dest_block is None:
-                        return
-                    found = _read_block_markers(dest_face, dest_block, marker_key)
-                    expected_set = set(src_markers.values())
-                    found_set = {v for v in found.values() if v is not None}
-                    if found_set != expected_set:
-                        ok = False
-                        failures.append(
-                            f"{target_face_name.name}<-{source_face_name.name} "
-                            f"block={target_block} {label}: "
-                            f"expected={sorted(expected_set)} found={sorted(found_set)}"
-                        )
-
-                _check("tm->sm", t_main_markers, source_face, result.source_block)
-                _check("tp->sp", t_prefix_markers, source_face, result.source_prefix_block)
-                _check("ts->ss", t_suffix_markers, source_face, result.source_suffix_block)
-                _check("sm->tm", s_main_markers, target_face, result.target_block)
-                _check("sp->tp", s_prefix_markers, target_face, result.target_prefix_block)
-                _check("ss->ts", s_suffix_markers, target_face, result.target_suffix_block)
-
-                if ok:
-                    successes.append(
-                        f"{target_face_name.name}<-{source_face_name.name} "
-                        f"block={target_block}"
-                    )
-
-        if failures:
-            msg = (
-                f"\nCube {cube_size}x{cube_size}, target={target_face_name.name}\n"
-                f"Successes: {len(successes)}, Failures: {len(failures)}\n"
-            )
-            for f in failures[:20]:
-                msg += f"  {f}\n"
-            assert False, msg
-
-        expected_count = len(full_slice_blocks) * len(adjacent)
-        assert len(successes) == expected_count, (
-            f"Expected {expected_count} successes, got {len(successes)}"
+        assert not failures, (
+            f"Swap verification failed for {cube_size}x{cube_size} "
+            f"{target_face_name.name}<-{source_face_name.name} "
+            f"block={target_block}:\n" + "\n".join(failures)
         )
 
 
@@ -446,63 +484,3 @@ class TestSliceSwapDryRun:
         assert piece_after.moveable_attributes.get(marker_key) == "before"
 
 
-# =============================================================================
-# Helpers for generating test blocks
-# =============================================================================
-
-def _get_test_blocks(n: int) -> list[Block]:
-    """Generate representative test blocks for an n×n center grid.
-
-    Returns blocks at various positions to exercise prefix/suffix/empty cases.
-    Includes single-column, multi-row, multi-column, and square blocks.
-    """
-    blocks = []
-
-    # 1x1 blocks at corners and edges
-    blocks.append(Block(Point(0, 0), Point(0, 0)))        # bottom-left
-    blocks.append(Block(Point(n - 1, n - 1), Point(n - 1, n - 1)))  # top-right
-    blocks.append(Block(Point(0, n - 1), Point(0, n - 1)))  # bottom-right
-
-    # 1x1 block near middle (but not center on odd grids)
-    if n >= 3:
-        blocks.append(Block(Point(1, 0), Point(1, 0)))  # second row
-
-    # Multi-cell blocks
-    if n >= 3:
-        # 2x1 block (2 rows, 1 col) — spans rows, single column
-        blocks.append(Block(Point(0, 0), Point(1, 0)))
-        # 1x2 block (1 row, 2 cols) — spans columns
-        blocks.append(Block(Point(0, 0), Point(0, 1)))
-
-    if n >= 5:
-        # 2x2 square block
-        blocks.append(Block(Point(0, 0), Point(1, 1)))
-        # 2x2 block offset
-        blocks.append(Block(Point(1, 1), Point(2, 2)))
-
-    return blocks
-
-
-def _get_full_slice_blocks(n: int) -> list[Block]:
-    """Generate all full-slice blocks for an n×n center grid.
-
-    - n vertical full-column strips: Block((0,c), (n-1,c)) for c in 0..n-1
-    - n horizontal full-row strips: Block((r,0), (r,n-1)) for r in 0..n-1
-
-    On odd n, the center column/row is skipped (self-intersects under
-    all rotations because 180° maps center to itself).
-    """
-    mid = n // 2
-    blocks = []
-
-    for c in range(n):
-        if n % 2 == 1 and c == mid:
-            continue  # center column on odd grid
-        blocks.append(Block(Point(0, c), Point(n - 1, c)))
-
-    for r in range(n):
-        if n % 2 == 1 and r == mid:
-            continue  # center row on odd grid
-        blocks.append(Block(Point(r, 0), Point(r, n - 1)))
-
-    return blocks
