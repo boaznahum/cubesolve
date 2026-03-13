@@ -628,6 +628,35 @@ def get_largest_blocks_from_point(n: int, point: Point) -> list[Block]:
     return unique
 
 
+def iter_sub_blocks(block: Block) -> Iterator[Block]:
+    """Yield all sub-blocks anchored at block.start, biggest to smallest.
+
+    Given Block(start=(r1,c1), end=(r2,c2)), yields all
+    Block((r1,c1), (r,c)) for r1 <= r <= r2, c1 <= c <= c2.
+
+    Iteration order: outer loop shrinks the bigger dimension first.
+    - If width >= height: outer loop on cols (c2 down to c1),
+      inner loop on rows (r2 down to r1).
+    - If height > width: outer loop on rows (r2 down to r1),
+      inner loop on cols (c2 down to c1).
+    """
+    r1, c1 = block.start.row, block.start.col
+    r2, c2 = block.end.row, block.end.col
+    height = r2 - r1 + 1
+    width = c2 - c1 + 1
+
+    if width >= height:
+        # Wider or square: shrink cols first (outer), then rows (inner)
+        for c in range(c2, c1 - 1, -1):
+            for r in range(r2, r1 - 1, -1):
+                yield Block(Point(r1, c1), Point(r, c))
+    else:
+        # Taller: shrink rows first (outer), then cols (inner)
+        for r in range(r2, r1 - 1, -1):
+            for c in range(c2, c1 - 1, -1):
+                yield Block(Point(r1, c1), Point(r, c))
+
+
 def _1d_intersect(range_1: tuple[int, int], range_2: tuple[int, int]) -> bool:
     """Check if two 1D ranges intersect."""
     x1, x2 = range_1

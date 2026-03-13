@@ -31,6 +31,7 @@ from cube.domain.solver.common.big_cube.commutator.BlockBySliceSwapHelper import
     SliceSwapResult,
     get_largest_blocks_containing_point,
     get_largest_blocks_from_point,
+    iter_sub_blocks,
 )
 from cube.domain.solver.direct.cage.CageNxNSolver import CageNxNSolver
 from cube.domain.solver.Solvers import Solvers
@@ -651,6 +652,52 @@ class TestLargestBlocksFromPoint:
             assert block.end.row == 0
             assert block.start.col == 0
             assert helper.is_valid_for_swap(block)
+
+
+class TestIterSubBlocks:
+    """Test that iter_sub_blocks yields all anchored sub-blocks, biggest first."""
+
+    def test_total_count(self):
+        """A 3x4 block should yield 3*4=12 sub-blocks."""
+        block = Block(Point(1, 2), Point(3, 5))
+        subs = list(iter_sub_blocks(block))
+        assert len(subs) == 3 * 4
+
+    def test_all_anchored_at_start(self):
+        """Every sub-block starts at the parent's start."""
+        block = Block(Point(1, 2), Point(3, 5))
+        for sb in iter_sub_blocks(block):
+            assert sb.start == block.start
+
+    def test_first_is_full_block(self):
+        """First yielded block is the full block itself."""
+        block = Block(Point(0, 0), Point(2, 3))
+        first = next(iter(iter_sub_blocks(block)))
+        assert first == block
+
+    def test_last_is_single_cell(self):
+        """Last yielded block is the single cell at start."""
+        block = Block(Point(0, 0), Point(2, 3))
+        last = list(iter_sub_blocks(block))[-1]
+        assert last == Block(block.start, block.start)
+
+    def test_wider_block_shrinks_cols_first(self):
+        """For width > height, outer loop is on cols."""
+        block = Block(Point(0, 0), Point(1, 2))  # 2x3
+        subs = list(iter_sub_blocks(block))
+        # First 2 blocks have full width (end.col=2), next 2 have col=1, last 2 col=0
+        assert subs[0].end.col == 2 and subs[1].end.col == 2
+        assert subs[2].end.col == 1 and subs[3].end.col == 1
+        assert subs[4].end.col == 0 and subs[5].end.col == 0
+
+    def test_taller_block_shrinks_rows_first(self):
+        """For height > width, outer loop is on rows."""
+        block = Block(Point(0, 0), Point(2, 1))  # 3x2
+        subs = list(iter_sub_blocks(block))
+        # First 2 blocks have full height (end.row=2), next 2 row=1, last 2 row=0
+        assert subs[0].end.row == 2 and subs[1].end.row == 2
+        assert subs[2].end.row == 1 and subs[3].end.row == 1
+        assert subs[4].end.row == 0 and subs[5].end.row == 0
 
 
 class TestSliceSwapDryRun:
