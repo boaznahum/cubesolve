@@ -38,5 +38,35 @@ so lets say the condition met, then we can the swap, we bring the souce slices, 
 so we bring the source slices, rotate, now target block is on the source slices and the source block is on the target skices
 now we send back the siurce slices to their source face taking with them the target block
 
+this is simple block but it has limitation , there are two more block that swapped, in target face terms:
+in casevof vertical slices:
+
+block before 0,c1,rc1-1,c1. and blcok after, rc2+1,c1,rc2,nn-1, so in total all 0,c1,nn-1,c2
+
+in case of 90 or horizontal we have differnet rules, sonwe have 4 combinations , the rotating and type of skice operation,
+when the source face is oposite then it might two diffrent skice opearions.
+
+so we have prefix block block and suffux block, in some case one or two of them can be empty
+
+so what is the task, all is similar to ch
+
+like in ch we hsve a concepty of natural source !11 the source that will be used if we dont rotate thevsource, and it has diffrent from the target becase of the 
+cordinates mapping betweem faces
+
+so the caller want to csll the swap helper "bsh" 
+ask bsh if source folder is good candidate for swapping, does bsh can know it without knowing the source target faces and type of dkice operation
+the answer is yes, because we say that we have 4 combinations, it is enough to find 90 or 180 that holds , and if skice type doesnt mstch then we can rotate target by mote 90 or less
+
+second method is transform the swap, with dry run flag
+in bith cases the natural 3 source blocks, thev3 source blocks afrer rotating source to match the target
+the 3 target blocks 
+bshbshould replace all valid combinations , slices and target rotations
+in non dry bsh will also do the swap
+like ch there is a flag to undo thecsetup , in case of bsh it might be setup of source and target 
+
+plan, give tonreview, ask till yiu have all the answers, most hard  think 
+
+caller has a target block, he wants to call the commutator
+
 
 '
