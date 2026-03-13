@@ -484,19 +484,25 @@ def _get_test_blocks(n: int) -> list[Block]:
 
 
 def _get_full_slice_blocks(n: int) -> list[Block]:
-    """Generate all 2n full-slice blocks for an n×n center grid.
+    """Generate all full-slice blocks for an n×n center grid.
 
     - n vertical full-column strips: Block((0,c), (n-1,c)) for c in 0..n-1
     - n horizontal full-row strips: Block((r,0), (r,n-1)) for r in 0..n-1
+
+    On odd n, the center column/row is skipped (self-intersects under
+    all rotations because 180° maps center to itself).
     """
+    mid = n // 2
     blocks = []
 
-    # n vertical full-column strips
     for c in range(n):
+        if n % 2 == 1 and c == mid:
+            continue  # center column on odd grid
         blocks.append(Block(Point(0, c), Point(n - 1, c)))
 
-    # n horizontal full-row strips
     for r in range(n):
+        if n % 2 == 1 and r == mid:
+            continue  # center row on odd grid
         blocks.append(Block(Point(r, 0), Point(r, n - 1)))
 
     return blocks
