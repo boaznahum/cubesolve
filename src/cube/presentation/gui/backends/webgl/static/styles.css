@@ -1442,7 +1442,7 @@ a.info-item-name:hover {
    Notation Guide Modal
    ============================================================ */
 .notation-guide-dialog {
-    max-width: 420px;
+    max-width: 480px;
 }
 
 .notation-guide-content {

@@ -120,8 +120,12 @@ export class NotationGuide {
             ['Prime', "R' L' U' D' F' B'", 'counter-clockwise'],
             ['Double', "R2 L2 U2 D2 F2 B2", '180\u00B0 turn'],
             ['Slice', 'M  E  S', 'middle layer'],
-            ['Wide', 'Rw  Lw  r  l ...', '2 layers together'],
+            ['All slice', '[:]M  [:]E  [:]S', 'all middle slices'],
+            ['Wide', 'Rw  r  Fw  f ...', '2 layers together'],
+            ['N-Wide', '3Rw  3Fw  3r ...', 'n layers together'],
+            ['Indexed', '[2]R  [1:3]M  [1,3]E', 'specific slice(s)'],
             ['Cube', 'X  Y  Z', 'rotate whole cube'],
+            ['Group', "(R U R' U')2", 'repeat group n times'],
         ];
 
         const table = document.createElement('div');
@@ -154,7 +158,7 @@ export class NotationGuide {
         // Tip line
         const tip = document.createElement('div');
         tip.className = 'notation-guide-tip';
-        tip.textContent = "Combine moves into algorithms: R U R' U'";
+        tip.textContent = "Modifiers: ' (prime)  2 (double) \u2014 e.g. 3Fw'  (R U R')2";
         container.appendChild(tip);
     }
 }
