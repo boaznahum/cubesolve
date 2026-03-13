@@ -54,7 +54,7 @@ CCW must also overlap on both axes. Only need to check CW and 180°.
 
 On odd cubes, `(n//2, n//2)` maps to itself under all rotations — always invalid.
 
-### 4. "Doesn't Cross the Middle" Rule (NEW — not yet implemented)
+### 4. "Doesn't Cross the Middle" Rule
 
 **User's insight**: A block is valid if it **doesn't cross the middle in at
 least one direction**.
@@ -64,7 +64,28 @@ Why this works:
 - Block crosses the middle in BOTH directions → every rotation overlaps → invalid
 - This is a simpler geometric equivalent of the rotation-based self-intersection check
 
-This is the next thing to implement.
+**Half boundaries (precise math):**
+For 180° rotation, range `[a, b]` must not overlap `[n-1-b, n-1-a]`:
+- `lower_max = (n-2) // 2` — last row/col of lower half
+- `upper_min = (n+1) // 2` — first row/col of upper half
+- Even n: halves touch (`lower_max + 1 == upper_min`)
+- Odd n: middle row/col excluded from both halves (gap at `n//2`)
+
+### 5. Building Block Functions
+
+**`get_largest_blocks_containing_point(n, point)`**
+Returns the maximal half-face blocks (from the 4 possible) that **contain** the point.
+- Even cubes: every point in exactly 2 blocks
+- Odd cubes: middle row/col → 1 block; center → 0 blocks
+- Test: `TestLargestBlocksContainingPoint`
+
+**`get_largest_blocks_from_point(n, point)`**
+Returns the largest valid blocks with `(r,c)` as **bottom-left corner**, extending
+UP (smaller rows) and RIGHT (larger cols):
+- Row-safe: rows constrained to half, cols `c..n-1`
+- Col-safe: cols constrained to half, rows `0..r`
+- Deduplicates when both produce the same block
+- Test: `TestLargestBlocksFromPoint`
 
 ## Commits (oldest → newest)
 
@@ -88,5 +109,5 @@ bda5819 Remove redundant 90° CCW check from is_valid_for_swap
 
 ## Next Steps
 
-- Implement "doesn't cross the middle" as a simpler validity check
+- Nuclear test: use building blocks in the full swap validation
 - Use block-slice-swap in actual solver strategies
