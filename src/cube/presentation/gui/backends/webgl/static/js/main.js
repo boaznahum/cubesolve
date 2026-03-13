@@ -20,6 +20,7 @@ import { SoundManager } from './SoundManager.js';
 import { ColorPicker } from './ColorPicker.js';
 import { AlgEditor } from './AlgEditor.js';
 import { InfoPopup } from './InfoPopup.js';
+import { NotationGuide } from './NotationGuide.js';
 import { SettingsPopup } from './SettingsPopup.js';
 import { ConsolePanel } from './ConsolePanel.js';
 import { MarkerAnimator } from './MarkerAnimator.js';
@@ -129,6 +130,12 @@ document.getElementById('btn-edit')?.addEventListener('click', () => {
     if (colorPicker.active) return;  // can't edit during paint mode
     if (animQueue.isBusy || state.isPlaying) return;
     algEditor.enter();
+});
+
+// ── Notation guide (opened from editor toolbar "?" button) ──
+const notationGuide = new NotationGuide();
+document.getElementById('edit-help')?.addEventListener('click', () => {
+    notationGuide.toggle();
 });
 
 // ── Info popup ──
