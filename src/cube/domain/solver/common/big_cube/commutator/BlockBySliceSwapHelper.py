@@ -524,6 +524,50 @@ class BlockBySliceSwapHelper(SolverHelper):
         self.op.play(result.algorithm)
 
 
+def get_largest_blocks_containing_point(n: int, point: Point) -> list[Block]:
+    """Return the largest valid blocks that contain the given point.
+
+    Returns those of the 4 maximal half-face blocks that contain (r,c),
+    sorted by size descending.
+
+    The 4 maximal half-face blocks (based on the "doesn't cross the middle" rule):
+        1. Bottom half, full width: Block((0,0), (lower_max, n-1))
+        2. Top half, full width:    Block((upper_min, 0), (n-1, n-1))
+        3. Left half, full height:  Block((0,0), (n-1, lower_max))
+        4. Right half, full height: Block((0, upper_min), (n-1, n-1))
+
+    For even n: every point is in exactly 2 blocks.
+    For odd n: middle row/col points may have only 1, and
+    the center point (mid, mid) has none.
+    """
+    lower_max = (n - 2) // 2  # last row/col of lower half
+    upper_min = (n + 1) // 2  # first row/col of upper half
+    r, c = point.row, point.col
+
+    candidates: list[Block] = []
+
+    # Bottom half (rows 0..lower_max), full width
+    if r <= lower_max:
+        candidates.append(Block(Point(0, 0), Point(lower_max, n - 1)))
+
+    # Top half (rows upper_min..n-1), full width
+    if r >= upper_min:
+        candidates.append(Block(Point(upper_min, 0), Point(n - 1, n - 1)))
+
+    # Left half (cols 0..lower_max), full height
+    if c <= lower_max:
+        candidates.append(Block(Point(0, 0), Point(n - 1, lower_max)))
+
+    # Right half (cols upper_min..n-1), full height
+    if c >= upper_min:
+        candidates.append(Block(Point(0, upper_min), Point(n - 1, n - 1)))
+
+    # Sort by size descending
+    candidates.sort(key=lambda b: b.size, reverse=True)
+
+    return candidates
+
+
 def get_largest_blocks_from_point(n: int, point: Point) -> list[Block]:
     """Return the largest valid blocks with (r,c) as bottom-left corner.
 
