@@ -213,8 +213,11 @@
             </div>
             <!-- Algorithm editor toolbar (hidden by default) -->
             <div id="edit-toolbar" style="display:none">
-                <input id="edit-input" type="text" placeholder="R U R' U'..."
-                    autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+                <div class="edit-input-row">
+                    <input id="edit-input" type="text" placeholder="R U R' U'..."
+                        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+                    <button class="edit-help-btn" id="edit-help" title="Notation guide">?</button>
+                </div>
                 <div class="edit-buttons">
                     <button class="edit-btn edit-btn-red" id="edit-play" disabled>Play</button>
                     <button class="edit-btn" id="edit-apply">Apply</button>
