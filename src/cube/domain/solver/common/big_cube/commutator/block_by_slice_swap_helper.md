@@ -317,14 +317,14 @@ Backward-compatible properties are available:
      rotation type)
 
 2. **`execute_swap(source_face, target_face, target_block, source_block=None,
-   rotation_type=None, dry_run=False, undo_target_setup=True,
-   undo_source_setup=True) -> SliceSwapResult`**
+   dry_run=False, undo_target_setup=True, undo_source_setup=True) -> SliceSwapResult`**
    - Main API: execute or dry-run the slice swap
    - `source_block`: where content actually is on source face. If None, assumes
      content is at natural source position. If provided, computes the rotation
      needed to align it with natural_source and wraps the algorithm with
      source_setup / source_setup'.
-   - Auto-selects rotation_type if not specified
+   - Rotation type is auto-selected internally (first valid combination).
+     The caller does not choose it — it's a geometric detail.
    - Returns all 5 block triples and the algorithm
    - `undo_target_setup`: include `target_setup'` in algorithm (default True)
    - `undo_source_setup`: include `source_setup'` in algorithm (default True)

@@ -218,7 +218,6 @@ class BlockBySliceSwapHelper(SolverHelper):
         target_face: Face,
         target_block: Block,
         source_block: Block | None = None,
-        rotation_type: int | None = None,
         dry_run: bool = False,
         undo_target_setup: bool = True,
         undo_source_setup: bool = True,
@@ -234,8 +233,6 @@ class BlockBySliceSwapHelper(SolverHelper):
                          face. If None, assumes content is at the natural source
                          position (no source setup needed). If provided, computes
                          the rotation needed to align it with natural_source.
-            rotation_type: 1 (90° CW), -1 (90° CCW), or 2 (180°).
-                          If None, auto-selects best option.
             dry_run: If True, compute geometry only (no moves)
             undo_target_setup: If True, undo the target face setup rotation
                               at the end of the algorithm.
@@ -244,53 +241,26 @@ class BlockBySliceSwapHelper(SolverHelper):
             preserve_state: Deprecated. If set, overrides both undo params.
 
         Returns:
-            SliceSwapResult with 5 block triples and algorithm
+            SliceSwapResult with 5 block triples and algorithm.
+            The rotation_type is auto-selected (first valid combination).
         """
         if preserve_state is not None:
             undo_target_setup = preserve_state
             undo_source_setup = preserve_state
         target_block = target_block.normalize
 
-        if rotation_type is None:
-            # Auto-select: get first valid combination
-            combinations = self.get_all_combinations(
-                source_face, target_face, target_block,
-                source_block=source_block,
-                undo_target_setup=undo_target_setup,
-                undo_source_setup=undo_source_setup,
+        combinations = self.get_all_combinations(
+            source_face, target_face, target_block,
+            source_block=source_block,
+            undo_target_setup=undo_target_setup,
+            undo_source_setup=undo_source_setup,
+        )
+        if not combinations:
+            raise ValueError(
+                f"No valid slice swap combination for block {target_block} "
+                f"from {source_face.name} to {target_face.name}"
             )
-            if not combinations:
-                raise ValueError(
-                    f"No valid slice swap combination for block {target_block} "
-                    f"from {source_face.name} to {target_face.name}"
-                )
-            result = combinations[0]
-        else:
-            # Use specified rotation — try with and without setup
-            trans_results = Face2FaceTranslator.translate_source_from_target(
-                target_face, source_face, target_block.start
-            )
-            result = None
-            for trans_result in trans_results:
-                slice_name = trans_result.slice_algorithm.whole_slice_alg.slice_name
-                slice_n = trans_result.slice_algorithm.n
-                for setup_rotation in [0, 1]:
-                    result = self._try_combination(
-                        source_face, target_face, target_block,
-                        slice_name, slice_n, rotation_type, trans_result,
-                        setup_rotation=setup_rotation,
-                        source_block=source_block,
-                        undo_target_setup=undo_target_setup,
-                        undo_source_setup=undo_source_setup,
-                    )
-                    if result is not None:
-                        break
-                if result is not None:
-                    break
-            if result is None:
-                raise ValueError(
-                    f"Rotation type {rotation_type} is not valid for block {target_block}"
-                )
+        result = combinations[0]
 
         if not dry_run:
             self._execute_algorithm(result, source_face, target_face)

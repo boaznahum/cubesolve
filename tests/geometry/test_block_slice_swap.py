@@ -278,7 +278,6 @@ class TestSliceSwapSixBlocks:
             # Execute the actual swap (not dry run)
             exec_result = helper.execute_swap(
                 source_face, target_face, target_block,
-                rotation_type=result.rotation_type,
                 dry_run=False,
                 preserve_state=True,
             )
@@ -442,7 +441,6 @@ class TestFullSliceBlocks:
 
         helper.execute_swap(
             source_face, target_face, target_block,
-            rotation_type=result.rotation_type,
             dry_run=False,
             preserve_state=True,
         )
@@ -781,7 +779,6 @@ class TestNuclearSwap:
             # Dry run to get block geometry
             result = helper.execute_swap(
                 source_face, target_face, sb,
-                rotation_type=2,
                 dry_run=True,
                 preserve_state=True,
             )
@@ -823,7 +820,6 @@ class TestNuclearSwap:
             # Execute the actual swap
             helper.execute_swap(
                 source_face, target_face, sb,
-                rotation_type=2,
                 dry_run=False,
                 preserve_state=True,
             )
@@ -986,7 +982,6 @@ class TestSourceSetup:
             exec_result = helper.execute_swap(
                 source_face, target_face, target_block,
                 source_block=source_block,
-                rotation_type=dry_result.rotation_type,
                 undo_source_setup=True,
                 undo_target_setup=True,
             )
