@@ -29,7 +29,6 @@ from cube.domain.model.Face import Face
 from cube.domain.solver.common.big_cube.commutator.BlockBySliceSwapHelper import (
     BlockBySliceSwapHelper,
     SliceSwapResult,
-    SwapBlockTriple,
     get_largest_blocks_containing_point,
     get_largest_blocks_from_point,
     iter_sub_blocks,
@@ -181,6 +180,52 @@ def _place_markers_and_verify_swap(
     return ok
 
 
+def _test_all_rotations(
+    app: AbstractApp,
+    target_face_name: FaceName,
+    source_face_name: FaceName,
+    target_block: Block,
+    dry: SliceSwapResult,
+    failures: list[dict],
+) -> int:
+    """Test all 4 source rotations for a given target block.
+
+    For each rotation (0, 1, 2, 3):
+    - Compute rotated source positions from the natural source triple
+    - Place markers at target and rotated source positions
+    - Execute swap with source_block and undo_source_setup
+    - Verify all 6 marker groups swapped correctly
+
+    Returns the number of successful rotations (0-4).
+    """
+    nat = dry.natural_source
+    n = app.cube.n_slices
+    successes = 0
+
+    for source_rotate in range(4):
+        src_main = nat.main.rotate_clockwise(n, source_rotate)
+        src_prefix = (
+            nat.prefix.rotate_clockwise(n, source_rotate)
+            if nat.prefix is not None else None
+        )
+        src_suffix = (
+            nat.suffix.rotate_clockwise(n, source_rotate)
+            if nat.suffix is not None else None
+        )
+
+        if _place_markers_and_verify_swap(
+            app, target_face_name, source_face_name, target_block,
+            _target_triple(dry),
+            (src_prefix, src_main, src_suffix),
+            dict(source_block=src_main, undo_source_setup=True, undo_target_setup=True),
+            failures,
+            {"block": target_block, "rotate": source_rotate, "src_main": src_main},
+        ):
+            successes += 1
+
+    return successes
+
+
 # =============================================================================
 # Tests
 # =============================================================================
@@ -265,11 +310,10 @@ class TestSliceSwapSixBlocks:
     @pytest.mark.parametrize("cube_size", [4, 5, 6, 7])
     @pytest.mark.parametrize("face_pair", _FACE_PAIRS, ids=[_face_pair_id(p) for p in _FACE_PAIRS])
     def test_slice_swap_markers(self, cube_size: int, face_pair: tuple[FaceName, FaceName]):
-        """Verify all 6 blocks swap correctly with markers.
+        """Verify all 6 blocks swap correctly with markers, all 4 source rotations.
 
-        For each valid target block, places markers on all 6 blocks
-        (3 on target face, 3 on source face), executes the swap,
-        then checks all markers moved to the expected positions.
+        For each valid target block × 4 rotations, places markers on all 6 blocks,
+        executes the swap with rotated source, verifies markers swapped correctly.
         """
         source_face_name, target_face_name = face_pair
 
@@ -291,20 +335,10 @@ class TestSliceSwapSixBlocks:
             if not results:
                 continue
 
-            result = results[0]
-            record = {
-                "target_block": target_block,
-                "rotation": result.rotation_type,
-                "slice": result.slice_name,
-            }
-
-            if _place_markers_and_verify_swap(
-                app, target_face_name, source_face_name, target_block,
-                _target_triple(result), _source_triple(result),
-                dict(dry_run=False, preserve_state=True),
-                failures, record,
-            ):
-                successes += 1
+            successes += _test_all_rotations(
+                app, target_face_name, source_face_name,
+                target_block, results[0], failures,
+            )
 
         if failures:
             msg = (
@@ -372,7 +406,7 @@ class TestFullSliceBlocks:
     @pytest.mark.parametrize("case", _FULL_SLICE_CASES,
                              ids=[_full_slice_id(c) for c in _FULL_SLICE_CASES])
     def test_full_slice_swap(self, case: tuple[int, FaceName, FaceName, Block]):
-        """Single full-slice block swap with marker verification."""
+        """Single full-slice block swap with all 4 source rotations."""
         cube_size, target_face_name, source_face_name, target_block = case
 
         app = AbstractApp.create_app(cube_size)
@@ -387,20 +421,16 @@ class TestFullSliceBlocks:
             f"{target_face_name.name}<-{source_face_name.name} block={target_block}"
         )
 
-        result = results[0]
         failures: list[dict] = []
-
-        ok = _place_markers_and_verify_swap(
-            app, target_face_name, source_face_name, target_block,
-            _target_triple(result), _source_triple(result),
-            dict(dry_run=False, preserve_state=True),
-            failures, {"block": target_block, "slice": result.slice_name},
+        successes = _test_all_rotations(
+            app, target_face_name, source_face_name,
+            target_block, results[0], failures,
         )
 
-        assert ok, (
+        assert successes == 4, (
             f"Swap verification failed for {cube_size}x{cube_size} "
             f"{target_face_name.name}<-{source_face_name.name} "
-            f"block={target_block}:\n" +
+            f"block={target_block}: {successes}/4 rotations passed\n" +
             "\n".join(f"  {f}" for f in failures)
         )
 
@@ -714,15 +744,10 @@ class TestNuclearSwap:
                 preserve_state=True,
             )
 
-            record = {"block": sb, "slice": result.slice_name}
-
-            if _place_markers_and_verify_swap(
-                app, target_face_name, source_face_name, sb,
-                _target_triple(result), _source_triple(result),
-                dict(dry_run=False, preserve_state=True),
-                failures, record,
-            ):
-                successes += 1
+            successes += _test_all_rotations(
+                app, target_face_name, source_face_name,
+                sb, result, failures,
+            )
 
         if failures:
             msg = (
@@ -752,43 +777,6 @@ class TestSourceSetup:
        d. Execute swap with source_block
        e. Verify all 6 marker groups swapped correctly
     """
-
-    @staticmethod
-    def _test_single_rotation(
-        app: AbstractApp,
-        target_face_name: FaceName,
-        source_face_name: FaceName,
-        target_block: Block,
-        dry: SliceSwapResult,
-        nat: SwapBlockTriple,
-        source_rotate: int,
-        failures: list[dict],
-    ) -> bool:
-        """Test a single source rotation for a given target block.
-
-        Returns True if the rotation passed, False otherwise.
-        """
-        n = app.cube.n_slices
-
-        # Compute rotated source positions
-        src_main = nat.main.rotate_clockwise(n, source_rotate)
-        src_prefix = (
-            nat.prefix.rotate_clockwise(n, source_rotate)
-            if nat.prefix is not None else None
-        )
-        src_suffix = (
-            nat.suffix.rotate_clockwise(n, source_rotate)
-            if nat.suffix is not None else None
-        )
-
-        return _place_markers_and_verify_swap(
-            app, target_face_name, source_face_name, target_block,
-            _target_triple(dry),
-            (src_prefix, src_main, src_suffix),
-            dict(source_block=src_main, undo_source_setup=True, undo_target_setup=True),
-            failures,
-            {"block": target_block, "rotate": source_rotate, "src_main": src_main},
-        )
 
     @pytest.mark.parametrize("cube_size", [4, 5, 6, 7])
     @pytest.mark.parametrize(
@@ -834,16 +822,10 @@ class TestSourceSetup:
             if not dry_results:
                 continue
 
-            dry = dry_results[0]
-            nat = dry.natural_source
-
-            # Test ALL 4 rotations for this block
-            for source_rotate in range(4):
-                if self._test_single_rotation(
-                    app, target_face_name, source_face_name,
-                    target_block, dry, nat, source_rotate, failures,
-                ):
-                    successes += 1
+            successes += _test_all_rotations(
+                app, target_face_name, source_face_name,
+                target_block, dry_results[0], failures,
+            )
 
         if failures:
             msg = (
