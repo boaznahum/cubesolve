@@ -1,21 +1,19 @@
 from collections.abc import Iterable, Iterator, Sequence, Set
 from contextlib import AbstractContextManager, nullcontext
-from dataclasses import dataclass
 from enum import Enum, unique
 from typing import Tuple
 
-from cube.domain import algs
 from cube.domain.algs import Algs
 from cube.domain.exceptions import InternalSWError
 from cube.domain.geometric.block import Block
 from cube.domain.geometric.cube_layout import CubeLayout
 from cube.domain.geometric.geometry_types import Point
-from cube.domain.model import CenterSlice, Color
+from cube.domain.model import Color
 from cube.domain.model.Cube import Cube
 from cube.domain.model.Face import Face
-from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.CenterBlockStatistics import CenterBlockStatistics
 from cube.domain.solver.common.SolverHelper import SolverHelper
+from cube.domain.solver.common.big_cube.commutator.BlockBySliceSwapHelper import BlockBySliceSwapHelper
 from cube.domain.solver.common.big_cube.commutator.CommutatorHelper import CommutatorHelper
 from cube.domain.solver.protocols import SolverElementsProvider
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
@@ -29,12 +27,6 @@ class _SearchBlockMode(Enum):
     BigThanSource = 2
     ExactMatch = 3  # required on source match source
 
-
-@dataclass
-class _CompleteSlice:
-    is_row: bool
-    index: int  # of row/column
-    n_matches: int  # number of pieces match color
 
 
 class NxNCenters(SolverHelper):
@@ -161,6 +153,8 @@ class NxNCenters(SolverHelper):
 
         # Use CommutatorHelper for block search operations
         self._comm_helper = CommutatorHelper(slv)
+        # Use BlockBySliceSwapHelper for complete slice swaps
+        self._bsh = BlockBySliceSwapHelper(slv)
 
     def _is_solved(self):
         return all((f.center.is3x3 for f in self.cube.faces)) and self.cube.match_original_scheme
@@ -457,213 +451,135 @@ class NxNCenters(SolverHelper):
 
         return work_done
 
-    def _do_complete_slices(self, tracker_holder: "FacesTrackerHolder", color, face, source_face) -> bool:
+    def _do_complete_slices(self, tracker_holder: "FacesTrackerHolder", color: Color,
+                            face: Face, source_face: Face) -> bool:
+        """Find and execute the best complete slice swaps between target and source faces.
 
-        work_done = False
+        For each target slice block, uses BSH dry_run to find the natural source,
+        then grades all 4 rotations of the source face to find the best content.
+        Picks the globally best swap, executes it, and repeats until no swap
+        with grade > 1 exists.
+        """
+        nn: int = self.cube.n_slices
 
-        # do while work is done
+        # Get source face's target color
+        source_color: Color = self._get_face_color(tracker_holder, source_face)
+
+        # Generate all full-slice blocks (skip middle on odd cubes)
+        all_slices: list[Block] = self._generate_all_slice_blocks(nn)
+
+        # Precompute natural source for each target slice (geometry doesn't change)
+        target_natural_pairs: list[tuple[Block, Block]] = []
+        for ts in all_slices:
+            combos = self._bsh.get_all_combinations(
+                source_face, face, ts,
+                undo_target_setup=self._preserve_cage,
+                undo_source_setup=self._preserve_cage,
+            )
+            if combos:
+                natural: Block = combos[0].natural_source.main
+                target_natural_pairs.append((ts, natural))
+
+        work_done: bool = False
+        max_iterations: int = nn * nn
+        iterations: int = 0
+
         while True:
-            if not self._do_one_complete_slice(tracker_holder, color, face, source_face):
+            # Find the best swap across all target slices × 4 source rotations
+            best_grade: int = 1  # minimum threshold (ignore grade <= 1)
+            best_target: Block | None = None
+            best_source: Block | None = None
+
+            for ts, natural in target_natural_pairs:
+                for rot in range(4):
+                    ss: Block = natural.rotate_clockwise(nn, (-rot) % 4)
+                    grade: int = self._compute_swap_grade(
+                        face, ts, color,
+                        source_face, ss, source_color,
+                    )
+                    if grade > best_grade:
+                        best_grade = grade
+                        best_target = ts
+                        best_source = ss
+
+            if best_target is None:
                 return work_done
 
+            # Execute the best swap
+            with self.ann.annotate(h2=", Swap complete slice"):
+                with tracker_holder.preserve_physical_faces():
+                    self._bsh.execute_swap(
+                        source_face=source_face,
+                        target_face=face,
+                        target_block=best_target,
+                        source_block=best_source,
+                        undo_target_setup=self._preserve_cage,
+                        undo_source_setup=self._preserve_cage,
+                    )
+
             work_done = True
+            iterations += 1
+            assert iterations <= max_iterations, (
+                f"Bug: too many slice swap iterations ({iterations}) for nn={nn}"
+            )
 
-    def _do_one_complete_slice(self, tracker_holder: "FacesTrackerHolder",  color, target_face: Face, source_face: Face) -> bool:
+    def _compute_swap_grade(
+        self,
+        target_face: Face, target_block: Block, target_color: Color,
+        source_face: Face, source_block: Block, source_color: Color,
+    ) -> int:
+        """Compute the grade (net improvement) of swapping two slice blocks.
 
-        with tracker_holder.preserve_physical_faces():
-            return self._do_one_complete_slice_imp(color, target_face, source_face)
-
-    def _do_one_complete_slice_imp(self, color, target_face: Face, source_face: Face) -> bool:
-
-        source_slices: Sequence[_CompleteSlice] = self._search_slices_on_face(source_face, color, None, True)
-
-        if not source_slices:
-            return False
-
-        odd_mid_slice: int | None = None
-        n_slices = self.cube.n_slices
-        if n_slices % 2:
-            odd_mid_slice = n_slices // 2
-
-        # cache already searched source_slices on the target face
-        slices_on_target_face: dict[int, Sequence[_CompleteSlice]] = {}
-
-        for source_slice in source_slices:
-
-            index = source_slice.index
-
-            if index == odd_mid_slice:
-                continue  # skip this one
-
-            # if source_slice.contains_track_slice:
-            #     continue  # we can't move it happens in even cube
-
-            target_slices = slices_on_target_face.get(index)
-
-            if target_slices is None:
-                target_slices = self._search_slices_on_face(target_face, color, index, False)
-                assert len(target_slices) == 4  # we search vertical and horizontal x  index, inv(index)
-                slices_on_target_face[index] = target_slices
-
-            min_target_slice = target_slices[0]
-
-            if (
-                    (min_target_slice.n_matches == 0 or
-                     not self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES_ONLY_TARGET_ZERO) and
-                      source_slice.n_matches > 0 / 2.0  # SEE SPECIAL_CASE_1 above
-            ) and source_slice.n_matches > min_target_slice.n_matches:
-                # ok now swap
-
-                # before = self._count_color_on_face(face, color)
-
-                # self._debug_print_track_slices()
-                # print("before", end="")
-                # self._print_faces()
-                # before = [ (f.face, f.color) for f in self._faces]
-
-                # _tf: FaceLoc = next(_f for _f in self._faces if _f.face is target_face)
-                # _sf: FaceLoc = next(_f for _f in self._faces if _f.face is source_face)
-                # print(f"@@@ to {color} {_tf} from {_sf} n={source_slice.n_matches}")
-
-                with self.ann.annotate(h2=", Swap complete slice"):
-                    self._swap_slice(min_target_slice, target_face, source_slice, source_face)
-
-                    # print("after", end="")
-                    # self._print_faces()
-                    # _after = [ (f.face, f.color) for f in self._faces]
-                    # if _before != _after:
-                    #     print("xxxx")
-                    #     raise InternalSWError()
-
-                    # self._debug_print_track_slices()
-                    # self._asserts_is_boy(self._faces)
-
-                    # after = self._count_color_on_face(face, color)
-
-                    # print(before, after, color)
-
-                    return True
-
-        return False
-
-    def _swap_slice(self, target_slice: _CompleteSlice,
-                    target_face: Face,
-                    source_slice: _CompleteSlice, source_face: Face):
+        Grade = solved_after - solved_before, where solved = pieces matching
+        their face's target color.
         """
-        Swap a complete slice (row or column) between target and source faces.
+        # Before swap
+        target_ok_before: int = self._count_colors_on_block(
+            target_color, target_face, target_block.start, target_block.end, ignore_if_back=True
+        )
+        source_ok_before: int = self._count_colors_on_block(
+            source_color, source_face, source_block.start, source_block.end, ignore_if_back=True
+        )
 
-        CAGE METHOD (preserve_cage=True):
-        =================================
-        Undoes setup moves (F' and source rotation) after the swap.
+        # After swap: target gets source content, source gets target content
+        target_ok_after: int = self._count_colors_on_block(
+            target_color, source_face, source_block.start, source_block.end, ignore_if_back=True
+        )
+        source_ok_after: int = self._count_colors_on_block(
+            source_color, target_face, target_block.start, target_block.end, ignore_if_back=True
+        )
 
-        WHY THIS MATTERS - VISUAL EXAMPLE:
-        -----------------------------------
-        To swap slices, we need them aligned as COLUMNS.
-        If target is a ROW, we first play F' to rotate it to a column.
+        return (target_ok_after + source_ok_after) - (target_ok_before + source_ok_before)
 
-        Before F':              After F':
-        ┌─┬─┬─┐                ┌─┬─┬─┐
-        │ │█│ │ <- row         │ │ │ │
-        ├─┼─┼─┤                ├─┼─┼─┤
-        │ │█│ │                │█│█│█│ <- now column
-        ├─┼─┼─┤                ├─┼─┼─┤
-        │ │█│ │                │ │ │ │
-        └─┴─┴─┘                └─┴─┴─┘
+    @staticmethod
+    def _generate_all_slice_blocks(nn: int) -> list[Block]:
+        """Generate all full-slice blocks (columns and rows).
 
-        The F' move BREAKS paired edges (rotates front wings).
-        With preserve_cage=True: We undo F' after the swap.
-
-        Similarly, source rotation (U * n_rotate) aligns source with target.
-        This also needs to be undone for cage method.
+        Returns nn columns + nn rows, skipping the middle slice on odd cubes.
         """
-        cube = self.cube
-        n_slices = cube.n_slices
+        blocks: list[Block] = []
+        nm1: int = nn - 1
+        mid: int | None = nn // 2 if nn % 2 else None
 
-        target_index: int
+        for c in range(nn):
+            if c == mid:
+                continue
+            blocks.append(Block(Point(0, c), Point(nm1, c)))  # column c
 
-        # Track if we did F' setup (for cage undo)
-        did_f_prime_setup = False
+        for r in range(nn):
+            if r == mid:
+                continue
+            blocks.append(Block(Point(r, 0), Point(r, nm1)))  # row r
 
-        # slice must be vertical
-        op = self.op
-        if target_slice.is_row:
-            target_slice_block_1 = cube.cqr.rotate_point_counterclockwise((target_slice.index, 0))
-            target_index = target_slice_block_1[1]
-            op.play(Algs.F.prime)
-            did_f_prime_setup = True  # Track for cage undo
-        else:
-            # column
-            target_index = target_slice.index
+        return blocks
 
-        # now we must bring source slice into position (0,  target_index^)
-
-        nm1 = cube.n_slices - 1
-        source_index = source_slice.index
-        if source_slice.is_row:
-            s1 = Point(source_index, 0)
-            s2 = Point(source_index, nm1)
-        else:
-            s1 = Point(0, source_index)
-            s2 = Point(nm1, source_index)
-
-        # now we need to bring source slice such that one of its endpoints is (0,  target_index^)
-        required_on_target = Point(0, cube.inv(target_index))
-
-        def is_column(p1: Point, p2: Point):
-
-            return (p1[0] == 0 and p2[0] == n_slices - 1) or (p2[0] == 0 and p1[0] == n_slices - 1)
-
-        source_is_back = source_face is cube.back
-        n_rotate: int | None = None
-        for i in range(4):
-
-            if is_column(s1, s2):
-                s1_on_target = self._point_on_target(source_is_back, s1)
-                s2_on_target = self._point_on_target(source_is_back, s2)
-
-                if s1_on_target == required_on_target or s2_on_target == required_on_target:
-                    n_rotate = i
-                    break
-
-            s1 = Point(*cube.cqr.rotate_point_clockwise(s1))
-            s2 = Point(*cube.cqr.rotate_point_clockwise(s2))
-
-        assert n_rotate is not None
-
-        # now rotate source face accordingly:
-        rotate_source_alg = Algs.of_face(source_face.name)
-        op.play(rotate_source_alg * n_rotate)
-
-        mul = 2 if source_is_back else 1
-        # do the swap:
-        slice_source_alg: algs.Alg = self._get_slice_m_alg(target_index, target_index)
-
-        def ann_source() -> Iterator[CenterSlice]:
-            for rc in self._2d_range(s1, s2):
-                yield source_face.center.get_center_slice(rc)
-
-        def ann_target() -> Iterator[CenterSlice]:
-
-            for rc in self._2d_range(Point(0, target_index), Point(nm1, target_index)):
-                yield target_face.center.get_center_slice(rc)
-
-        with self.ann.annotate((ann_source(), AnnWhat.Moved), (ann_target(), AnnWhat.FixedPosition)):
-            op.play(slice_source_alg * mul +
-                  rotate_source_alg * 2 +  # this replaces source slice with target
-                  slice_source_alg.prime * mul
-                  )
-
-        # =========================================================
-        # CAGE METHOD: Undo setup moves to preserve paired edges
-        # =========================================================
-        if self._preserve_cage:
-            if n_rotate:
-                self.debug( f"  [CAGE] Undoing source rotation: {rotate_source_alg.prime * n_rotate}", level=1)
-                op.play(rotate_source_alg.prime * n_rotate)
-
-            if did_f_prime_setup:
-                self.debug( "  [CAGE] Undoing F' setup: F", level=1)
-                op.play(Algs.F)
+    @staticmethod
+    def _get_face_color(tracker_holder: "FacesTrackerHolder", face: Face) -> Color:
+        """Get the target color for a face from the tracker holder."""
+        for ft in tracker_holder:
+            if ft.face is face:
+                return ft.color
+        raise InternalSWError(f"No tracker for face {face.name}")
 
     def _do_blocks(self, tracker_holder: "FacesTrackerHolder", color: Color, face: Face, source_face: Face, faces: Iterable[FaceTracker]) -> bool:
         """
@@ -942,68 +858,6 @@ class NxNCenters(SolverHelper):
 
         return _count
 
-    def _search_slices_on_face(self, face, color, index: int | None, search_max: bool) -> list[_CompleteSlice]:
-
-        """
-
-        :param face:
-        :param color:
-        :param index: if not None then return only (index, 0) (index^, 0), (0, index), (0, index^)
-        :param search_max:
-        :return:
-        """
-
-        cube = self.cube
-        inv = cube.inv
-        n_slices = cube.n_slices
-        nm1 = n_slices - 1
-
-        rows: Iterable[int]
-        columns: Iterable[int]
-        if index is not None:
-            rows = [index, inv(index)]
-            columns = [index, inv(index)]
-        else:
-            rows = range(n_slices)
-            columns = rows
-
-        _slices = []
-        for r in rows:
-
-            n = self._count_colors_on_block(color, face, (r, 0), (r, nm1), ignore_if_back=True)
-
-            if n > 1 or not search_max:  # one is not interesting, will be handled by commutator
-                # if we search for minimum than we want zero too
-                _slice = _CompleteSlice(True, r, n)
-                _slices.append(_slice)
-
-        for c in columns:
-
-            n = self._count_colors_on_block(color, face, (0, c), (nm1, c), ignore_if_back=True)
-
-            if n > 1 or not search_max:  # one is not interesting, will be handled by commutator
-                # if we search for minimum than we want zero too
-                _slice = _CompleteSlice(False, c, n)
-                _slices.append(_slice)
-
-        _slices = sorted(_slices, key=lambda s: s.n_matches, reverse=search_max)
-
-        return _slices
-
-    def _point_on_target(self, source_is_back: bool, rc: Tuple[int, int]) -> Point:
-
-        inv = self.cube.inv
-
-        # the logic here is hard code of the logic in slice rotate
-        # it will be broken if cube layout is changed
-        # here we assume we work on F, and UP has same coord system as F, and
-        # back is mirrored in both direction
-        if source_is_back:
-            return Point(inv(rc[0]), inv(rc[1]))
-        else:
-            # on up
-            return Point(*rc)
-
     @staticmethod
     def _2d_range(rc1: Point, rc2: Point) -> Iterator[Point]:
 
@@ -1111,23 +965,6 @@ class NxNCenters(SolverHelper):
             rotated_block = rotated_block.rotate_clockwise(n_slices)
 
         return None
-
-    def _get_slice_m_alg(self, c1, c2):
-
-        """
-
-        :param c1: Center Slice index [0, n)
-        :param c2: Center Slice index [0, n)
-        :return: m slice in range suitable for [c1, c2]
-        """
-
-        #   index is from left to right, L is from left to right,
-        # so we don't need to invert
-
-        if c1 > c2:
-            c1, c2 = c2, c1
-
-        return Algs.MM[c1 + 1:c2 + 1].prime
 
     def reset_block_statistics(self) -> None:
         """Reset block solving statistics."""
