@@ -1516,6 +1516,22 @@ a.info-item-name:hover {
     white-space: nowrap;
 }
 
+.notation-guide-section {
+    margin-top: 12px;
+    margin-bottom: 4px;
+    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    color: rgba(0, 255, 65, 0.75);
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid rgba(0, 255, 65, 0.15);
+    padding-bottom: 2px;
+}
+
+.notation-guide-section:first-child {
+    margin-top: 0;
+}
+
 .notation-guide-tip {
     margin-top: 14px;
     padding-top: 10px;

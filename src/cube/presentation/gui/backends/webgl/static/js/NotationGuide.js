@@ -115,7 +115,8 @@ export class NotationGuide {
     }
 
     _renderContent(container) {
-        const lines = [
+        // -- Moves section --
+        this._renderSection(container, 'Moves', [
             ['Faces', "R  L  U  D  F  B", 'clockwise 90\u00B0'],
             ['Prime', "R' L' U' D' F' B'", 'counter-clockwise'],
             ['Double', "R2 L2 U2 D2 F2 B2", '180\u00B0 turn'],
@@ -126,7 +127,43 @@ export class NotationGuide {
             ['Indexed', '[2]R  [1:3]M  [1,3]E', 'specific slice(s)'],
             ['Cube', 'X  Y  Z', 'rotate whole cube'],
             ['Group', "(R U R' U')2", 'repeat group n times'],
-        ];
+        ]);
+
+        // Tip line
+        const tip = document.createElement('div');
+        tip.className = 'notation-guide-tip';
+        tip.textContent = "Modifiers: ' (prime)  2 (double) \u2014 e.g. 3Fw'  (R U R')2";
+        container.appendChild(tip);
+
+        // -- Multiline section --
+        this._renderSection(container, 'Multiline & Variables', [
+            ['Comment', '# text', 'ignored line'],
+            ['Variable', "$setup = R U R'", 'define algorithm'],
+            ['Use var', '$setup', 'expands inline'],
+            ['Inverse', "$setup'", 'prime of variable'],
+            ['Int var', '$I = 1', 'integer variable'],
+            ['Expr', '[$I:$I+1]M', 'integer expression in slice'],
+            ['Repeat', "$alg * $n", 'repeat n times'],
+            ['Repeat', "R U R' U' * 6", 'repeat literal times'],
+        ]);
+
+        // -- Metadata section --
+        this._renderSection(container, 'Metadata', [
+            ['Name', '%name=myAlg', 'save to browser (localStorage)'],
+        ]);
+
+        // Keyboard tip
+        const kbTip = document.createElement('div');
+        kbTip.className = 'notation-guide-tip';
+        kbTip.textContent = 'Ctrl+Enter \u2014 Play    |    Esc \u2014 Cancel';
+        container.appendChild(kbTip);
+    }
+
+    _renderSection(container, title, lines) {
+        const heading = document.createElement('div');
+        heading.className = 'notation-guide-section';
+        heading.textContent = title;
+        container.appendChild(heading);
 
         const table = document.createElement('div');
         table.className = 'notation-guide-table';
@@ -154,11 +191,5 @@ export class NotationGuide {
         }
 
         container.appendChild(table);
-
-        // Tip line
-        const tip = document.createElement('div');
-        tip.className = 'notation-guide-tip';
-        tip.textContent = "Modifiers: ' (prime)  2 (double) \u2014 e.g. 3Fw'  (R U R')2";
-        container.appendChild(tip);
     }
 }
