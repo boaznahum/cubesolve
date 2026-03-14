@@ -6,7 +6,7 @@ from cube.utils.logger_protocol import ILogger, LazyArg
 from cube.domain.model.Cube import Cube, CubeSupplier
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
-from cube.domain.solver.common.CenterBlockStatistics import CenterBlockStatistics
+from cube.domain.solver.common.SolverStatistics import SolverStatistics
 from cube.domain.solver.protocols import (
     AdditionalMarker,
     AnnotationProtocol,
@@ -109,9 +109,9 @@ class SolverHelper(CubeSupplier, SolverElementsProvider):
     def cmn(self) -> _Common:
         return self._cmn  # type: ignore[return-value]  # CommonOp sets self._cmn = self
 
-    def get_block_statistics(self) -> CenterBlockStatistics:
+    def get_block_statistics(self) -> SolverStatistics:
         """Return block statistics. Override in subclasses that track or aggregate statistics."""
-        return CenterBlockStatistics()
+        return SolverStatistics()
 
     def reset_block_statistics(self) -> None:
         """Reset block statistics. Override in subclasses that track or aggregate statistics."""

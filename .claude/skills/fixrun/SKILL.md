@@ -85,7 +85,12 @@ ls -d "$APPDATA/JetBrains/PyCharm"*/options/jdk.table.xml \
 ```
 
 - **If exactly one match:** use it.
-- **If multiple matches:** ask the user which PyCharm version they are using (use `AskUserQuestion` with the list of found versions as options).
+- **If multiple matches:** Use `AskUserQuestion` with selectable options to let the user pick. Extract version names from paths (e.g., "PyCharm2025.3", "PyCharm2026.1") and pass them as the `options` array parameter. Example:
+  ```
+  AskUserQuestion:
+    question: "Multiple PyCharm versions found. Which one are you using?"
+    options: ["PyCharm2025.3", "PyCharm2026.1"]
+  ```
 - **If no matches:** report error — PyCharm config directory not found.
 
 ## Part 1: Analyze Current State (Read Everything First)

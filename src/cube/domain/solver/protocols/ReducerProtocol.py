@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Protocol
 
 if TYPE_CHECKING:
-    from cube.domain.solver.common.CenterBlockStatistics import CenterBlockStatistics
+    from cube.domain.solver.common.SolverStatistics import SolverStatistics
     from cube.domain.solver.protocols.OperatorProtocol import OperatorProtocol
 
 
@@ -112,7 +112,7 @@ class ReducerProtocol(Protocol):
         """Human-readable status of reduction state."""
         ...
 
-    def get_block_statistics(self) -> "CenterBlockStatistics":
+    def get_block_statistics(self) -> "SolverStatistics":
         """Return block statistics from reduction."""
         ...
 

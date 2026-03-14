@@ -11,7 +11,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-from cube.domain.solver.common.CenterBlockStatistics import CenterBlockStatistics
+from cube.domain.solver.common.SolverStatistics import SolverStatistics
 from cube.domain.solver.protocols.OperatorProtocol import OperatorProtocol
 from cube.domain.solver.protocols.ReducerProtocol import (
     ReducerProtocol,
@@ -115,9 +115,9 @@ class AbstractReducer(ReducerProtocol, SolverElementsProvider, ABC):
 
     # ---- Block statistics ----
 
-    def get_block_statistics(self) -> CenterBlockStatistics:
+    def get_block_statistics(self) -> SolverStatistics:
         """Return block statistics. Override in subclasses that track statistics."""
-        return CenterBlockStatistics()
+        return SolverStatistics()
 
     def reset_block_statistics(self) -> None:
         """Reset block statistics. Override in subclasses that track statistics."""
@@ -128,26 +128,14 @@ class AbstractReducer(ReducerProtocol, SolverElementsProvider, ABC):
 
         Uses get_block_statistics() to aggregate stats from the entire helper tree.
         """
-        stats: CenterBlockStatistics = self.get_block_statistics()
+        stats: SolverStatistics = self.get_block_statistics()
         if stats.is_empty():
             return
-        # Strip reducer's own prefix from topic names to avoid redundancy
         my_prefix: str = self._logger.prefix + ":"
-        summary = stats.get_summary_stats()
-        total_blocks = sum(summary.values())
-        total_pieces = sum(size * count for size, count in summary.items())
-        self.debug(f"[Center Block Statistics] {total_blocks} blocks, {total_pieces} pieces moved")
-        for topic in stats.get_all_topics():
-            display_topic = topic.replace(my_prefix, "")
-            topic_stats = stats.get_topic_stats(topic)
-            if topic_stats:
-                parts = [f"{size}x1:{count}" for size, count in sorted(topic_stats.items())]
-                total = sum(topic_stats.values())
-                self.debug(f"  [{display_topic}] {', '.join(parts)} (total: {total} blocks)")
-            else:
-                self.debug(f"  [{display_topic}] (no blocks)")
-        parts = [f"{size}x1:{count}" for size, count in sorted(summary.items())]
-        self.debug(f"  [SUMMARY] {', '.join(parts)} (total: {total_blocks} blocks)")
+        self.debug("[Solver Statistics]")
+        for topic_name, lines in stats.format_all(strip_prefix=my_prefix):
+            for line in lines:
+                self.debug(f"  [{topic_name}] {line}")
 
     # ---- ReducerProtocol interface (abstract) ----
 

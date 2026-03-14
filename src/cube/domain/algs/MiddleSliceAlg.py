@@ -74,10 +74,4 @@ class MiddleSliceAlg(SliceAlgBase):
     def get_base_alg(self) -> SliceAlgBase:
         """Return the sliceable all-slices alg as the base."""
         from cube.domain.algs.Algs import Algs
-        match self._slice_name:
-            case SliceName.M:
-                return Algs.MM
-            case SliceName.E:
-                return Algs.EE
-            case SliceName.S:
-                return Algs.SS
+        return Algs.of_slice(self._slice_name)

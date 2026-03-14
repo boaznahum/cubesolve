@@ -1,0 +1,151 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cubesolve"
+version = "0.1.0"
+description = "Rubik's Cube solver and visualizer"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Boaz Nahum", email = "boaznahum@gmail.com"}
+]
+keywords = ["rubiks-cube", "puzzle", "solver", "visualization"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Games/Entertainment :: Puzzle Games",
+]
+
+dependencies = [
+    "pyglet>=2.0",
+    "PyOpenGL",
+    "numpy",
+    "PyYAML",
+    "colorama",
+    "rich",  # Console colored output for text_cube_viewer
+    "vecrec",
+    "typeguard>=4.4.0",  # override signature_dispatch's ~=3.0 constraint for Python 3.14 compatibility
+    "typing_extensions>=4.14.0",  # for @deprecated decorator
+    "keyboard",
+    "aiohttp>=3.9.0",  # Web backend (WebSocket server)
+    "kociemba",  # Near-optimal Rubik's cube solver (18-22 moves)
+]
+
+#[project.optional-dependencies]
+## Pyglet backends - install ONE of these:
+##   pip install -e ".[pyglet1]"   # Legacy OpenGL (display lists)
+##   pip install -e ".[pyglet2]"   # Modern OpenGL (shaders/VBOs)
+#pyglet1 = ["pyglet>=1.5,<2.0"]
+#pyglet2 = ["pyglet>=2.0"]
+
+# Install with pyglet 1.x (legacy OpenGL)
+# pip install -e ".[pyglet1]" --force-reinstall
+
+  # Install with pyglet 2.x (modern OpenGL)
+#  pip install -e ".[pyglet2]"
+
+  # Install with dev tools + pyglet2
+#  pip install -e ".[pyglet2,dev]"
+
+# Yes, pip install -e ".[pyglet1]" installs:
+#  1. All base dependencies (PyOpenGL, numpy, PyYAML, colorama, vecrec, typeguard, keyboard)
+#  2. Plus the pyglet1 extra (pyglet>=1.5,<2.0)
+#  Extras are additive - they add to the base dependencies, never replace them.
+
+
+dev = [
+    "pytest",
+    "pytest-xdist",
+    "mypy",
+    "pyright==1.1.408",
+    "vulture",
+    "ruff",
+    "types-colorama",
+    "types-keyboard",
+    "Pillow",  # For generating test face textures (resources/faces/generate_images.py)
+    "tabulate",  # For formatting test failure tables
+]
+
+[project.urls]
+Homepage = "https://github.com/boaznahum/cubesolve"
+Repository = "https://github.com/boaznahum/cubesolve"
+# Project layout reference: https://packaging.python.org/en/latest/discussions/src-layout-vs-flat-layout/
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["cube*"]
+
+[tool.setuptools.package-data]
+"cube.resources.faces" = ["**/*.png", "**/*.jpg", "README.md"]
+"cube.resources.algs" = ["*.txt"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "bug_*.py"]
+python_functions = ["test_*"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "benchmark: marks tests as benchmarks",
+    "gui: marks tests as GUI tests (require display, run with 'pytest tests/gui -v')",
+    "console: marks tests as console tests (run with 'pytest tests/console -v')",
+]
+addopts = "-n auto"
+
+[tool.mypy]
+# Mypy configuration - single source of truth (replaces mypy.ini)
+# Run from command line: .venv/Scripts/python.exe -m mypy src/cube
+# Run from PyCharm: Settings → Tools → Mypy → set executable to .venv/Scripts/mypy.exe
+python_version = "3.14"
+
+# Error reporting
+show_error_codes = true
+show_column_numbers = true
+# pretty = true  # Disabled - breaks clickable links in PyCharm
+show_error_context = false  # Disable code snippets for cleaner output
+
+# Strictness - no relaxation, show all errors
+strict_optional = true
+warn_return_any = true
+warn_unused_configs = true
+warn_unreachable = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+
+# Import handling
+ignore_missing_imports = true
+
+# Error codes
+enable_error_code = ["deprecated"]
+disable_error_code = ["import-untyped"]
+
+# Exclude test/experimental directories
+exclude = [
+    "^__try/",
+]
+
+# Ignore errors in experimental code
+[[tool.mypy.overrides]]
+module = "__try.*"
+ignore_errors = true
+
+# Third-party library without type stubs
+[[tool.mypy.overrides]]
+module = "kociemba"
+ignore_missing_imports = true
+
+[tool.pyright]
+pythonVersion = "3.14"
+typeCheckingMode = "standard"
+reportUnsupportedDunderAll = "error"
+exclude = ["src/cube/domain/solver/direct"]

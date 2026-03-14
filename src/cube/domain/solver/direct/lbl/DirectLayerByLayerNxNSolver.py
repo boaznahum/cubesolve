@@ -33,7 +33,7 @@ from cube.domain.exceptions.EvenCubeEdgeParityException import EvenCubeEdgeParit
 from cube.domain.model import Corner, Part, Color
 from cube.domain.solver.SolverName import SolverName
 from cube.domain.solver.common.BaseSolver import BaseSolver
-from cube.domain.solver.common.CenterBlockStatistics import CenterBlockStatistics
+from cube.domain.solver.common.SolverStatistics import SolverStatistics
 from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
 from cube.domain.solver.common.big_cube.NxNCorners import NxNCorners
 from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
@@ -101,7 +101,7 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
         self._l3_edges = _LBLL3Edges(self)
 
         # Accumulated stats from temporary helpers (L1/L3 NxNCenters instances)
-        self._accumulated_temp_stats = CenterBlockStatistics()
+        self._accumulated_temp_stats = SolverStatistics()
 
     # =========================================================================
     # Public properties/methods (Solver protocol order)
@@ -807,9 +807,9 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
         self._shadow_helper.reset_block_statistics()
         self._accumulated_temp_stats.reset()
 
-    def get_block_statistics(self) -> CenterBlockStatistics:
+    def get_block_statistics(self) -> SolverStatistics:
         """Return block solving statistics from ALL children."""
-        stats = CenterBlockStatistics()
+        stats = SolverStatistics()
         stats.accumulate(self._lbl_slices.get_block_statistics())
         stats.accumulate(self._l3_edges.get_block_statistics())
         stats.accumulate(self._nxn_edges.get_block_statistics())

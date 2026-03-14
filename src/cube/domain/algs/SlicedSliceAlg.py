@@ -89,13 +89,7 @@ class SlicedSliceAlg(SliceAlgBase):
     def get_base_alg(self) -> "SliceAlgBase":
         """Return the base unsliced alg. For sliced algs, we construct it."""
         from cube.domain.algs.Algs import Algs
-        match self._slice_name:
-            case SliceName.M:
-                return Algs.MM
-            case SliceName.E:
-                return Algs.EE
-            case SliceName.S:
-                return Algs.SS
+        return Algs.of_slice(self._slice_name)
 
     # NOTE: No __getitem__ method - this class cannot be sliced again!
     # This is intentional type-level enforcement.

@@ -11,7 +11,7 @@ from cube.domain.solver.SolverName import SolverName
 if TYPE_CHECKING:
     from cube.domain.algs.Alg import Alg
 
-from cube.domain.solver.common.CenterBlockStatistics import CenterBlockStatistics
+from cube.domain.solver.common.SolverStatistics import SolverStatistics
 
 
 
@@ -211,9 +211,9 @@ class Solver(SolverElementsProvider, ABC):
     def op(self) -> OperatorProtocol:
         pass
 
-    def get_block_statistics(self) -> CenterBlockStatistics:
+    def get_block_statistics(self) -> SolverStatistics:
         """Return block solving statistics. Override in subclasses that track stats."""
-        return CenterBlockStatistics()
+        return SolverStatistics()
 
     @abstractmethod
     def supported_steps(self) -> list[SolveStep]:

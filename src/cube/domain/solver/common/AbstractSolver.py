@@ -6,7 +6,7 @@ from cube.domain.algs.Algs import Algs
 from cube.domain.exceptions import OpAborted
 from cube.domain.model import Cube
 from cube.domain.solver import Solver
-from cube.domain.solver.common.CenterBlockStatistics import CenterBlockStatistics
+from cube.domain.solver.common.SolverStatistics import SolverStatistics
 from cube.domain.solver.common.CommonOp import CommonOp
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.solver import SolverResults, SolveStep
@@ -209,26 +209,14 @@ class AbstractSolver(Solver, ABC):
         display_statistics() runs (via solve() template method), so
         child solvers don't duplicate output.
         """
-        stats: CenterBlockStatistics = self.get_block_statistics()
+        stats: SolverStatistics = self.get_block_statistics()
         if stats.is_empty():
             return
-        # Strip solver's own prefix from topic names to avoid redundancy
         my_prefix: str = self._logger.prefix + ":"
-        summary = stats.get_summary_stats()
-        total_blocks = sum(summary.values())
-        total_pieces = sum(size * count for size, count in summary.items())
-        self.debug(f"[Center Block Statistics] {total_blocks} blocks, {total_pieces} pieces moved")
-        for topic in stats.get_all_topics():
-            display_topic = topic.replace(my_prefix, "")
-            topic_stats = stats.get_topic_stats(topic)
-            if topic_stats:
-                parts = [f"{size}x1:{count}" for size, count in sorted(topic_stats.items())]
-                total = sum(topic_stats.values())
-                self.debug(f"  [{display_topic}] {', '.join(parts)} (total: {total} blocks)")
-            else:
-                self.debug(f"  [{display_topic}] (no blocks)")
-        parts = [f"{size}x1:{count}" for size, count in sorted(summary.items())]
-        self.debug(f"  [SUMMARY] {', '.join(parts)} (total: {total_blocks} blocks)")
+        self.debug("[Solver Statistics]")
+        for topic_name, lines in stats.format_all(strip_prefix=my_prefix):
+            for line in lines:
+                self.debug(f"  [{topic_name}] {line}")
 
     def _run_child_solver(self, child: Solver, what: SolveStep) -> SolverResults:
         """Run a child solver, propagating debug override if set.

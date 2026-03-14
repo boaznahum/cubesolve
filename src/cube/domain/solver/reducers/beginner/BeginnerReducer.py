@@ -7,7 +7,7 @@ Uses FacesTrackerHolder for even cube matching - see:
 from __future__ import annotations
 
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
-from cube.domain.solver.common.CenterBlockStatistics import CenterBlockStatistics
+from cube.domain.solver.common.SolverStatistics import SolverStatistics
 from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.protocols.ReducerProtocol import ReductionResults
@@ -53,7 +53,7 @@ class BeginnerReducer(AbstractReducer):
         # Pass self (we implement SolverElementsProvider via AbstractReducer)
         self._nxn_edges = NxNEdges(self, advanced_edge_parity)
         self._nxn_corners = NxNCorners(self)
-        self._accumulated_temp_stats = CenterBlockStatistics()
+        self._accumulated_temp_stats = SolverStatistics()
 
     def is_reduced(self) -> bool:
         """Check if cube is already reduced to 3x3 state.
@@ -140,9 +140,9 @@ class BeginnerReducer(AbstractReducer):
         self._nxn_corners.reset_block_statistics()
         self._accumulated_temp_stats.reset()
 
-    def get_block_statistics(self) -> CenterBlockStatistics:
+    def get_block_statistics(self) -> SolverStatistics:
         """Return block statistics from all children."""
-        stats = CenterBlockStatistics()
+        stats = SolverStatistics()
         stats.accumulate(self._nxn_edges.get_block_statistics())
         stats.accumulate(self._nxn_corners.get_block_statistics())
         stats.accumulate(self._accumulated_temp_stats)

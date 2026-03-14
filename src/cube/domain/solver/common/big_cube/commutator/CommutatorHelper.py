@@ -28,7 +28,7 @@ from cube.domain.model.Color import Color
 from cube.domain.model.Face import Face
 from cube.domain.model.SliceName import SliceName
 from cube.domain.solver.AnnWhat import AnnWhat
-from cube.domain.solver.common.CenterBlockStatistics import CenterBlockStatistics
+from cube.domain.solver.common.SolverStatistics import BlockSizeTopic, SolverStatistics, TopicKey
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.common.big_cube.commutator._supported_faces import _get_supported_pairs
 from cube.domain.solver.protocols import SolverElementsProvider
@@ -151,11 +151,12 @@ class CommutatorHelper(SolverHelper):
     # For opposite faces, there are 2 valid results; tests can iterate both.
     _test_result_index: int = 0
 
+    BLOCK_KEY: TopicKey[BlockSizeTopic] = TopicKey("Commutator", BlockSizeTopic)
+
     def __init__(self, solver: SolverElementsProvider) -> None:
         super().__init__(solver, "CommHelper")
-        self._statistics = CenterBlockStatistics()
-        self._topic = self._logger.prefix  # Use logger prefix as topic for traceability
-        self._statistics.register_topic(self._topic)
+        self._statistics: SolverStatistics = SolverStatistics()
+        self._statistics.get_topic(self.BLOCK_KEY)  # register
 
     @property
     def n_slices(self) -> int:
@@ -164,9 +165,9 @@ class CommutatorHelper(SolverHelper):
     def reset_block_statistics(self) -> None:
         """Reset block solving statistics."""
         self._statistics.reset()
-        self._statistics.register_topic(self._topic)  # Keep topic visible even when empty
+        self._statistics.get_topic(self.BLOCK_KEY)  # register
 
-    def get_block_statistics(self) -> CenterBlockStatistics:
+    def get_block_statistics(self) -> SolverStatistics:
         """Get accumulated block solving statistics."""
         return self._statistics
 
@@ -577,7 +578,7 @@ class CommutatorHelper(SolverHelper):
 
             # Record statistics - block size solved
             block_size = target_block.size
-            self._statistics.add_block(topic=self._topic, block_size=block_size)
+            self._statistics.get_topic(self.BLOCK_KEY).add_block(block_size)
 
         final_algorithm = (source_setup_alg + cum + source_setup_alg.prime).simplify()
 

@@ -82,21 +82,7 @@ class OperatorProtocol(Protocol, metaclass=ABCMeta):
         - If inside with_buffer(): flushes buffer first, disables buffering during query
         - Supports nesting
         """
-        ...
 
-    def with_buffer(self) -> ContextManager[None]:
-        """
-        Context manager for buffered play ("with buffer").
-
-        Moves played inside the context are buffered and simplified on exit.
-        If config.operator_buffer_mode is False, this is a transparent no-op.
-
-        Nestable: inner flush pushes to outer buffer.
-        AnnotationAlg triggers flush before playing the annotation.
-        """
-        ...
-
-    @property
     def annotation(self) -> "AnnotationProtocol":
         """Get the annotation object."""
         ...
