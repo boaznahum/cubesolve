@@ -75,6 +75,7 @@ class SliceSwapResult:
     algorithm: Alg
     rotation_type: int  # 1 (90° CW), -1 (90° CCW), or 2 (180°)
     setup_rotation: int  # 0 (none) or 1 (90° CW pre-rotation of target face)
+    source_setup_rotation: int  # 0-3: CW rotations to align source_block to natural_source
 
     # The 5 block triples
     natural_source: SwapBlockTriple
@@ -164,7 +165,9 @@ class BlockBySliceSwapHelper(SolverHelper):
         source_face: Face,
         target_face: Face,
         target_block: Block,
+        source_block: Block | None = None,
         undo_target_setup: bool = True,
+        undo_source_setup: bool = True,
     ) -> list[SliceSwapResult]:
         """Return all valid slice swap combinations (dry run).
 
@@ -200,7 +203,9 @@ class BlockBySliceSwapHelper(SolverHelper):
                         source_face, target_face, target_block,
                         slice_name, slice_n, rotation_type, trans_result,
                         setup_rotation=setup_rotation,
+                        source_block=source_block,
                         undo_target_setup=undo_target_setup,
+                        undo_source_setup=undo_source_setup,
                     )
                     if result is not None:
                         results.append(result)
@@ -212,6 +217,7 @@ class BlockBySliceSwapHelper(SolverHelper):
         source_face: Face,
         target_face: Face,
         target_block: Block,
+        source_block: Block | None = None,
         rotation_type: int | None = None,
         dry_run: bool = False,
         undo_target_setup: bool = True,
@@ -224,14 +230,17 @@ class BlockBySliceSwapHelper(SolverHelper):
             source_face: Source face (where content comes from)
             target_face: Target face (where content goes to)
             target_block: Block on target face to swap
+            source_block: Where the desired content actually is on the source
+                         face. If None, assumes content is at the natural source
+                         position (no source setup needed). If provided, computes
+                         the rotation needed to align it with natural_source.
             rotation_type: 1 (90° CW), -1 (90° CCW), or 2 (180°).
                           If None, auto-selects best option.
             dry_run: If True, compute geometry only (no moves)
             undo_target_setup: If True, undo the target face setup rotation
                               at the end of the algorithm.
             undo_source_setup: If True, undo the source face setup rotation
-                              at the end of the algorithm. (Placeholder —
-                              source setup not yet implemented.)
+                              at the end of the algorithm.
             preserve_state: Deprecated. If set, overrides both undo params.
 
         Returns:
@@ -246,7 +255,9 @@ class BlockBySliceSwapHelper(SolverHelper):
             # Auto-select: get first valid combination
             combinations = self.get_all_combinations(
                 source_face, target_face, target_block,
+                source_block=source_block,
                 undo_target_setup=undo_target_setup,
+                undo_source_setup=undo_source_setup,
             )
             if not combinations:
                 raise ValueError(
@@ -268,7 +279,9 @@ class BlockBySliceSwapHelper(SolverHelper):
                         source_face, target_face, target_block,
                         slice_name, slice_n, rotation_type, trans_result,
                         setup_rotation=setup_rotation,
+                        source_block=source_block,
                         undo_target_setup=undo_target_setup,
+                        undo_source_setup=undo_source_setup,
                     )
                     if result is not None:
                         break
@@ -294,14 +307,19 @@ class BlockBySliceSwapHelper(SolverHelper):
         rotation_type: int,
         trans_result: FaceTranslationResult,
         setup_rotation: int = 0,
+        source_block: Block | None = None,
         undo_target_setup: bool = True,
+        undo_source_setup: bool = True,
     ) -> SliceSwapResult | None:
         """Try a specific slice + rotation combination.
 
         Args:
             setup_rotation: 0 = no setup, 1 = 90° CW pre-rotation of target face.
                            A setup converts a horizontal strip to vertical and vice versa.
-            undo_target_setup: If True, include setup' in the algorithm.
+            source_block: Where the content actually is on source face. If None,
+                         assumes content is at the natural source position.
+            undo_target_setup: If True, include target_setup' in the algorithm.
+            undo_source_setup: If True, include source_setup' in the algorithm.
 
         Returns SliceSwapResult if valid, None if self-intersection.
         """
@@ -381,7 +399,7 @@ class BlockBySliceSwapHelper(SolverHelper):
         )
 
         # Compute source blocks by rotating each target block (in setup coords),
-        # then translating to source face
+        # then translating to source face — this gives the NATURAL source position
         rotated_main = rotated_block  # already computed above
         rotated_prefix = (
             target_setup_prefix.rotate_clockwise(n, rot_n)
@@ -405,22 +423,54 @@ class BlockBySliceSwapHelper(SolverHelper):
             if rotated_suffix is not None else None
         )
 
-        # Triples 1-3: natural_source, source_before_setup, source_after_setup
-        # (All equal — source setup not yet implemented)
+        # Triple 1: natural_source — geometric position on source face
         natural_source = SwapBlockTriple(
             prefix=source_prefix,
             main=source_main,
             suffix=source_suffix,
         )
-        source_before_setup = natural_source
+
+        # Compute source setup rotation
+        if source_block is not None:
+            source_setup_n = self._find_rotation_idx(
+                source_block.normalize, natural_source.main
+            )
+        else:
+            source_setup_n = 0
+
+        # Triple 2: source_before_setup — where content actually is on source face
+        # This is the natural source rotated by the INVERSE of source_setup
+        # (source_setup rotates the face so content moves FROM source_before_setup
+        #  TO natural_source position)
+        if source_setup_n:
+            inv_source_setup = (4 - source_setup_n) % 4
+            sb_prefix = (
+                natural_source.prefix.rotate_clockwise(n, inv_source_setup)
+                if natural_source.prefix is not None else None
+            )
+            sb_main = natural_source.main.rotate_clockwise(n, inv_source_setup)
+            sb_suffix = (
+                natural_source.suffix.rotate_clockwise(n, inv_source_setup)
+                if natural_source.suffix is not None else None
+            )
+            source_before_setup = SwapBlockTriple(
+                prefix=sb_prefix, main=sb_main, suffix=sb_suffix,
+            )
+        else:
+            source_before_setup = natural_source
+
+        # Triple 3: source_after_setup — after source setup aligns content
+        # with natural position. Always equals natural_source.
         source_after_setup = natural_source
 
-        # Build the algorithm
+        # Build the algorithm (includes source_setup wrapping)
         algorithm = self._build_algorithm(
             source_face, target_face, effective_block, rotated_block,
             slice_name, slice_n, rotation_type, cuts_rows,
             setup_rotation=setup_rotation,
+            source_setup_n=source_setup_n,
             undo_target_setup=undo_target_setup,
+            undo_source_setup=undo_source_setup,
         )
 
         return SliceSwapResult(
@@ -428,11 +478,34 @@ class BlockBySliceSwapHelper(SolverHelper):
             algorithm=algorithm,
             rotation_type=rotation_type,
             setup_rotation=setup_rotation,
+            source_setup_rotation=source_setup_n,
             natural_source=natural_source,
             source_before_setup=source_before_setup,
             source_after_setup=source_after_setup,
             target_before_setup=target_before_setup,
             target_after_setup=target_after_setup,
+        )
+
+    def _find_rotation_idx(self, actual_source_block: Block, natural_source_block: Block) -> int:
+        """Find how many CW rotations of source face align actual to natural.
+
+        After rotating source face by n CW rotations, the piece at
+        actual_source_block will move to natural_source_block.
+
+        Returns:
+            Number of clockwise rotations (0-3)
+
+        Raises:
+            ValueError: If positions cannot be mapped by rotation
+        """
+        rotated = actual_source_block.normalize
+        for n_rot in range(4):
+            if rotated == natural_source_block:
+                return n_rot
+            rotated = rotated.rotate_clockwise(self.n_slices)
+
+        raise ValueError(
+            f"Cannot align {actual_source_block} to {natural_source_block} by rotation"
         )
 
     @staticmethod
@@ -529,13 +602,15 @@ class BlockBySliceSwapHelper(SolverHelper):
         rotation_type: int,
         cuts_rows: bool,
         setup_rotation: int = 0,
+        source_setup_n: int = 0,
         undo_target_setup: bool = True,
+        undo_source_setup: bool = True,
     ) -> Alg:
         """Build the slice swap algorithm.
 
-        Without setup: slice → face_rotate → slice'
-        With setup + undo: face_setup → slice → face_rotate → slice' → face_setup'
-        With setup, no undo: face_setup → slice → face_rotate → slice'
+        Full form:
+          [source_setup] → [target_setup] → slice → face_rotate → slice'
+              → [target_setup'] → [source_setup']
         """
         cube = self.cube
 
@@ -550,20 +625,23 @@ class BlockBySliceSwapHelper(SolverHelper):
         # Face rotation
         face_rotate = Algs.of_face(target_face.name) * rotation_type
 
+        # Build core: [target_setup] → slice → rotate → slice' → [target_setup']
         if setup_rotation:
-            # Setup: pre-rotate target face
             face_setup = Algs.of_face(target_face.name) * setup_rotation
             parts = [face_setup, slice_alg, face_rotate, slice_alg.prime]
             if undo_target_setup:
                 parts.append(face_setup.prime)
-            return Algs.seq_alg(None, *parts)
         else:
-            # No setup: slice → rotate → slice'
-            return Algs.seq_alg(None,
-                slice_alg,
-                face_rotate,
-                slice_alg.prime,
-            )
+            parts = [slice_alg, face_rotate, slice_alg.prime]
+
+        # Wrap with source setup: source_setup → core → source_setup'
+        if source_setup_n:
+            source_setup_alg = Algs.of_face(source_face.name) * source_setup_n
+            parts.insert(0, source_setup_alg)
+            if undo_source_setup:
+                parts.append(source_setup_alg.prime)
+
+        return Algs.seq_alg(None, *parts)
 
     def _get_slice_alg(
         self,

@@ -134,6 +134,35 @@ If undo_target_setup=False, the face stays rotated → blocks end up
 at target_after_setup.
 ```
 
+### With Source Setup Rotation (source_block parameter)
+
+When the content you want is NOT at the natural source position, pass `source_block`
+to tell the helper where it actually is. The helper computes the rotation needed:
+
+```
+Source face
+
+BEFORE source_setup                  AFTER source_setup
+(content at source_block)            (content aligned to natural_source)
+
+┌──────────────────┐                 ┌──────────────────┐
+│                  │   source_setup  │                  │
+│   ┌──┐           │   (CW × N)     │        ┌──┐      │
+│   │XX│ ← content │  ────────────→  │        │XX│ ← now│
+│   │XX│   is here │                 │        │XX│   at  │
+│   └──┘           │                 │        └──┘  nat. │
+│  source_block    │                 │  natural_source   │
+└──────────────────┘                 └──────────────────┘
+
+source_before_setup.main == source_block
+source_after_setup.main  == natural_source.main
+natural_source.main      == geometric position from face-to-face translation
+
+After the swap + source_setup' (undo):
+- Source content (was at source_block) → arrives at target
+- Target content → lands at source_block position (because source_setup' undoes)
+```
+
 ## The 5 Block Triples
 
 Each `SwapBlockTriple` has `.prefix`, `.main`, `.suffix`.
@@ -141,12 +170,15 @@ Each `SwapBlockTriple` has `.prefix`, `.main`, `.suffix`.
 | # | Triple                | Face   | Description                                           |
 |---|----------------------|--------|-------------------------------------------------------|
 | 1 | `natural_source`      | source | Geometric natural position via face-to-face translation |
-| 2 | `source_before_setup` | source | Source blocks before source face setup rotation        |
-| 3 | `source_after_setup`  | source | Source blocks after source face setup rotation         |
+| 2 | `source_before_setup` | source | Where content actually is before source_setup rotation |
+| 3 | `source_after_setup`  | source | After source_setup aligns content = natural_source     |
 | 4 | `target_before_setup` | target | Target blocks in original face coordinates             |
 | 5 | `target_after_setup`  | target | Target blocks in setup-rotated (effective) coordinates |
 
-**Currently**: source setup is not yet implemented, so triples 1, 2, 3 are identical.
+**Relationship between source triples:**
+- `source_after_setup` always equals `natural_source` (setup aligns content to natural)
+- `source_before_setup` differs from `natural_source` when `source_block` is provided
+- When `source_block=None`: all 3 source triples are identical
 
 **When `undo_target_setup=True`** (default): the algorithm includes `target_setup'`,
 so after execution the target face is back in original orientation.
@@ -155,6 +187,13 @@ The caller should use `target_before_setup` for the final block positions.
 **When `undo_target_setup=False`**: the algorithm omits `target_setup'`,
 so the target face stays in setup-rotated orientation.
 The caller should use `target_after_setup` for the final block positions.
+
+**When `undo_source_setup=True`** (default): the algorithm includes `source_setup'`,
+so the source face is back in its original orientation. Target content that went to
+source ends up at `source_before_setup` positions (= `source_block` position).
+
+**When `undo_source_setup=False`**: the algorithm omits `source_setup'`,
+so the source face stays rotated. Target content ends up at `natural_source` positions.
 
 ## Self-Intersection Constraint
 
@@ -228,10 +267,13 @@ With target setup, no undo (`undo_target_setup=False`):
 target_setup → slice_alg → target_rotation → slice_alg'
 ```
 
-Full form (future, with source setup):
+Full form (with source and target setup):
 ```
 [source_setup] → [target_setup] → slice_alg → target_rotation → slice_alg' → [target_setup'] → [source_setup']
 ```
+
+`source_setup` = rotate source face CW by `source_setup_rotation` steps.
+`source_setup'` = undo (only if `undo_source_setup=True`).
 
 ## API
 
@@ -252,8 +294,9 @@ class SwapBlockTriple:
 class SliceSwapResult:
     slice_name: SliceName
     algorithm: Alg
-    rotation_type: int      # 1 (90° CW), -1 (90° CCW), or 2 (180°)
-    setup_rotation: int     # 0 (none) or 1 (90° CW)
+    rotation_type: int              # 1 (90° CW), -1 (90° CCW), or 2 (180°)
+    setup_rotation: int             # 0 (none) or 1 (90° CW target setup)
+    source_setup_rotation: int      # 0-3: CW rotations to align source_block to natural
 
     # The 5 block triples
     natural_source: SwapBlockTriple
@@ -273,13 +316,18 @@ Backward-compatible properties are available:
    - Check if target block can be swapped (no self-intersection for at least one
      rotation type)
 
-2. **`execute_swap(source_face, target_face, target_block, rotation_type=None,
-   dry_run=False, undo_target_setup=True, undo_source_setup=True) -> SliceSwapResult`**
+2. **`execute_swap(source_face, target_face, target_block, source_block=None,
+   rotation_type=None, dry_run=False, undo_target_setup=True,
+   undo_source_setup=True) -> SliceSwapResult`**
    - Main API: execute or dry-run the slice swap
+   - `source_block`: where content actually is on source face. If None, assumes
+     content is at natural source position. If provided, computes the rotation
+     needed to align it with natural_source and wraps the algorithm with
+     source_setup / source_setup'.
    - Auto-selects rotation_type if not specified
    - Returns all 5 block triples and the algorithm
    - `undo_target_setup`: include `target_setup'` in algorithm (default True)
-   - `undo_source_setup`: include `source_setup'` in algorithm (placeholder, not yet implemented)
+   - `undo_source_setup`: include `source_setup'` in algorithm (default True)
    - In dry_run mode: computes geometry but doesn't execute
 
 3. **`get_all_combinations(source_face, target_face, target_block) -> list[SliceSwapResult]`**
