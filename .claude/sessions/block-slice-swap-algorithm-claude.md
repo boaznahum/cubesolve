@@ -4,88 +4,17 @@
 **Branch:** `claude/block-slice-swap-algorithm-R6Pml`
 **Status:** IN PROGRESS
 
+**Design docs:** [block_by_slice_swap_helper.md](../../src/cube/domain/solver/common/big_cube/commutator/block_by_slice_swap_helper.md)
+
 ## What Was Built
 
-Designed and implemented the **Block-by-Slice Swap** algorithm — a simpler
-alternative to the commutator for moving blocks between faces on big NxN cubes.
-
-### Core Algorithm
-
-**Formula**: `slice → face_rotate(180°) → slice'`
-
-With optional setup: `face_setup(90°) → slice → face_rotate(180°) → slice' → face_setup'`
-
-Unlike the commutator (which performs a 3-cycle), this swaps **ALL content**
-on the affected slices — **6 blocks total** (3 on target face, 3 on source face):
-prefix, main, suffix on each.
+Designed and implemented the **Block-by-Slice Swap** algorithm.
+See design docs for full theory, API, six blocks, self-intersection rules, and usage patterns.
 
 ### Implementation
 
-**File**: `src/cube/domain/solver/common/big_cube/commutator/BlockBySliceSwapHelper.py`
-
-Key methods:
-- `is_valid_for_swap(block)` — self-intersection check
-- `get_all_combinations(source, target, block)` — all 4 combo attempts
-- `execute_swap(...)` — the actual swap, computing all 6 blocks + algorithm
-
-### Test Coverage
-
-**File**: `tests/geometry/test_block_slice_swap.py`
-
-- 6-block marker verification across all 30 face pair combinations
-- Full-slice blocks: 576 individual test cases
-- Center cell invariant on odd cubes
-- Dry run mode verification
-
-## Key Insights
-
-### 1. Four Combinations via Setup Rotation
-
-Each face pair has ONE natural slice (H or V on the target face). A 90° CW
-setup rotation of the target face converts H↔V, doubling the options.
-Combined with slice direction → **4 combinations** per face pair.
-
-### 2. 90° CCW is Redundant for Self-Intersection
-
-**Proved and removed** (commit `bda5819`): If CW overlaps on both axes,
-CCW must also overlap on both axes. Only need to check CW and 180°.
-
-### 3. Center Cell Invariant
-
-On odd cubes, `(n//2, n//2)` maps to itself under all rotations — always invalid.
-
-### 4. "Doesn't Cross the Middle" Rule
-
-**User's insight**: A block is valid if it **doesn't cross the middle in at
-least one direction**.
-
-Why this works:
-- Block entirely in one half (row or col) → 180° rotation sends it to other half → no overlap → valid
-- Block crosses the middle in BOTH directions → every rotation overlaps → invalid
-- This is a simpler geometric equivalent of the rotation-based self-intersection check
-
-**Half boundaries (precise math):**
-For 180° rotation, range `[a, b]` must not overlap `[n-1-b, n-1-a]`:
-- `lower_max = (n-2) // 2` — last row/col of lower half
-- `upper_min = (n+1) // 2` — first row/col of upper half
-- Even n: halves touch (`lower_max + 1 == upper_min`)
-- Odd n: middle row/col excluded from both halves (gap at `n//2`)
-
-### 5. Building Block Functions
-
-**`get_largest_blocks_containing_point(n, point)`**
-Returns the maximal half-face blocks (from the 4 possible) that **contain** the point.
-- Even cubes: every point in exactly 2 blocks
-- Odd cubes: middle row/col → 1 block; center → 0 blocks
-- Test: `TestLargestBlocksContainingPoint`
-
-**`get_largest_blocks_from_point(n, point)`**
-Returns the largest valid blocks with `(r,c)` as **bottom-left corner**, extending
-UP (smaller rows) and RIGHT (larger cols):
-- Row-safe: rows constrained to half, cols `c..n-1`
-- Col-safe: cols constrained to half, rows `0..r`
-- Deduplicates when both produce the same block
-- Test: `TestLargestBlocksFromPoint`
+- **Code**: `src/cube/domain/solver/common/big_cube/commutator/BlockBySliceSwapHelper.py`
+- **Tests**: `tests/geometry/test_block_slice_swap.py`
 
 ## Commits (oldest → newest)
 
