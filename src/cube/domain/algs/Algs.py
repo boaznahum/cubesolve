@@ -262,37 +262,36 @@ class Algs:
         return parse_alg(alg, compat_3x3=compat_3x3)
 
     @classmethod
-    def parse_multiline(cls, text: str) -> Alg:
-        """Parse a multi-line algorithm string.
+    def parse_multiline(cls, text: str, *, compat_3x3: bool = False) -> Alg:
+        """Parse a multi-line algorithm string with variable support.
 
         Supports:
             - Lines starting with # are comments (ignored)
             - Empty lines are ignored (use for readability)
-            - All non-empty, non-comment lines are concatenated into ONE algorithm
+            - Variable assignments: $name = R U R' U'
+            - Variable references: $name expands inline
+            - Prime of variables: $name' → inverse of expanded alg
+            - Integer expressions in slices: [$I:$I+1]M → [1:2]M
+            - Repetition: $alg * $n or $alg * 5
 
         Example:
             alg = Algs.parse_multiline('''
-                # Flip FU edge
-                U'2 B'
-                R' U R
+                # Setup and solve
+                $setup = R U R'
+                $setup
+                U2
+                $setup'
             ''')
 
         Args:
             text: Multi-line string containing the algorithm
+            compat_3x3: Passed through to parse_alg
 
         Returns:
             Parsed Alg object
 
         Raises:
-            ValueError: If text is empty or contains only comments
+            ValueError: If text is empty or contains only comments/assignments
         """
-        lines: list[str] = []
-        for line in text.splitlines():
-            stripped = line.strip()
-            if stripped and not stripped.startswith("#"):
-                lines.append(stripped)
-
-        if not lines:
-            raise ValueError("Algorithm text is empty or contains only comments")
-
-        return parse_alg(" ".join(lines))
+        from cube.domain.algs._multiline_parser import parse_multiline
+        return parse_multiline(text, compat_3x3=compat_3x3)

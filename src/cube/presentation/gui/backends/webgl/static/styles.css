@@ -1350,6 +1350,9 @@ a.info-item-name:hover {
     border-radius: 6px;
     outline: none;
     transition: border-color 0.2s ease;
+    resize: vertical;
+    min-height: 60px;
+    line-height: 1.4;
 }
 
 #edit-input:focus {
@@ -1402,11 +1405,41 @@ a.info-item-name:hover {
     background: linear-gradient(135deg, rgba(100, 100, 110, 0.85), rgba(80, 80, 90, 0.85));
 }
 
+/* Saved alg browser row */
+.edit-alg-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+#edit-alg-select {
+    flex: 1;
+    min-width: 0;
+    padding: 4px 8px;
+    font-size: 12px;
+    color: #e0e0e0;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 4px;
+    outline: none;
+}
+
+#edit-alg-select option {
+    background: #1c1c22;
+    color: #e0e0e0;
+}
+
+.edit-btn-small {
+    padding: 4px 8px !important;
+    font-size: 11px !important;
+    min-width: auto !important;
+}
+
 /* Input row with help button */
 .edit-input-row {
     display: flex;
     gap: 6px;
-    align-items: center;
+    align-items: flex-start;
 }
 
 .edit-input-row #edit-input {

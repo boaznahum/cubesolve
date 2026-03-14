@@ -1,8 +1,14 @@
 /**
- * AlgEditor — algorithm text editor overlay.
+ * AlgEditor — algorithm text editor overlay with localStorage persistence.
  *
  * Replaces move buttons when active. User types algorithms (e.g., "R U R' U'"),
  * the server validates on each keystroke, and Play/OK buttons reflect validity.
+ *
+ * Persistence:
+ *   - Latest editor text auto-saved to localStorage (restored on page load)
+ *   - Named algorithms: add `%name=myAlg` as first line to save/load by name
+ *   - Saved algs stored in localStorage under "cubesolve_saved_algs" key
+ *   - A dropdown lets you browse, load, and delete saved algs
  *
  * Buttons:
  *   Play   — preview algorithm from initial state (no animation)
@@ -10,6 +16,9 @@
  *   Cancel — restore initial state and dismiss
  *   OK     — restore initial state, play algorithm with animation, dismiss
  */
+
+const LS_KEY_TEXT = 'cubesolve_editor_text';
+const LS_KEY_ALGS = 'cubesolve_saved_algs';
 
 export class AlgEditor {
     constructor(sendFn) {
@@ -21,9 +30,16 @@ export class AlgEditor {
 
         this._el = document.getElementById('edit-toolbar');
         this._input = document.getElementById('edit-input');
+        this._algSelect = document.getElementById('edit-alg-select');
+        this._algDeleteBtn = document.getElementById('edit-alg-delete');
+
+        // Restore text from localStorage
+        const saved = localStorage.getItem(LS_KEY_TEXT);
+        if (saved) this._text = saved;
 
         this._wireButtons();
         this._wireKeyboard();
+        this._wireAlgBrowser();
     }
 
     /* ── Public API ─────────────────────────────────────── */
@@ -43,6 +59,7 @@ export class AlgEditor {
         // Restore remembered text
         this._input.value = this._text;
         this._updateButtonStates();
+        this._refreshAlgList();
         this._input.focus();
 
         // Validate if there's existing text
@@ -91,7 +108,11 @@ export class AlgEditor {
 
     _onInput(text) {
         this._text = text;
+        this._persistText(text);
         clearTimeout(this._debounceTimer);
+
+        // Auto-save named alg
+        this._autoSaveNamed(text);
 
         if (!text.trim()) {
             this._valid = false;
@@ -149,7 +170,7 @@ export class AlgEditor {
             this._onInput(e.target.value);
         });
 
-        // Escape to cancel
+        // Escape to cancel, Ctrl+Enter to play
         this._input?.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 e.preventDefault();
@@ -157,13 +178,103 @@ export class AlgEditor {
                 this._send({ type: 'edit_cancel' });
                 this.exit();
             }
-            // Enter to play (preview)
-            if (e.key === 'Enter' && !e.shiftKey) {
+            // Ctrl+Enter to play (preview) — plain Enter inserts newline in textarea
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault();
                 if (this._valid) {
                     this._send({ type: 'edit_play', text: this._text });
                 }
             }
         });
+    }
+
+    /* ── localStorage persistence ───────────────────────── */
+
+    _persistText(text) {
+        try { localStorage.setItem(LS_KEY_TEXT, text); } catch { /* quota */ }
+    }
+
+    /** Extract %name=xxx from first line, if present. */
+    _parseName(text) {
+        const m = text.match(/^%name\s*=\s*(.+)/m);
+        return m ? m[1].trim() : null;
+    }
+
+    /** Auto-save named alg to localStorage when %name= header present. */
+    _autoSaveNamed(text) {
+        const name = this._parseName(text);
+        if (!name) return;
+        const store = this._loadStore();
+        store[name] = text;
+        this._saveStore(store);
+        this._refreshAlgList();
+    }
+
+    _loadStore() {
+        try {
+            const raw = localStorage.getItem(LS_KEY_ALGS);
+            if (raw) return JSON.parse(raw);
+        } catch { /* corrupted */ }
+        return {};
+    }
+
+    _saveStore(store) {
+        try { localStorage.setItem(LS_KEY_ALGS, JSON.stringify(store)); } catch { /* quota */ }
+    }
+
+    /* ── Saved alg browser ──────────────────────────────── */
+
+    _wireAlgBrowser() {
+        // Load selected alg
+        this._algSelect?.addEventListener('change', () => {
+            const name = this._algSelect.value;
+            if (!name) return;
+            const store = this._loadStore();
+            const text = store[name];
+            if (text !== undefined) {
+                this._text = text;
+                this._input.value = text;
+                this._persistText(text);
+                this._onInput(text);
+            }
+            // Reset select to placeholder after loading
+            this._algSelect.value = '';
+        });
+
+        // Delete selected alg
+        this._algDeleteBtn?.addEventListener('click', () => {
+            const name = this._parseName(this._text);
+            if (!name) return;
+            const store = this._loadStore();
+            if (!(name in store)) return;
+            if (!confirm(`Delete saved alg "${name}"?`)) return;
+            delete store[name];
+            this._saveStore(store);
+            this._refreshAlgList();
+        });
+    }
+
+    _refreshAlgList() {
+        if (!this._algSelect) return;
+        const store = this._loadStore();
+        const names = Object.keys(store).sort();
+
+        // Clear existing options (keep placeholder)
+        while (this._algSelect.options.length > 1) {
+            this._algSelect.remove(1);
+        }
+
+        for (const name of names) {
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.textContent = name;
+            this._algSelect.appendChild(opt);
+        }
+
+        // Show/hide delete button based on whether current text has a name
+        if (this._algDeleteBtn) {
+            const currentName = this._parseName(this._text);
+            this._algDeleteBtn.style.display = currentName ? '' : 'none';
+        }
     }
 }
