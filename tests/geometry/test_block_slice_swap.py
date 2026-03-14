@@ -606,8 +606,8 @@ class TestLargestBlocksFromPoint:
 
                 # (r,c) must be at the bottom-left corner of each block
                 for block in blocks:
-                    assert block.end.row == r, (
-                        f"Block {block}: end.row={block.end.row} != r={r}"
+                    assert block.start.row == r, (
+                        f"Block {block}: start.row={block.start.row} != r={r}"
                     )
                     assert block.start.col == c, (
                         f"Block {block}: start.col={block.start.col} != c={c}"
@@ -655,8 +655,8 @@ class TestLargestBlocksFromPoint:
         # Point on middle row, col 0 (in the left half)
         blocks = get_largest_blocks_from_point(n, Point(mid, 0))
         assert len(blocks) == 1
-        # (mid, 0) is bottom-left: block extends up to row 0, right to lower_max
-        assert blocks[0].end.row == mid
+        # (mid, 0) is bottom-left: block extends up to n-1, right to lower_max
+        assert blocks[0].start.row == mid
         assert blocks[0].start.col == 0
         assert helper.is_valid_for_swap(blocks[0])
 
@@ -672,13 +672,13 @@ class TestLargestBlocksFromPoint:
         assert len(blocks) >= 1
         for block in blocks:
             # (0,0) is bottom-left corner
-            assert block.end.row == 0
+            assert block.start.row == 0
             assert block.start.col == 0
             assert helper.is_valid_for_swap(block)
 
 
 class TestIterSubBlocks:
-    """Test that iter_sub_blocks yields all sub-blocks anchored at end, biggest first."""
+    """Test that iter_sub_blocks yields all sub-blocks anchored at start, biggest first."""
 
     def test_total_count(self):
         """A 3x4 block should yield 3*4=12 sub-blocks."""
@@ -686,11 +686,11 @@ class TestIterSubBlocks:
         subs = list(iter_sub_blocks(block))
         assert len(subs) == 3 * 4
 
-    def test_all_anchored_at_end(self):
-        """Every sub-block ends at the parent's end."""
+    def test_all_anchored_at_start(self):
+        """Every sub-block starts at the parent's start."""
         block = Block(Point(1, 2), Point(3, 5))
         for sb in iter_sub_blocks(block):
-            assert sb.end == block.end
+            assert sb.start == block.start
 
     def test_first_is_full_block(self):
         """First yielded block is the full block itself."""
@@ -699,28 +699,28 @@ class TestIterSubBlocks:
         assert first == block
 
     def test_last_is_single_cell(self):
-        """Last yielded block is the single cell at end."""
+        """Last yielded block is the single cell at start."""
         block = Block(Point(0, 0), Point(2, 3))
         last = list(iter_sub_blocks(block))[-1]
-        assert last == Block(block.end, block.end)
+        assert last == Block(block.start, block.start)
 
     def test_wider_block_shrinks_cols_first(self):
-        """For width > height, outer loop is on cols."""
+        """For width > height, outer loop shrinks cols from end."""
         block = Block(Point(0, 0), Point(1, 2))  # 2x3
         subs = list(iter_sub_blocks(block))
-        # First 2 blocks have full width (start.col=0), next 2 have col=1, last 2 col=2
-        assert subs[0].start.col == 0 and subs[1].start.col == 0
-        assert subs[2].start.col == 1 and subs[3].start.col == 1
-        assert subs[4].start.col == 2 and subs[5].start.col == 2
+        # First 2 blocks have full width (end.col=2), next 2 end.col=1, last 2 end.col=0
+        assert subs[0].end.col == 2 and subs[1].end.col == 2
+        assert subs[2].end.col == 1 and subs[3].end.col == 1
+        assert subs[4].end.col == 0 and subs[5].end.col == 0
 
     def test_taller_block_shrinks_rows_first(self):
-        """For height > width, outer loop is on rows."""
+        """For height > width, outer loop shrinks rows from end."""
         block = Block(Point(0, 0), Point(2, 1))  # 3x2
         subs = list(iter_sub_blocks(block))
-        # First 2 blocks have full height (start.row=0), next 2 row=1, last 2 row=2
-        assert subs[0].start.row == 0 and subs[1].start.row == 0
-        assert subs[2].start.row == 1 and subs[3].start.row == 1
-        assert subs[4].start.row == 2 and subs[5].start.row == 2
+        # First 2 blocks have full height (end.row=2), next 2 end.row=1, last 2 end.row=0
+        assert subs[0].end.row == 2 and subs[1].end.row == 2
+        assert subs[2].end.row == 1 and subs[3].end.row == 1
+        assert subs[4].end.row == 0 and subs[5].end.row == 0
 
 
 @pytest.mark.slow
