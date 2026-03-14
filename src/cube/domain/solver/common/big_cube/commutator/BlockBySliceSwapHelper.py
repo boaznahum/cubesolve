@@ -629,18 +629,18 @@ def get_largest_blocks_from_point(n: int, point: Point) -> list[Block]:
 
 
 def iter_sub_blocks(block: Block) -> Iterator[Block]:
-    """Yield all sub-blocks anchored at block.end, biggest to smallest.
+    """Yield all sub-blocks anchored at block.start, biggest to smallest.
 
     Given Block(start=(r1,c1), end=(r2,c2)), yields all
-    Block((r,c), (r2,c2)) for r1 <= r <= r2, c1 <= c <= c2.
+    Block((r1,c1), (r,c)) for r1 <= r <= r2, c1 <= c <= c2.
 
-    Biggest = full block (r1,c1,r2,c2), smallest = single cell (r2,c2,r2,c2).
+    Biggest = full block (r1,c1,r2,c2), smallest = single cell (r1,c1,r1,c1).
 
     Iteration order: outer loop shrinks the bigger dimension first.
-    - If width >= height: outer loop on cols (c1 up to c2),
-      inner loop on rows (r1 up to r2).
-    - If height > width: outer loop on rows (r1 up to r2),
-      inner loop on cols (c1 up to c2).
+    - If width >= height: outer loop on cols (c2 down to c1),
+      inner loop on rows (r2 down to r1).
+    - If height > width: outer loop on rows (r2 down to r1),
+      inner loop on cols (c2 down to c1).
     """
     r1, c1 = block.start.row, block.start.col
     r2, c2 = block.end.row, block.end.col
@@ -649,14 +649,14 @@ def iter_sub_blocks(block: Block) -> Iterator[Block]:
 
     if width >= height:
         # Wider or square: shrink cols first (outer), then rows (inner)
-        for c in range(c1, c2 + 1):
-            for r in range(r1, r2 + 1):
-                yield Block(Point(r, c), Point(r2, c2))
+        for c in range(c2, c1 - 1, -1):
+            for r in range(r2, r1 - 1, -1):
+                yield Block(Point(r1, c1), Point(r, c))
     else:
         # Taller: shrink rows first (outer), then cols (inner)
-        for r in range(r1, r2 + 1):
-            for c in range(c1, c2 + 1):
-                yield Block(Point(r, c), Point(r2, c2))
+        for r in range(r2, r1 - 1, -1):
+            for c in range(c2, c1 - 1, -1):
+                yield Block(Point(r1, c1), Point(r, c))
 
 
 def _1d_intersect(range_1: tuple[int, int], range_2: tuple[int, int]) -> bool:
