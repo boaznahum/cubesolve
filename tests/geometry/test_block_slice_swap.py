@@ -741,7 +741,6 @@ class TestNuclearSwap:
             result = helper.execute_swap(
                 source_face, target_face, sb,
                 dry_run=True,
-                preserve_state=True,
             )
 
             successes += _test_all_rotations(

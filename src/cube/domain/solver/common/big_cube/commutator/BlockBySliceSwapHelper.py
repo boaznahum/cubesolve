@@ -221,7 +221,6 @@ class BlockBySliceSwapHelper(SolverHelper):
         dry_run: bool = False,
         undo_target_setup: bool = True,
         undo_source_setup: bool = True,
-        preserve_state: bool | None = None,
     ) -> SliceSwapResult:
         """Execute a slice swap operation.
 
@@ -238,15 +237,11 @@ class BlockBySliceSwapHelper(SolverHelper):
                               at the end of the algorithm.
             undo_source_setup: If True, undo the source face setup rotation
                               at the end of the algorithm.
-            preserve_state: Deprecated. If set, overrides both undo params.
 
         Returns:
             SliceSwapResult with 5 block triples and algorithm.
             The rotation_type is auto-selected (first valid combination).
         """
-        if preserve_state is not None:
-            undo_target_setup = preserve_state
-            undo_source_setup = preserve_state
         target_block = target_block.normalize
 
         combinations = self.get_all_combinations(
