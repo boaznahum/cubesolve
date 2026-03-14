@@ -29,6 +29,7 @@ from cube.domain.model.Face import Face
 from cube.domain.solver.common.big_cube.commutator.BlockBySliceSwapHelper import (
     BlockBySliceSwapHelper,
     SliceSwapResult,
+    SwapBlockTriple,
     get_largest_blocks_containing_point,
     get_largest_blocks_from_point,
     iter_sub_blocks,

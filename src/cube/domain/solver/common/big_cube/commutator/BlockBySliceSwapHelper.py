@@ -34,31 +34,80 @@ from cube.domain.solver.protocols import SolverElementsProvider
 
 
 @dataclass(frozen=True)
+class SwapBlockTriple:
+    """Three blocks on a face strip: prefix + main + suffix.
+
+    A face strip (full row or column on the affected slices) splits into three
+    parts around the main block:
+
+    - prefix: the part before the main block (None if main starts at the edge)
+    - main: the block being swapped (never None)
+    - suffix: the part after the main block (None if main ends at the edge)
+    """
+    prefix: Block | None
+    main: Block
+    suffix: Block | None
+
+
+@dataclass(frozen=True)
 class SliceSwapResult:
     """Result of a slice swap operation.
 
-    Contains all 6 blocks (3 on target, 3 on source) and the algorithm.
+    Contains 5 block triples (prefix + main + suffix each):
 
-    The target face strip (full column or row on affected slices) splits into:
-    - prefix_block: above/before the target block (may be None)
-    - target_block: the main block being swapped
-    - suffix_block: below/after the target block (may be None)
+    1. natural_source: Geometric natural position on the source face,
+       determined purely by face-to-face coordinate translation.
 
-    Each has a corresponding block on the source face.
+    2. source_before_setup: Source blocks before source face setup rotation.
+       Currently always equals natural_source (source setup not yet implemented).
+
+    3. source_after_setup: Source blocks after source face setup rotation.
+       Currently always equals natural_source (source setup not yet implemented).
+
+    4. target_before_setup: Target blocks in original face coordinates
+       (before the target face setup rotation, if any).
+
+    5. target_after_setup: Target blocks in effective (setup-rotated) coordinates.
+       These are the coordinates during the slice operation.
+       If setup_rotation=0, equals target_before_setup.
     """
     slice_name: SliceName
     algorithm: Alg
     rotation_type: int  # 1 (90° CW), -1 (90° CCW), or 2 (180°)
+    setup_rotation: int  # 0 (none) or 1 (90° CW pre-rotation of target face)
 
-    # Target face blocks
-    target_prefix_block: Block | None
-    target_block: Block
-    target_suffix_block: Block | None
+    # The 5 block triples
+    natural_source: SwapBlockTriple
+    source_before_setup: SwapBlockTriple
+    source_after_setup: SwapBlockTriple
+    target_before_setup: SwapBlockTriple
+    target_after_setup: SwapBlockTriple
 
-    # Source face blocks (natural positions before any source setup)
-    source_prefix_block: Block | None
-    source_block: Block
-    source_suffix_block: Block | None
+    # --- Backward-compatible accessors ---
+
+    @property
+    def target_prefix_block(self) -> Block | None:
+        return self.target_before_setup.prefix
+
+    @property
+    def target_block(self) -> Block:
+        return self.target_before_setup.main
+
+    @property
+    def target_suffix_block(self) -> Block | None:
+        return self.target_before_setup.suffix
+
+    @property
+    def source_prefix_block(self) -> Block | None:
+        return self.natural_source.prefix
+
+    @property
+    def source_block(self) -> Block:
+        return self.natural_source.main
+
+    @property
+    def source_suffix_block(self) -> Block | None:
+        return self.natural_source.suffix
 
 
 class BlockBySliceSwapHelper(SolverHelper):
@@ -115,6 +164,7 @@ class BlockBySliceSwapHelper(SolverHelper):
         source_face: Face,
         target_face: Face,
         target_block: Block,
+        undo_target_setup: bool = True,
     ) -> list[SliceSwapResult]:
         """Return all valid slice swap combinations (dry run).
 
@@ -150,6 +200,7 @@ class BlockBySliceSwapHelper(SolverHelper):
                         source_face, target_face, target_block,
                         slice_name, slice_n, rotation_type, trans_result,
                         setup_rotation=setup_rotation,
+                        undo_target_setup=undo_target_setup,
                     )
                     if result is not None:
                         results.append(result)
@@ -163,7 +214,9 @@ class BlockBySliceSwapHelper(SolverHelper):
         target_block: Block,
         rotation_type: int | None = None,
         dry_run: bool = False,
-        preserve_state: bool = True,
+        undo_target_setup: bool = True,
+        undo_source_setup: bool = True,
+        preserve_state: bool | None = None,
     ) -> SliceSwapResult:
         """Execute a slice swap operation.
 
@@ -174,16 +227,27 @@ class BlockBySliceSwapHelper(SolverHelper):
             rotation_type: 1 (90° CW), -1 (90° CCW), or 2 (180°).
                           If None, auto-selects best option.
             dry_run: If True, compute geometry only (no moves)
-            preserve_state: If True, undo any setup rotations
+            undo_target_setup: If True, undo the target face setup rotation
+                              at the end of the algorithm.
+            undo_source_setup: If True, undo the source face setup rotation
+                              at the end of the algorithm. (Placeholder —
+                              source setup not yet implemented.)
+            preserve_state: Deprecated. If set, overrides both undo params.
 
         Returns:
-            SliceSwapResult with all 6 blocks and algorithm
+            SliceSwapResult with 5 block triples and algorithm
         """
+        if preserve_state is not None:
+            undo_target_setup = preserve_state
+            undo_source_setup = preserve_state
         target_block = target_block.normalize
 
         if rotation_type is None:
             # Auto-select: get first valid combination
-            combinations = self.get_all_combinations(source_face, target_face, target_block)
+            combinations = self.get_all_combinations(
+                source_face, target_face, target_block,
+                undo_target_setup=undo_target_setup,
+            )
             if not combinations:
                 raise ValueError(
                     f"No valid slice swap combination for block {target_block} "
@@ -204,6 +268,7 @@ class BlockBySliceSwapHelper(SolverHelper):
                         source_face, target_face, target_block,
                         slice_name, slice_n, rotation_type, trans_result,
                         setup_rotation=setup_rotation,
+                        undo_target_setup=undo_target_setup,
                     )
                     if result is not None:
                         break
@@ -229,12 +294,14 @@ class BlockBySliceSwapHelper(SolverHelper):
         rotation_type: int,
         trans_result: FaceTranslationResult,
         setup_rotation: int = 0,
+        undo_target_setup: bool = True,
     ) -> SliceSwapResult | None:
         """Try a specific slice + rotation combination.
 
         Args:
             setup_rotation: 0 = no setup, 1 = 90° CW pre-rotation of target face.
                            A setup converts a horizontal strip to vertical and vice versa.
+            undo_target_setup: If True, include setup' in the algorithm.
 
         Returns SliceSwapResult if valid, None if self-intersection.
         """
@@ -281,25 +348,52 @@ class BlockBySliceSwapHelper(SolverHelper):
         if orig_slice_count != rot_slice_count:
             return None  # Dimension mismatch after rotation
 
-        # Compute all 6 blocks in SETUP coordinates (effective block positions)
-        target_prefix, target_suffix = self._compute_strip_blocks(
+        # --- Compute the 5 block triples ---
+
+        # Triple 5: target_after_setup — blocks in setup (effective) coordinates
+        target_setup_prefix, target_setup_suffix = self._compute_strip_blocks(
             effective_block, n, cuts_rows
         )
+        target_after_setup = SwapBlockTriple(
+            prefix=target_setup_prefix,
+            main=effective_block,
+            suffix=target_setup_suffix,
+        )
 
-        # Compute source blocks by rotating each target block, then translating
-        # to source face
+        # Triple 4: target_before_setup — blocks in original coordinates
+        if setup_rotation:
+            inv_setup = (4 - setup_rotation) % 4  # Inverse: 1 → 3 (90° CCW)
+            orig_target_prefix = (
+                target_setup_prefix.rotate_clockwise(n, inv_setup)
+                if target_setup_prefix is not None else None
+            )
+            orig_target_suffix = (
+                target_setup_suffix.rotate_clockwise(n, inv_setup)
+                if target_setup_suffix is not None else None
+            )
+        else:
+            orig_target_prefix = target_setup_prefix
+            orig_target_suffix = target_setup_suffix
+        target_before_setup = SwapBlockTriple(
+            prefix=orig_target_prefix,
+            main=target_block,
+            suffix=orig_target_suffix,
+        )
+
+        # Compute source blocks by rotating each target block (in setup coords),
+        # then translating to source face
         rotated_main = rotated_block  # already computed above
         rotated_prefix = (
-            target_prefix.rotate_clockwise(n, rot_n)
-            if target_prefix is not None else None
+            target_setup_prefix.rotate_clockwise(n, rot_n)
+            if target_setup_prefix is not None else None
         )
         rotated_suffix = (
-            target_suffix.rotate_clockwise(n, rot_n)
-            if target_suffix is not None else None
+            target_setup_suffix.rotate_clockwise(n, rot_n)
+            if target_setup_suffix is not None else None
         )
 
         # Translate rotated blocks to source face
-        source_block = self._translate_block_to_source(
+        source_main = self._translate_block_to_source(
             target_face, source_face, rotated_main, slice_name
         )
         source_prefix = (
@@ -311,40 +405,34 @@ class BlockBySliceSwapHelper(SolverHelper):
             if rotated_suffix is not None else None
         )
 
-        # Convert target blocks from setup coordinates back to original coordinates
-        if setup_rotation:
-            inv_setup = (4 - setup_rotation) % 4  # Inverse: 1 → 3 (90° CCW)
-            orig_target_block = target_block  # Already in original coords
-            orig_target_prefix = (
-                target_prefix.rotate_clockwise(n, inv_setup)
-                if target_prefix is not None else None
-            )
-            orig_target_suffix = (
-                target_suffix.rotate_clockwise(n, inv_setup)
-                if target_suffix is not None else None
-            )
-        else:
-            orig_target_block = target_block
-            orig_target_prefix = target_prefix
-            orig_target_suffix = target_suffix
+        # Triples 1-3: natural_source, source_before_setup, source_after_setup
+        # (All equal — source setup not yet implemented)
+        natural_source = SwapBlockTriple(
+            prefix=source_prefix,
+            main=source_main,
+            suffix=source_suffix,
+        )
+        source_before_setup = natural_source
+        source_after_setup = natural_source
 
         # Build the algorithm
         algorithm = self._build_algorithm(
             source_face, target_face, effective_block, rotated_block,
             slice_name, slice_n, rotation_type, cuts_rows,
             setup_rotation=setup_rotation,
+            undo_target_setup=undo_target_setup,
         )
 
         return SliceSwapResult(
             slice_name=slice_name,
             algorithm=algorithm,
             rotation_type=rotation_type,
-            target_prefix_block=orig_target_prefix,
-            target_block=orig_target_block,
-            target_suffix_block=orig_target_suffix,
-            source_prefix_block=source_prefix,
-            source_block=source_block,
-            source_suffix_block=source_suffix,
+            setup_rotation=setup_rotation,
+            natural_source=natural_source,
+            source_before_setup=source_before_setup,
+            source_after_setup=source_after_setup,
+            target_before_setup=target_before_setup,
+            target_after_setup=target_after_setup,
         )
 
     @staticmethod
@@ -441,11 +529,13 @@ class BlockBySliceSwapHelper(SolverHelper):
         rotation_type: int,
         cuts_rows: bool,
         setup_rotation: int = 0,
+        undo_target_setup: bool = True,
     ) -> Alg:
         """Build the slice swap algorithm.
 
         Without setup: slice → face_rotate → slice'
-        With setup:    face_setup → slice → face_rotate → slice' → face_setup'
+        With setup + undo: face_setup → slice → face_rotate → slice' → face_setup'
+        With setup, no undo: face_setup → slice → face_rotate → slice'
         """
         cube = self.cube
 
@@ -463,13 +553,10 @@ class BlockBySliceSwapHelper(SolverHelper):
         if setup_rotation:
             # Setup: pre-rotate target face
             face_setup = Algs.of_face(target_face.name) * setup_rotation
-            return Algs.seq_alg(None,
-                face_setup,
-                slice_alg,
-                face_rotate,
-                slice_alg.prime,
-                face_setup.prime,
-            )
+            parts = [face_setup, slice_alg, face_rotate, slice_alg.prime]
+            if undo_target_setup:
+                parts.append(face_setup.prime)
+            return Algs.seq_alg(None, *parts)
         else:
             # No setup: slice → rotate → slice'
             return Algs.seq_alg(None,

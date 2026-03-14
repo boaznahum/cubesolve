@@ -15,24 +15,146 @@ to swap it with a **source block** from a source face.
 This is much simpler than the commutator, but the key difference is: **it swaps ALL
 content on the affected slices, not just the target block**.
 
-## The Six Blocks
+## The Six Blocks and SwapBlockTriple
 
-When a slice swap happens, there are **6 blocks** that get swapped (3 pairs):
+When a slice swap happens, there are **6 blocks** that get swapped (3 pairs).
+Each group of 3 is represented by a `SwapBlockTriple(prefix, main, suffix)`.
 
-On the **target face** (in terms of the slice direction), the slice covers a full
-strip. If the slice is vertical on the target face and the target block spans rows
-r1..r2, columns c1..c2, then the full strip 0..nn-1 on columns c1..c2 splits into:
+Only `prefix` and `suffix` can be `None` (when the main block starts/ends at the edge).
+`main` is never `None`.
 
-1. **Prefix block (before)**: rows 0..r1-1, cols c1..c2 (can be empty if r1=0)
-2. **Target block (main)**: rows r1..r2, cols c1..c2
-3. **Suffix block (after)**: rows r2+1..nn-1, cols c1..c2 (can be empty if r2=nn-1)
+### Vertical Slice — Block in the Middle
 
-Each of these 3 blocks on the target face has a corresponding block on the source face
-(determined by the face-to-face coordinate translation), giving us **6 blocks total**
-(3 target blocks + 3 source blocks).
+The slice covers a full vertical strip. The target block sits in the middle:
 
-After the swap, each target block's content moves to its corresponding source block
-position, and vice versa.
+```
+Target face (n=6)                Source face (natural)
+cols c1..c2                      (translated coordinates)
+┌──────────────────┐             ┌──────────────────┐
+│                  │             │                  │
+│   ┌──┐           │             │   ┌──┐           │
+│   │P │ ← prefix  │             │   │P'│ ← source  │
+│   │  │  (0,c1)   │             │   │  │   prefix  │
+│   │  │  to       │             │   │  │           │
+│   │  │  (r1-1,c2)│             │   └──┘           │
+│   ├──┤           │   SWAP      │   ├──┤           │
+│   │M │ ← main    │  ←────→    │   │M'│ ← source  │
+│   │  │  (r1,c1)  │             │   │  │   main    │
+│   │  │  to       │             │   │  │           │
+│   │  │  (r2,c2)  │             │   └──┘           │
+│   ├──┤           │             │   ├──┤           │
+│   │S │ ← suffix  │             │   │S'│ ← source  │
+│   │  │  (r2+1,c1)│             │   │  │   suffix  │
+│   │  │  to       │             │   │  │           │
+│   │  │  (n-1,c2) │             │   └──┘           │
+│   └──┘           │             │                  │
+└──────────────────┘             └──────────────────┘
+
+After swap:  P↔P'  M↔M'  S↔S'
+```
+
+### Vertical Slice — Block at the Top (No Prefix)
+
+```
+Target face                      Source face
+cols c1..c2
+┌──────────────────┐             ┌──────────────────┐
+│   ┌──┐           │             │   ┌──┐           │
+│   │M │ ← main    │   SWAP     │   │M'│           │
+│   │  │  (0,c1)   │  ←────→    │   │  │           │
+│   │  │  to       │             │   └──┘           │
+│   │  │  (r2,c2)  │             │   ├──┤           │
+│   ├──┤           │             │   │S'│           │
+│   │S │ ← suffix  │             │   │  │           │
+│   │  │           │             │   └──┘           │
+│   └──┘           │             │                  │
+└──────────────────┘             └──────────────────┘
+
+prefix = None (main starts at row 0)
+```
+
+### Vertical Slice — Full Column (No Prefix, No Suffix)
+
+```
+Target face                      Source face
+cols c1..c2
+┌──────────────────┐             ┌──────────────────┐
+│   ┌──┐           │             │   ┌──┐           │
+│   │M │ ← main    │   SWAP     │   │M'│           │
+│   │  │  (0,c1)   │  ←────→    │   │  │           │
+│   │  │  to       │             │   │  │           │
+│   │  │  (n-1,c2) │             │   │  │           │
+│   └──┘           │             │   └──┘           │
+└──────────────────┘             └──────────────────┘
+
+prefix = None, suffix = None (main spans full column)
+```
+
+### Horizontal Slice — Block in the Middle
+
+```
+Target face (n=6)
+rows r1..r2
+┌───────────────────────────────────────┐
+│                                       │
+│  ┌────────┬────────────┬─────────┐    │
+│  │ prefix │   main     │ suffix  │    │
+│  │(r1,0)  │ (r1,c1)   │(r1,c2+1)│    │
+│  │  to    │  to        │  to     │    │
+│  │(r2,    │ (r2,c2)    │(r2,n-1) │    │
+│  │ c1-1)  │            │         │    │
+│  └────────┴────────────┴─────────┘    │
+│                                       │
+└───────────────────────────────────────┘
+```
+
+### With Target Setup Rotation (setup_rotation=1)
+
+When a 90° CW setup rotation is used, the blocks exist in two coordinate systems:
+
+```
+BEFORE setup (original coords)     AFTER setup (effective coords)
+target_before_setup triple          target_after_setup triple
+
+┌──────────────────┐                ┌──────────────────┐
+│                  │    90° CW      │       ┌──┐       │
+│ ┌──────────────┐ │   ────────→    │       │P'│       │
+│ │ P  M   S     │ │                │       ├──┤       │
+│ │ (horizontal) │ │                │       │M'│       │
+│ └──────────────┘ │                │       │  │       │
+│                  │                │       ├──┤       │
+│                  │                │       │S'│       │
+│                  │                │       └──┘       │
+└──────────────────┘                └──────────────────┘
+
+The algorithm operates on target_after_setup coordinates internally.
+If undo_target_setup=True, setup' is appended and the face returns
+to its original orientation → blocks end up at target_before_setup.
+If undo_target_setup=False, the face stays rotated → blocks end up
+at target_after_setup.
+```
+
+## The 5 Block Triples
+
+Each `SwapBlockTriple` has `.prefix`, `.main`, `.suffix`.
+
+| # | Triple                | Face   | Description                                           |
+|---|----------------------|--------|-------------------------------------------------------|
+| 1 | `natural_source`      | source | Geometric natural position via face-to-face translation |
+| 2 | `source_before_setup` | source | Source blocks before source face setup rotation        |
+| 3 | `source_after_setup`  | source | Source blocks after source face setup rotation         |
+| 4 | `target_before_setup` | target | Target blocks in original face coordinates             |
+| 5 | `target_after_setup`  | target | Target blocks in setup-rotated (effective) coordinates |
+
+**Currently**: source setup is not yet implemented, so triples 1, 2, 3 are identical.
+
+**When `undo_target_setup=True`** (default): the algorithm includes `target_setup'`,
+so after execution the target face is back in original orientation.
+The caller should use `target_before_setup` for the final block positions.
+
+**When `undo_target_setup=False`**: the algorithm omits `target_setup'`,
+so the target face stays in setup-rotated orientation.
+The caller should use `target_after_setup` for the final block positions.
 
 ## Self-Intersection Constraint
 
@@ -67,10 +189,10 @@ On odd cubes, `(n//2, n//2)` maps to itself under all rotations — always inval
 ## Four Combinations
 
 There are 4 combinations to consider:
-1. **Vertical slice + 90° rotation**
-2. **Vertical slice + 180° rotation**
-3. **Horizontal slice + 90° rotation**
-4. **Horizontal slice + 180° rotation**
+1. **Vertical slice + 180° rotation** (no setup)
+2. **Horizontal slice + 180° rotation** (no setup)
+3. **Vertical slice + 180° rotation** (with 90° CW setup)
+4. **Horizontal slice + 180° rotation** (with 90° CW setup)
 
 For a given source/target face pair, the Face2FaceTranslator determines which slice(s)
 connect them. For **opposite faces**, there may be two different slice options. For
@@ -96,34 +218,54 @@ For a basic swap (no setup rotations):
 slice_alg → target_face_rotation → slice_alg' (inverse)
 ```
 
-With source/target setup:
+With target setup + undo:
+```
+target_setup → slice_alg → target_rotation → slice_alg' → target_setup'
+```
+
+With target setup, no undo (`undo_target_setup=False`):
+```
+target_setup → slice_alg → target_rotation → slice_alg'
+```
+
+Full form (future, with source setup):
 ```
 [source_setup] → [target_setup] → slice_alg → target_rotation → slice_alg' → [target_setup'] → [source_setup']
 ```
 
 ## API
 
-### Class: BlockBySliceSwapHelper(SolverHelper)
+### SwapBlockTriple
 
-### Result Dataclass: SliceSwapResult
+```python
+@dataclass(frozen=True)
+class SwapBlockTriple:
+    prefix: Block | None    # None if main starts at edge
+    main: Block             # Never None
+    suffix: Block | None    # None if main ends at edge
+```
+
+### SliceSwapResult
 
 ```python
 @dataclass(frozen=True)
 class SliceSwapResult:
     slice_name: SliceName
     algorithm: Alg
-    rotation_type: int               # 1 (90° CW), -1 (90° CCW), or 2 (180°)
+    rotation_type: int      # 1 (90° CW), -1 (90° CCW), or 2 (180°)
+    setup_rotation: int     # 0 (none) or 1 (90° CW)
 
-    # The 3 target blocks (on target face)
-    target_prefix_block: Block | None   # None if empty
-    target_block: Block                 # The main target block
-    target_suffix_block: Block | None   # None if empty
-
-    # The 3 corresponding source blocks (on source face)
-    source_prefix_block: Block | None   # None if empty
-    source_block: Block                 # Natural source block
-    source_suffix_block: Block | None   # None if empty
+    # The 5 block triples
+    natural_source: SwapBlockTriple
+    source_before_setup: SwapBlockTriple
+    source_after_setup: SwapBlockTriple
+    target_before_setup: SwapBlockTriple
+    target_after_setup: SwapBlockTriple
 ```
+
+Backward-compatible properties are available:
+`target_block`, `target_prefix_block`, `target_suffix_block` → from `target_before_setup`
+`source_block`, `source_prefix_block`, `source_suffix_block` → from `natural_source`
 
 ### Key Methods
 
@@ -132,18 +274,20 @@ class SliceSwapResult:
      rotation type)
 
 2. **`execute_swap(source_face, target_face, target_block, rotation_type=None,
-   dry_run=False, preserve_state=True) -> SliceSwapResult`**
+   dry_run=False, undo_target_setup=True, undo_source_setup=True) -> SliceSwapResult`**
    - Main API: execute or dry-run the slice swap
    - Auto-selects rotation_type if not specified
-   - Returns all 6 blocks and the algorithm
+   - Returns all 5 block triples and the algorithm
+   - `undo_target_setup`: include `target_setup'` in algorithm (default True)
+   - `undo_source_setup`: include `source_setup'` in algorithm (placeholder, not yet implemented)
    - In dry_run mode: computes geometry but doesn't execute
 
 3. **`get_all_combinations(source_face, target_face, target_block) -> list[SliceSwapResult]`**
-   - Returns all valid combinations (up to 4) with their 6 blocks
+   - Returns all valid combinations (up to 4) with their 5 triples
 
 ## Finding Swappable Blocks
 
-### `get_largest_blocks_from_point(n, point) → list[Block]`
+### `get_largest_blocks_from_point(n, point) -> list[Block]`
 
 Returns up to 2 largest valid blocks with `point` as bottom-left corner,
 extending upward (larger rows) and rightward (larger cols).
@@ -155,7 +299,7 @@ Two candidates from each point:
 On odd `n`, the middle row/col produces no block in that dimension.
 The center point `(mid, mid)` returns empty.
 
-### `iter_sub_blocks(block) → Iterator[Block]`
+### `iter_sub_blocks(block) -> Iterator[Block]`
 
 Yields all sub-blocks anchored at `block.start`, from biggest to smallest.
 Shrinks the larger dimension first (outer loop).
@@ -165,7 +309,7 @@ Shrinks the larger dimension first (outer loop).
 # Block((r1,c1), (r,c))  for r2 >= r >= r1, c2 >= c >= c1
 ```
 
-### `get_largest_blocks_containing_point(n, point) → list[Block]`
+### `get_largest_blocks_containing_point(n, point) -> list[Block]`
 
 Returns up to 4 half-plane blocks that contain `point`:
 - Bottom half full-width, Top half full-width
@@ -188,7 +332,10 @@ is_valid_for_swap(block)  →  check no self-intersection under rotation
 for block in get_largest_blocks_from_point(n, point):
     for sub in iter_sub_blocks(block):
         if helper.is_valid_for_swap(sub):
-            result = helper.do_swap(source, target, sub)
+            result = helper.execute_swap(source, target, sub)
+            # Access triples:
+            result.natural_source.main      # source main block
+            result.target_before_setup.prefix  # target prefix in original coords
 ```
 
 ## Tests
@@ -199,4 +346,4 @@ for block in get_largest_blocks_from_point(n, point):
 - Full-slice blocks: 576 individual test cases
 - Center cell invariant on odd cubes
 - Dry run mode verification
-- Nuclear swap tests for cube sizes 4–7 (1241 tests total)
+- Nuclear swap tests for cube sizes 4-7 (1241 tests total)
