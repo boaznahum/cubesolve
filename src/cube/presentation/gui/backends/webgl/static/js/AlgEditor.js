@@ -111,9 +111,6 @@ export class AlgEditor {
         this._persistText(text);
         clearTimeout(this._debounceTimer);
 
-        // Auto-save named alg
-        this._autoSaveNamed(text);
-
         if (!text.trim()) {
             this._valid = false;
             this._updateButtonStates();
@@ -144,6 +141,7 @@ export class AlgEditor {
     _wireButtons() {
         document.getElementById('edit-play')?.addEventListener('click', () => {
             if (!this._valid) return;
+            this._autoSaveNamed(this._text);
             this._send({ type: 'edit_play', text: this._text });
         });
 
@@ -158,6 +156,7 @@ export class AlgEditor {
 
         document.getElementById('edit-ok')?.addEventListener('click', () => {
             if (!this._valid) return;
+            this._autoSaveNamed(this._text);
             this._send({ type: 'edit_ok', text: this._text });
             // Don't call exit() here — server will send editMode=false
             // when it exits EDITING state, and applyState() will call exit()
