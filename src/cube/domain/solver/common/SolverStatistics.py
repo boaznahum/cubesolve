@@ -132,7 +132,7 @@ class SliceSwapTopic(StatsTopic):
         if self._swap_count == 0:
             return ["(no swaps)"]
         avg: float = self._total_grade / self._swap_count
-        grades: list[str] = [f"g{g}:{c}" for g, c in sorted(self._grade_histogram.items())]
+        grades: list[str] = [f"grade:{g}#{c}" for g, c in sorted(self._grade_histogram.items())]
         return [f"{self._swap_count} swaps, {self._total_pieces} pieces, "
                 f"avg grade {avg:.1f}, [{', '.join(grades)}]"]
 
