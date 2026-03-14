@@ -53,10 +53,10 @@ class TestParseMultiline:
 
         assert cube.cqr.compare_state(state_before)
 
-    def test_parse_multiline_empty_raises(self) -> None:
-        """Test that empty input raises ValueError."""
-        with pytest.raises(ValueError):
-            Algs.parse_multiline("")
+    def test_parse_multiline_empty_is_noop(self) -> None:
+        """Test that empty input returns identity (no-op) alg."""
+        alg = Algs.parse_multiline("")
+        assert list(alg.flatten()) == []
 
-        with pytest.raises(ValueError):
-            Algs.parse_multiline("# only comments")
+        alg = Algs.parse_multiline("# only comments")
+        assert list(alg.flatten()) == []

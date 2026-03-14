@@ -84,17 +84,18 @@ class TestPreprocessor:
         with pytest.raises(InternalSWError, match="Undefined variable"):
             preprocess_multiline("$undefined")
 
-    def test_empty_raises(self) -> None:
-        with pytest.raises(ValueError):
-            preprocess_multiline("")
+    def test_empty_returns_empty(self) -> None:
+        """Empty text is valid — returns empty string (no-op)."""
+        assert preprocess_multiline("") == ""
 
-    def test_only_comments_raises(self) -> None:
-        with pytest.raises(ValueError):
-            preprocess_multiline("# comment only")
+    def test_only_comments_returns_empty(self) -> None:
+        """Comments-only text is valid — returns empty string (no-op)."""
+        assert preprocess_multiline("# comment only") == ""
 
-    def test_only_assignments_raises(self) -> None:
-        with pytest.raises(ValueError):
-            preprocess_multiline("$x = R U")
+    def test_only_assignments_returns_empty(self) -> None:
+        """Assignments-only text is valid — returns empty string (no-op)."""
+        result = preprocess_multiline("$x = R U")
+        assert result == ""
 
     def test_complex_slice_expression(self) -> None:
         """Test [$I:$I+1] with larger numbers."""
@@ -126,6 +127,19 @@ class TestPreprocessor:
 
 class TestParseMultilineIntegration:
     """Integration tests — preprocess + parse + execute on a real cube."""
+
+    def test_only_assignments_is_noop(self) -> None:
+        """Text with only variable assignments is valid and is a no-op."""
+        cube = Cube(3, sp=_test_sp)
+        state_before = cube.cqr.get_sate()
+        alg = parse_multiline("$x = U R")
+        alg.play(cube)
+        assert cube.cqr.compare_state(state_before)
+
+    def test_only_metadata_is_noop(self) -> None:
+        """Text with only %name= metadata is valid and is a no-op."""
+        alg = parse_multiline("%name=test")
+        assert list(alg.flatten()) == []
 
     def test_setup_solve_pattern(self) -> None:
         """$setup / moves / $setup' should return cube to pre-move state

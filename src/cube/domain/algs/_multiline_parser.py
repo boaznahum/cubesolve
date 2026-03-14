@@ -69,7 +69,7 @@ def preprocess_multiline(text: str) -> str:
             alg_lines.append(expanded)
 
     if not alg_lines:
-        raise ValueError("Algorithm text is empty or contains only comments/assignments")
+        return ""
 
     return " ".join(alg_lines)
 
@@ -78,17 +78,21 @@ def parse_multiline(text: str, *, compat_3x3: bool = False) -> Alg:
     """Parse multi-line algorithm text with variable support.
 
     This is the full pipeline: preprocess → parse_alg.
+    Returns identity (empty SeqAlg) for texts with only comments/assignments/metadata.
 
     Args:
         text: Multi-line algorithm text
         compat_3x3: Passed through to parse_alg
 
     Returns:
-        Parsed Alg object
+        Parsed Alg object (identity if no algorithm lines)
     """
+    from cube.domain.algs.Algs import Algs
     from cube.domain.algs._parser import parse_alg
 
     expanded = preprocess_multiline(text)
+    if not expanded:
+        return Algs.NOOP
     return parse_alg(expanded, compat_3x3=compat_3x3)
 
 
