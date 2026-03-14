@@ -889,28 +889,25 @@ class TestNuclearSwap:
 
 
 class TestSourceSetup:
-    """Test source setup rotation with ALL valid blocks.
+    """Test source setup rotation with ALL valid blocks, ALL 4 rotations.
 
     For each valid block on the target face:
-    1. Dry run to get natural source triple (all 6 blocks)
-    2. Place markers on ALL 6 blocks at their natural positions
-    3. Rotate the source face by source_rotate CW rotations
-    4. Compute source_block (where natural_source.main moved to)
-    5. Execute swap with source_block parameter
-    6. Verify ALL 6 marker groups moved correctly:
-       - 3 target blocks' markers → source_block positions (rotated back by undo)
-       - 3 source blocks' markers → target positions
+    1. Dry run ONCE to get natural source triple (outside rotation loop)
+    2. For each rotation (0, 1, 2, 3):
+       a. Reset cube
+       b. Compute rotated source positions
+       c. Place markers DIRECTLY at rotated source positions and target positions
+       d. Execute swap with source_block
+       e. Verify all 6 marker groups swapped correctly
     """
 
     @pytest.mark.parametrize("cube_size", [4, 5, 6, 7])
-    @pytest.mark.parametrize("source_rotate", [1, 2, 3])
     @pytest.mark.parametrize(
         "face_pair", _FACE_PAIRS, ids=[_face_pair_id(p) for p in _FACE_PAIRS],
     )
     def test_source_setup_all_blocks(
         self,
         cube_size: int,
-        source_rotate: int,
         face_pair: tuple[FaceName, FaceName],
     ):
         source_face_name, target_face_name = face_pair
@@ -920,7 +917,7 @@ class TestSourceSetup:
         n = cube.n_slices
         helper = _create_helper(app)
 
-        # Enumerate ALL valid blocks via get_largest_blocks_from_point + iter_sub_blocks
+        # Enumerate ALL valid blocks
         tested_blocks: set[tuple[int, int, int, int]] = set()
         valid_blocks: list[Block] = []
         for r in range(n):
@@ -937,121 +934,115 @@ class TestSourceSetup:
         failures: list[dict] = []
 
         for target_block in valid_blocks:
-            # Reset
+
+            # Dry run ONCE to get natural source geometry
             cube.reset()
             helper = _create_helper(app)
             target_face = cube.face(target_face_name)
             source_face = cube.face(source_face_name)
 
-            # Dry run to get all 6 blocks at natural positions
             dry_results = helper.get_all_combinations(source_face, target_face, target_block)
             if not dry_results:
                 continue
 
             dry = dry_results[0]
-            nat = dry.natural_source  # natural source triple
+            nat = dry.natural_source
 
-            # Compute source_block: where natural_source.main ends up after
-            # rotating source face CW by source_rotate
-            source_block = nat.main.rotate_clockwise(n, source_rotate)
+            # Test ALL 4 rotations for this block
+            for source_rotate in range(4):
 
-            # Also compute where prefix/suffix move (for verification after undo)
-            source_block_prefix = (
-                nat.prefix.rotate_clockwise(n, source_rotate)
-                if nat.prefix is not None else None
-            )
-            source_block_suffix = (
-                nat.suffix.rotate_clockwise(n, source_rotate)
-                if nat.suffix is not None else None
-            )
+                cube.reset()
+                helper = _create_helper(app)
+                target_face = cube.face(target_face_name)
+                source_face = cube.face(source_face_name)
 
-            # Reset, place markers on ALL 6 blocks at natural positions
-            cube.reset()
-            helper = _create_helper(app)
-            target_face = cube.face(target_face_name)
-            source_face = cube.face(source_face_name)
+                # Compute rotated source positions
+                src_main = nat.main.rotate_clockwise(n, source_rotate)
+                src_prefix = (
+                    nat.prefix.rotate_clockwise(n, source_rotate)
+                    if nat.prefix is not None else None
+                )
+                src_suffix = (
+                    nat.suffix.rotate_clockwise(n, source_rotate)
+                    if nat.suffix is not None else None
+                )
 
-            marker_key = f"ss_{uuid.uuid4().hex[:8]}"
+                marker_key = f"ss_{uuid.uuid4().hex[:8]}"
 
-            # Target face markers (3 blocks)
-            t_prefix_m = _place_block_markers(
-                target_face, dry.target_prefix_block, marker_key, "tp"
-            )
-            t_main_m = _place_block_markers(
-                target_face, dry.target_block, marker_key, "tm"
-            )
-            t_suffix_m = _place_block_markers(
-                target_face, dry.target_suffix_block, marker_key, "ts"
-            )
+                # Place markers DIRECTLY at target positions
+                t_prefix_m = _place_block_markers(
+                    target_face, dry.target_prefix_block, marker_key, "tp"
+                )
+                t_main_m = _place_block_markers(
+                    target_face, dry.target_block, marker_key, "tm"
+                )
+                t_suffix_m = _place_block_markers(
+                    target_face, dry.target_suffix_block, marker_key, "ts"
+                )
 
-            # Source face markers (3 blocks at NATURAL positions)
-            s_prefix_m = _place_block_markers(
-                source_face, nat.prefix, marker_key, "sp"
-            )
-            s_main_m = _place_block_markers(
-                source_face, nat.main, marker_key, "sm"
-            )
-            s_suffix_m = _place_block_markers(
-                source_face, nat.suffix, marker_key, "ss"
-            )
+                # Place markers DIRECTLY at rotated source positions
+                s_prefix_m = _place_block_markers(
+                    source_face, src_prefix, marker_key, "sp"
+                )
+                s_main_m = _place_block_markers(
+                    source_face, src_main, marker_key, "sm"
+                )
+                s_suffix_m = _place_block_markers(
+                    source_face, src_suffix, marker_key, "ss"
+                )
 
-            # Rotate source face — content moves from natural to rotated positions
-            from cube.domain.algs import Algs
-            source_rotate_alg = Algs.of_face(source_face.name) * source_rotate
-            helper.op.play(source_rotate_alg)
+                # Execute swap with source_block
+                helper.execute_swap(
+                    source_face, target_face, target_block,
+                    source_block=src_main,
+                    undo_source_setup=True,
+                    undo_target_setup=True,
+                )
 
-            # Execute swap with source_block
-            helper.execute_swap(
-                source_face, target_face, target_block,
-                source_block=source_block,
-                undo_source_setup=True,
-                undo_target_setup=True,
-            )
+                # Verify ALL 6 marker swaps
+                record = {
+                    "block": target_block, "rotate": source_rotate,
+                    "src_main": src_main,
+                }
+                ok = True
 
-            # Verify ALL 6 marker swaps
-            record = {"block": target_block, "rotate": source_rotate}
-            ok = True
+                def _check(
+                    label: str,
+                    src_markers: dict[Point, str],
+                    dest_face: Face,
+                    dest_block: Block | None,
+                ) -> None:
+                    nonlocal ok
+                    if not src_markers or dest_block is None:
+                        return
+                    found = _read_block_markers(dest_face, dest_block, marker_key)
+                    expected_set = set(src_markers.values())
+                    found_set = {v for v in found.values() if v is not None}
+                    if found_set != expected_set:
+                        ok = False
+                        failures.append({
+                            **record, "type": label,
+                            "expected": sorted(expected_set),
+                            "found": sorted(found_set),
+                        })
 
-            def _check(
-                label: str,
-                src_markers: dict[Point, str],
-                dest_face: Face,
-                dest_block: Block | None,
-            ) -> None:
-                nonlocal ok
-                if not src_markers or dest_block is None:
-                    return
-                found = _read_block_markers(dest_face, dest_block, marker_key)
-                expected_set = set(src_markers.values())
-                found_set = {v for v in found.values() if v is not None}
-                if found_set != expected_set:
-                    ok = False
-                    failures.append({
-                        **record, "type": label,
-                        "expected": sorted(expected_set),
-                        "found": sorted(found_set),
-                    })
+                # Source markers should arrive at target positions
+                _check("sm->tm", s_main_m, target_face, dry.target_block)
+                _check("sp->tp", s_prefix_m, target_face, dry.target_prefix_block)
+                _check("ss->ts", s_suffix_m, target_face, dry.target_suffix_block)
 
-            # Source markers should arrive at target positions
-            _check("sm->tm", s_main_m, target_face, dry.target_block)
-            _check("sp->tp", s_prefix_m, target_face, dry.target_prefix_block)
-            _check("ss->ts", s_suffix_m, target_face, dry.target_suffix_block)
+                # Target markers should arrive at rotated source positions
+                _check("tm->sm", t_main_m, source_face, src_main)
+                _check("tp->sp", t_prefix_m, source_face, src_prefix)
+                _check("ts->ss", t_suffix_m, source_face, src_suffix)
 
-            # Target markers should arrive at source_block positions
-            # (after undo_source_setup, source face is rotated back,
-            # so target content at natural_source gets rotated to source_block positions)
-            _check("tm->sm", t_main_m, source_face, source_block)
-            _check("tp->sp", t_prefix_m, source_face, source_block_prefix)
-            _check("ts->ss", t_suffix_m, source_face, source_block_suffix)
-
-            if ok:
-                successes += 1
+                if ok:
+                    successes += 1
 
         if failures:
             msg = (
                 f"\nCube {cube_size}x{cube_size}, "
-                f"{target_face_name.name}<-{source_face_name.name}, "
-                f"rotate={source_rotate}\n"
+                f"{target_face_name.name}<-{source_face_name.name}\n"
                 f"Successes: {successes}, Failures: {len(failures)}\n"
             )
             for f in failures[:10]:
@@ -1060,8 +1051,7 @@ class TestSourceSetup:
 
         assert successes > 0, (
             f"No valid blocks tested for {cube_size}x{cube_size} "
-            f"{target_face_name.name}<-{source_face_name.name} "
-            f"rotate={source_rotate}"
+            f"{target_face_name.name}<-{source_face_name.name}"
         )
 
 
