@@ -98,27 +98,87 @@ def _read_block_markers(
     return result
 
 
-def _read_block_markers_ordered(
-    face: Face,
-    block: Block,
-    marker_key: str,
-    n_slices: int,
-    order_by: Block,
-) -> list[str | None]:
-    """Read marker values from a block in kernel-aligned order.
+def _target_triple(result: SliceSwapResult) -> tuple[Block | None, Block, Block | None]:
+    """Extract target (prefix, main, suffix) blocks from a SliceSwapResult."""
+    return (result.target_prefix_block, result.target_block, result.target_suffix_block)
 
-    Uses points_by(n_slices, order_by) so the iteration order matches
-    the order_by block's cell ordering. This ensures that marker[i]
-    placed on order_by cell[i] is read at index i from this block.
 
-    Returns:
-        List of marker values in aligned order.
+def _source_triple(result: SliceSwapResult) -> tuple[Block | None, Block, Block | None]:
+    """Extract source (prefix, main, suffix) blocks from a SliceSwapResult."""
+    return (result.source_prefix_block, result.source_block, result.source_suffix_block)
+
+
+def _place_markers_and_verify_swap(
+    app: AbstractApp,
+    target_face_name: FaceName,
+    source_face_name: FaceName,
+    target_block: Block,
+    target_blocks: tuple[Block | None, Block, Block | None],
+    source_blocks: tuple[Block | None, Block, Block | None],
+    swap_kwargs: dict[str, object],
+    failures: list[dict],
+    record: dict,
+) -> bool:
+    """Place markers on 6 blocks, execute swap, verify markers swapped correctly.
+
+    Resets the cube, places unique markers on all 6 blocks (3 target, 3 source),
+    executes the swap with the given kwargs, then verifies all markers moved
+    to the expected positions using set comparison.
+
+    Returns True if all markers swapped correctly.
     """
-    result: list[str | None] = []
-    for cell in block.points_by(n_slices, order_by=order_by):
-        piece = face.center.get_center_slice(cell).edge
-        result.append(piece.moveable_attributes.get(marker_key))
-    return result
+    cube = app.cube
+    cube.reset()
+    helper = _create_helper(app)
+    target_face = cube.face(target_face_name)
+    source_face = cube.face(source_face_name)
+
+    marker_key = f"mk_{uuid.uuid4().hex[:8]}"
+
+    t_prefix, t_main, t_suffix = target_blocks
+    s_prefix, s_main, s_suffix = source_blocks
+
+    # Place markers on all 6 blocks
+    t_prefix_m = _place_block_markers(target_face, t_prefix, marker_key, "tp")
+    t_main_m = _place_block_markers(target_face, t_main, marker_key, "tm")
+    t_suffix_m = _place_block_markers(target_face, t_suffix, marker_key, "ts")
+    s_prefix_m = _place_block_markers(source_face, s_prefix, marker_key, "sp")
+    s_main_m = _place_block_markers(source_face, s_main, marker_key, "sm")
+    s_suffix_m = _place_block_markers(source_face, s_suffix, marker_key, "ss")
+
+    # Execute swap
+    helper.execute_swap(source_face, target_face, target_block, **swap_kwargs)
+
+    # Verify all 6 marker swaps
+    ok = True
+
+    def _check(label: str, src_markers: dict[Point, str],
+               dest_face: Face, dest_block: Block | None) -> None:
+        nonlocal ok
+        if not src_markers or dest_block is None:
+            return
+        found = _read_block_markers(dest_face, dest_block, marker_key)
+        expected_set = set(src_markers.values())
+        found_set = {v for v in found.values() if v is not None}
+        if found_set != expected_set:
+            ok = False
+            failures.append({
+                **record, "type": label,
+                "expected": sorted(expected_set),
+                "found": sorted(found_set),
+            })
+
+    # Target markers should arrive at source positions
+    _check("tm->sm", t_main_m, source_face, s_main)
+    _check("tp->sp", t_prefix_m, source_face, s_prefix)
+    _check("ts->ss", t_suffix_m, source_face, s_suffix)
+
+    # Source markers should arrive at target positions
+    _check("sm->tm", s_main_m, target_face, t_main)
+    _check("sp->tp", s_prefix_m, target_face, t_prefix)
+    _check("ss->ts", s_suffix_m, target_face, t_suffix)
+
+    return ok
 
 
 # =============================================================================
@@ -215,130 +275,48 @@ class TestSliceSwapSixBlocks:
 
         app = AbstractApp.create_app(cube_size)
         cube = app.cube
-        n = cube.n_slices  # inner slices = cube_size - 2
+        n = cube.n_slices
         helper = _create_helper(app)
 
-        target_face = cube.face(target_face_name)
-        source_face = cube.face(source_face_name)
+        successes = 0
+        failures: list[dict] = []
 
-        successes = []
-        failures = []
-
-        # Try a few representative target blocks
-        test_blocks = _get_test_blocks(n)
-
-        for target_block in test_blocks:
-            # Reset cube and recreate helper (reset creates new objects)
+        for target_block in _get_test_blocks(n):
             cube.reset()
             helper = _create_helper(app)
             target_face = cube.face(target_face_name)
             source_face = cube.face(source_face_name)
 
-            # Dry run to get all 6 blocks
             results = helper.get_all_combinations(source_face, target_face, target_block)
-
             if not results:
-                continue  # No valid combination for this block
+                continue
 
-            # Use the first valid combination
             result = results[0]
-
-            # Reset and recreate for clean marker placement
-            cube.reset()
-            helper = _create_helper(app)
-            target_face = cube.face(target_face_name)
-            source_face = cube.face(source_face_name)
-
-            # Generate unique marker key for this test
-            marker_key = f"bsh_{uuid.uuid4().hex[:8]}"
-
-            # Place markers on all 6 blocks
-            # Target face blocks
-            t_prefix_markers = _place_block_markers(
-                target_face, result.target_prefix_block, marker_key, "tp"
-            )
-            t_main_markers = _place_block_markers(
-                target_face, result.target_block, marker_key, "tm"
-            )
-            t_suffix_markers = _place_block_markers(
-                target_face, result.target_suffix_block, marker_key, "ts"
-            )
-
-            # Source face blocks
-            s_prefix_markers = _place_block_markers(
-                source_face, result.source_prefix_block, marker_key, "sp"
-            )
-            s_main_markers = _place_block_markers(
-                source_face, result.source_block, marker_key, "sm"
-            )
-            s_suffix_markers = _place_block_markers(
-                source_face, result.source_suffix_block, marker_key, "ss"
-            )
-
-            # Execute the actual swap (not dry run)
-            exec_result = helper.execute_swap(
-                source_face, target_face, target_block,
-                dry_run=False,
-                preserve_state=True,
-            )
-
-            # Verify: target blocks' markers should now be at source positions
-            # and source blocks' markers should now be at target positions
-
             record = {
                 "target_block": target_block,
                 "rotation": result.rotation_type,
                 "slice": result.slice_name,
             }
 
-            ok = True
-
-            def _check_swap(
-                label: str,
-                src_markers: dict[Point, str],
-                dest_face: Face,
-                dest_block: Block | None,
-            ) -> None:
-                """Check that all markers from src ended up in dest_block (set comparison)."""
-                nonlocal ok
-                if not src_markers or dest_block is None:
-                    return
-                found = _read_block_markers(dest_face, dest_block, marker_key)
-                expected_set = set(src_markers.values())
-                found_set = {v for v in found.values() if v is not None}
-                if found_set != expected_set:
-                    ok = False
-                    failures.append({
-                        **record, "type": label,
-                        "expected": sorted(expected_set),
-                        "found": sorted(found_set),
-                    })
-
-            # Target blocks should swap to source positions
-            _check_swap("tm->sm", t_main_markers, source_face, result.source_block)
-            _check_swap("tp->sp", t_prefix_markers, source_face, result.source_prefix_block)
-            _check_swap("ts->ss", t_suffix_markers, source_face, result.source_suffix_block)
-
-            # Source blocks should swap to target positions
-            _check_swap("sm->tm", s_main_markers, target_face, result.target_block)
-            _check_swap("sp->tp", s_prefix_markers, target_face, result.target_prefix_block)
-            _check_swap("ss->ts", s_suffix_markers, target_face, result.target_suffix_block)
-
-            if ok:
-                successes.append(record)
+            if _place_markers_and_verify_swap(
+                app, target_face_name, source_face_name, target_block,
+                _target_triple(result), _source_triple(result),
+                dict(dry_run=False, preserve_state=True),
+                failures, record,
+            ):
+                successes += 1
 
         if failures:
             msg = (
                 f"\nCube {cube_size}x{cube_size}, "
                 f"{target_face_name.name}<-{source_face_name.name}\n"
-                f"Successes: {len(successes)}, Failures: {len(failures)}\n"
+                f"Successes: {successes}, Failures: {len(failures)}\n"
             )
             for f in failures[:10]:
                 msg += f"  {f}\n"
             assert False, msg
 
-        # Ensure we actually tested something
-        assert len(successes) > 0, (
+        assert successes > 0, (
             f"No valid test blocks found for {cube_size}x{cube_size} "
             f"{target_face_name.name}<-{source_face_name.name}"
         )
@@ -403,7 +381,6 @@ class TestFullSliceBlocks:
         target_face = cube.face(target_face_name)
         source_face = cube.face(source_face_name)
 
-        # Must find at least one valid combination
         results = helper.get_all_combinations(source_face, target_face, target_block)
         assert results, (
             f"No valid combination for {cube_size}x{cube_size} "
@@ -411,65 +388,20 @@ class TestFullSliceBlocks:
         )
 
         result = results[0]
+        failures: list[dict] = []
 
-        # Reset and verify with markers
-        cube.reset()
-        helper = _create_helper(app)
-        target_face = cube.face(target_face_name)
-        source_face = cube.face(source_face_name)
-
-        marker_key = f"fs_{uuid.uuid4().hex[:8]}"
-
-        t_prefix_markers = _place_block_markers(
-            target_face, result.target_prefix_block, marker_key, "tp"
-        )
-        t_main_markers = _place_block_markers(
-            target_face, result.target_block, marker_key, "tm"
-        )
-        t_suffix_markers = _place_block_markers(
-            target_face, result.target_suffix_block, marker_key, "ts"
-        )
-        s_prefix_markers = _place_block_markers(
-            source_face, result.source_prefix_block, marker_key, "sp"
-        )
-        s_main_markers = _place_block_markers(
-            source_face, result.source_block, marker_key, "sm"
-        )
-        s_suffix_markers = _place_block_markers(
-            source_face, result.source_suffix_block, marker_key, "ss"
+        ok = _place_markers_and_verify_swap(
+            app, target_face_name, source_face_name, target_block,
+            _target_triple(result), _source_triple(result),
+            dict(dry_run=False, preserve_state=True),
+            failures, {"block": target_block, "slice": result.slice_name},
         )
 
-        helper.execute_swap(
-            source_face, target_face, target_block,
-            dry_run=False,
-            preserve_state=True,
-        )
-
-        failures = []
-
-        def _check(label, src_markers, dest_face, dest_block):
-            if not src_markers or dest_block is None:
-                return
-            found = _read_block_markers(dest_face, dest_block, marker_key)
-            expected_set = set(src_markers.values())
-            found_set = {v for v in found.values() if v is not None}
-            if found_set != expected_set:
-                failures.append(
-                    f"{label}: expected={sorted(expected_set)} "
-                    f"found={sorted(found_set)}"
-                )
-
-        _check("tm->sm", t_main_markers, source_face, result.source_block)
-        _check("tp->sp", t_prefix_markers, source_face, result.source_prefix_block)
-        _check("ts->ss", t_suffix_markers, source_face, result.source_suffix_block)
-        _check("sm->tm", s_main_markers, target_face, result.target_block)
-        _check("sp->tp", s_prefix_markers, target_face, result.target_prefix_block)
-        _check("ss->ts", s_suffix_markers, target_face, result.target_suffix_block)
-
-        assert not failures, (
+        assert ok, (
             f"Swap verification failed for {cube_size}x{cube_size} "
             f"{target_face_name.name}<-{source_face_name.name} "
-            f"block={target_block}:\n" + "\n".join(failures)
+            f"block={target_block}:\n" +
+            "\n".join(f"  {f}" for f in failures)
         )
 
 
@@ -770,106 +702,26 @@ class TestNuclearSwap:
                 _rotated = sb.rotate_clockwise(n, rot)
                 assert _rotated is not None
 
-            # Execute 180° swap and verify
+            # Dry run to get block geometry
             cube.reset()
             helper = _create_helper(app)
             target_face = cube.face(target_face_name)
             source_face = cube.face(source_face_name)
 
-            # Dry run to get block geometry
             result = helper.execute_swap(
                 source_face, target_face, sb,
                 dry_run=True,
                 preserve_state=True,
             )
 
-            # Reset for clean marker placement
-            cube.reset()
-            helper = _create_helper(app)
-            target_face = cube.face(target_face_name)
-            source_face = cube.face(source_face_name)
+            record = {"block": sb, "slice": result.slice_name}
 
-            marker_key = f"nuc_{uuid.uuid4().hex[:8]}"
-
-            # Place markers on all 6 blocks
-            t_prefix = _place_block_markers(
-                target_face, result.target_prefix_block,
-                marker_key, "tp",
-            )
-            t_main = _place_block_markers(
-                target_face, result.target_block,
-                marker_key, "tm",
-            )
-            t_suffix = _place_block_markers(
-                target_face, result.target_suffix_block,
-                marker_key, "ts",
-            )
-            s_prefix = _place_block_markers(
-                source_face, result.source_prefix_block,
-                marker_key, "sp",
-            )
-            s_main = _place_block_markers(
-                source_face, result.source_block,
-                marker_key, "sm",
-            )
-            s_suffix = _place_block_markers(
-                source_face, result.source_suffix_block,
-                marker_key, "ss",
-            )
-
-            # Execute the actual swap
-            helper.execute_swap(
-                source_face, target_face, sb,
-                dry_run=False,
-                preserve_state=True,
-            )
-
-            # Verify all 6 marker swaps (ordered comparison)
-            # Use points_by(n, order_by=src_block) to align
-            # iteration order with the source block's cell order.
-            record = {
-                "block": sb,
-                "slice": result.slice_name,
-            }
-            ok = True
-
-            def _check(
-                label: str,
-                src_markers: dict[Point, str],
-                src_block: Block | None,
-                dest_face: Face,
-                dest_block: Block | None,
-            ) -> None:
-                nonlocal ok
-                if not src_markers or dest_block is None or src_block is None:
-                    return
-                actual = _read_block_markers_ordered(
-                    dest_face, dest_block, marker_key,
-                    n, order_by=src_block,
-                )
-                expected = list(src_markers.values())
-                if actual != expected:
-                    ok = False
-                    failures.append({
-                        **record, "type": label,
-                        "expected": expected,
-                        "found": actual,
-                    })
-
-            _check("tm->sm", t_main, result.target_block,
-                   source_face, result.source_block)
-            _check("tp->sp", t_prefix, result.target_prefix_block,
-                   source_face, result.source_prefix_block)
-            _check("ts->ss", t_suffix, result.target_suffix_block,
-                   source_face, result.source_suffix_block)
-            _check("sm->tm", s_main, result.source_block,
-                   target_face, result.target_block)
-            _check("sp->tp", s_prefix, result.source_prefix_block,
-                   target_face, result.target_prefix_block)
-            _check("ss->ts", s_suffix, result.source_suffix_block,
-                   target_face, result.target_suffix_block)
-
-            if ok:
+            if _place_markers_and_verify_swap(
+                app, target_face_name, source_face_name, sb,
+                _target_triple(result), _source_triple(result),
+                dict(dry_run=False, preserve_state=True),
+                failures, record,
+            ):
                 successes += 1
 
         if failures:
@@ -916,13 +768,7 @@ class TestSourceSetup:
 
         Returns True if the rotation passed, False otherwise.
         """
-        cube = app.cube
-        n = cube.n_slices
-
-        cube.reset()
-        helper = _create_helper(app)
-        target_face = cube.face(target_face_name)
-        source_face = cube.face(source_face_name)
+        n = app.cube.n_slices
 
         # Compute rotated source positions
         src_main = nat.main.rotate_clockwise(n, source_rotate)
@@ -935,76 +781,14 @@ class TestSourceSetup:
             if nat.suffix is not None else None
         )
 
-        marker_key = f"ss_{uuid.uuid4().hex[:8]}"
-
-        # Place markers DIRECTLY at target positions
-        t_prefix_m = _place_block_markers(
-            target_face, dry.target_prefix_block, marker_key, "tp"
+        return _place_markers_and_verify_swap(
+            app, target_face_name, source_face_name, target_block,
+            _target_triple(dry),
+            (src_prefix, src_main, src_suffix),
+            dict(source_block=src_main, undo_source_setup=True, undo_target_setup=True),
+            failures,
+            {"block": target_block, "rotate": source_rotate, "src_main": src_main},
         )
-        t_main_m = _place_block_markers(
-            target_face, dry.target_block, marker_key, "tm"
-        )
-        t_suffix_m = _place_block_markers(
-            target_face, dry.target_suffix_block, marker_key, "ts"
-        )
-
-        # Place markers DIRECTLY at rotated source positions
-        s_prefix_m = _place_block_markers(
-            source_face, src_prefix, marker_key, "sp"
-        )
-        s_main_m = _place_block_markers(
-            source_face, src_main, marker_key, "sm"
-        )
-        s_suffix_m = _place_block_markers(
-            source_face, src_suffix, marker_key, "ss"
-        )
-
-        # Execute swap with source_block
-        helper.execute_swap(
-            source_face, target_face, target_block,
-            source_block=src_main,
-            undo_source_setup=True,
-            undo_target_setup=True,
-        )
-
-        # Verify ALL 6 marker swaps
-        record = {
-            "block": target_block, "rotate": source_rotate,
-            "src_main": src_main,
-        }
-        ok = True
-
-        def _check(
-            label: str,
-            src_markers: dict[Point, str],
-            dest_face: Face,
-            dest_block: Block | None,
-        ) -> None:
-            nonlocal ok
-            if not src_markers or dest_block is None:
-                return
-            found = _read_block_markers(dest_face, dest_block, marker_key)
-            expected_set = set(src_markers.values())
-            found_set = {v for v in found.values() if v is not None}
-            if found_set != expected_set:
-                ok = False
-                failures.append({
-                    **record, "type": label,
-                    "expected": sorted(expected_set),
-                    "found": sorted(found_set),
-                })
-
-        # Source markers should arrive at target positions
-        _check("sm->tm", s_main_m, target_face, dry.target_block)
-        _check("sp->tp", s_prefix_m, target_face, dry.target_prefix_block)
-        _check("ss->ts", s_suffix_m, target_face, dry.target_suffix_block)
-
-        # Target markers should arrive at rotated source positions
-        _check("tm->sm", t_main_m, source_face, src_main)
-        _check("tp->sp", t_prefix_m, source_face, src_prefix)
-        _check("ts->ss", t_suffix_m, source_face, src_suffix)
-
-        return ok
 
     @pytest.mark.parametrize("cube_size", [4, 5, 6, 7])
     @pytest.mark.parametrize(
