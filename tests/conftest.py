@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 
 # Directories whose tests should be marked as 'gui'
-_GUI_DIRS = {"gui", "webgl", "backends"}
+_GUI_DIRS = {"gui", "webgl"}
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:  # noqa: ARG001
