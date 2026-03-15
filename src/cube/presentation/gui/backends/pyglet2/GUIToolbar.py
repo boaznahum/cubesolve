@@ -416,7 +416,7 @@ class GUIToolbar:
     # === Solver Dropdown ===
 
     def _open_dropdown(self) -> None:
-        """Open the solver dropdown, populating items from SolverName.implemented()."""
+        """Open the solver dropdown, populating items from SolverName.user_visible()."""
         if self._window is None:
             return
         app = self._window.app
@@ -428,7 +428,7 @@ class GUIToolbar:
                 solver_name=sn,
                 is_current=(sn.display_name == current_name),
             )
-            for sn in SolverName.implemented()
+            for sn in SolverName.user_visible()
         ]
 
         # Find the Solver button to anchor the dropdown below it
