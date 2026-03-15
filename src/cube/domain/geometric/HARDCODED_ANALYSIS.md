@@ -20,16 +20,17 @@ Two-layer architecture (see `GEOMETRY_LAYERS.md`):
 
 | What | Location | Entries | How to Derive |
 |------|----------|---------|---------------|
-| `slice_to_axis` dict | Face2FaceTranslator.py:488 | 3 | Use `_AXIS_ROTATION_FACE` directly |
-| `get_start_face()` | slice_layout.py | 3 | Derive from slice definitions |
-| `_rotate_dict_x/y/z` | _CubeLayout.py | 12 | From rotation cycles |
-| Face transform table | _supported_faces.py | 41 | From face relationships |
+| Face transform table | _supported_faces.py | 30 | All non-identical face pairs (trivially derivable) |
+| Face-to-slice mapping | main_g_mouse.py, ClientSession.py | ~18 each | Use `get_slice_parallel_to_face()` from CubeLayout |
 | Subclass constructors | FaceAlg.py | 6 | Factory pattern |
 | Wide move instances | WideLayerAlg.py (via Algs.py) | 12 | WCA standard + adaptive |
 | Subclass constructors | SliceAlg.py | 3 | Factory pattern |
 | Subclass constructors | WholeCubeAlg.py | 9 | Factory pattern |
 
-**Total: ~83 hardcoded entries**
+**Resolved since last update:**
+- `slice_to_axis` dict in Face2FaceTranslator.py — **REMOVED**
+- `get_start_face()` in slice_layout.py — **REMOVED**
+- `_rotate_dict_x/y/z` in _CubeLayout.py — **REMOVED**
 
 ---
 
@@ -40,7 +41,7 @@ Two-layer architecture (see `GEOMETRY_LAYERS.md`):
 | 1.1 | `_TRANSFORMATION_TABLE` | ~~Face2FaceTranslator.py~~ | **REMOVED** | Was dead code |
 | 1.2 | `_SLICE_INDEX_TABLE` | ~~Face2FaceTranslator.py~~ | **REMOVED** | Derived via `_derive_slice_index_formula()` |
 | 1.3 | `_X_CYCLE`, `_Y_CYCLE`, `_Z_CYCLE` | ~~Face2FaceTranslator.py~~ | **REMOVED** | Derived via `get_face_neighbors_cw_names()` |
-| 1.4 | `slice_to_axis` dict | Face2FaceTranslator.py:488 | TODO | Duplicates `_AXIS_ROTATION_FACE` |
+| 1.4 | `slice_to_axis` dict | ~~Face2FaceTranslator.py~~ | **REMOVED** | Was duplicate of `_AXIS_ROTATION_FACE` |
 | 1.5 | `_build_slice_cycle` start faces | Face2FaceTranslator.py:693 | **FIXED** | Uses `resolve_cube_cycle()` |
 | 2.1 | `SLICE_ROTATION_FACE` | geometry_fundamentals.py | **MOVED** | Axiom (was `_SLICE_ROTATION_FACE` in `_CubeLayout.py`) |
 | 2.2 | `AXIS_FACE` | geometry_fundamentals.py | **MOVED** | Axiom (was `_AXIS_FACE` in `_CubeLayout.py`) |
@@ -50,10 +51,10 @@ Two-layer architecture (see `GEOMETRY_LAYERS.md`):
 | 2.6 | `get_slice_parallel_to_face()` | cube_layout.py | **ADDED** | Derives parallel slice for face |
 | 2.7 | `get_face_neighbor()` | cube_layout.py | **ADDED** | Gets neighbor face by EdgePosition |
 | 2.8 | `get_face_neighbors_cw()` | cube_layout.py | **ADDED** | Gets 4 neighbors in CW order |
-| 3.1 | `get_start_face()` | slice_layout.py | TODO | Hardcoded face returns |
+| 3.1 | `get_start_face()` | ~~slice_layout.py~~ | **REMOVED** | No longer exists |
 | 3.2 | face checks | ~~_SizedCubeLayout.py~~ | **FIXED** | Now uses `get_slice_parallel_to_face()` |
 | 3.3 | `does_slice_of_face_start_with_face()` | slice_layout.py | **MOVED** | Moved from _SizedCubeLayout |
-| 3.4 | rotation logic | _CubeLayout.py | TODO | `_rotate_dict_x/y/z` cycles |
+| 3.4 | rotation logic | ~~_CubeLayout.py~~ | **REMOVED** | `_rotate_dict_x/y/z` no longer exists |
 | 4.1 | `EdgePosition` enum | _elements.py | **ADDED** | LEFT/RIGHT/TOP/BOTTOM positions |
 | 4.2 | `Face.get_edge()` | Face.py | **ADDED** | Get edge by EdgePosition |
 
@@ -166,17 +167,25 @@ These are inherently tied to enum values and are acceptable:
 
 ## Priority Order for Remaining Work
 
-### High Priority (Duplicated Constants)
-1. **`slice_to_axis` in Face2FaceTranslator.py** - Direct duplicate of `_AXIS_ROTATION_FACE`
-2. **`_supported_faces.py` table** - 41 entries that could be derived
+### High Priority (Hardcoded Geometry Facts in GUI Code)
+1. **Face-to-slice mapping in mouse handlers** - `main_g_mouse.py` and `ClientSession.py` both
+   hardcode which slice (M/E/S) corresponds to which face+direction. This is a geometry fact
+   derivable from `get_slice_parallel_to_face()` and slice layout properties. The same logic
+   is duplicated across two backends.
 
 ### Medium Priority (Derivable Tables)
-3. **`_SLICE_INDEX_TABLE`** - 12 entries, derive from `does_slice_cut_rows_or_columns()`
-4. **`_X/Y/Z_CYCLE`** - 12 entries, derive from `_SLICE_ROTATION_FACE + _ADJACENT`
-5. **`_build_slice_cycle` start faces** - 3 cases, derive from slice definitions
+2. **`_supported_faces.py` table** - 30 entries that are simply all non-identical face pairs
 
 ### Low Priority (Factory Pattern Refactoring)
-6. **Alg subclass constructors** - Use factory/registry pattern instead of explicit classes
+3. **Alg subclass constructors** - Use factory/registry pattern instead of explicit classes
+
+### Completed (Previously Listed)
+- ~~`slice_to_axis` in Face2FaceTranslator.py~~ - **REMOVED**
+- ~~`_SLICE_INDEX_TABLE`~~ - **REMOVED** (derived via `_derive_slice_index_formula()`)
+- ~~`_X/Y/Z_CYCLE`~~ - **REMOVED** (derived via `get_face_neighbors_cw_names()`)
+- ~~`_build_slice_cycle` start faces~~ - **FIXED** (uses `resolve_cube_cycle()`)
+- ~~`get_start_face()`~~ - **REMOVED**
+- ~~`_rotate_dict_x/y/z`~~ - **REMOVED**
 
 ---
 

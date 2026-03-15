@@ -175,8 +175,8 @@ https://user-images.githubusercontent.com/3913990/172851026-05582a7f-1c12-4732-a
 
 ### Solving
 
-    SHIFT + any solve key below forces animation off (useful for skipping to specific step)
-    / (or ? with Shift) - Solve the cube (see animation mode above)
+    / - Solve the cube (see animation mode above)
+    Shift+/ - Solve the cube instantly (no animation)
     F1 - First Layer
     Ctrl+F1 - First Layer cross only
     F2 - Second Layer
@@ -184,6 +184,7 @@ https://user-images.githubusercontent.com/3913990/172851026-05582a7f-1c12-4732-a
     Ctrl+F3 - Third Layer cross only
     F4 - Big cube centers
     F5 - Big cube edges
+    Ctrl + click on any toolbar solve button forces animation off
 
 ### Recording
     Ctrl+P - Start/stop recording manual sequences, scrambling, solutions

@@ -820,7 +820,7 @@ class ExecuteFileAlgCommand(Command):
     Args:
         slot: File number 1-5
         inverse: If True, play the inverse (prime) of the algorithm
-        instant: If True, force no animation (like Shift+click)
+        instant: If True, force no animation (like Ctrl+click)
     """
     slot: int
     inverse: bool = False

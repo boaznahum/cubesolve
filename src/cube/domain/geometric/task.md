@@ -75,9 +75,9 @@ may explain many of the lookup tables.
 
 | Decision | Classification | Location | Notes |
 |----------|---------------|----------|-------|
-| X cycle: D-F-U-B | HARDCODED | Face2FaceTranslator:420 | "X rotates like R" |
-| Y cycle: R-F-L-B | HARDCODED | Face2FaceTranslator:421 | "Y rotates like U" |
-| Z cycle: L-U-R-D | HARDCODED | Face2FaceTranslator:422 | "Z rotates like F" |
+| X cycle: D-F-U-B | **COMPUTED** | `get_face_neighbors_cw_names()` | Derived from AXIS_FACE + adjacency |
+| Y cycle: R-F-L-B | **COMPUTED** | `get_face_neighbors_cw_names()` | Derived from AXIS_FACE + adjacency |
+| Z cycle: L-U-R-D | **COMPUTED** | `get_face_neighbors_cw_names()` | Derived from AXIS_FACE + adjacency |
 | Clockwise direction | HARDCODED | - | Viewer-facing convention |
 
 ### 3.5 Coordinate Systems
@@ -92,8 +92,8 @@ may explain many of the lookup tables.
 
 | Decision | Classification | Location | Notes |
 |----------|---------------|----------|-------|
-| 30 face-pair transformations | COMPUTED | Face2FaceTranslator:162 | Derived from whole-cube rotations |
-| 12 slice-index formulas | UNKNOWN | Face2FaceTranslator:335 | Empirically derived, may be computable |
+| 30 face-pair transformations | **REMOVED** | ~~Face2FaceTranslator~~ | Was dead code, transforms computed dynamically |
+| 12 slice-index formulas | **COMPUTED** | `_derive_slice_index_formula()` | Derived from `does_slice_cut_rows_or_columns()` + `does_slice_of_face_start_with_face()` |
 
 ---
 
@@ -103,11 +103,11 @@ may explain many of the lookup tables.
 
 | Location | Question/Comment |
 |----------|-----------------|
-| `_CubeLayoutGeometry.py:44` | `# claude what is the Mathematica of this ???` |
-| `Face2FaceTranslator.py:270-271` | `# claude make a bug here it make it 1 based, now it is hard to fix it` |
-| `slice_layout.py:135-139` | `# cluad: replace with member that passed in the constructor` |
+| `Face2FaceTranslator.py` | Various coordinate translation comments |
 | `Face.py:305-306` | `# TODO [#10]: Unclear why these copies are needed` |
 | `docs/design2/my_questions.md` | Various rendering/texture questions |
+
+*Note: `CubeLayout/SizedCubeLayout.py` no longer exists — methods moved to `_CubeLayout.py` and `_SizedCubeLayout.py`.*
 
 ### 4.2 Issue References in Code
 
@@ -116,7 +116,7 @@ may explain many of the lookup tables.
 | #10 | `Face.py:305` | Unclear why edge copies needed during rotation |
 | #11 | `Slice.py:378-381` | M slice direction inverted vs standard notation |
 | #53 | `Face.py:290, Cube.py:412-413` | Edge orientation system not documented |
-| #55 | `_CubeLayoutGeometry.py:23-25` | Hardcoded geometry methods need derivation |
+| #55 | geometry package | Hardcoded geometry methods — most now derived (see HARDCODED_ANALYSIS.md) |
 
 ### 4.3 Magic Numbers and Rotation Constants
 
@@ -141,66 +141,24 @@ may explain many of the lookup tables.
 ## 5. FACE2FACE TRANSLATOR - CENTRAL GEOMETRY ENGINE
 
 The `Face2FaceTranslator.py` is the central geometry engine for coordinate
-translation between cube faces. It encodes three key insights:
+translation between cube faces.
 
-### 5.1 Transformation Table (30 Face Pairs x 4 Transform Types)
+### 5.1 Transformation Table — **REMOVED**
 
-**Structure:**
-```python
-_TRANSFORMATION_TABLE = {
-    (FaceName.B, FaceName.D): TransformType.ROT_180,  # via X
-    (FaceName.D, FaceName.F): TransformType.IDENTITY,
-    (FaceName.L, FaceName.U): TransformType.ROT_90_CW,  # via Z
-    # ... 30 total face pairs
-}
-```
+Was a 30-entry lookup `_TRANSFORMATION_TABLE`. Removed as dead code —
+transforms are now computed dynamically via `CubeWalkingInfo`.
 
-**Transformation Formulas:**
-```
-inv(x) = n - 1 - x  (index inversion for nxn cube)
+### 5.2 Slice Index Table — **REMOVED** (Now Derived)
 
-IDENTITY:    (r, c) -> (r, c)           # No change
-ROT_90_CW:   (r, c) -> (inv(c), r)      # 90 clockwise
-ROT_90_CCW:  (r, c) -> (c, inv(r))      # 90 counter-clockwise
-ROT_180:     (r, c) -> (inv(r), inv(c)) # 180 rotation
-```
+Was a 12-entry lookup `_SLICE_INDEX_TABLE`. Now derived dynamically via
+`_derive_slice_index_formula()` using:
+- `does_slice_cut_rows_or_columns()` → determines ROW vs COL
+- `does_slice_of_face_start_with_face()` → determines direct vs inverted
 
-**Classification:** HARDCODED (empirically derived) but MATHEMATICALLY DERIVABLE
-from rotation cycles and standard 2D rotation matrices.
+### 5.3 Rotation Cycles — **REMOVED** (Now Derived)
 
-### 5.2 Slice Index Table (12 Slice/Face Combinations)
-
-**Structure:**
-```python
-_SLICE_INDEX_TABLE = {
-    (SliceName.M, FaceName.F): _SliceIndexFormula.COL,
-    (SliceName.M, FaceName.B): _SliceIndexFormula.INV_COL,
-    (SliceName.E, FaceName.F): _SliceIndexFormula.ROW,
-    # ... 12 total combinations
-}
-```
-
-**Formula Semantics (1-based indexing):**
-```python
-ROW:     slice_index = row + 1
-COL:     slice_index = col + 1
-INV_ROW: slice_index = n_slices - row
-INV_COL: slice_index = n_slices - col
-```
-
-**Classification:** HARDCODED (empirically derived), derivation requires
-understanding slice axis alignment with face coordinate systems.
-
-### 5.3 Rotation Cycles
-
-```python
-_X_CYCLE = [D, F, U, B]  # X rotates like R: D->F->U->B->D
-_Y_CYCLE = [R, F, L, B]  # Y rotates like U: R->F->L->B->R
-_Z_CYCLE = [L, U, R, D]  # Z rotates like F: L->U->R->D->L
-```
-
-**Classification:** HARDCODED but represents FIXED GEOMETRIC FACTS
-of the cube structure (not arbitrary).
+Were hardcoded `_X_CYCLE`, `_Y_CYCLE`, `_Z_CYCLE`. Now derived via
+`get_face_neighbors_cw_names()` from `AXIS_FACE` + adjacency topology.
 
 ---
 
@@ -268,8 +226,8 @@ This explains many special cases in the code:
 if face_name == FaceName.B:
     return False  # Inverted index
 
-# In _SLICE_INDEX_TABLE:
-(SliceName.M, FaceName.B): _SliceIndexFormula.INV_COL  # Not COL!
+# In slice index derivation:
+# M on B face → INV_COL (not COL!) because B is 180° rotated
 ```
 
 ### 7.2 Slice-Face Relationships
@@ -314,13 +272,13 @@ R, U', L', U  # Face algorithms: specific sequence
 
 ## 8. PLACES ASKING GEOMETRY QUESTIONS
 
-### 8.1 In _CubeLayoutGeometry
+### 8.1 In CubeLayout / SizedCubeLayout
 
-| Method | Question Asked |
-|--------|---------------|
-| `does_slice_cut_rows_or_columns` | Does slice M/E/S cut rows or columns on face X? |
-| `does_slice_of_face_start_with_face` | Does slice[0] align with face's row/col 0? |
-| `iterate_orthogonal_face_center_pieces` | Which centers on side_face belong to layer slice N? |
+| Method | Question Asked | Layer |
+|--------|---------------|-------|
+| `does_slice_cut_rows_or_columns` | Does slice M/E/S cut rows or columns on face X? | SliceLayout |
+| `does_slice_of_face_start_with_face` | Does slice[0] align with face's row/col 0? | SliceLayout |
+| `iterate_orthogonal_face_center_pieces` | Which centers on side_face belong to layer slice N? | SizedCubeLayout |
 
 ### 8.2 In Face2FaceTranslator
 
@@ -352,16 +310,12 @@ R, U', L', U  # Face algorithms: specific sequence
 4. **Transformation types** from whole-cube rotation sequences
 5. **2D coordinate transformations** from standard rotation matrices
 
-### 9.2 Potentially Derivable (Needs Analysis)
+### 9.2 Now Derived (Previously Listed as "Potentially Derivable")
 
-1. **Slice index formulas** - may follow from:
-   - LTR coordinate convention
-   - Slice reference face convention
-   - Face-to-face transformation rules
+1. **Slice index formulas** — **DONE**: Derived via `_derive_slice_index_formula()` from
+   `does_slice_cut_rows_or_columns()` and `does_slice_of_face_start_with_face()`
 
-2. **B-face rotation** - may follow from:
-   - Cube unfolding convention
-   - LTR coordinate system on all faces
+2. **B-face rotation** — Confirmed as consequence of LTR coordinate convention + cube topology
 
 ### 9.3 Cannot Be Derived (Must Be Hardcoded)
 
@@ -415,16 +369,16 @@ def iterate_slice_on_face(slice, face, index): ...
 
 ## 11. SUMMARY TABLE
 
-| Component | Type | Hardcoded | Computed | Mathematical |
-|-----------|------|-----------|----------|--------------|
-| **_TRANSFORMATION_TABLE** | Lookup (30x4) | YES (empirical) | Derivable | YES |
-| **_SLICE_INDEX_TABLE** | Lookup (12x4) | YES (empirical) | From geometry | PARTIAL |
-| **Rotation Cycles** | Constants (3x4) | YES | From 3D geometry | YES |
-| **_apply_transform()** | Formulas (4 types) | YES | From 2D rotation | YES |
-| **_derive_whole_cube_alg()** | Algorithm | NO (computed) | From cycles | YES |
-| **_compute_slice_index()** | Algorithm | NO (computed) | From table | N/A |
-| **does_slice_cut_rows_or_columns** | Lookup | YES | Derivable | UNKNOWN |
-| **does_slice_of_face_start_with_face** | Lookup | YES | Derivable | UNKNOWN |
+| Component | Status | Notes |
+|-----------|--------|-------|
+| **_TRANSFORMATION_TABLE** | **REMOVED** | Was dead code |
+| **_SLICE_INDEX_TABLE** | **REMOVED** | Now derived via `_derive_slice_index_formula()` |
+| **Rotation Cycles** | **REMOVED** | Now derived via `get_face_neighbors_cw_names()` |
+| **_apply_transform()** | Formulas (4 types) | From 2D rotation |
+| **_derive_whole_cube_alg()** | Computed | From derived cycles |
+| **_compute_slice_index()** | Computed | From derived formula |
+| **does_slice_cut_rows_or_columns** | Computed | In SliceLayout |
+| **does_slice_of_face_start_with_face** | Computed | In SliceLayout |
 
 ---
 
@@ -439,11 +393,13 @@ def iterate_slice_on_face(slice, face, index): ...
 
 ### 12.2 Future Work (Issue #55)
 
-1. [ ] Implement Layer 0 constants module
-2. [ ] Implement Layer 1 derived topology
-3. [ ] Implement Layer 2 coordinate math
-4. [ ] Replace lookup tables with computed values
-5. [ ] Add comprehensive tests
+1. [x] Implement Layer 0 constants module — `geometry_fundamentals.py`
+2. [x] Implement Layer 1 derived topology — `CubeLayout`, `SliceLayout`
+3. [x] Implement Layer 2 coordinate math — `SizedCubeLayout`, `_derive_slice_index_formula()`
+4. [x] Replace lookup tables with computed values — `_TRANSFORMATION_TABLE`, `_SLICE_INDEX_TABLE`, `_X/Y/Z_CYCLE` all removed
+5. [x] Add comprehensive tests — `test_slice_index_derivation.py` and others
+6. [ ] Remove hardcoded face-to-slice mapping in mouse handlers (`main_g_mouse.py`, `ClientSession.py`)
+7. [ ] Replace `_supported_faces.py` table with derived computation
 
 ---
 
@@ -451,19 +407,22 @@ def iterate_slice_on_face(slice, face, index): ...
 
 | File | Contains |
 |------|----------|
+| `geometry_fundamentals.py` | Axioms: `SLICE_ROTATION_FACE`, `AXIS_FACE` |
 | `cube_layout.py` | CubeLayout protocol, opposite/adjacent |
-| `_CubeLayout.py` | CubeLayout implementation |
-| `_CubeLayoutGeometry.py` | Slice geometry methods |
+| `_CubeLayout.py` | CubeLayout implementation (includes former `CubeLayout/SizedCubeLayout`) |
+| `sized_cube_layout.py` | SizedCubeLayout protocol (size-dependent) |
+| `_SizedCubeLayout.py` | SizedCubeLayout implementation |
 | `cube_boy.py` | BOY color scheme |
-| `slice_layout.py` | SliceLayout protocol |
+| `slice_layout.py` | SliceLayout protocol + implementation |
 | `Face2FaceTranslator.py` | Coordinate translation |
-| `SliceName.py` | Slice enum |
 | `FaceName.py` | Face enum |
 | `_part.py` | Edge/Corner definitions |
-| `GEOMETRY.md` | Existing geometry documentation |
+| `HARDCODED_ANALYSIS.md` | Tracking of hardcoded items |
+| `GEOMETRY_LAYERS.md` | Two-layer architecture |
+| `GEOMETRY.md` | Questions and solutions framework |
 
 ---
 
 *Document created: Analysis complete*
-*Last updated: Comprehensive agent analysis integrated*
+*Last updated: 2026-03-15 — removed references to deleted files/tables*
 

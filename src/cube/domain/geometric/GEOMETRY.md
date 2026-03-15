@@ -212,10 +212,11 @@ Else:  # L1 == opposite of reference
 
 The geometry methods are organized as follows:
 
-- **Private implementation:** `_CubeLayoutGeometry` (in `_CubeLayoutGeometry.py`)
+- **Private implementations:** `_CubeLayout` (size-independent), `_SizedCubeLayout` (size-dependent)
 - **Public API via protocols:**
   - `SliceLayout` protocol: slice-related methods (`does_slice_cut_rows_or_columns`, `does_slice_of_face_start_with_face`)
-  - `CubeLayout` protocol: face relationship methods (`iterate_orthogonal_face_center_pieces`)
+  - `CubeLayout` protocol: face relationship methods
+  - `SizedCubeLayout` protocol: size-dependent methods (`iterate_orthogonal_face_center_pieces`)
 
 ## Methods in SliceLayout Protocol
 
