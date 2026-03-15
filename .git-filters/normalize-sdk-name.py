@@ -6,12 +6,17 @@ PyCharm's auto-generated SDK_NAME changes don't show up in git diffs.
 import re
 import sys
 
+# Use binary I/O to preserve line endings (prevents CRLF/LF conversion on Windows)
+stdin = sys.stdin.buffer
+stdout = sys.stdout.buffer
+
 CANONICAL_SDK_NAME = "uv (cubesolve2)"
 
-for line in sys.stdin:
+for raw_line in stdin:
+    line = raw_line.decode("utf-8")
     line = re.sub(
         r'(<option name="SDK_NAME" value=")([^"]*)("\s*/>)',
         rf'\g<1>{CANONICAL_SDK_NAME}\g<3>',
         line,
     )
-    sys.stdout.write(line)
+    stdout.write(line.encode("utf-8"))

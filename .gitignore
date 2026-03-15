@@ -10,6 +10,9 @@ __todo/__next_session.md
 # Ignore PyCharm interpreter settings
 .idea/misc.xml
 
+# Machine-specific git filter config
+.git-filters/local-sdk-name.txt
+
 # Claude Code temp files
 tmpclaude-*-cwd
 .claude/tmpdir/

@@ -15,8 +15,8 @@ description: |
 Fix four common PyCharm breakages in this project:
 1. Project module (.iml file) — source/test roots
 2. Global interpreter (jdk.table.xml) — deduplicate entries, determine active SDK name
-3. Run configurations — all configs point to the correct interpreter
-4. Git filter — prevent SDK_NAME drift from creating git diffs
+3. Git filter — prevent SDK_NAME drift from creating git diffs
+4. Run configurations — all configs point to the correct interpreter
 
 ## Triggers
 
@@ -114,9 +114,10 @@ Categorize each `<jdk>` entry:
 ### Step 1C: Determine the Active SDK Name
 
 The **active SDK name** is determined by this priority:
-1. The `jdkName` in the `.iml` file (this is what PyCharm is currently using)
-2. If that doesn't match any jdk.table entry → use the name of the first jdk.table entry for this project
-3. If no jdk.table entries exist for this project → report error, cannot proceed
+1. The `jdkName` in the `.iml` file (if it uses an explicit `jdkName`, not `inheritedJdk`)
+2. The `project-jdk-name` in `.idea/misc.xml` (if .iml uses `inheritedJdk`)
+3. If neither matches a jdk.table entry → use the name of the first jdk.table entry for this project
+4. If no jdk.table entries exist for this project → report error, cannot proceed
 
 **Store this as `ACTIVE_SDK_NAME`** — it will be used everywhere.
 
@@ -211,73 +212,32 @@ Or if using `ProjectRootManager`:
 
 **Use whichever format misc.xml already uses** — don't change its structure, just update the SDK name value.
 
-## Part 4: Fix Run Configurations
+## Part 4: Git Filter for SDK_NAME (Bidirectional)
 
-### Step 4A: Scan Run Configs
+Prevent PyCharm's SDK_NAME auto-changes from creating git diffs, AND ensure correct SDK_NAME on checkout/branch-switch. Uses a bidirectional git filter:
+- **Clean** (working copy → git): normalizes any SDK_NAME to canonical `uv (cubesolve2)`
+- **Smudge** (git → working copy): replaces canonical with the local machine's ACTIVE_SDK_NAME
 
-1. Glob for all `.idea/runConfigurations/*.xml` files.
-2. Read each file. Only consider `type="PythonConfigurationType"` or `type="tests"`.
-3. For each config, check:
-   - `SDK_HOME` should be `$PROJECT_DIR$/.venv/Scripts/python.exe`
-   - `SDK_NAME` should match `ACTIVE_SDK_NAME`
-   - `IS_MODULE_SDK` should be `false`
+**The canonical name for git is `uv (cubesolve2)`.** This is independent of what PyCharm uses.
 
-4. Display a table:
+**IMPORTANT:** This part MUST run before Part 5 (Fix Run Configurations). Step 4C.4 re-checkouts run config files through the smudge filter. Part 5 then verifies and fixes any remaining issues.
 
-```
-| # | Config Name              | SDK_HOME | SDK_NAME            | IS_MODULE_SDK | Needs Fix |
-|---|--------------------------|----------|---------------------|---------------|-----------|
-| 1 | main_pyglet2             | (set)    | uv (cubesolve3) (3) | false         | No        |
-| 2 | pytest_all_tests         | (empty)  | —                   | true          | Yes       |
-```
-
-### Step 4B: Apply Fixes (no confirmation needed — fix all automatically)
-
-For each config that needs fixing, apply these XML changes:
-
-**a) Set SDK_HOME:**
-```xml
-<option name="SDK_HOME" value="$PROJECT_DIR$/.venv/Scripts/python.exe" />
-```
-
-**b) Set SDK_NAME to ACTIVE_SDK_NAME:**
-```xml
-<option name="SDK_NAME" value="ACTIVE_SDK_NAME" />
-```
-
-**c) Set IS_MODULE_SDK to false:**
-```xml
-<option name="IS_MODULE_SDK" value="false" />
-```
-
-### Step 4C: Cross-Platform Symlink (Linux only)
-
-If running on Linux (`uname -s` returns "Linux"), create compatibility symlink:
-
-```bash
-mkdir -p .venv/Scripts
-ln -sf ../bin/python .venv/Scripts/python.exe
-```
-
-This ensures `$PROJECT_DIR$/.venv/Scripts/python.exe` resolves on Linux too.
-
-## Part 5: Git Filter for SDK_NAME
-
-Prevent PyCharm's SDK_NAME auto-changes from creating git diffs. This uses a git clean filter that normalizes SDK_NAME to a canonical value before staging.
-
-**The canonical name for git is `uv (cubesolve2)`.** This is independent of what PyCharm uses — it only affects what git sees when staging files.
-
-### Step 5A: Check if Filter Already Set Up
+### Step 4A: Check if Filter Already Set Up
 
 1. Check if `.git-filters/normalize-sdk-name.py` exists.
-2. Check if `.gitattributes` contains the filter rule for `runConfigurations/*.xml`.
-3. Check if `git config filter.normalize-sdk-name.clean` is set.
+2. Check if `.git-filters/denormalize-sdk-name.py` exists.
+3. Check if `.git-filters/local-sdk-name.txt` exists and contains the correct ACTIVE_SDK_NAME.
+4. Check if `.gitattributes` contains the filter rule for `runConfigurations/*.xml`.
+5. Check if `git config filter.normalize-sdk-name.clean` is set.
+6. Check if `git config filter.normalize-sdk-name.smudge` references `denormalize-sdk-name.py` (NOT `cat`).
 
-If all three exist, report "Git filter already configured." and skip to Step 5D.
+If all six exist and correct, report "Git filter already configured." and skip to Step 4D.
 
-### Step 5B: Create Filter Script
+**Migration note:** If smudge is set to `cat` (old version), update it to use `denormalize-sdk-name.py` and continue with setup.
 
-Create `.git-filters/normalize-sdk-name.py`:
+### Step 4B: Create Filter Scripts
+
+**1. Create `.git-filters/normalize-sdk-name.py`** (clean filter — working copy → git):
 
 ```python
 """Git clean filter: normalize SDK_NAME in PyCharm run configurations.
@@ -299,9 +259,56 @@ for line in sys.stdin:
     sys.stdout.write(line)
 ```
 
-### Step 5C: Configure Git
+**2. Create `.git-filters/denormalize-sdk-name.py`** (smudge filter — git → working copy):
 
-1. Add to `.gitattributes`:
+```python
+"""Git smudge filter: replace canonical SDK_NAME with local machine's SDK name.
+
+Reads the local SDK name from .git-filters/local-sdk-name.txt and replaces
+the canonical placeholder with it. This ensures every checkout/branch-switch
+gets the correct SDK_NAME for this machine's PyCharm interpreter.
+"""
+import os
+import re
+import sys
+
+CANONICAL_SDK_NAME = "uv (cubesolve2)"
+
+# Read local SDK name from sibling file
+local_sdk_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "local-sdk-name.txt")
+try:
+    with open(local_sdk_file) as f:
+        local_sdk_name = f.read().strip()
+except FileNotFoundError:
+    local_sdk_name = CANONICAL_SDK_NAME  # fallback if file missing
+
+canonical_escaped = re.escape(CANONICAL_SDK_NAME)
+
+for line in sys.stdin:
+    line = re.sub(
+        rf'(<option name="SDK_NAME" value="){canonical_escaped}("\s*/>)',
+        rf'\g<1>{local_sdk_name}\g<2>',
+        line,
+    )
+    sys.stdout.write(line)
+```
+
+**3. Create `.git-filters/local-sdk-name.txt`** with the ACTIVE_SDK_NAME:
+
+```
+uv (cubesolve)
+```
+
+This file is machine-specific. It must be in `.gitignore`.
+
+**4. Ensure `.git-filters/local-sdk-name.txt` is git-ignored.** Add to `.gitignore` if not already present:
+```
+.git-filters/local-sdk-name.txt
+```
+
+### Step 4C: Configure Git
+
+1. Add to `.gitattributes` (if not already present):
    ```
    # Normalize SDK_NAME in PyCharm run configs so PyCharm's auto-changes don't create git diffs
    .idea/runConfigurations/*.xml filter=normalize-sdk-name
@@ -310,36 +317,100 @@ for line in sys.stdin:
 2. Register the filter in git config:
    ```bash
    git config filter.normalize-sdk-name.clean "python .git-filters/normalize-sdk-name.py"
-   git config filter.normalize-sdk-name.smudge "cat"
+   git config filter.normalize-sdk-name.smudge "python .git-filters/denormalize-sdk-name.py"
    ```
 
-3. Re-checkout run configs so the filter applies to the index:
+3. If upgrading from old `cat` smudge, also update:
+   ```bash
+   git config filter.normalize-sdk-name.smudge "python .git-filters/denormalize-sdk-name.py"
+   ```
+
+4. Re-checkout run configs so the smudge filter applies (injects correct SDK_NAME):
    ```bash
    rm .idea/runConfigurations/*.xml
    git checkout -- .idea/runConfigurations/
    ```
 
-### Step 5D: Verify Filter Works
+### Step 4D: Verify Filter Works
 
-Test the filter:
+Test both directions:
 ```bash
+# Clean filter: any SDK_NAME → canonical
 echo '<option name="SDK_NAME" value="uv (cubesolve3) (4)" />' | python .git-filters/normalize-sdk-name.py
-```
+# Expected: <option name="SDK_NAME" value="uv (cubesolve2)" />
 
-Expected output: `<option name="SDK_NAME" value="uv (cubesolve2)" />`
+# Smudge filter: canonical → local
+echo '<option name="SDK_NAME" value="uv (cubesolve2)" />' | python .git-filters/denormalize-sdk-name.py
+# Expected: <option name="SDK_NAME" value="ACTIVE_SDK_NAME" /> (whatever is in local-sdk-name.txt)
+```
 
 ### How It Works
 
 ```
-PyCharm saves:  SDK_NAME="uv (cubesolve3) (4)"
-                     ↓ (git clean filter runs on "git add")
-Git sees:       SDK_NAME="uv (cubesolve2)"
-                     → no diff!
+PyCharm saves:  SDK_NAME="uv (cubesolve) (4)"
+                     ↓ (git clean filter on "git add")
+Git stores:     SDK_NAME="uv (cubesolve2)"        ← canonical, same everywhere
+                     ↓ (git smudge filter on checkout)
+Working copy:   SDK_NAME="uv (cubesolve)"          ← local machine's SDK name
+                     → PyCharm finds the right interpreter!
 ```
 
-- The filter runs automatically on `git add` — no manual steps needed.
-- The working copy keeps whatever PyCharm writes — the filter only affects what git stages.
-- After the one-time setup, SDK_NAME changes never appear in `git diff` again.
+- **Clean** runs on `git add` — normalizes to canonical. No diffs from SDK_NAME changes.
+- **Smudge** runs on `git checkout` — denormalizes to local. Every checkout gets the right name.
+- `local-sdk-name.txt` is git-ignored (machine-specific). Updated by this skill.
+- After setup, SDK_NAME is always correct in both git and working copy.
+
+## Part 5: Fix Run Configurations
+
+**NOTE:** This part runs AFTER Part 4 (git filter). The smudge filter should have already injected the correct ACTIVE_SDK_NAME during the re-checkout in Step 4C.4. This part verifies and fixes any remaining issues (e.g., SDK_HOME, IS_MODULE_SDK).
+
+### Step 5A: Scan Run Configs
+
+1. Glob for all `.idea/runConfigurations/*.xml` files.
+2. Read each file. Only consider `type="PythonConfigurationType"` or `type="tests"`.
+3. For each config, check:
+   - `SDK_HOME` should be `$PROJECT_DIR$/.venv/Scripts/python.exe`
+   - `SDK_NAME` should match `ACTIVE_SDK_NAME`
+   - `IS_MODULE_SDK` should be `false`
+
+4. Display a table:
+
+```
+| # | Config Name              | SDK_HOME | SDK_NAME            | IS_MODULE_SDK | Needs Fix |
+|---|--------------------------|----------|---------------------|---------------|-----------|
+| 1 | main_pyglet2             | (set)    | uv (cubesolve3) (3) | false         | No        |
+| 2 | pytest_all_tests         | (empty)  | —                   | true          | Yes       |
+```
+
+### Step 5B: Apply Fixes (no confirmation needed — fix all automatically)
+
+For each config that needs fixing, apply these XML changes:
+
+**a) Set SDK_HOME:**
+```xml
+<option name="SDK_HOME" value="$PROJECT_DIR$/.venv/Scripts/python.exe" />
+```
+
+**b) Set SDK_NAME to ACTIVE_SDK_NAME:**
+```xml
+<option name="SDK_NAME" value="ACTIVE_SDK_NAME" />
+```
+
+**c) Set IS_MODULE_SDK to false:**
+```xml
+<option name="IS_MODULE_SDK" value="false" />
+```
+
+### Step 5C: Cross-Platform Symlink (Linux only)
+
+If running on Linux (`uname -s` returns "Linux"), create compatibility symlink:
+
+```bash
+mkdir -p .venv/Scripts
+ln -sf ../bin/python .venv/Scripts/python.exe
+```
+
+This ensures `$PROJECT_DIR$/.venv/Scripts/python.exe` resolves on Linux too.
 
 ## Part 6: Final Verification
 
