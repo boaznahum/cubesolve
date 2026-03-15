@@ -248,15 +248,14 @@ class NxNCenters(SolverHelper):
 
         self._asserts_is_boy(faces)
 
-        # Phase 1: Exhaust all cheap full-slice swaps globally before commutators
-        while True:
-            if not self._do_faces(holder, faces, slices_only=True):
-                break
-            self._asserts_is_boy(faces)
+        # Phase 1: Exhaust all cheap full-slice swaps globally before commutators.
+        # Iterates by color (stable) not face (unstable). Only brings to front
+        # when a swap actually exists, avoiding unnecessary cube rotations.
+        self._do_slice_swaps_phase(holder, faces)
 
         # Phase 2: Full solve — slices + commutator blocks
         while True:
-            if not self._do_faces(holder, faces, slices_only=False):
+            if not self._do_faces(holder, faces):
                 break
             self._asserts_is_boy(faces)
 
@@ -264,14 +263,94 @@ class NxNCenters(SolverHelper):
 
         assert self._is_solved()
 
-    def _do_faces(self, tracker_holder: "FacesTrackerHolder", faces: Sequence[FaceTracker],
-                  *, slices_only: bool = False) -> bool:
+    def _do_slice_swaps_phase(self, holder: FacesTrackerHolder, faces: list[FaceTracker]) -> None:
+        """Phase 1: Exhaust all full-slice swaps globally before commutators.
+
+        Iterates by color (stable) instead of face (unstable after rotations).
+        Only brings face to front when a swap with grade > 1 actually exists,
+        avoiding unnecessary cube rotations.
+        """
+        if not self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES:
+            return
+
+        nn: int = self.cube.n_slices
+        all_slices: list[Block] = self._generate_all_slice_blocks(nn)
+
+        while True:
+            any_work: bool = False
+
+            for target_tracker in faces:
+                target_color: Color = target_tracker.color
+                target_face: Face = target_tracker.face
+
+                if self._is_face_solved(target_face, target_color):
+                    continue
+
+                for source_tracker in faces:
+                    if source_tracker is target_tracker:
+                        continue
+
+                    source_face = source_tracker.face
+                    source_color: Color = source_tracker.color
+
+                    if self.count_color_on_face(source_face, target_color) == 0:
+                        continue
+
+                    # Dry-run: check if any grade > 1 swap exists (no cube rotation)
+                    if not self._has_slice_swap(target_face, target_color,
+                                               source_face, source_color,
+                                               all_slices, nn):
+                        continue
+
+                    # Work exists — bring to front and execute
+                    self.cmn.bring_face_front(target_face)
+                    # After rotation, re-resolve faces from trackers
+                    target_face = target_tracker.face
+                    source_face = source_tracker.face
+
+                    with self.ann.annotate(h2=f"{target_color.long} face"):
+                        if self._do_complete_slices(holder, target_color,
+                                                    target_face, source_face):
+                            any_work = True
+
+                    self._asserts_is_boy(faces)
+
+                    if self._is_face_solved(target_face, target_color):
+                        break  # this target is done, try next
+
+            if not any_work:
+                return
+
+    def _has_slice_swap(self, target_face: Face, target_color: Color,
+                        source_face: Face, source_color: Color,
+                        all_slices: list[Block], nn: int) -> bool:
+        """Check if any slice swap with grade > 1 exists (dry run, no execution)."""
+        for ts in all_slices:
+            combos = self._bsh.get_all_combinations(
+                source_face, target_face, ts,
+                undo_target_setup=self._preserve_cage,
+                undo_source_setup=self._preserve_cage,
+            )
+            if not combos:
+                continue
+            natural: Block = combos[0].natural_source.main
+            for rot in range(4):
+                ss: Block = natural.rotate_clockwise(nn, (-rot) % 4)
+                grade: int = self._compute_swap_grade(
+                    target_face, ts, target_color,
+                    source_face, ss, source_color,
+                )
+                if grade > 1:
+                    return True
+        return False
+
+    def _do_faces(self, tracker_holder: "FacesTrackerHolder", faces: Sequence[FaceTracker]) -> bool:
         self.debug( "_do_faces:", *faces, level=3)
         work_done = False
         for f in faces:
             # we must trace faces, because they are moved by algorith
             # we need to locate the face by original_color, b ut on odd cube, the color is of the center
-            if self._do_center(tracker_holder, f, faces, slices_only=slices_only):
+            if self._do_center(tracker_holder, f, faces):
                 work_done = True
                 self._asserts_is_boy(tracker_holder)
             # if NxNCenters.work_on_b or not work_done:
@@ -292,7 +371,7 @@ class NxNCenters(SolverHelper):
                                                      lambda: {f.face.name: f.color for f in faces})
 
     def _do_center(self, tracker_holder: "FacesTrackerHolder", face_loc: FaceTracker,
-                   faces: Iterable[FaceTracker], *, slices_only: bool = False) -> bool:
+                   faces: Iterable[FaceTracker]) -> bool:
 
         if self._is_face_solved(face_loc.face, face_loc.color):
             self.debug( f"Face is already done {face_loc.face}", level=1)
@@ -308,7 +387,7 @@ class NxNCenters(SolverHelper):
 
         self.debug( f"Need to work on {face_loc.face}", level=1)
 
-        work_done = self.__do_center(tracker_holder, face_loc, faces, slices_only=slices_only)
+        work_done = self.__do_center(tracker_holder, face_loc, faces)
 
         self.debug( f"After working on {face_loc.face} {work_done=}, "
                            f"solved={self._is_face_solved(face_loc.face, face_loc.color)}", level=1)
@@ -316,7 +395,7 @@ class NxNCenters(SolverHelper):
         return work_done
 
     def __do_center(self, tracker_holder: "FacesTrackerHolder", face_loc: FaceTracker,
-                    faces: Iterable[FaceTracker], *, slices_only: bool = False) -> bool:
+                    faces: Iterable[FaceTracker]) -> bool:
         """
         Process one face - bring correct colored pieces from ALL source faces.
 
@@ -325,9 +404,6 @@ class NxNCenters(SolverHelper):
 
         For each source: complete slices + blocks + 1x1 commutators.
         Skip sources with no matching colors (zero-cost).
-
-        Args:
-            slices_only: If True, only do complete slice swaps (phase 1).
 
         :return: if any work was done
         """
@@ -359,8 +435,7 @@ class NxNCenters(SolverHelper):
 
                 if self._do_center_from_face_direct(tracker_holder, cube.front,
                                                      color,
-                                                     source_face, faces,
-                                                     slices_only=slices_only):
+                                                     source_face, faces):
                     work_done = True
 
                 if self._is_face_solved(face_loc.face, color):
@@ -370,8 +445,7 @@ class NxNCenters(SolverHelper):
 
     def _do_center_from_face_direct(self, tracker_holder: "FacesTrackerHolder", face: Face,
                                      color: Color,
-                                     source_face: Face, faces: Iterable[FaceTracker],
-                                     *, slices_only: bool = False) -> bool:
+                                     source_face: Face, faces: Iterable[FaceTracker]) -> bool:
         """
         Bring correct colored pieces from source_face to target face.
 
@@ -379,9 +453,6 @@ class NxNCenters(SolverHelper):
         1. Complete slice swaps (UP/DOWN/BACK — M-axis faces)
         2. Block commutators (all faces)
         3. 1x1 commutators fallback (all faces)
-
-        Args:
-            slices_only: If True, only do complete slice swaps (phase 1).
 
         :param face: Target face (must be front)
         :param color: Required color
@@ -401,9 +472,6 @@ class NxNCenters(SolverHelper):
         if self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES:
             if self._do_complete_slices(tracker_holder, color, face, source_face):
                 work_done = True
-
-        if slices_only:
-            return work_done
 
         if self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS:
             if self._do_blocks(tracker_holder, color, face, source_face, faces):
