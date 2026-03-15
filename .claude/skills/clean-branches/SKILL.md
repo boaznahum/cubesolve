@@ -212,19 +212,26 @@ git branch -d <branch>
 
 If `git branch -d` fails with "cannot delete branch used by worktree", the branch is checked out in another worktree. The analysis script detects this and shows the worktree path.
 
-**To delete such branches, first detach HEAD in the worktree:**
+**Options for worktree branches (present all three to user):**
 
 ```bash
-# Option 1: Detach HEAD in the worktree, then delete the branch
+# Option 1: Detach HEAD + delete branch (Recommended if branch is merged)
+# Keeps the worktree intact, just frees the branch
 git -C "<worktree-path>" checkout --detach
-git branch -d <branch>
+git branch -D <branch>
+git push origin --delete <branch>  # if remote exists
 
-# Option 2: Remove the worktree entirely (also frees the branch)
+# Option 2: Remove the worktree entirely + delete branch
+# Use when the worktree is no longer needed
 git worktree remove "<worktree-path>"
-git branch -d <branch>
+git branch -D <branch>
+git push origin --delete <branch>  # if remote exists
+
+# Option 3: Keep as-is
+# Leave worktree and branch alone
 ```
 
-**IMPORTANT:** Always ask the user which option they prefer. The worktree may contain uncommitted work.
+**IMPORTANT:** Always ask the user which option they prefer. The worktree may contain uncommitted work. Present "Detach + delete branch" as the recommended option when the branch is merged, since it preserves the worktree directory while cleaning up the branch.
 
 ### Step 8: Process Merged Branches (with remotes)
 
