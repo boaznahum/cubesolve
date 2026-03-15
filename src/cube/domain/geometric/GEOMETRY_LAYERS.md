@@ -187,12 +187,15 @@ Note: `_SLICE_FACES` was removed - now derived on demand in `get_slice_for_faces
 **BOY color scheme in `cube_boy.py`:**
 - Face → Color mapping for standard Rubik's cube
 
-### To Be Derived (Goal: Remove Hardcoding)
+### Hardcoding Reduction Progress
 
-The following tables in `Face2FaceTranslator.py` should be derived, not hardcoded:
+The following tables in `Face2FaceTranslator.py` have been removed or derived:
 - `_TRANSFORMATION_TABLE` - **REMOVED** (was dead code, transforms computed dynamically)
-- `_SLICE_INDEX_TABLE` - TODO (derive from edge geometry)
-- `_X_CYCLE`, `_Y_CYCLE`, `_Z_CYCLE` - TODO (derive from rotation faces)
+- `_SLICE_INDEX_TABLE` - **REMOVED** (derived via `_derive_slice_index_formula()`)
+- `_X_CYCLE`, `_Y_CYCLE`, `_Z_CYCLE` - **REMOVED** (derived via `get_face_neighbors_cw_names()`)
+- `slice_to_axis` - **REMOVED** (was duplicate of `AXIS_FACE`)
+
+See `HARDCODED_ANALYSIS.md` for remaining items.
 
 ---
 
