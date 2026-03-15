@@ -1,8 +1,17 @@
 # Swap two pieces on 4x4 up , orthogonal
 # see F1.txt
 
-Fw' L' Fw Rw2 Fw' L Fw D Fw2 D' Fw2 D' Rw2
+#$d=D2
+#$d=D2
+#Fw' L' Fw Rw2 Fw' L Fw $d Fw2 $d' Fw2 $d' Rw2
 
+#https://www.speedsolving.com/wiki/index.php/4x4x4_parity_algorithms#Two_X-center_piece_swap_algorithms
+#$f1=y Rw U' Lw Uw2 Rw' U Rw Uw2 x Rw2 U y'
+#$f1=Rw U' Lw Uw2 Rw' U Rw Uw2 x Rw2 U
+#$f1
+
+$f1=Fw' U' Rw Fw Rw' U' Rw Fw' Rw' U2 Fw U'
+$f1
 
 
 
