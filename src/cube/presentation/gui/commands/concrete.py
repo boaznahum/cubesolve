@@ -816,14 +816,15 @@ class ExecuteFileAlgCommand(Command):
     """Execute algorithm from file slot (1-5).
 
     Loads algorithm from f{slot}.txt resource file and executes it on the cube.
-    Respects current animation setting.
 
     Args:
         slot: File number 1-5
         inverse: If True, play the inverse (prime) of the algorithm
+        instant: If True, force no animation (like Shift+click)
     """
     slot: int
     inverse: bool = False
+    instant: bool = False
 
     def execute(self, ctx: CommandContext) -> CommandResult:
         from cube.domain.exceptions import InternalSWError
@@ -837,7 +838,7 @@ class ExecuteFileAlgCommand(Command):
             file_name = f"f{self.slot}.txt"
             ctx.cube.sp.logger.debug(None, f"Executing algorithm from {file_name}: {alg}")
 
-            ctx.op.play(alg)  # Respects current animation setting
+            ctx.op.play(alg, animation=not self.instant)
         except FileNotFoundError as e:
             ctx.app.set_error(f"File not found: {e}")
         except ValueError as e:

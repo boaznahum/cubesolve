@@ -591,9 +591,12 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
             if self._toolbar.handle_key_escape():
                 return  # Dropdown consumed the Escape key
 
-        # Track Shift key for toolbar button label updates
-        if self._toolbar and (modifiers & pyglet_key.MOD_SHIFT):
-            self._toolbar.set_shift_state(True)
+        # Track modifier keys for toolbar button label updates
+        if self._toolbar:
+            if modifiers & pyglet_key.MOD_SHIFT:
+                self._toolbar.set_shift_state(True)
+            if modifiers & pyglet_key.MOD_CTRL:
+                self._toolbar.set_ctrl_state(True)
 
         abstract_symbol = _PYGLET_TO_KEYS.get(symbol, symbol)
         abstract_mods = _convert_modifiers(modifiers)
@@ -604,11 +607,12 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
 
         Tracks Shift key release for toolbar label updates.
         """
-        # Track Shift key release for toolbar button label updates
+        # Track modifier key releases for toolbar button label updates
         if self._toolbar:
-            # If Shift is no longer held, update toolbar state
             if not (modifiers & pyglet_key.MOD_SHIFT):
                 self._toolbar.set_shift_state(False)
+            if not (modifiers & pyglet_key.MOD_CTRL):
+                self._toolbar.set_ctrl_state(False)
 
     def handle_key(self, symbol: int, modifiers: int) -> None:
         """Handle abstract key press.

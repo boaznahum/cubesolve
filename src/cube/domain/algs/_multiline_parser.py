@@ -39,6 +39,11 @@ def preprocess_multiline(text: str) -> str:
         ValueError: If text is empty or contains only comments/assignments
         InternalSWError: If variable references are invalid
     """
+    # Normalize Unicode quotes to ASCII apostrophe early, before variable
+    # expansion — $var' patterns and prime operators need ASCII apostrophe.
+    # (Common when pasting from rich-text sources, Word, macOS, web pages.)
+    text = _normalize_quotes(text)
+
     variables: dict[str, str] = {}  # $name -> value string
     int_vars: dict[str, int] = {}   # $name -> integer value (subset of variables)
     alg_lines: list[str] = []
@@ -235,3 +240,16 @@ def _eval_int_expr(expr: str, int_vars: dict[str, int]) -> int:
             return num * val
 
     raise InternalSWError(f"Cannot evaluate integer expression: {expr}")
+
+
+def _normalize_quotes(text: str) -> str:
+    """Normalize Unicode quote characters to ASCII apostrophe.
+
+    Handles right/left single quotes, prime, and modifier letter apostrophe —
+    all common when pasting from rich-text sources, Word, macOS, or web pages.
+    """
+    return (text
+            .replace('\u2019', "'")   # RIGHT SINGLE QUOTATION MARK
+            .replace('\u2018', "'")   # LEFT SINGLE QUOTATION MARK
+            .replace('\u2032', "'")   # PRIME
+            .replace('\u02BC', "'"))  # MODIFIER LETTER APOSTROPHE

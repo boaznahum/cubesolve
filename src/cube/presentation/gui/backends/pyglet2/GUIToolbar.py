@@ -88,10 +88,14 @@ class GUIButton:
     tooltip: str | None = None  # Hover tooltip text
     shift_label: str | None = None  # Alternative label when Shift is held
     shift_command: "Command | None" = None  # Alternative command for Shift+click
+    ctrl_label: str | None = None  # Alternative label when Ctrl is held
+    ctrl_command: "Command | None" = None  # Alternative command for Ctrl+click
     tag: str = ""  # Optional tag for identification (e.g., solver dropdown)
 
-    def get_label(self, shift_held: bool = False) -> str:
-        """Get current label (static, dynamic, or shift-modified)."""
+    def get_label(self, shift_held: bool = False, ctrl_held: bool = False) -> str:
+        """Get current label (static, dynamic, or modifier-modified)."""
+        if ctrl_held and self.ctrl_label:
+            return self.ctrl_label
         if shift_held and self.shift_label:
             return self.shift_label
         if self.label_fn:
@@ -142,8 +146,9 @@ class GUIToolbar:
         self._button_bevels: list[list[shapes.Line]] = []  # Bevel lines per button
         self._button_labels: list[pyglet.text.Label | None] = []
 
-        # Shift key state (for dynamic labels and shift+click)
+        # Modifier key state (for dynamic labels and modifier+click)
         self._shift_held: bool = False
+        self._ctrl_held: bool = False
 
         # Index where solver buttons start (for dynamic rebuild)
         self._solver_row_start: int = -1
@@ -174,6 +179,8 @@ class GUIToolbar:
             tooltip: str | None = None,
             shift_label: str | None = None,
             shift_command: "Command | None" = None,
+            ctrl_label: str | None = None,
+            ctrl_command: "Command | None" = None,
             tag: str = "",
     ) -> None:
         """Add a clickable button to current row."""
@@ -193,6 +200,8 @@ class GUIToolbar:
             tooltip=tooltip,
             shift_label=shift_label,
             shift_command=shift_command,
+            ctrl_label=ctrl_label,
+            ctrl_command=ctrl_command,
             tag=tag,
         ))
         self._shapes_dirty = True
@@ -256,7 +265,7 @@ class GUIToolbar:
         for row_buttons in rows:
             row_width = TOOLBAR_PADDING
             for btn in row_buttons:
-                current_label = btn.get_label(self._shift_held)
+                current_label = btn.get_label(self._shift_held, self._ctrl_held)
                 text_width = len(current_label) * 9 + BUTTON_PADDING * 2
                 btn.width = max(text_width, btn.min_width, 36)
                 row_width += btn.width + BUTTON_MARGIN
@@ -294,7 +303,7 @@ class GUIToolbar:
 
         # Create button shapes and labels
         for btn in self._buttons:
-            current_label = btn.get_label(self._shift_held)
+            current_label = btn.get_label(self._shift_held, self._ctrl_held)
 
             if btn.is_label:
                 # Non-clickable label - no background rectangle or bevel
@@ -554,6 +563,8 @@ class GUIToolbar:
                 if btn.tag == _SOLVER_BUTTON_TAG:
                     self._open_dropdown()
                     return None  # Consumed — no command to execute
+                if self._ctrl_held and btn.ctrl_command:
+                    return btn.ctrl_command
                 if self._shift_held and btn.shift_command:
                     return btn.shift_command
                 if btn.command:
@@ -630,6 +641,12 @@ class GUIToolbar:
             self._shift_held = shift_held
             self._shapes_dirty = True  # Rebuild to update labels
 
+    def set_ctrl_state(self, ctrl_held: bool) -> None:
+        """Update Ctrl key state (called from window on key events)."""
+        if self._ctrl_held != ctrl_held:
+            self._ctrl_held = ctrl_held
+            self._shapes_dirty = True  # Rebuild to update labels
+
     def rebuild_solver_buttons(self, app: "AbstractApp") -> None:
         """Rebuild Row 3 solver buttons based on current solver's supported steps.
 
@@ -641,7 +658,6 @@ class GUIToolbar:
             DiagnosticsCommand,
             SolveAllCommand,
             SolveAllNoAnimationCommand,
-            SolveAndPlayCommand,
             SolveStepCommand,
             SolveStepNoAnimationCommand,
         )
@@ -673,21 +689,13 @@ class GUIToolbar:
             min_width=45,
         )
 
-        # Add "Solution" button (renamed from Solve) - uses current animation setting
-        self.add_button(
-            label="Solution",
-            command=SolveAllCommand(),
-            tooltip="Find solution (Shift: instant)",
-            shift_label="Instant",
-            shift_command=SolveAllNoAnimationCommand(),
-            min_width=70,
-        )
-
-        # Add "Solve" button - solves and always plays with animation
+        # Add "Solve" button - uses current animation setting
         self.add_button(
             label="Solve",
-            command=SolveAndPlayCommand(),
-            tooltip="Solve and play solution with animation",
+            command=SolveAllCommand(),
+            tooltip="Solve (Ctrl: instant)",
+            ctrl_label="Solve!",
+            ctrl_command=SolveAllNoAnimationCommand(),
             min_width=55,
         )
 
@@ -702,8 +710,8 @@ class GUIToolbar:
                 label=step.short_code,
                 command=SolveStepCommand(step),
                 tooltip=step.description,
-                shift_label=f"{step.short_code}!",
-                shift_command=SolveStepNoAnimationCommand(step),
+                ctrl_label=f"{step.short_code}!",
+                ctrl_command=SolveStepNoAnimationCommand(step),
             )
 
         # Rebuild Row 4 (animation/debug buttons) after solver buttons
@@ -782,9 +790,11 @@ class GUIToolbar:
                 self.add_button(
                     label=f"F{slot}",
                     command=ExecuteFileAlgCommand(slot=slot),
-                    tooltip=f"Execute algorithm from f{slot}.txt (Shift: inverse)",
+                    tooltip=f"Execute f{slot}.txt (Shift: inverse, Ctrl: instant)",
                     shift_label=f"F{slot}'",
                     shift_command=ExecuteFileAlgCommand(slot=slot, inverse=True),
+                    ctrl_label=f"F{slot}!",
+                    ctrl_command=ExecuteFileAlgCommand(slot=slot, instant=True),
                 )
 
     def draw_exit_only(self) -> None:

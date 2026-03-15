@@ -1,5 +1,8 @@
-# F2
-[1:4]E [7:8]E
+# Swap two pieces on 4x4 up , orthogonal
+# see F1.txt
+
+Fw' L' Fw Rw2 Fw' L Fw D Fw2 D' Fw2 D' Rw2
+
 
 
 

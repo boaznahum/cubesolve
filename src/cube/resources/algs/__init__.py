@@ -32,7 +32,7 @@ def load_file_alg(slot: int) -> Alg:
     # Try to load as package resource (works when installed via pip)
     content: str | None = None
     try:
-        content = resources.files(__package__).joinpath(filename).read_text()
+        content = resources.files(__package__).joinpath(filename).read_text(encoding='utf-8')
     except (TypeError, FileNotFoundError):
         pass
 
@@ -40,7 +40,7 @@ def load_file_alg(slot: int) -> Alg:
     if content is None:
         local_path = Path(__file__).parent / filename
         if local_path.exists():
-            content = local_path.read_text()
+            content = local_path.read_text(encoding='utf-8')
 
     if content is None:
         raise FileNotFoundError(f"Algorithm file '{filename}' not found")
