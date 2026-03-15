@@ -293,7 +293,7 @@ export class ColorPicker {
     _wireKeyboard() {
         window.addEventListener('keydown', (e) => {
             if (!this.active) return;
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
 
             // 1–6 → select palette color
             const num = parseInt(e.key);

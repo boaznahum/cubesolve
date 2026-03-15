@@ -1575,7 +1575,7 @@ class ClientSession:
 
     def _handle_parse_alg(self, text: str) -> None:
         """Validate algorithm text and return parse result to client."""
-        from cube.domain.algs._parser import parse_alg
+        from cube.domain.algs._multiline_parser import parse_multiline
         from cube.domain.exceptions import InternalSWError
 
         text = text.strip()
@@ -1584,11 +1584,11 @@ class ClientSession:
             return
 
         try:
-            parse_alg(text)
-            # If parse_alg succeeds, the algorithm is valid (even if it reduces
+            parse_multiline(text)
+            # If parse succeeds, the algorithm is valid (even if it reduces
             # to identity, e.g. U4, U8, U20 — these are valid no-op algorithms)
             self._send(json.dumps({"type": "parse_alg_result", "valid": True, "error": ""}))
-        except (InternalSWError, Exception) as e:
+        except (InternalSWError, ValueError, Exception) as e:
             self._send(json.dumps({"type": "parse_alg_result", "valid": False, "error": str(e)}))
 
     def _handle_enter_edit_mode(self) -> None:
@@ -1628,7 +1628,7 @@ class ClientSession:
         if self._fsm.state != FlowState.EDITING:
             return
 
-        from cube.domain.algs._parser import parse_alg
+        from cube.domain.algs._multiline_parser import parse_multiline
         from cube.domain.exceptions import InternalSWError
 
         self._edit_alg_text = text
@@ -1640,7 +1640,7 @@ class ClientSession:
             return
 
         try:
-            alg = parse_alg(text)
+            alg = parse_multiline(text)
             moves = list(alg.flatten())
             if not moves:
                 self._restore_edit_snapshot()
@@ -1702,7 +1702,7 @@ class ClientSession:
         if self._fsm.state != FlowState.EDITING:
             return
 
-        from cube.domain.algs._parser import parse_alg
+        from cube.domain.algs._multiline_parser import parse_multiline
         from cube.domain.exceptions import InternalSWError
 
         self._edit_alg_text = text
@@ -1718,7 +1718,7 @@ class ClientSession:
             return
 
         try:
-            alg = parse_alg(text)
+            alg = parse_multiline(text)
             moves = list(alg.flatten())
             if not moves:
                 self._restore_edit_snapshot()

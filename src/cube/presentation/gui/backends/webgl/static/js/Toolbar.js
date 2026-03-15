@@ -423,8 +423,8 @@ export class Toolbar {
         }
 
         window.addEventListener('keydown', (e) => {
-            // Don't capture when typing in inputs
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+            // Don't capture when typing in inputs/textarea
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
 
             // F10 — toggle all shadow faces (client-side only)
             if (e.key === 'F10' && this._cubeModel) {

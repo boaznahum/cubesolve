@@ -213,9 +213,16 @@
             </div>
             <!-- Algorithm editor toolbar (hidden by default) -->
             <div id="edit-toolbar" style="display:none">
+                <div class="edit-alg-row">
+                    <select id="edit-alg-select" title="Load saved algorithm">
+                        <option value="">Saved algs...</option>
+                    </select>
+                    <button class="edit-btn edit-btn-small edit-btn-cancel" id="edit-alg-delete"
+                        style="display:none" title="Delete current named alg">Del</button>
+                </div>
                 <div class="edit-input-row">
-                    <input id="edit-input" type="text" placeholder="R U R' U'..."
-                        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+                    <textarea id="edit-input" rows="3" placeholder="R U R' U'&#10;%name=myAlg&#10;$setup = R U R'&#10;$setup U2 $setup'"
+                        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
                     <button class="edit-help-btn" id="edit-help" title="Notation guide">?</button>
                 </div>
                 <div class="edit-buttons">
