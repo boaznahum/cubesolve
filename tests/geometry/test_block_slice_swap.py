@@ -117,12 +117,21 @@ def _place_markers_and_verify_swap(
     swap_kwargs: dict[str, object],
     failures: list[dict],
     record: dict,
+    verify_source_at: tuple[Block | None, Block, Block | None] | None = None,
 ) -> bool:
     """Place markers on 6 blocks, execute swap, verify markers swapped correctly.
 
     Resets the cube, places unique markers on all 6 blocks (3 target, 3 source),
     executes the swap with the given kwargs, then verifies all markers moved
     to the expected positions using set comparison.
+
+    Args:
+        target_blocks: Where to place target markers AND where to verify source→target arrival.
+        source_blocks: Where to place source markers.
+        verify_source_at: Where to verify target→source arrival.
+            If None, uses source_blocks (same positions as placement).
+            Use this when undo_source_setup=False: markers are placed at the rotated
+            source position but target content arrives at the natural (un-undone) position.
 
     Returns True if all markers swapped correctly.
     """
@@ -136,6 +145,10 @@ def _place_markers_and_verify_swap(
 
     t_prefix, t_main, t_suffix = target_blocks
     s_prefix, s_main, s_suffix = source_blocks
+
+    # Where to verify target markers arrived on source face
+    vs = verify_source_at if verify_source_at is not None else source_blocks
+    vs_prefix, vs_main, vs_suffix = vs
 
     # Place markers on all 6 blocks
     t_prefix_m = _place_block_markers(target_face, t_prefix, marker_key, "tp")
@@ -167,10 +180,10 @@ def _place_markers_and_verify_swap(
                 "found": sorted(found_set),
             })
 
-    # Target markers should arrive at source positions
-    _check("tm->sm", t_main_m, source_face, s_main)
-    _check("tp->sp", t_prefix_m, source_face, s_prefix)
-    _check("ts->ss", t_suffix_m, source_face, s_suffix)
+    # Target markers should arrive at source verify positions
+    _check("tm->sm", t_main_m, source_face, vs_main)
+    _check("tp->sp", t_prefix_m, source_face, vs_prefix)
+    _check("ts->ss", t_suffix_m, source_face, vs_suffix)
 
     # Source markers should arrive at target positions
     _check("sm->tm", s_main_m, target_face, t_main)
@@ -187,6 +200,7 @@ def _test_all_rotations(
     target_block: Block,
     dry: SliceSwapResult,
     failures: list[dict],
+    undo_source_setup: bool = True,
 ) -> int:
     """Test all 4 source rotations for a given target block.
 
@@ -196,11 +210,22 @@ def _test_all_rotations(
     - Execute swap with source_block and undo_source_setup
     - Verify all 6 marker groups swapped correctly
 
+    When undo_source_setup=False:
+    - Source face stays rotated after swap
+    - Target content lands at natural_source (not rotated back)
+    - Markers are placed at rotated positions but verified at natural positions
+    - The 4 rotations should produce 4 unique source_before_setup blocks
+      (at least 3 differ from natural), proving undo was correctly skipped
+
     Returns the number of successful rotations (0-4).
     """
     nat = dry.natural_source
     n = app.cube.n_slices
     successes = 0
+
+    # For undo_source_setup=False: collect source_before_setup blocks
+    # to verify they are 4 unique rotations
+    reported_source_blocks: list[Block] = []
 
     for source_rotate in range(4):
         src_main = nat.main.rotate_clockwise(n, source_rotate)
@@ -213,15 +238,49 @@ def _test_all_rotations(
             if nat.suffix is not None else None
         )
 
+        # Always place source markers at the rotated position (where content IS)
+        place_source = (src_prefix, src_main, src_suffix)
+
+        if undo_source_setup:
+            # undo=True: source face rotated back after swap
+            # → target content arrives at rotated source positions
+            verify_at = None  # same as placement positions
+        else:
+            # undo=False: source face stays rotated
+            # → target content arrives at natural_source positions
+            verify_at = (nat.prefix, nat.main, nat.suffix)
+            reported_source_blocks.append(src_main)
+
         if _place_markers_and_verify_swap(
             app, target_face_name, source_face_name, target_block,
             _target_triple(dry),
-            (src_prefix, src_main, src_suffix),
-            dict(source_block=src_main, undo_source_setup=True, undo_target_setup=True),
+            place_source,
+            dict(source_block=src_main, undo_source_setup=undo_source_setup,
+                 undo_target_setup=True),
             failures,
-            {"block": target_block, "rotate": source_rotate, "src_main": src_main},
+            {"block": target_block, "rotate": source_rotate, "src_main": src_main,
+             "undo_source": undo_source_setup},
+            verify_source_at=verify_at,
         ):
             successes += 1
+
+    # When undo_source_setup=False: verify 4 rotations produce unique source blocks
+    if not undo_source_setup and len(reported_source_blocks) == 4:
+        unique_blocks = {(b.start, b.end) for b in reported_source_blocks}
+        non_natural = {(b.start, b.end) for b in reported_source_blocks
+                       if b != nat.main}
+        if len(unique_blocks) != 4:
+            failures.append({
+                "block": target_block, "type": "undo_source_uniqueness",
+                "expected": "4 unique source blocks",
+                "found": f"{len(unique_blocks)} unique out of 4",
+            })
+        if len(non_natural) < 3:
+            failures.append({
+                "block": target_block, "type": "undo_source_non_natural",
+                "expected": "at least 3 differ from natural",
+                "found": f"{len(non_natural)} differ from natural",
+            })
 
     return successes
 
@@ -433,6 +492,92 @@ class TestFullSliceBlocks:
             f"block={target_block}: {successes}/4 rotations passed\n" +
             "\n".join(f"  {f}" for f in failures)
         )
+
+
+class TestUndoSourceSetup:
+    """Test undo_source_setup=False: source face stays rotated after swap.
+
+    When undo_source_setup=False and we test 4 source rotations:
+    - Each rotation leaves the source face in a different orientation
+    - The helper should report 4 unique source block positions
+    - At least 3 of 4 must differ from natural (rotation 0 matches)
+    - This proves undo was correctly skipped
+
+    Uses representative blocks from each cube size to keep test count manageable.
+    """
+
+    @pytest.mark.parametrize("cube_size", [5, 6, 7])
+    def test_undo_source_false_full_slices(self, cube_size: int):
+        """Full-slice blocks with undo_source_setup=False on adjacent faces."""
+        app = AbstractApp.create_app(cube_size)
+        cube = app.cube
+        n = cube.n_slices
+        helper = _create_helper(app)
+
+        blocks = _get_full_slice_blocks(n)
+        # Test a few representative face pairs
+        face_pairs = [
+            (FaceName.F, FaceName.U),
+            (FaceName.F, FaceName.R),
+            (FaceName.U, FaceName.B),
+        ]
+
+        failures: list[dict] = []
+        total_successes = 0
+
+        for target_fn, source_fn in face_pairs:
+            target_face = cube.face(target_fn)
+            source_face = cube.face(source_fn)
+
+            for block in blocks:
+                results = helper.get_all_combinations(source_face, target_face, block)
+                if not results:
+                    continue
+
+                total_successes += _test_all_rotations(
+                    app, target_fn, source_fn,
+                    block, results[0], failures,
+                    undo_source_setup=False,
+                )
+
+        assert not failures, (
+            f"undo_source_setup=False failures for {cube_size}x{cube_size}:\n" +
+            "\n".join(f"  {f}" for f in failures[:10])
+        )
+        assert total_successes > 0, f"No swaps tested for {cube_size}x{cube_size}"
+
+    @pytest.mark.parametrize("cube_size", [5, 6, 7])
+    def test_undo_source_false_sub_blocks(self, cube_size: int):
+        """Sub-blocks (non-full-slice) with undo_source_setup=False."""
+        app = AbstractApp.create_app(cube_size)
+        cube = app.cube
+        n = cube.n_slices
+        helper = _create_helper(app)
+
+        blocks = _get_test_blocks(n)
+        target_fn, source_fn = FaceName.F, FaceName.U
+        target_face = cube.face(target_fn)
+        source_face = cube.face(source_fn)
+
+        failures: list[dict] = []
+        total_successes = 0
+
+        for block in blocks:
+            results = helper.get_all_combinations(source_face, target_face, block)
+            if not results:
+                continue
+
+            total_successes += _test_all_rotations(
+                app, target_fn, source_fn,
+                block, results[0], failures,
+                undo_source_setup=False,
+            )
+
+        assert not failures, (
+            f"undo_source_setup=False sub-block failures for {cube_size}x{cube_size}:\n" +
+            "\n".join(f"  {f}" for f in failures[:10])
+        )
+        assert total_successes > 0, f"No swaps tested for {cube_size}x{cube_size}"
 
 
 class TestSliceSwapValid:

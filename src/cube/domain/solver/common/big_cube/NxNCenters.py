@@ -4,6 +4,8 @@ from enum import Enum, unique
 from typing import Tuple
 
 from cube.domain.exceptions import InternalSWError
+from cube.domain.model.PartSlice import CenterSlice
+from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.geometric.block import Block
 from cube.domain.geometric.cube_layout import CubeLayout
 from cube.domain.geometric.geometry_types import Point
@@ -464,8 +466,41 @@ class NxNCenters(SolverHelper):
             if best_target is None:
                 return work_done
 
-            # Execute the best swap
-            with self.ann.annotate(h2=", Swap complete slice"):
+            # Execute the best swap — annotate matching pieces on both sides
+            assert best_source is not None  # always set when best_target is set
+            _bt: Block = best_target
+            _bs: Block = best_source
+            _tf: Face = face
+            _sf: Face = source_face
+            _tc: Color = color
+            _sc: Color = source_color
+
+            def _ann_moved() -> Iterator["CenterSlice"]:
+                """Yield pieces that will be correct after swap (lazy).
+
+                Source pieces matching target_color + target pieces matching source_color.
+                """
+                for pt in _bs.cells:
+                    cs = _sf.center.get_center_slice(pt)
+                    if cs.color == _tc:
+                        yield cs
+                for pt in _bt.cells:
+                    cs = _tf.center.get_center_slice(pt)
+                    if cs.color == _sc:
+                        yield cs
+
+            def _ann_fixed() -> Iterator["CenterSlice"]:
+                """Yield all destination positions on both blocks (lazy)."""
+                for pt in _bt.cells:
+                    yield _tf.center.get_center_slice(pt)
+                for pt in _bs.cells:
+                    yield _sf.center.get_center_slice(pt)
+
+            with self.ann.annotate(
+                    (_ann_moved, AnnWhat.Moved),
+                    (_ann_fixed, AnnWhat.FixedPosition),
+                    h2=f", Swap slice grade:{best_grade}",
+            ):
                 with tracker_holder.preserve_physical_faces():
                     self._bsh.execute_swap(
                         source_face=source_face,
