@@ -275,6 +275,11 @@ class NxNCenters(SolverHelper):
         nn: int = self.cube.n_slices
         all_slices: list[Block] = self._generate_all_slice_blocks(nn)
 
+        # Each grade>1 swap improves the global solved count by ≥2,
+        # so at most 3*nn*nn rounds can occur. Guard against bugs.
+        max_rounds: int = 3 * nn * nn
+        rounds: int = 0
+
         while True:
             any_work: bool = False
 
@@ -319,6 +324,11 @@ class NxNCenters(SolverHelper):
 
             if not any_work:
                 return
+
+            rounds += 1
+            assert rounds <= max_rounds, (
+                f"Bug: too many slice swap phase rounds ({rounds}) for nn={nn}"
+            )
 
     def _has_slice_swap(self, target_face: Face, target_color: Color,
                         source_face: Face, source_color: Color,
