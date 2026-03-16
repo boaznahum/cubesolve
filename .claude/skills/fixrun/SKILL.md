@@ -104,6 +104,7 @@ Before making ANY changes, read all relevant files to understand the full pictur
 3. Read `jdk.table.xml` → identify all entries, especially for this project
 4. Read `.idea/misc.xml` → note current `sdkName`
 5. Read all `.idea/runConfigurations/*.xml` → note their `SDK_NAME` values
+6. Read `.idea/workspace.xml` → find `<component name="RunManager">` section, note `SDK_NAME`/`SDK_HOME`/`IS_MODULE_SDK` for all temporary run configs (`type="PythonConfigurationType"` or `type="tests"`)
 
 ### Step 1B: Identify This Project's Entries in jdk.table.xml
 
@@ -364,7 +365,15 @@ Working copy:   SDK_NAME="uv (cubesolve)"          ← local machine's SDK name
 
 **NOTE:** This part runs AFTER Part 4 (git filter). The smudge filter should have already injected the correct ACTIVE_SDK_NAME during the re-checkout in Step 4C.4. This part verifies and fixes any remaining issues (e.g., SDK_HOME, IS_MODULE_SDK).
 
-### Step 5A: Scan Run Configs
+### Step 5A: Scan Run Configs (Shared AND Temporary)
+
+PyCharm stores run configurations in **two** locations:
+- **Shared configs:** `.idea/runConfigurations/*.xml` (one file per config, committed to git)
+- **Temporary/local configs:** `.idea/workspace.xml` (inside `<component name="RunManager">`, NOT committed)
+
+**Both must be scanned and fixed.**
+
+#### 5A.1: Scan Shared Configs
 
 1. Glob for all `.idea/runConfigurations/*.xml` files.
 2. Read each file. Only consider `type="PythonConfigurationType"` or `type="tests"`.
@@ -373,13 +382,22 @@ Working copy:   SDK_NAME="uv (cubesolve)"          ← local machine's SDK name
    - `SDK_NAME` should match `ACTIVE_SDK_NAME`
    - `IS_MODULE_SDK` should be `false`
 
-4. Display a table:
+#### 5A.2: Scan Temporary Configs in workspace.xml
+
+1. Read `.idea/workspace.xml`.
+2. Find the `<component name="RunManager">` section.
+3. Within it, find all `<configuration>` elements with `type="PythonConfigurationType"` or `type="tests"`.
+4. For each config, check the same three fields: `SDK_HOME`, `SDK_NAME`, `IS_MODULE_SDK`.
+5. **Note:** Temporary configs often have `SDK_HOME` set to empty string (`""`) and missing `SDK_NAME` entirely — both need fixing.
+
+#### 5A.3: Display Combined Table
 
 ```
-| # | Config Name              | SDK_HOME | SDK_NAME            | IS_MODULE_SDK | Needs Fix |
-|---|--------------------------|----------|---------------------|---------------|-----------|
-| 1 | main_pyglet2             | (set)    | uv (cubesolve3) (3) | false         | No        |
-| 2 | pytest_all_tests         | (empty)  | —                   | true          | Yes       |
+| # | Location    | Config Name              | SDK_HOME | SDK_NAME            | IS_MODULE_SDK | Needs Fix |
+|---|-------------|--------------------------|----------|---------------------|---------------|-----------|
+| 1 | shared      | main_pyglet2             | (set)    | uv (cubesolve3) (3) | false         | No        |
+| 2 | shared      | pytest_all_tests         | (empty)  | —                   | true          | Yes       |
+| 3 | workspace   | pytest in solvers        | (empty)  | —                   | true          | Yes       |
 ```
 
 ### Step 5B: Apply Fixes (no confirmation needed — fix all automatically)
@@ -391,15 +409,18 @@ For each config that needs fixing, apply these XML changes:
 <option name="SDK_HOME" value="$PROJECT_DIR$/.venv/Scripts/python.exe" />
 ```
 
-**b) Set SDK_NAME to ACTIVE_SDK_NAME:**
+**b) Set or add SDK_NAME to ACTIVE_SDK_NAME:**
 ```xml
 <option name="SDK_NAME" value="ACTIVE_SDK_NAME" />
 ```
+If `SDK_NAME` is missing entirely from a config (common in workspace.xml temporary configs), **add it** as a new `<option>` element right after the `SDK_HOME` line.
 
 **c) Set IS_MODULE_SDK to false:**
 ```xml
 <option name="IS_MODULE_SDK" value="false" />
 ```
+
+**For workspace.xml configs:** Use the Edit tool to fix each broken config in place. Be careful to match the exact `<configuration name="...">` to avoid editing the wrong config.
 
 ### Step 5C: Cross-Platform Symlink (Linux only)
 
@@ -419,7 +440,8 @@ After all changes, verify consistency:
 1. **Read the kept jdk.table entry name** → `ACTIVE_SDK_NAME`
 2. **Check .iml `jdkName`** → must match `ACTIVE_SDK_NAME`
 3. **Check misc.xml `sdkName`** → must match `ACTIVE_SDK_NAME`
-4. **Check all run configs `SDK_NAME`** → must match `ACTIVE_SDK_NAME`
+4. **Check all shared run configs `SDK_NAME`** (`.idea/runConfigurations/*.xml`) → must match `ACTIVE_SDK_NAME`
+5. **Check all temporary run configs `SDK_NAME`** (`.idea/workspace.xml`) → must match `ACTIVE_SDK_NAME`
 
 If any mismatch is found, fix it immediately.
 
