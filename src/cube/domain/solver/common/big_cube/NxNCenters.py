@@ -481,7 +481,7 @@ class NxNCenters(SolverHelper):
                 if self._block_commutator(tracker_holder, color,
                                             face,
                                             source_face,
-                                            rc, rc,
+                                            Block.of(rc, rc),
                                             _SearchBlockMode.CompleteBlock, faces):
                     after_fixed_color = center.get_center_slice(rc).color
                     if after_fixed_color != color:
@@ -620,18 +620,18 @@ class NxNCenters(SolverHelper):
         """
         # Before swap
         target_ok_before: int = self._count_colors_on_block(
-            target_color, target_face, target_block.start, target_block.end, ignore_if_back=True
+            target_color, target_face, target_block
         )
         source_ok_before: int = self._count_colors_on_block(
-            source_color, source_face, source_block.start, source_block.end, ignore_if_back=True
+            source_color, source_face, source_block
         )
 
         # After swap: target gets source content, source gets target content
         target_ok_after: int = self._count_colors_on_block(
-            target_color, source_face, source_block.start, source_block.end, ignore_if_back=True
+            target_color, source_face, source_block
         )
         source_ok_after: int = self._count_colors_on_block(
-            source_color, target_face, target_block.start, target_block.end, ignore_if_back=True
+            source_color, target_face, target_block
         )
 
         return (target_ok_after + source_ok_after) - (target_ok_before + source_ok_before)
@@ -706,7 +706,7 @@ class NxNCenters(SolverHelper):
             if self._block_commutator(tracker_holder, color,
                                         face,
                                         source_face,
-                                        big_block[0], big_block[1],
+                                        big_block,
                                         _SearchBlockMode.ExactMatch, faces):
                 self.debug(f"    ✓ Block {block_dims[0]}x{block_dims[1]} ({block_size} pieces) "
                            f"from {source_face.name} to {face.name}", level=1)
@@ -733,7 +733,7 @@ class NxNCenters(SolverHelper):
     def _block_commutator(self,
                             tracker_holder: "FacesTrackerHolder",
                             required_color: Color,
-                            face: Face, source_face: Face, rc1: Tuple[int, int], rc2: Tuple[int, int],
+                            face: Face, source_face: Face, target_block: Block,
                             mode: _SearchBlockMode, faces: Iterable[FaceTracker]) -> bool:
         """
         Execute block commutator to move pieces from source to target.
@@ -749,31 +749,14 @@ class NxNCenters(SolverHelper):
 
         :param face: Target face (must be front)
         :param source_face: Source face (any face except front)
-        :param rc1: one corner of block, center slices indexes [0..n)
-        :param rc2: other corner of block, center slices indexes [0..n)
+        :param target_block: Block on target face (in target face coordinates)
         :param mode: to search complete block or with colors more than mine
         :return: False if block not found (or no work need to be done)
         """
         cube: Cube = face.cube
         assert face is cube.front
 
-        # fix: use block methods, simplify
-
-        # normalize block
-        r1: int = rc1[0]
-        c1: int = rc1[1]
-
-        r2: int = rc2[0]
-        c2: int = rc2[1]
-
-        if r1 > r2:
-            r1, r2 = r2, r1
-        if c1 > c2:
-            c1, c2 = c2, c1
-
-        rc1 = Point(r1, c1)
-        rc2 = Point(r2, c2)
-        normalized_block = Block(rc1, rc2)
+        normalized_block = target_block.normalize
 
         # Use dry_run to get natural source coordinates — works for ALL source faces
         dry_result = self._comm_helper.execute_commutator(
@@ -836,80 +819,21 @@ class NxNCenters(SolverHelper):
         return False
 
     @staticmethod
-    def _count_colors_on_block(color: Color, source_face: Face, rc1: Tuple[int, int], rc2: Tuple[int, int],
-                               ignore_if_back=False) -> int:
+    def _count_colors_on_block(color: Color, source_face: Face, block: Block) -> int:
+        """Count number of centerpieces on block that match color.
 
+        Block coordinates must be in source_face's coordinate space.
+
+        :param color: Color to match
+        :param source_face: Face to check
+        :param block: Block defining the region (in source face coordinates)
+        :return: Number of matching center pieces
         """
-        Count number of centerpieces on center that match color
-        :param source_face: front up or back
-        :param rc1: one corner of block, front coords, center slice indexes
-        :param rc2: other corner of block, front coords, center slice indexes
-        :return:
-        """
-
-        cube = source_face.cube
-        fix_back_coords = not ignore_if_back and source_face is cube.back
-
-        if fix_back_coords:
-            # Fix:
-            # claude [#126]: we can fix it !!!, itis easy !!!
-            # lets understand all the callers and why it works today !!!
-
-            # the logic here is hard code of the logic in slice rotate
-            # it will be broken if cube layout is changed
-            # here we assume we work on F, and UP has same coord system as F, and
-            # back is mirrored in both direction
-            # claude [#126]: but now we know using geometry classes to translate
-            inv = cube.inv
-            rc1 = (inv(rc1[0]), inv(rc1[1]))
-            rc2 = (inv(rc2[0]), inv(rc2[1]))
-
-        r1 = rc1[0]
-        c1 = rc1[1]
-
-        r2 = rc2[0]
-        c2 = rc2[1]
-
-        if r1 > r2:
-            r1, r2 = r2, r1
-
-        if c1 > c2:
-            c1, c2 = c2, c1
-
         _count = 0
-        for r in range(r1, r2 + 1):
-            for c in range(c1, c2 + 1):
-                center_slice = source_face.center.get_center_slice((r, c))
-                if color == center_slice.color:
-                    _count += 1
-
+        for pt in block.cells:
+            if source_face.center.get_center_slice(pt).color == color:
+                _count += 1
         return _count
-
-    @staticmethod
-    def _2d_range(rc1: Point, rc2: Point) -> Iterator[Point]:
-
-        """
-        Iterator over 2d block columns advanced faster
-        :param rc1: one corner of block, front coords, center slice indexes
-        :param rc2: other corner of block, front coords, center slice indexes
-        :return:
-        """
-
-        r1 = rc1[0]
-        c1 = rc1[1]
-
-        r2 = rc2[0]
-        c2 = rc2[1]
-
-        if r1 > r2:
-            r1, r2 = r2, r1
-
-        if c1 > c2:
-            c1, c2 = c2, c1
-
-        for r in range(r1, r2 + 1):
-            for c in range(c1, c2 + 1):
-                yield Point(r, c)
 
     def _is_block(self,
                   source_face: Face,
@@ -937,8 +861,8 @@ class NxNCenters(SolverHelper):
         center = source_face.center
         miss_count = 0
 
-        for rc in self._2d_range(block.start, block.end):
-            if center.get_center_slice(rc).color != required_color:
+        for pt in block.cells:
+            if center.get_center_slice(pt).color != required_color:
                 miss_count += 1
                 if miss_count > max_allowed_not_match:
                     return False
@@ -966,7 +890,7 @@ class NxNCenters(SolverHelper):
         :param natural_source_block: Natural source block from dry_run
         :return: Number of clockwise rotations to apply to source face to align, or None
         """
-        n_ok = self._count_colors_on_block(required_color, target_face, target_block.start, target_block.end)
+        n_ok = self._count_colors_on_block(required_color, target_face, target_block)
 
         if n_ok == target_block.size:
             return None  # nothing to do
