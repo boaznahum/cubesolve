@@ -117,7 +117,7 @@ These classes already exist and can replace hardcoded logic:
 - [ ] E2ECommutator.py line 46
 - [ ] _LBLL3Edges.py lines 225, 279
 - [ ] _LBLNxNEdges.py line 111
-- [ ] NxNCenters.py line 727
+- [x] NxNCenters.py — already fixed in merged branch `claude/code-cleanup-4R0LI`
 - [ ] CommonOp.py lines 231-343 (big refactor — #121)
 - [ ] CommonOp.py line 472 (optimal rotation path)
 - [ ] CommonOp.py line 529 (hardcoded geometry)

@@ -449,7 +449,7 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
         """
         l1_face = self._get_layer1_tracker(th).face
         l1_face_color = l1_face.color
-        # todo [#122]: Use tracker colors instead of center colors for matching
+        # face.color returns tracker color via with_faces_color_provider context
         c: Corner
 
         for c in l1_face.corners:
@@ -715,7 +715,7 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
 
         l3_face = self._get_layer1_tracker(th).face.opposite
         l3_face_color = l3_face.color
-        # todo [#122]: Use tracker colors instead of center colors for matching
+        # face.color returns tracker color via with_faces_color_provider context
         c: Corner
 
         for c in l3_face.corners:
