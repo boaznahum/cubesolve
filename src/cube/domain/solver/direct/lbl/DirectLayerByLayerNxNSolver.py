@@ -482,9 +482,9 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
             return
 
         l1_tracker = self._get_layer1_tracker(th)
-        self.debug(f"Solving Layer 1 centers ({l1_tracker.color.name} face only)")
+        self.debug(lambda: f"Solving Layer 1 centers ({l1_tracker.color.name} face only)")
 
-        with self.op.annotation.annotate(h2=f"L1 centers ({l1_tracker.color.name})"):
+        with self.op.annotation.annotate(h2=lambda: f"L1 centers ({l1_tracker.color.name})"):
             centers = NxNCenters(self, preserve_cage=False, tracker_holder=th)
             centers.solve_single_face(th, l1_tracker)
             self._accumulated_temp_stats.accumulate(centers.get_block_statistics(), topic_prefix="L1")
@@ -495,9 +495,9 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
             return
 
         l1_tracker = self._get_layer1_tracker(th)
-        self.debug(f"Solving Layer 1 edges ({l1_tracker.color.name} face only)")
+        self.debug(lambda: f"Solving Layer 1 edges ({l1_tracker.color.name} face only)")
 
-        with self.op.annotation.annotate(h2=f"L1 edges ({l1_tracker.color.name})"):
+        with self.op.annotation.annotate(h2=lambda: f"L1 edges ({l1_tracker.color.name})"):
             # Use solve_face_edges to solve only Layer 1 face edges
             self._nxn_edges.solve_face_edges(l1_tracker)
 
@@ -507,9 +507,9 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
             return
 
         l1_tracker = self._get_layer1_tracker(th)
-        self.debug(f"Solving Layer 1 cross ({l1_tracker.color.name} layer)")
+        self.debug(lambda: f"Solving Layer 1 cross ({l1_tracker.color.name} layer)")
 
-        with self.op.annotation.annotate(h2=f"L1 cross ({l1_tracker.color.name})"):
+        with self.op.annotation.annotate(h2=lambda: f"L1 cross ({l1_tracker.color.name})"):
             # Solve using shadow cube approach with Solvers3x3
             self._solve_layer1_with_shadow(th, SolveStep.L1x)
 
@@ -519,9 +519,9 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
             return
 
         l1_tracker = self._get_layer1_tracker(th)
-        self.debug(f"Solving Layer 1 corners ({l1_tracker.color.name} layer)")
+        self.debug(lambda: f"Solving Layer 1 corners ({l1_tracker.color.name} layer)")
 
-        with self.op.annotation.annotate(h2=f"L1 corners ({l1_tracker.color.name})"):
+        with self.op.annotation.annotate(h2=lambda: f"L1 corners ({l1_tracker.color.name})"):
             # Solve using shadow cube approach with Solvers3x3
             self._solve_layer1_with_shadow(th, SolveStep.L1)
 
@@ -742,9 +742,9 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
             return
 
         l3_tracker = self._get_layer1_tracker(th).opposite
-        self.debug(f"Solving Layer 3 centers ({l3_tracker.color.name} face only)")
+        self.debug(lambda: f"Solving Layer 3 centers ({l3_tracker.color.name} face only)")
 
-        with self.op.annotation.annotate(h2=f"L3 centers ({l3_tracker.color.name})"):
+        with self.op.annotation.annotate(h2=lambda: f"L3 centers ({l3_tracker.color.name})"):
             centers = NxNCenters(self, preserve_cage=False, tracker_holder=th)
             centers.solve_single_face(th, l3_tracker)
             self._accumulated_temp_stats.accumulate(centers.get_block_statistics(), topic_prefix="L3")
@@ -762,9 +762,9 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
             return
 
         l3_tracker = self._get_layer1_tracker(th).opposite
-        self.debug(f"Solving Layer 3 edges ({l3_tracker.color.name} face only)")
+        self.debug(lambda: f"Solving Layer 3 edges ({l3_tracker.color.name} face only)")
 
-        with self.op.annotation.annotate(h2=f"L3 edges ({l3_tracker.color.name})"):
+        with self.op.annotation.annotate(h2=lambda: f"L3 edges ({l3_tracker.color.name})"):
             self._l3_edges.do_l3_edges(l3_tracker)
 
     def _solve_layer3_cross(self, th: FacesTrackerHolder) -> None:
@@ -776,9 +776,9 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
             return
 
         l1_tracker = self._get_layer1_tracker(th).opposite
-        self.debug(f"Solving Layer 3 cross ({l1_tracker.color.name} layer)")
+        self.debug(lambda: f"Solving Layer 3 cross ({l1_tracker.color.name} layer)")
 
-        with self.op.annotation.annotate(h2=f"L3 cross ({l1_tracker.color.name})"):
+        with self.op.annotation.annotate(h2=lambda: f"L3 cross ({l1_tracker.color.name})"):
             # Solve using shadow cube approach with Solvers3x3
             self._solve_layer1_with_shadow(th, SolveStep.L3x)
 
@@ -788,9 +788,9 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
             return
 
         l3_tracker = self._get_layer1_tracker(th).opposite
-        self.debug(f"Solving Layer 3 corners ({l3_tracker.color.name} layer)")
+        self.debug(lambda: f"Solving Layer 3 corners ({l3_tracker.color.name} layer)")
 
-        with self.op.annotation.annotate(h2=f"L3 corners ({l3_tracker.color.name})"):
+        with self.op.annotation.annotate(h2=lambda: f"L3 corners ({l3_tracker.color.name})"):
             # Solve using shadow cube approach with Solvers3x3
             self._solve_layer1_with_shadow(th, SolveStep.L3)
 

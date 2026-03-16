@@ -124,7 +124,7 @@ class Operator(OperatorProtocol):
     def check_clear_rais_abort(self):
         if self._aborted:
             self._aborted = False
-            self._app_state.debug(True, f"A signal abort was raise, not in loop, raising an exception {OpAborted}")
+            self._app_state.debug(True, lambda: f"A signal abort was raise, not in loop, raising an exception {OpAborted}")
             raise OpAborted()
 
     def play(self, alg: Alg, inv: Any = False, animation: Any = True) -> None:

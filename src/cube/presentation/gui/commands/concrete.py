@@ -836,7 +836,7 @@ class ExecuteFileAlgCommand(Command):
 
             # Log file name and algorithm
             file_name = f"f{self.slot}.txt"
-            ctx.cube.sp.logger.debug(None, f"Executing algorithm from {file_name}: {alg}")
+            ctx.cube.sp.logger.debug(None, lambda: f"Executing algorithm from {file_name}: {alg}")
 
             ctx.op.play(alg, animation=not self.instant)
         except FileNotFoundError as e:

@@ -240,12 +240,12 @@ class CageNxNSolver(BaseSolver):
         # For even: trackers mark center slices (cleanup on exit)
         # Use context manager for automatic cleanup on exit
         with FacesTrackerHolder(self) as tracker_holder:
-            self.debug(f"Created trackers: {list(tracker_holder)}")
+            self.debug(lambda: f"Created trackers: {list(tracker_holder)}")
 
             # Main solve loop with parity retry
             # Even cubes may need multiple retries due to OLL and PLL parity interaction
             for attempt in range(5):
-                self.debug(f"=== Solve attempt {attempt} ===")
+                self.debug(lambda: f"=== Solve attempt {attempt} ===")
 
                 # PHASE 1a: EDGE SOLVING (pair all edges)
                 if not self._are_edges_solved():
@@ -260,7 +260,7 @@ class CageNxNSolver(BaseSolver):
                     break  # Success - exit retry loop
 
                 except EvenCubeEdgeParityException as e:
-                    self.debug(f"Caught EvenCubeEdgeParityException on attempt {attempt}: {type(e)}")
+                    self.debug(lambda: f"Caught EvenCubeEdgeParityException on attempt {attempt}: {type(e)}")
                     if attempt >= 4:
                         raise  # Give up after 5 attempts
 
@@ -336,10 +336,10 @@ class CageNxNSolver(BaseSolver):
             return sr
 
         with FacesTrackerHolder(self) as tracker_holder:
-            self.debug(f"Created trackers: {list(tracker_holder)}")
+            self.debug(lambda: f"Created trackers: {list(tracker_holder)}")
 
             for attempt in range(5):
-                self.debug(f"=== Cage solve attempt {attempt} ===")
+                self.debug(lambda: f"=== Cage solve attempt {attempt} ===")
 
                 # PHASE 1a: EDGE SOLVING
                 if not self._are_edges_solved():
@@ -354,7 +354,7 @@ class CageNxNSolver(BaseSolver):
                     break  # Success - exit retry loop
 
                 except EvenCubeEdgeParityException as e:
-                    self.debug(f"Caught EvenCubeEdgeParityException on attempt {attempt}: {type(e)}")
+                    self.debug(lambda: f"Caught EvenCubeEdgeParityException on attempt {attempt}: {type(e)}")
                     if attempt >= 4:
                         raise
 
@@ -450,12 +450,12 @@ class CageNxNSolver(BaseSolver):
 
         # Get face colors from tracker holder
         face_colors = tracker_holder.get_face_colors()
-        self.debug(f"Face colors: {face_colors}")
+        self.debug(lambda: f"Face colors: {face_colors}")
 
         # Debug: show current edge state
         self.debug("Current edges:")
         for edge in self._cube.edges:
-            self.debug(f"  {edge._name}: {edge.e1.color}-{edge.e2.color}, is3x3={edge.is3x3}")
+            self.debug(lambda: f"  {edge._name}: {edge.e1.color}-{edge.e2.color}, is3x3={edge.is3x3}")
 
         # Solve using DualOperator - moves are applied to real cube automatically
         self._solve_with_dual_operator(tracker_holder)
@@ -480,7 +480,7 @@ class CageNxNSolver(BaseSolver):
         # Debug: print all edges on shadow cube
         self.debug("Shadow cube edges:")
         for edge in shadow_cube.edges:
-            self.debug(f"  {edge._name}: {edge.e1.color}-{edge.e2.color}")
+            self.debug(lambda: f"  {edge._name}: {edge.e1.color}-{edge.e2.color}")
 
         if shadow_cube.solved:
             self.debug("Shadow cube is already solved")
@@ -529,7 +529,7 @@ class CageNxNSolver(BaseSolver):
         self._op.enter_single_step_mode(SSCode.CAGE_CENTERS_START)
 
         # Log cage state before
-        self.debug(f"Before centers: edges={self._are_edges_solved()}, "
+        self.debug(lambda: f"Before centers: edges={self._are_edges_solved()}, "
                    f"corners={self._are_corners_solved()}")
 
         # Use NxNCenters with preserve_cage=True to preserve paired edges
@@ -538,7 +538,7 @@ class CageNxNSolver(BaseSolver):
         cage_centers.solve(tracker_holder)
 
         # Log cage state after
-        self.debug(f"After centers: edges={self._are_edges_solved()}, "
+        self.debug(lambda: f"After centers: edges={self._are_edges_solved()}, "
                    f"corners={self._are_corners_solved()}, "
                    f"centers={self._are_centers_solved()}")
 

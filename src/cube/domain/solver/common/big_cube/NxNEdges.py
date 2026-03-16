@@ -104,7 +104,7 @@ class NxNEdges(SolverHelper):
 
     def _report_done(self, s):
         n_to_fix = sum(not e.is3x3 for e in self.cube.edges)
-        self.debug( f"{s}, Still more to fix {n_to_fix}", level=2)
+        self.debug(lambda: f"{s}, Still more to fix {n_to_fix}", level=2)
 
     @property
     def _left_to_fix(self) -> int:
@@ -126,10 +126,10 @@ class NxNEdges(SolverHelper):
         """
 
         if edge.is3x3:
-            self.debug( f"Edge {edge} is already solved", level=3)
+            self.debug(lambda: f"Edge {edge} is already solved", level=3)
             return False
         else:
-            self.debug( f"Need to work on Edge {edge} ", level=3)
+            self.debug(lambda: f"Need to work on Edge {edge} ", level=3)
 
         # find needed color
         n_slices = self.cube.n_slices
@@ -139,7 +139,7 @@ class NxNEdges(SolverHelper):
 
         with self.ann.annotate(h2=lambda: f"Fixing {edge.name_n_faces}"):
 
-            self.debug( f"Brining {edge} to front-right", level=3)
+            self.debug(lambda: f"Brining {edge} to front-right", level=3)
             self.cmn.bring_edge_to_front_left_by_whole_rotate(edge)
             edge = self.cube.front.edge_left
 
@@ -184,7 +184,7 @@ class NxNEdges(SolverHelper):
         edge: Edge = face.edge_left
 
         # now start to work
-        self.debug( f"Working on edge {edge} color {ordered_color}", level=3)
+        self.debug(lambda: f"Working on edge {edge} color {ordered_color}", level=3)
 
         # first fix all that match color on this edge
         self._fix_all_slices_on_edge(face, edge, ordered_color, color_un_ordered)
@@ -256,7 +256,7 @@ class NxNEdges(SolverHelper):
 
         # Now fix
 
-        self.debug( f"On same edge, going to slice {ltrs}", level=3)
+        self.debug(lambda: f"On same edge, going to slice {ltrs}", level=3)
 
         with self.ann.annotate((slices, AnnWhat.Moved),
                                (lambda: (edge.get_slice(inv(i)) for i in slices_to_slice),
@@ -298,7 +298,7 @@ class NxNEdges(SolverHelper):
 
             assert source_slice
 
-            self.debug( f"Found source slice {source_slice}", level=3)
+            self.debug(lambda: f"Found source slice {source_slice}", level=3)
 
             self.cmn.bring_edge_to_front_right_preserve_front_left(source_slice.parent)
 
@@ -371,7 +371,7 @@ class NxNEdges(SolverHelper):
         if not target_slices:
             return False
 
-        self.debug( f"Going to slice, sources={source_slice_indices}, target={target_indices}", level=3)
+        self.debug(lambda: f"Going to slice, sources={source_slice_indices}, target={target_indices}", level=3)
 
         # now slice them all
         with self.ann.annotate((source_slices, AnnWhat.Moved), (target_slices, AnnWhat.FixedPosition)):
@@ -420,7 +420,7 @@ class NxNEdges(SolverHelper):
 
             tracer: EdgeSliceTracker
             with self.cmn.track_e_slice(edge.get_slice(0)) as tracer:
-                self.debug( f"Doing parity on {edge}", level=1)
+                self.debug(lambda: f"Doing parity on {edge}", level=1)
                 edge = self.cmn.bring_edge_to_front_left_by_whole_rotate(edge)
                 assert edge is face.edge_left
                 assert edge is cube.fl
@@ -466,7 +466,7 @@ class NxNEdges(SolverHelper):
                 plus_one = [ i + 1 for i in slices_indices_to_fix]
 
                 if not self._advanced_edge_parity:
-                    self.debug( f"*** Doing parity on M {plus_one}", level=2)
+                    self.debug(lambda: f"*** Doing parity on M {plus_one}", level=2)
                     for _ in range(4):
                         self.op.play(Algs.MM[plus_one].prime)
                         self.op.play(Algs.U * 2)
@@ -475,7 +475,7 @@ class NxNEdges(SolverHelper):
                     # in case of R/L we need to add 1, because 1 is R, and slices begin with 2
                     plus_one = [i + 1 for i in plus_one]
 
-                    self.debug( f"*** Doing parity on R {plus_one}", level=2)
+                    self.debug(lambda: f"*** Doing parity on R {plus_one}", level=2)
                     #  https://speedcubedb.com/a/6x6/6x6L2E
                     # 3R' U2 3L F2 3L' F2 3R2 U2 3R U2 3R' U2 F2 3R2 F2
 
@@ -608,7 +608,7 @@ class NxNEdges(SolverHelper):
             if all(e.is3x3 for e in target_edges_by_color):
                 return False
 
-            with self.ann.annotate(h1=f"Edges for {target_color.name}"):
+            with self.ann.annotate(h1=lambda: f"Edges for {target_color.name}"):
                 parity_done = False
                 while True:
                     unsolved = [e for e in self.cube.edges

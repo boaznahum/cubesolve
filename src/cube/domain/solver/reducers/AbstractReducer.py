@@ -135,7 +135,7 @@ class AbstractReducer(ReducerProtocol, SolverElementsProvider, ABC):
         self.debug("[Solver Statistics]")
         for topic_name, lines in stats.format_all(strip_prefix=my_prefix):
             for line in lines:
-                self.debug(f"  [{topic_name}] {line}")
+                self.debug(lambda: f"  [{topic_name}] {line}")
 
     # ---- ReducerProtocol interface (abstract) ----
 

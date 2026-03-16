@@ -71,7 +71,7 @@ class OLL(StepSolver):
         description = ""
         for r in range(4):
             state = self._encode_state()
-            self.debug(f"Found state after {r} rotations:\n{state}")
+            self.debug(lambda: f"Found state after {r} rotations:\n{state}")
 
             description_alg: tuple[str, Alg] | None = self._get_state_alg(state)
 
@@ -87,7 +87,7 @@ class OLL(StepSolver):
         if alg is None:
             raise InternalSWError(f"Unknown OLL state:\n {state}")
 
-        self.debug(f"Found OLL alg '{description}' {alg}")
+        self.debug(lambda: f"Found OLL alg '{description}' {alg}")
 
         self.play(alg)
 
@@ -110,7 +110,7 @@ class OLL(StepSolver):
 
         if n_edges not in [0, 2, 4]:
             if self.cube.n_slices % 2 == 0 or self.cube.is_even_cube_shadow:
-                self.debug(f"OLL: Edge parity detected ({n_edges} edges matching)")
+                self.debug(lambda: f"OLL: Edge parity detected ({n_edges} edges matching)")
                 raise EvenCubeEdgeParityException()
             else:
                 # on odd cube it should be solved by edges
@@ -178,7 +178,7 @@ class OLL(StepSolver):
 
         alg = d_alg[1]
         description = d_alg[0]
-        self.debug(f"Found (raw) alg: {description} : {alg}")
+        self.debug(lambda: f"Found (raw) alg: {description} : {alg}")
 
         if isinstance(alg, str):
             alg = Algs.parse(alg, compat_3x3=True)
@@ -198,7 +198,7 @@ class OLL(StepSolver):
         # normalize it to my form
         state2 = state.strip().replace("\n", ", ")
         state = state.strip().replace("\n", "")
-        self.debug(f"Comparing state:{state2}")
+        self.debug(lambda: f"Comparing state:{state2}")
 
         dbs: list[tuple[str, str, str]] = self._get_algs_db()
 

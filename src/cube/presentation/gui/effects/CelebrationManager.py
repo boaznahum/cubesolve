@@ -82,7 +82,7 @@ class CelebrationManager:
         self._event_loop.schedule_interval(self._update, 1 / 60)
         self._update_scheduled = True
 
-        self._vs.debug(True, f"Celebration started: {effect.name}")
+        self._vs.debug(True, lambda: f"Celebration started: {effect.name}")
 
     def _update(self, dt: float) -> None:
         """Update callback for event loop.
@@ -111,7 +111,7 @@ class CelebrationManager:
 
         if self._current_effect:
             self._current_effect.cleanup()
-            self._vs.debug(True, f"Celebration stopped: {self._current_effect.name}")
+            self._vs.debug(True, lambda: f"Celebration stopped: {self._current_effect.name}")
             self._current_effect = None
 
     @property

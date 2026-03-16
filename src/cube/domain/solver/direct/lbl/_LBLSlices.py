@@ -413,7 +413,7 @@ class _LBLSlices(SolverHelper):
                 if alg_best_rotations is not None:
                     slice_alg = alg_best_rotations[0]
                     best_rotations = alg_best_rotations[1]
-                    self.debug(f"Pre-align row {face_row}: rotating slice {best_rotations}x")
+                    self.debug(lambda: f"Pre-align row {face_row}: rotating slice {best_rotations}x")
                     # Preserve tracker positions across the slice rotation.
                     # The rotation moves center pieces (and their tracker marks) between
                     # faces. We want the pieces to move, but tracker marks must stay on
@@ -514,7 +514,7 @@ class _LBLSlices(SolverHelper):
         with setup_l1(self, l1_tracker):
 
             for face_row in range(n_to_solve):
-                with self._logger.tab(f"Solving face row {face_row}"):
+                with self._logger.tab(lambda: f"Solving face row {face_row}"):
 
                     with self.with_sanity_check_previous_are_solved(l1_tracker, face_row, "solving row"):
                         self._solve_slice_row(face_row, face_trackers, l1_tracker)

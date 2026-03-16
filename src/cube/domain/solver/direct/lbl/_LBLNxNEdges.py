@@ -66,7 +66,7 @@ class _LBLNxNEdges(SolverHelper):
         assert white is cube.down
 
 
-        with self._logger.tab(f"Solving edges on face {target_face_t} row {face_row}"):
+        with self._logger.tab(lambda: f"Solving edges on face {target_face_t} row {face_row}"):
 
             self.cmn.bring_face_front_preserve_down(target_face_t.face)
 
@@ -121,7 +121,7 @@ class _LBLNxNEdges(SolverHelper):
 
             with PartSliceTracker.with_trackers(source_wings) as sts:
 
-                with self._logger.tab(f"Working on single wing {target_edge_wing.parent_name_index_colors_position} ,"
+                with self._logger.tab(lambda: f"Working on single wing {target_edge_wing.parent_name_index_colors_position} ,"
                            f" two faes {faces_colors}"
                            f"sources: {[t.slice.parent_name_index_colors_position for t in sts]}"):
 
@@ -155,7 +155,7 @@ class _LBLNxNEdges(SolverHelper):
                                     else:
                                         the_wing = cube.front.edge_right.get_slice(edge_info.index_on_edge_two)
 
-                                    with self._logger.tab(f"patch: Working on {the_target_face} target {the_wing.parent_name_index_colors_position} source wing {st.slice.parent_name_index_colors}"):
+                                    with self._logger.tab(lambda: f"patch: Working on {the_target_face} target {the_wing.parent_name_index_colors_position} source wing {st.slice.parent_name_index_colors}"):
 
 
                                         solved = self._solve_one_side_edge_one_source(l1_tracker,
@@ -284,7 +284,7 @@ class _LBLNxNEdges(SolverHelper):
             target_face_color = target_face.color
 
             self.debug(
-                f"Found source EdgeWing for target {untracked_source_wing.parent_name_index_colors} : {untracked_source_wing} / {untracked_source_wing.index}")
+                lambda: f"Found source EdgeWing for target {untracked_source_wing.parent_name_index_colors} : {untracked_source_wing} / {untracked_source_wing.index}")
 
             self.debug(lambda: f"on faces {untracked_source_wing.faces()} {untracked_source_edge.name}")
 

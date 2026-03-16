@@ -198,7 +198,7 @@ class F2L(SolverHelper):
         else:
             pre = Algs.no_op()
 
-        with self.annotate(h2=f"Bringing up  {edge.name_n_colors}"):
+        with self.annotate(h2=lambda: f"Bringing up  {edge.name_n_colors}"):
 
             self.op.play(pre + x + Algs.U + x.p)
 
@@ -223,7 +223,7 @@ class F2L(SolverHelper):
         with self.cmn.annotate(([corner.actual, edge.actual], AnnWhat.Moved),
                                ([corner.position, edge.position], AnnWhat.FixedPosition)):
 
-            self.debug(f"Working on {corner.position.name} {edge.position.name} actual {corner.actual} {edge.actual} ")
+            self.debug(lambda: f"Working on {corner.position.name} {edge.position.name} actual {corner.actual} {edge.actual} ")
 
             up: Face = cube.up
             front: Face = cube.front
@@ -310,7 +310,7 @@ class F2L(SolverHelper):
             if alg is None:
                 raise InternalSWError(f"Unknown case, corner is {corner.actual.name}, edge is {edge.actual.name}")
 
-            self.debug(f"Case corner is {corner.actual.name}, edge is {edge.actual.name}, Running alg:{alg}")
+            self.debug(lambda: f"Case corner is {corner.actual.name}, edge is {edge.actual.name}, Running alg:{alg}")
 
             # Pause before wide move so user can observe WideLayerAlg behavior
             if self._contains_wide_move(alg):
@@ -345,7 +345,7 @@ class F2L(SolverHelper):
         """
 
         self.debug(
-            f"Case: 1 Easy or 4th case: Corner pointing outwards, "
+            lambda: f"Case: 1 Easy or 4th case: Corner pointing outwards, "
             f"edge in top layer: "
             f"{corner.actual.name} {edge.actual.name}")
 
@@ -411,11 +411,11 @@ class F2L(SolverHelper):
                 alg = U + R - U - R
 
         if alg:
-            self.debug(f"Case:1st: Easy cases: edge at top: {corner.actual.name} {edge.actual.name}")
+            self.debug(lambda: f"Case:1st: Easy cases: edge at top: {corner.actual.name} {edge.actual.name}")
             return alg
 
         self.debug(
-            f"Case: 4th case: Corner pointing outwards, edge in top layer: {corner.actual.name} {edge.actual.name}")
+            lambda: f"Case: 4th case: Corner pointing outwards, edge in top layer: {corner.actual.name} {edge.actual.name}")
 
         ################################################################
         # 4th case: Corner pointing outwards, edge in top layer
@@ -501,7 +501,7 @@ class F2L(SolverHelper):
                 f"{edge.actual.name}")
 
         self.debug(
-            f"Case: 4th case: sub case {case4}: {corner.actual.name} {edge.actual.name}")
+            lambda: f"Case: 4th case: sub case {case4}: {corner.actual.name} {edge.actual.name}")
 
         return alg
 
@@ -518,7 +518,7 @@ class F2L(SolverHelper):
         """
 
         self.debug(
-            f"Case: 2nd case: Corner in bottom, edge in top layer: {corner.actual.name} {edge.actual.name}")
+            lambda: f"Case: 2nd case: Corner in bottom, edge in top layer: {corner.actual.name} {edge.actual.name}")
 
         cube = self.cube
 
@@ -595,7 +595,7 @@ class F2L(SolverHelper):
         """
 
         self.debug(
-            f"Case: 3rd case: Corner in top, "
+            lambda: f"Case: 3rd case: Corner in top, "
             f"edge in middle: {corner.actual.name} {edge.actual.name}")
 
         cube = self.cube
@@ -660,7 +660,7 @@ class F2L(SolverHelper):
         """
 
         self.debug(
-            f"Case: 5th case: Corner pointing upwards, "
+            lambda: f"Case: 5th case: Corner pointing upwards, "
             f"edge in top layer: {corner.actual.name} {edge.actual.name}")
 
         cube = self.cube
@@ -753,7 +753,7 @@ class F2L(SolverHelper):
         """
 
         self.debug(
-            f"Case: 6th case: Corner in bottom, "
+            lambda: f"Case: 6th case: Corner in bottom, "
             f"edge in middle: {corner.actual.name} {edge.actual.name}")
 
         cube = self.cube
@@ -814,7 +814,7 @@ class F2L(SolverHelper):
             raise InternalSWError(f"6th case: Unknown case, Corner in bottom, edge in middle, {c}, {e}")
 
         self.debug(
-            f"Case: 6th case: sub case {case6}: {corner.actual.name} {edge.actual.name}")
+            lambda: f"Case: 6th case: sub case {case6}: {corner.actual.name} {edge.actual.name}")
 
         return alg
 

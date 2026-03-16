@@ -244,7 +244,7 @@ class NxNSolverOrchestrator(AbstractSolver):
             if self._cube.solved:
                 break
 
-            self.debug(f"@@@@ Iteration # {attempt}")
+            self.debug(lambda: f"@@@@ Iteration # {attempt}")
 
             try:
                 if parity_detector is not None:
@@ -267,7 +267,7 @@ class NxNSolverOrchestrator(AbstractSolver):
                 # Detected by L3Cross: 1 or 3 edges flipped (impossible on 3x3)
                 # L3Cross throws, orchestrator catches and fixes via reducer.
                 # After fix, edges are disturbed -> need to re-reduce
-                self.debug(f"Catch even edge parity in iteration #{attempt}")
+                self.debug(lambda: f"Catch even edge parity in iteration #{attempt}")
                 if even_edge_parity_detected:
                     raise InternalSWError("Edge parity detected twice - fix_edge_parity failed")
                 even_edge_parity_detected = True
@@ -286,7 +286,7 @@ class NxNSolverOrchestrator(AbstractSolver):
                 #
                 # The corner swap algorithm swaps diagonal corners on U face.
                 # Any diagonal swap fixes parity - only requirement is yellow up.
-                self.debug(f"Catch corner swap in iteration #{attempt}")
+                self.debug(lambda: f"Catch corner swap in iteration #{attempt}")
                 if corner_swap_detected:
                     raise InternalSWError("Corner parity detected twice - fix_corner_parity failed")
                 corner_swap_detected = True

@@ -171,7 +171,7 @@ class CommonOp(SolverHelper):
         if not silent:
             self.debug("Need to bring ", source, 'to', target.name)
 
-        with self.ann.annotate(h2=f"Bringing face {source.color_at_face_str} to {target.name.value}"):
+        with self.ann.annotate(h2=lambda: f"Bringing face {source.color_at_face_str} to {target.name.value}"):
             # Use CubeLayout's cached method to get the rotation algorithm
             alg = self.cube.layout.get_bring_face_alg(target.name, source.name).simplify()
             self.op.play(alg)

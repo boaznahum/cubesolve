@@ -71,7 +71,7 @@ class PLL(StepSolver):
         if description_alg is not None:
             # Found a PLL alg - apply it
             search_alg, description, alg = description_alg
-            self.debug(f"Found PLL alg '{description}' {alg}")
+            self.debug(lambda: f"Found PLL alg '{description}' {alg}")
             self.play((search_alg + alg).simplify())
             self._rotate_and_solve()  # because all our searching U
 
@@ -100,7 +100,7 @@ class PLL(StepSolver):
 
         search_alg, description, alg = description_alg
 
-        self.debug(f"Found PLL alg '{description}' {alg}")
+        self.debug(lambda: f"Found PLL alg '{description}' {alg}")
 
         self.play((search_alg + alg).simplify())
 
@@ -228,7 +228,7 @@ class PLL(StepSolver):
 
         alg = d_alg[1]
         description = d_alg[0]
-        self.debug(f"Found (raw) alg: {description} : {alg}")
+        self.debug(lambda: f"Found (raw) alg: {description} : {alg}")
 
         if isinstance(alg, str):
             alg = Algs.parse(alg, compat_3x3=True)

@@ -156,27 +156,27 @@ class _LBLL3Edges(SolverHelper):
         cube = self.cube
         target_wing = cube.fl.get_slice(target_index)
 
-        with self._logger.tab(f"Solving left edge Slice {target_wing.parent_name_index_colors_position}"):
+        with self._logger.tab(lambda: f"Solving left edge Slice {target_wing.parent_name_index_colors_position}"):
 
             # Skip if already solved
             if target_wing.match_faces:
-                self.debug(f"Wing {target_wing.parent_name_index_position} already solved")
+                self.debug(lambda: f"Wing {target_wing.parent_name_index_position} already solved")
                 return
 
             # Find all matching source wings (may be 1 or 2)
             assert l3t.face is cube.front  # that what _find_sources_for_target excepts
             source_wings = self._find_sources_for_target(l3t.parent, target_wing)
 
-            self.debug(f"Found {len(source_wings)} sources for {target_wing.parent_name_and_index}")
+            self.debug(lambda: f"Found {len(source_wings)} sources for {target_wing.parent_name_and_index}")
 
             # Try each source until one works
             for source_wing in source_wings:
                 self._dispatch_to_case_handler(l3t, source_wing, target_wing)
 
                 if target_wing.match_faces:
-                    self.debug(f"✅✅✅ Wing {target_wing.parent_name_index_colors_position} solved")
+                    self.debug(lambda: f"✅✅✅ Wing {target_wing.parent_name_index_colors_position} solved")
                 else:
-                    self.debug(f"‼️‼️‼️  Wing {target_wing.parent_name_index_colors_position} was solved")
+                    self.debug(lambda: f"‼️‼️‼️  Wing {target_wing.parent_name_index_colors_position} was solved")
 
                 # After handling, the target should be solved
                 # (future: could check and try next source if failed)
@@ -314,7 +314,7 @@ class _LBLL3Edges(SolverHelper):
 
         assert target.parent is cube.front.edge_left
 
-        with self._logger.tab(f"Case FR→FL: source={source.index}, target={ti}"):
+        with self._logger.tab(lambda: f"Case FR→FL: source={source.index}, target={ti}"):
             with source.tracker() as src_t:
                 # 1. Setup: Bring FD to BU (doesn't affect FL/FR/FU)
                 protect_bu_alg = self._protect_bu()
@@ -382,7 +382,7 @@ class _LBLL3Edges(SolverHelper):
         └───────┼─────────┼───────┘
         """
 
-        with self._logger.tab(f"Case FU→FL: source={source.parent_name_index_colors}, target={target.parent_name_index_colors_position}"):
+        with self._logger.tab(lambda: f"Case FU→FL: source={source.parent_name_index_colors}, target={target.parent_name_index_colors_position}"):
             with source.tracker() as src_t:
                 # 1. Setup: Bring FD to BU (doesn't affect FL/FU)
                 protect_bu_alg = self._protect_bu()
@@ -455,7 +455,7 @@ class _LBLL3Edges(SolverHelper):
         └───────┼─────────┼───────┘
         """
 
-        with self._logger.tab(f"Case FD→FL: source={_source.parent_name_index_colors_position}, target={target.parent_name_index_position}"):
+        with self._logger.tab(lambda: f"Case FD→FL: source={_source.parent_name_index_colors_position}, target={target.parent_name_index_position}"):
             # source is moved around !!
             with _source.tracker() as src_t:
                 # 1. F rotation - moves source FD → FL, target FL → FU
@@ -538,7 +538,7 @@ class _LBLL3Edges(SolverHelper):
         ti = target.index
         si = source.index
 
-        with self._logger.tab(f"Case FL→FL: source={si}, target={ti}"):
+        with self._logger.tab(lambda: f"Case FL→FL: source={si}, target={ti}"):
             with source.tracker() as src_t:
                 # 1. Setup: Bring FD to BU (doesn't affect FL)
                 protect_bu_alg = self._protect_bu()
