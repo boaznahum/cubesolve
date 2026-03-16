@@ -282,11 +282,9 @@ class NxNCenters(SolverHelper):
                 if self._is_face_solved(target_face, target_color):
                     continue
 
-                source_trackers = [ft for ft in faces if ft is not target_tracker]
-
                 # Dry-run: find best swap across all source faces (no cube rotation)
                 if not self._find_best_slice_swap(target_face, target_color,
-                                                  source_trackers,
+                                                  faces,
                                                   find_any=True):
                     continue
 
@@ -308,7 +306,7 @@ class NxNCenters(SolverHelper):
     def _find_best_slice_swap(
         self,
         target_face: Face, target_color: Color,
-        source_trackers: Iterable[FaceTracker],
+        faces: Iterable[FaceTracker],
         find_any: bool = False,
     ) -> tuple[Face, Color, Block, Block, int] | None:
         """Find the best slice swap across all source faces.
@@ -319,7 +317,7 @@ class NxNCenters(SolverHelper):
         Args:
             target_face: Face where content should arrive
             target_color: Target color for that face
-            source_trackers: Source face trackers to search (excludes target)
+            faces: All face trackers (target face is excluded automatically)
             find_any: If True, return first swap with grade > 1 (fast check)
 
         Returns:
@@ -332,7 +330,9 @@ class NxNCenters(SolverHelper):
         best_grade: int = 1
         best: tuple[Face, Color, Block, Block, int] | None = None
 
-        for source_tracker in source_trackers:
+        for source_tracker in faces:
+            if source_tracker.face is target_face:
+                continue
             source_face = source_tracker.face
             source_color = source_tracker.color
 
@@ -519,13 +519,11 @@ class NxNCenters(SolverHelper):
         Searches ALL source faces for the best swap, executes it, and repeats
         until no swap with grade > 1 exists.
         """
-        source_trackers = [ft for ft in faces if ft.face is not face]
-
         work_done: bool = False
 
         while True:
             result = self._find_best_slice_swap(
-                face, color, source_trackers
+                face, color, faces
             )
             if result is None:
                 return work_done
