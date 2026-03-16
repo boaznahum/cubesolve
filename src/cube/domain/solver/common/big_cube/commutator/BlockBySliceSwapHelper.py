@@ -17,6 +17,7 @@ from dataclasses import dataclass
 
 from cube.domain.algs import Algs, Alg
 from cube.domain.algs.SliceAlg import SliceAlg
+from cube.domain.algs.SliceAlgBase import SliceAlgBase
 from cube.domain.geometric.Face2FaceTranslator import (
     Face2FaceTranslator,
     FaceTranslationResult,
@@ -610,7 +611,7 @@ class BlockBySliceSwapHelper(SolverHelper):
         target_block: Block,
         on_face: FaceName,
         cuts_rows: bool,
-    ) -> SliceAlg:
+    ) -> SliceAlgBase:
         """Get the slice sub-algorithm covering the target block's range.
 
         For vertical slices (cuts_rows=True): uses the block's column range

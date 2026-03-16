@@ -121,6 +121,13 @@ class ClientSession:
         # Flow state machine — single source of truth for all flow control
         self._fsm: FlowStateMachine = FlowStateMachine()
 
+        # Edit mode state (declared before callback that references them)
+        self._edit_alg_text: str = ""  # remembered across open/close
+        self._edit_snapshot_history_len: int = 0
+        self._edit_snapshot_redo: list[Alg] | None = None
+        self._edit_ok_pending: bool = False  # exit editing when animations finish
+        self._edit_preview_text: str | None = None  # text currently previewed on cube (None = at snapshot)
+
         # Wire queue-drained callback: when AM finishes all animations for a
         # single redo/undo/face-turn, transition FSM from ANIMATING → READY/IDLE
         def _on_am_queue_drained() -> None:
@@ -147,16 +154,8 @@ class ClientSession:
         # Live console forwarding callback (added/removed on subscribe/unsubscribe)
         self._console_live_cb: Callable[[str], None] | None = None
 
-
         # Client count — set externally by SessionManager
         self._client_count: int = 0
-
-        # Edit mode state
-        self._edit_alg_text: str = ""  # remembered across open/close
-        self._edit_snapshot_history_len: int = 0
-        self._edit_snapshot_redo: list[Alg] | None = None
-        self._edit_ok_pending: bool = False  # exit editing when animations finish
-        self._edit_preview_text: str | None = None  # text currently previewed on cube (None = at snapshot)
 
     @property
     def app(self) -> "AbstractApp":
