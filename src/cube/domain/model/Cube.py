@@ -133,7 +133,7 @@ The model uses the BOY (Blue-Orange-Yellow) color scheme by default:
 - Back (B) = Green
 """
 
-from collections.abc import Generator, Iterable, MutableSequence
+from collections.abc import Generator, Iterable, Iterator, MutableSequence
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Collection, Protocol, Tuple
 
@@ -559,7 +559,7 @@ class Cube(CubeSupplier):
 
         This is called when any of these change:
         - has_visible_presentation
-        - set_in_query_mode()
+        - _set_in_query_mode()
         """
         self._is_moves_visible = (
             self._has_visible_presentation
@@ -600,7 +600,7 @@ class Cube(CubeSupplier):
         self._has_textures = value
         self._update_is_moves_visible()
 
-    def set_in_query_mode(self, value: bool) -> None:
+    def _set_in_query_mode(self, value: bool) -> None:
         """Set query mode and recompute visibility.
 
         Query mode is used when temporarily rotating the cube to check state
@@ -612,6 +612,24 @@ class Cube(CubeSupplier):
         """
         self._in_query_mode = value
         self._update_is_moves_visible()
+
+    @contextmanager
+    def with_query_mode(self) -> Iterator[None]:
+        """Context manager that enters query mode and restores on exit.
+
+        Usage::
+
+            with cube.with_query_mode():
+                # cube is in query mode here — texture updates skipped
+                ...
+            # query mode restored to previous state
+        """
+        was_in_query_mode = self._in_query_mode
+        self._set_in_query_mode(True)
+        try:
+            yield
+        finally:
+            self._set_in_query_mode(was_in_query_mode)
 
     def add_listener(self, listener: "CubeListener") -> None:
         """Register a listener to be notified of cube events.
@@ -1291,7 +1309,7 @@ class Cube(CubeSupplier):
         :return: indexes (of face and slices), neg slices, slice name
         """
 
-        if not _slices:
+        if _slices is None:
             _slices = [0]
 
         size = self.size

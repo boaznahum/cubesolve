@@ -519,29 +519,28 @@ class Operator(OperatorProtocol):
         cube = self._cube
 
         # Save original states
-        was_in_query_mode = cube._in_query_mode
         history_len_before = len(self._history)
         saved_redo_queue = [*self._redo_queue]
 
-        # CLAUDE [#8]: move the query mode context manager to cube itself, this is not OOP programming
-        cube._in_query_mode = True
-
         with self.with_animation(animation=False):
-            try:
-                yield None
-            finally:
-                # Rollback: undo all moves made during query
-                while len(self._history) > history_len_before:
-                    self.undo(animation=False)
+            with cube.with_query_mode():
+                try:
+                    yield None
+                finally:
+                    # Rollback: undo all moves made during query.
+                    # Must run inside query mode — undo triggers cube rotations,
+                    # and query mode skips texture updates for performance.
+                    while len(self._history) > history_len_before:
+                        self.undo(animation=False)
 
-                # Restore redo queue — undo() above pollutes it with query moves
-                self._redo_queue[:] = saved_redo_queue
+                    # Restore redo queue — undo() above pollutes it with query moves
+                    self._redo_queue[:] = saved_redo_queue
 
-                cube._in_query_mode = was_in_query_mode
-
-                # Restore buffer state
-                self._buffer = saved_buffer
-                self._buffer_depth = saved_depth
+            # Query mode restored above by context manager exit.
+            # Buffer restore is outside query mode but inside animation-off context,
+            # matching the original order: undo → redo queue → query mode → buffer.
+            self._buffer = saved_buffer
+            self._buffer_depth = saved_depth
 
     @property
     def is_animation_running(self):
