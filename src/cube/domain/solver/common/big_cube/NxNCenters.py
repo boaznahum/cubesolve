@@ -266,8 +266,8 @@ class NxNCenters(SolverHelper):
         """Phase 1: Exhaust all full-slice swaps globally before commutators.
 
         Iterates by color (stable) instead of face (unstable after rotations).
-        Only brings face to front when a swap with grade > 1 actually exists,
-        avoiding unnecessary cube rotations.
+        For each unsolved target face, finds the best swap across ALL source
+        faces, brings to front only when work exists, and repeats.
         """
         if not self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES:
             return
@@ -285,63 +285,85 @@ class NxNCenters(SolverHelper):
                 if self._is_face_solved(target_face, target_color):
                     continue
 
-                for source_tracker in faces:
-                    if source_tracker is target_tracker:
-                        continue
+                source_trackers = [ft for ft in faces if ft is not target_tracker]
 
-                    source_face = source_tracker.face
-                    source_color: Color = source_tracker.color
+                # Dry-run: find best swap across all source faces (no cube rotation)
+                if not self._find_best_slice_swap(target_face, target_color,
+                                                  source_trackers, all_slices, nn,
+                                                  find_any=True):
+                    continue
 
-                    if self.count_color_on_face(source_face, target_color) == 0:
-                        continue
+                # Work exists — bring to front and execute
+                self.cmn.bring_face_front(target_face)
+                # After rotation, re-resolve faces from trackers
+                target_face = target_tracker.face
 
-                    # Dry-run: check if any grade > 1 swap exists (no cube rotation)
-                    if not self._has_slice_swap(target_face, target_color,
-                                               source_face, source_color,
-                                               all_slices, nn):
-                        continue
+                with self.ann.annotate(h2=f"{target_color.long} face"):
+                    if self._do_complete_slices(holder, target_color,
+                                                target_face, faces):
+                        any_work = True
 
-                    # Work exists — bring to front and execute
-                    self.cmn.bring_face_front(target_face)
-                    # After rotation, re-resolve faces from trackers
-                    target_face = target_tracker.face
-                    source_face = source_tracker.face
-
-                    with self.ann.annotate(h2=f"{target_color.long} face"):
-                        if self._do_complete_slices(holder, target_color,
-                                                    target_face, source_face):
-                            any_work = True
-
-                    self._asserts_is_boy(faces)
-
-                    if self._is_face_solved(target_face, target_color):
-                        break  # this target is done, try next
+                self._asserts_is_boy(faces)
 
             if not any_work:
                 return
 
-    def _has_slice_swap(self, target_face: Face, target_color: Color,
-                        source_face: Face, source_color: Color,
-                        all_slices: list[Block], nn: int) -> bool:
-        """Check if any slice swap with grade > 1 exists (dry run, no execution)."""
-        for ts in all_slices:
-            combos = self._bsh.get_all_combinations(
-                source_face, target_face, ts,
-                undo_target_setup=self._preserve_cage,
-                undo_source_setup=self._preserve_cage,
-            )
-            if not combos:
+    def _find_best_slice_swap(
+        self,
+        target_face: Face, target_color: Color,
+        source_trackers: Iterable[FaceTracker],
+        all_slices: list[Block], nn: int,
+        find_any: bool = False,
+    ) -> tuple[Face, Color, Block, Block, int] | None:
+        """Find the best slice swap across all source faces.
+
+        Searches all source faces × all target slices × 4 rotations for the
+        swap with the highest grade.
+
+        Args:
+            target_face: Face where content should arrive
+            target_color: Target color for that face
+            source_trackers: Source face trackers to search (excludes target)
+            all_slices: Precomputed slice blocks
+            nn: Center grid size (n_slices)
+            find_any: If True, return first swap with grade > 1 (fast check)
+
+        Returns:
+            (source_face, source_color, target_block, source_block, grade)
+            or None if no swap with grade > 1 exists.
+        """
+        best_grade: int = 1
+        best: tuple[Face, Color, Block, Block, int] | None = None
+
+        for source_tracker in source_trackers:
+            source_face = source_tracker.face
+            source_color = source_tracker.color
+
+            if self.count_color_on_face(source_face, target_color) == 0:
                 continue
-            natural: Block = combos[0].natural_source.main
-            for rot in range(4):
-                ss: Block = natural.rotate_clockwise(nn, (-rot) % 4)
-                grade: int = self._compute_swap_grade(
-                    target_face, ts, target_color,
-                    source_face, ss, source_color,
+
+            for ts in all_slices:
+                combos = self._bsh.get_all_combinations(
+                    source_face, target_face, ts,
+                    undo_target_setup=self._preserve_cage,
+                    undo_source_setup=self._preserve_cage,
                 )
-                if grade > 1:
-                    return True
-        return False
+                if not combos:
+                    continue
+                natural: Block = combos[0].natural_source.main
+                for rot in range(4):
+                    ss: Block = natural.rotate_clockwise(nn, (-rot) % 4)
+                    grade: int = self._compute_swap_grade(
+                        target_face, ts, target_color,
+                        source_face, ss, source_color,
+                    )
+                    if grade > best_grade:
+                        best_grade = grade
+                        best = (source_face, source_color, ts, ss, grade)
+                        if find_any:
+                            return best
+
+        return best
 
     def _do_faces(self, tracker_holder: "FacesTrackerHolder", faces: Sequence[FaceTracker]) -> bool:
         self.debug( "_do_faces:", *faces, level=3)
@@ -444,12 +466,12 @@ class NxNCenters(SolverHelper):
 
     def _do_center_from_face_direct(self, tracker_holder: "FacesTrackerHolder", face: Face,
                                      color: Color,
-                                     source_face: Face, faces: Iterable[FaceTracker]) -> bool:
+                                     source_face: Face, faces: list[FaceTracker]) -> bool:
         """
         Bring correct colored pieces from source_face to target face.
 
         Works with ANY source face. Does everything for that source:
-        1. Complete slice swaps (UP/DOWN/BACK — M-axis faces)
+        1. Complete slice swaps (all source faces — finds global best)
         2. Block commutators (all faces)
         3. 1x1 commutators fallback (all faces)
 
@@ -467,9 +489,9 @@ class NxNCenters(SolverHelper):
         work_done = False
         center = face.center
 
-        # Complete slice swaps — BlockBySliceSwapHelper supports ALL face pairs
+        # Complete slice swaps — searches ALL source faces for global best
         if self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES:
-            if self._do_complete_slices(tracker_holder, color, face, source_face):
+            if self._do_complete_slices(tracker_holder, color, face, faces):
                 work_done = True
 
         if self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_BLOCKS:
@@ -494,73 +516,34 @@ class NxNCenters(SolverHelper):
         return work_done
 
     def _do_complete_slices(self, tracker_holder: "FacesTrackerHolder", color: Color,
-                            face: Face, source_face: Face) -> bool:
-        """Find and execute the best complete slice swaps between target and source faces.
+                            face: Face, faces: list[FaceTracker]) -> bool:
+        """Find and execute the best complete slice swaps for a target face.
 
-        For each target slice block, uses BSH dry_run to find the natural source,
-        then grades all 4 rotations of the source face to find the best content.
-        Picks the globally best swap, executes it, and repeats until no swap
-        with grade > 1 exists.
+        Searches ALL source faces for the best swap, executes it, and repeats
+        until no swap with grade > 1 exists.
         """
         nn: int = self.cube.n_slices
-
-        # Get source face's target color
-        source_color: Color = self._get_face_color(tracker_holder, source_face)
-
-        # Generate all full-slice blocks (skip middle on odd cubes)
         all_slices: list[Block] = self._generate_all_slice_blocks(nn)
 
-        # Precompute natural source for each target slice (geometry doesn't change)
-        target_natural_pairs: list[tuple[Block, Block]] = []
-        for ts in all_slices:
-            combos = self._bsh.get_all_combinations(
-                source_face, face, ts,
-                undo_target_setup=self._preserve_cage,
-                undo_source_setup=self._preserve_cage,
-            )
-            if combos:
-                natural: Block = combos[0].natural_source.main
-                target_natural_pairs.append((ts, natural))
+        source_trackers = [ft for ft in faces if ft.face is not face]
 
         work_done: bool = False
-        max_iterations: int = nn * nn
-        iterations: int = 0
 
         while True:
-            # Find the best swap across all target slices × 4 source rotations
-            best_grade: int = 1  # minimum threshold (ignore grade <= 1)
-            best_target: Block | None = None
-            best_source: Block | None = None
-
-            for ts, natural in target_natural_pairs:
-                for rot in range(4):
-                    ss: Block = natural.rotate_clockwise(nn, (-rot) % 4)
-                    grade: int = self._compute_swap_grade(
-                        face, ts, color,
-                        source_face, ss, source_color,
-                    )
-                    if grade > best_grade:
-                        best_grade = grade
-                        best_target = ts
-                        best_source = ss
-
-            if best_target is None:
+            result = self._find_best_slice_swap(
+                face, color, source_trackers, all_slices, nn
+            )
+            if result is None:
                 return work_done
 
-            # Execute the best swap — annotate matching pieces on both sides
-            assert best_source is not None  # always set when best_target is set
-            _bt: Block = best_target
-            _bs: Block = best_source
-            _tf: Face = face
-            _sf: Face = source_face
-            _tc: Color = color
-            _sc: Color = source_color
+            source_face, source_color, target_block, source_block, best_grade = result
+
+            # Capture for annotation closures
+            _bt, _bs = target_block, source_block
+            _tf, _sf = face, source_face
+            _tc, _sc = color, source_color
 
             def _ann_moved() -> Iterator["CenterSlice"]:
-                """Yield pieces that will be correct after swap (lazy).
-
-                Source pieces matching target_color + target pieces matching source_color.
-                """
                 for pt in _bs.cells:
                     cs = _sf.center.get_center_slice(pt)
                     if cs.color == _tc:
@@ -571,10 +554,6 @@ class NxNCenters(SolverHelper):
                         yield cs
 
             def _ann_fixed() -> Iterator["CenterSlice"]:
-                """Yield destination positions (lazy).
-
-                All target block positions + source pieces already matching source_color.
-                """
                 for pt in _bt.cells:
                     yield _tf.center.get_center_slice(pt)
                 for pt in _bs.cells:
@@ -591,22 +570,16 @@ class NxNCenters(SolverHelper):
                     self._bsh.execute_swap(
                         source_face=source_face,
                         target_face=face,
-                        target_block=best_target,
-                        source_block=best_source,
+                        target_block=target_block,
+                        source_block=source_block,
                         undo_target_setup=self._preserve_cage,
                         undo_source_setup=self._preserve_cage,
                     )
 
-            # Track slice swap statistics
             self._slice_stats.get_topic(self.SLICE_SWAP_KEY).add_swap(
                 grade=best_grade, nn=nn,
             )
-
             work_done = True
-            iterations += 1
-            assert iterations <= max_iterations, (
-                f"Bug: too many slice swap iterations ({iterations}) for nn={nn}"
-            )
 
     def _compute_swap_grade(
         self,
@@ -658,13 +631,6 @@ class NxNCenters(SolverHelper):
 
         return blocks
 
-    @staticmethod
-    def _get_face_color(tracker_holder: "FacesTrackerHolder", face: Face) -> Color:
-        """Get the target color for a face from the tracker holder."""
-        for ft in tracker_holder:
-            if ft.face is face:
-                return ft.color
-        raise InternalSWError(f"No tracker for face {face.name}")
 
     def _do_blocks(self, tracker_holder: "FacesTrackerHolder", color: Color, face: Face, source_face: Face, faces: Iterable[FaceTracker]) -> bool:
         """
