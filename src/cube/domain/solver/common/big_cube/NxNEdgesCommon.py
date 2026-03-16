@@ -19,10 +19,12 @@ class NxNEdgesCommon(SolverHelper):
 
     D_LEVEL = 3
 
-    def __init__(self, slv: SolverElementsProvider, advanced_edge_parity: bool) -> None:
+    def __init__(self, slv: SolverElementsProvider, advanced_edge_parity: bool,
+                 preserve_other_edges: bool = False) -> None:
         super().__init__(slv, "NxNEdgesCommon")
         self._logger.set_level(NxNEdgesCommon.D_LEVEL)
         self._advanced_edge_parity = advanced_edge_parity
+        self._preserve_other_edges = preserve_other_edges
 
 
     def _is_solved(self):
@@ -280,6 +282,9 @@ class NxNEdgesCommon(SolverHelper):
             # bring them back
             self.op.play(slice_alg.prime)  # move me to opposite E begin from D, slice begin with 1
 
+            if self._preserve_other_edges:
+                self.op.play(self.rf.prime)
+
         for i in slices_to_fix:
             assert self.get_slice_ordered_color(face, edge.get_slice(inv(i))) == ordered_color
 
@@ -310,10 +315,15 @@ class NxNEdgesCommon(SolverHelper):
                 # ok now do for all that color order match
                 # is there one that can be sliced ?
 
+                rf: Alg | None = None
                 if not any(self.get_slice_ordered_color(face, s) == ordered_color for s in edge_right.all_slices):
-                    self.op.play(self.rf)
+                    rf = self.rf
+                    self.op.play(rf)
 
                 self._fix_many_from_other_edges_same_order(face, edge, ordered_color, color_un_ordered)
+
+                if rf is not None and self._preserve_other_edges:
+                    self.op.play(rf.prime)
 
     def _fix_many_from_other_edges_same_order(self, face: Face, edge: Edge, ordered_color: Tuple[Color, Color],
                                               color_un_ordered: PartColorsID):
@@ -386,6 +396,9 @@ class NxNEdgesCommon(SolverHelper):
             self.op.play(self.rf)
             # for target_index in target_indices:
             self.op.play(slice_alg.prime)
+
+            if self._preserve_other_edges:
+                self.op.play(self.rf.prime)
 
         for target_index in target_indices:
             assert self.get_slice_ordered_color(face, edge.get_slice(target_index)) == ordered_color
