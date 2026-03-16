@@ -688,13 +688,12 @@ class NxNCenters(SolverHelper):
 
         return x and slice__color == color
 
-    def _get_four_center_points(self, r, c) -> Iterator[Tuple[int, int]]:
-
-        inv = self.cube.inv
-
-        for _ in range(4):
-            yield r, c
-            (r, c) = (c, inv(r))
+    def _get_four_center_points(self, r: int, c: int) -> Iterator[Point]:
+        from cube.domain.geometric.geometry_utils import rotate_point_clockwise
+        n_slices = self.cube.n_slices
+        pt = Point(r, c)
+        for rot in range(4):
+            yield rotate_point_clockwise(pt, n_slices, rot)
 
     def _block_commutator(self,
                             tracker_holder: "FacesTrackerHolder",
