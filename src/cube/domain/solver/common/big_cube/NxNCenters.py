@@ -272,9 +272,6 @@ class NxNCenters(SolverHelper):
         if not self._OPTIMIZE_BIG_CUBE_CENTERS_SEARCH_COMPLETE_SLICES:
             return
 
-        nn: int = self.cube.n_slices
-        all_slices: list[Block] = self._generate_all_slice_blocks(nn)
-
         while True:
             any_work: bool = False
 
@@ -289,7 +286,7 @@ class NxNCenters(SolverHelper):
 
                 # Dry-run: find best swap across all source faces (no cube rotation)
                 if not self._find_best_slice_swap(target_face, target_color,
-                                                  source_trackers, all_slices, nn,
+                                                  source_trackers,
                                                   find_any=True):
                     continue
 
@@ -312,7 +309,6 @@ class NxNCenters(SolverHelper):
         self,
         target_face: Face, target_color: Color,
         source_trackers: Iterable[FaceTracker],
-        all_slices: list[Block], nn: int,
         find_any: bool = False,
     ) -> tuple[Face, Color, Block, Block, int] | None:
         """Find the best slice swap across all source faces.
@@ -324,14 +320,15 @@ class NxNCenters(SolverHelper):
             target_face: Face where content should arrive
             target_color: Target color for that face
             source_trackers: Source face trackers to search (excludes target)
-            all_slices: Precomputed slice blocks
-            nn: Center grid size (n_slices)
             find_any: If True, return first swap with grade > 1 (fast check)
 
         Returns:
             (source_face, source_color, target_block, source_block, grade)
             or None if no swap with grade > 1 exists.
         """
+        nn: int = self.cube.n_slices
+        all_slices: list[Block] = self._generate_all_slice_blocks(nn)
+
         best_grade: int = 1
         best: tuple[Face, Color, Block, Block, int] | None = None
 
@@ -522,16 +519,13 @@ class NxNCenters(SolverHelper):
         Searches ALL source faces for the best swap, executes it, and repeats
         until no swap with grade > 1 exists.
         """
-        nn: int = self.cube.n_slices
-        all_slices: list[Block] = self._generate_all_slice_blocks(nn)
-
         source_trackers = [ft for ft in faces if ft.face is not face]
 
         work_done: bool = False
 
         while True:
             result = self._find_best_slice_swap(
-                face, color, source_trackers, all_slices, nn
+                face, color, source_trackers
             )
             if result is None:
                 return work_done
