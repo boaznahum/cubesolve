@@ -6,7 +6,6 @@ from cube.domain.exceptions import InternalSWError
 from cube.domain.model import Color, Edge, EdgeWing, PartColorsID
 from cube.domain.model.Face import Face
 from cube.domain.model.ModelHelper import ModelHelper
-from cube.domain.tracker._face_trackers import FaceTracker
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.CommonOp import EdgeSliceTracker
 from cube.domain.solver.common.SolverHelper import SolverHelper
@@ -15,8 +14,6 @@ from cube.utils.OrderedSet import OrderedSet
 
 
 class NxNEdgesCommon(SolverHelper):
-    work_on_b: bool = True
-
     D_LEVEL = 3
 
     def __init__(self, slv: SolverElementsProvider, advanced_edge_parity: bool,
@@ -64,58 +61,6 @@ class NxNEdgesCommon(SolverHelper):
 
             return True
 
-    def solve_face_edges(self, face_tracker: FaceTracker) -> bool:
-        """Solve only the 4 edges that contain a specific color.
-
-        Used by layer-by-layer solver to solve one layer's edges at a time.
-
-        Args:
-            face_tracker: FaceTracker for the target face (tracks by color).
-
-        Returns:
-            True if edge parity was performed, False otherwise.
-
-        Note:
-            Finds edges by COLOR (e.g., all edges containing WHITE for white cross),
-            not by position. This is correct because after centers are solved,
-            the cross edges may be scattered across the cube.
-        """
-        # Find the 4 edges that contain the target color (by color, not position!)
-        # For white cross: finds edges with WHITE in their colors_id
-        target_color = face_tracker.color
-        target_edges_by_color = [e for e in self.cube.edges if target_color in e.colors_id]
-
-        assert len(target_edges_by_color) == 4, \
-            f"Expected 4 edges with {target_color}, found {len(target_edges_by_color)}"
-
-        # Check if all target edges are already solved (paired)
-        if all(e.is3x3 for e in target_edges_by_color):
-            return False
-
-        with self.ann.annotate(h1=f"Edges for {target_color.name}"):
-            parity_done = False
-            while True:
-                # Find unsolved edges containing target color (re-query each iteration)
-                unsolved = [e for e in self.cube.edges
-                           if target_color in e.colors_id and not e.is3x3]
-                if not unsolved:
-                    break
-
-                # Check if this is the LAST unsolved edge in the WHOLE cube
-                # (parity can only happen when all other 11 edges are solved)
-                total_cube_unsolved = sum(1 for e in self.cube.edges if not e.is3x3)
-                if total_cube_unsolved == 1 and len(unsolved) == 1:
-                    # Last edge in whole cube AND it's one of our targets - parity
-                    self._do_last_edge_parity()
-                    parity_done = True
-                    continue
-
-                # Solve one edge
-                edge = unsolved[0]
-                self._do_edge(edge)
-
-            return parity_done
-
     def _do_first_11(self):
         """
 
@@ -148,10 +93,6 @@ class NxNEdgesCommon(SolverHelper):
             return False
         else:
             self.debug( f"Need to work on Edge {edge} ", level=3)
-
-        # if self._left_to_fix < 2:
-        #     self.debug( f"But I can't continue because I'm the last {edge} ", level=3)
-        #     return False
 
         # find needed color
         n_slices = self.cube.n_slices
@@ -390,11 +331,8 @@ class NxNEdgesCommon(SolverHelper):
 
             slice_alg = Algs.EE[[i + 1 for i in target_indices]]
 
-            # for target_index in target_indices:
-            #     # slice me
             self.op.play(slice_alg)  # slice begin with 1
             self.op.play(self.rf)
-            # for target_index in target_indices:
             self.op.play(slice_alg.prime)
 
             if self._preserve_other_edges:
@@ -409,8 +347,6 @@ class NxNEdgesCommon(SolverHelper):
 
         assert self._left_to_fix == 1
 
-        # self.op.toggle_animation_on()
-        # still don't know how to handle
         cube = self.cube
 
         edge = self.cqr.find_edge(cube.edges, lambda e: not e.is3x3)
@@ -435,9 +371,6 @@ class NxNEdgesCommon(SolverHelper):
                 assert edge is cube.fl
                 self.op.play(Algs.F)
 
-                # not true on even, edge is OK
-                # assert CubeQueries.find_edge(cube.edges, lambda e: not e.is3x3) is face.edge_top
-
                 edge = tracer.the_slice_nl.parent
                 assert edge is face.edge_top
                 edge = cube.front.edge_top
@@ -459,7 +392,6 @@ class NxNEdgesCommon(SolverHelper):
 
                 s = edge.get_slice(i)
                 color = self.get_slice_ordered_color(face, s)
-                # print(f"{i} ,{required_color}, {color}")
                 if color != required_color:
                     slices_indices_to_fix.append(i)
                     slices_to_fix.append(s)
@@ -470,7 +402,6 @@ class NxNEdgesCommon(SolverHelper):
             if n_slices % 2 == 0 and _all:
                 ann += "(Full even)"
 
-            # self.op.toggle_animation_on(enable=True)
             with self.ann.annotate((slices_to_fix, AnnWhat.Moved), h1=ann):
                 # slices are from [1 nn], so we need to add 1
                 # actually, simple alg doesn't care if we fix i or inv(i), because on
@@ -510,13 +441,12 @@ class NxNEdgesCommon(SolverHelper):
 
     @staticmethod
     def get_slice_ordered_color(f: Face, s: EdgeWing) -> Tuple[Color, Color]:
-        """
-        claud:document this method
-        :param f:
-        :param s:
-        :return:  (on face color, on_other color)
-        """
+        """Get the ordered color pair of a slice relative to a face.
 
+        :param f: The face to determine ordering from
+        :param s: The edge wing slice
+        :return: (color on face f, color on the other face)
+        """
         return s.get_face_edge(f).color, s.get_other_face_edge(f).color
 
     @staticmethod

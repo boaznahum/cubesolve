@@ -12,8 +12,6 @@ from cube.domain.solver.protocols import SolverElementsProvider
 
 
 class NxNEdges(SolverHelper):
-    work_on_b: bool = True
-
     D_LEVEL = 3
 
     def __init__(self, slv: SolverElementsProvider,
@@ -21,8 +19,6 @@ class NxNEdges(SolverHelper):
                  preserve_other_edges: bool = False) -> None:
         super().__init__(slv, "NxNEdges")
         self._logger.set_level(NxNEdges.D_LEVEL)
-        self._advanced_edge_parity = advanced_edge_parity
-        self._preserve_other_edges = preserve_other_edges
         self._edges_common = NxNEdgesCommon(slv, advanced_edge_parity, preserve_other_edges)
 
 
@@ -114,10 +110,6 @@ class NxNEdges(SolverHelper):
             return False
         else:
             self.debug( f"Need to work on Edge {edge} ", level=3)
-
-        # if self._edges_common._left_to_fix < 2:
-        #     self.debug( f"But I can't continue because I'm the last {edge} ", level=3)
-        #     return False
 
         # find needed color
         n_slices = self.cube.n_slices
