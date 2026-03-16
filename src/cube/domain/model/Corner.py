@@ -53,28 +53,6 @@ class Corner(Part):
         """
         return Corner(self._slice.clone())
 
-    def replace_colors(self, on_face: _Face,
-                       source: "Corner",
-                       source_2: _Face, target_2: _Face,
-                       source_3: _Face, target_3: _Face,
-                       ):
-        """
-        Replace the colors of this corner with the colors from source
-        Find the edge part contains on_face both in self and the other face,
-        replaces the edge part color on on_face with the matched color from source
-
-        We assume that both source and self are belonged to on_face.
-        :param target_3:
-        :param source_3:
-        :param target_2:
-        :param source_2:
-        :param on_face:
-        :param source:
-        :return:
-        """
-
-        self._replace_colors(source, (on_face, on_face), (source_2, target_2), (source_3, target_3))
-
     def get_other_faces_color(self, face: _Face) -> Tuple[Color, Color]:
 
         edges = self._slice.edges

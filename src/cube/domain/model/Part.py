@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator, Sequence
-from typing import TYPE_CHECKING, Self, Tuple, TypeVar
+from typing import TYPE_CHECKING, Self, TypeVar
 if sys.version_info >= (3, 13):
     from warnings import deprecated
 else:
@@ -231,41 +231,6 @@ class Part(ABC, CubeElement):
 
     def __repr__(self):
         return self.__str__()
-
-    def _replace_colors(self, source_part: "Part", *source_dest: Tuple[_Face, _Face],
-                        index: SliceIndex | None = None,
-                        source_index: SliceIndex | None = None):
-
-        """
-        Replace the colors of this edge with the colors from source
-        Find the edge part contains source_dest[i][0] and copy it to
-        edge part that matches source_dest[i][0]
-
-        :param source:
-        :return:
-        """
-
-        if source_index is None:
-            source_index = index
-
-        source_slices: Iterable[PartSlice]
-        dest_slices: Iterable[PartSlice]
-
-        source_slices = source_part.get_slices(source_index)
-        dest_slices = self.get_slices(index)
-
-        # without that they below doesn't work, it doesn't iterate all
-        # slice rotate doesn't work
-        source_slices = [*source_slices]
-        dest_slices = [*dest_slices]
-
-        source_slice: PartSlice
-        target_slice: PartSlice
-
-        for source_slice, target_slice in zip(source_slices, dest_slices):
-            target_slice.copy_colors(source_slice, *source_dest)
-
-        self.reset_colors_id()
 
     @deprecated("Use face_color")
     def f_color(self, f: _Face):

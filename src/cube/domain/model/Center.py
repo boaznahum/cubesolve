@@ -136,12 +136,6 @@ class Center(Part, Colorable):
 
         return Center(_slices, face=self._face_ref)
 
-    def copy_colors(self, other: "Center",
-                    index: CenterSliceIndex | None = None,
-                    source_index: CenterSliceIndex | None = None):
-        # self._edges[0].copy_color(other.edg())
-        self._replace_colors(other, (other.face, self.face), index=index, source_index=source_index)
-
     def __str__(self):
         if not self._slices:
             return f"Center({self.face.name}:empty)"

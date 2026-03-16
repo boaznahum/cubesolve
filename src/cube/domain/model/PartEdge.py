@@ -19,7 +19,7 @@ class PartEdge(Colorable):
     The smallest unit of the cube model, representing a single colored sticker.
 
     Each PartEdge belongs to exactly one Face and is aggregated by a PartSlice.
-    The color can change during rotations (via copy_color), but the face reference
+    The color can change during rotations (via rotate_4cycle), but the face reference
     is fixed - representing the physical slot position.
 
     TWO ATTRIBUTE DICTIONARIES
@@ -35,7 +35,7 @@ class PartEdge(Colorable):
 
     2. ``moveable_attributes`` - Color-Associated (MOVES with color)
        - Attributes that travel with the colored sticker during rotations
-       - COPIED during copy_color() method
+       - ROTATED during rotate_4cycle() method
        - Keys: "n" (sequential number), tracker keys, "markers" list
        - Use case: Track a specific piece as it moves around the cube
        - Example: FaceTracker puts a key here to find a piece after rotation
@@ -111,38 +111,10 @@ class PartEdge(Colorable):
         else:
             return f"{self._color.name}@{self._face}"
 
-    def copy_color(self, source: "PartEdge"):
-        """
-        Copy color and color-associated attributes from source.
-
-        This is the core rotation mechanic - colors move between physical slots.
-        Called by PartSlice.copy_colors() during face rotation.
-
-        What gets COPIED:
-        - _color: The actual sticker color
-        - _annotated_by_color: Color-based annotation flag
-        - moveable_attributes: All color-associated attributes (cleared then updated)
-
-        What is NOT copied (stays at this slot):
-        - _face: Physical face reference
-        - fixed_attributes: Fixed slot properties (structural + runtime markers)
-
-        This distinction enables:
-        - Tracking pieces: Put marker in moveable_attributes, it follows the color
-        - Marking destinations: Put marker in fixed_attributes, it stays put
-
-        See: design2/partedge-attribute-system.md for visual diagrams
-        """
-        self._color = source._color
-        self._annotated_by_color = source._annotated_by_color
-        self._texture_direction = source._texture_direction
-        self.moveable_attributes.clear()
-        self.moveable_attributes.update(source.moveable_attributes)
-
     def clone(self) -> "PartEdge":
-        """
-        Used as temporary for rotate, must not be used in cube
-        :return:
+        """Create a shallow copy for shadow cube creation.
+
+        The cloned PartEdge must not be inserted into the original cube.
         """
         p = PartEdge(self._face, self._color)
         p._annotated_by_color = self._annotated_by_color
@@ -204,7 +176,7 @@ class PartEdge(Colorable):
 
         Performance: O(1) for moveable_attributes instead of O(K) where K = number of attributes.
 
-        The cycle direction matches the copy_color pattern:
+        The cycle direction:
         - p0 receives p1's color data
         - p1 receives p2's color data
         - p2 receives p3's color data

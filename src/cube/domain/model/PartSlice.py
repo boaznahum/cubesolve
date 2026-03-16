@@ -5,7 +5,7 @@ import sys
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from collections.abc import Hashable, MutableSequence, Sequence
-from typing import TYPE_CHECKING, Any, Generic, Self, Tuple, TypeAlias, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Self, TypeAlias, TypeVar
 
 from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
@@ -165,37 +165,6 @@ class PartSlice(ABC, Generic[_TPartType], Hashable):
 
     def __repr__(self):
         return self.__str__()
-
-    def copy_colors(self, source_slice: "PartSlice", *source_dest: Tuple[_Face, _Face]):
-
-        """
-        Replace the colors of this edge with the colors from source
-        Find the edge part contains source_dest[i][0] and copy it to
-        edge part that matches source_dest[i][0]
-
-        :param source_slice:
-        :return:
-        """
-
-        assert len(source_dest) == len(self._edges)
-        source: _Face
-        target: _Face
-        for source, target in source_dest:
-            source_edge: PartEdge = source_slice.get_face_edge(source)
-            target_edge: PartEdge = self.get_face_edge(target)
-
-            target_edge.copy_color(source_edge)
-
-        self._unique_id = source_slice._unique_id
-        # this is critical for 3x3
-        parent = self._parent
-        assert parent
-        parent.reset_colors_id()
-
-        self.reset_colors_id()
-
-        self.moveable_attributes.clear()
-        self.moveable_attributes.update(source_slice.moveable_attributes)
 
     def clear_moveable_attributes(self) -> None:
         """Clear color-associated attributes from this slice and all its edges."""
@@ -606,48 +575,6 @@ class EdgeWing(PartSlice["Edge"]):
 
         return self.get_other_face_edge(f).face
 
-    def copy_colors_horizontal(self,
-                               source: "EdgeWing"):
-        """
-        Copy from edge - copy from shared face
-        self and the source assume to share a face
-
-        source_other_face, shared_face --> this_other_face, shared_face
-
-        other |__ __| other
-              shared, shared,
-
-
-        :param source
-        """
-
-        shared_face = self.single_shared_face(source)
-        source_other = source.get_other_face(shared_face)
-        dest_other = self.get_other_face(shared_face)
-
-        self.copy_colors(source, (shared_face, shared_face), (source_other, dest_other))
-
-    def copy_colors_ver(self,
-                        source: "EdgeWing"):
-        """
-        Copy from vertical-edge - copy from another face,
-        self and source assume to share a face
-
-        Other |__     __|  other
-              shared,  shared
-
-        Source_other_face, shared_face  --> shared_face,this_other_face,
-
-        :param source
-        """
-
-        shared_face = self.single_shared_face(source)
-        source_other = source.get_other_face(shared_face)
-        dest_other = self.get_other_face(shared_face)
-
-        self.copy_colors(source, (source_other, shared_face),
-                         (shared_face, dest_other))
-
     # Note: parent property is now type-safe via PartSlice["Edge"] generic.
     # No need to override - base class returns Edge type directly.
 
@@ -727,10 +654,6 @@ class CenterSlice(PartSlice["Center"]):
     @property
     def face(self) -> _Face:
         return self.edge.face
-
-    def copy_center_colors(self, other: "CenterSlice"):
-        # self._edges[0].copy_color(other.edg())
-        self.copy_colors(other, (other.face, self.face))
 
     @property
     def colors(self) -> PartSliceColors:
