@@ -17,6 +17,7 @@ from cube.application.commands.Operator import Operator
 from cube.application.config_impl import AppConfig
 from cube.application.state import ApplicationAndViewState
 from cube.domain.algs import Algs
+from cube.domain.algs.Scramble import scramble
 from cube.domain.solver import Solvers
 from cube.domain.solver.SolverName import SolverName
 from tests.test_utils import _test_sp
@@ -205,7 +206,7 @@ class CubeTestDriver:
         Returns:
             self for chaining
         """
-        scramble_alg = Algs.scramble(self.cube.size, seed=seed)
+        scramble_alg = scramble(self.cube.size, seed=seed)
         self.operator.play(scramble_alg)
         return self
 

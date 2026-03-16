@@ -20,6 +20,7 @@ import pytest
 
 from cube.application.AbstractApp import AbstractApp
 from cube.domain.algs import Algs
+from cube.domain.algs.Scramble import scramble
 
 
 # =============================================================================
@@ -204,10 +205,10 @@ def test_scramble_round_trip(seed: int, cube_size: int) -> None:
     verify they produce the same state.
     """
     # Generate scramble
-    scramble = Algs.scramble(cube_size, seed, seq_length=20)
+    scramble_alg = scramble(cube_size, seed, n=20)
 
     # Use to_printable() to get parseable version (without {name})
-    printable = scramble.to_printable()
+    printable = scramble_alg.to_printable()
 
     # Parse back
     parsed = Algs.parse(str(printable))
@@ -236,23 +237,23 @@ def test_scramble_round_trip(seed: int, cube_size: int) -> None:
 def test_scramble_same_cube_state(seed: int, cube_size: int) -> None:
     """Test that original and parsed scramble produce same cube state."""
     # Generate scramble
-    scramble = Algs.scramble(cube_size, seed, seq_length=20)
+    scramble_alg = scramble(cube_size, seed, n=20)
 
     # Create two cubes
     app1 = AbstractApp.create_app(cube_size=cube_size)
     app2 = AbstractApp.create_app(cube_size=cube_size)
 
     # Apply original scramble to cube1
-    scramble.play(app1.cube)
+    scramble_alg.play(app1.cube)
 
     # Parse scramble string (use to_printable) and apply to cube2
-    printable = scramble.to_printable()
+    printable = scramble_alg.to_printable()
     parsed = Algs.parse(str(printable))
     parsed.play(app2.cube)
 
     # Both cubes should be in same state (check via solved after inverse)
     # Apply inverse of original to cube1
-    scramble.inv().play(app1.cube)
+    scramble_alg.inv().play(app1.cube)
     # Apply inverse of parsed to cube2
     parsed.inv().play(app2.cube)
 
@@ -269,11 +270,11 @@ def test_scramble_inverse_returns_solved(seed: int, cube_size: int) -> None:
     assert app.cube.solved, "Cube should start solved"
 
     # Generate and apply scramble
-    scramble = Algs.scramble(cube_size, seed, seq_length=20)
-    scramble.play(app.cube)
+    scramble_alg = scramble(cube_size, seed, n=20)
+    scramble_alg.play(app.cube)
 
     # Apply inverse
-    scramble.inv().play(app.cube)
+    scramble_alg.inv().play(app.cube)
 
     assert app.cube.solved, f"Scramble seed={seed} + inverse should return to solved"
 
@@ -287,11 +288,11 @@ def test_scramble_parsed_inverse_returns_solved(seed: int, cube_size: int) -> No
     assert app.cube.solved, "Cube should start solved"
 
     # Generate and apply scramble
-    scramble = Algs.scramble(cube_size, seed, seq_length=20)
-    scramble.play(app.cube)
+    scramble_alg = scramble(cube_size, seed, n=20)
+    scramble_alg.play(app.cube)
 
     # Parse the scramble string (use to_printable) and apply its inverse
-    printable = scramble.to_printable()
+    printable = scramble_alg.to_printable()
     parsed = Algs.parse(str(printable))
     parsed.inv().play(app.cube)
 

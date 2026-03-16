@@ -15,6 +15,7 @@ import pytest
 
 from cube.application.AbstractApp import AbstractApp
 from cube.domain.algs import Algs
+from cube.domain.algs.Scramble import scramble
 from cube.domain.geometric.block import Block
 from cube.domain.geometric.geometry_types import Point
 from cube.domain.model.FaceName import FaceName
@@ -202,8 +203,8 @@ class TestCommutatorBlockSearch:
 
         # Scramble the cube with a seeded random
         random.seed(seed)
-        scramble = Algs.scramble(cube_size, seed)
-        app.op.play(scramble)
+        scramble_ = scramble(cube_size, seed)
+        app.op.play(scramble_)
 
         comm_helper = get_new_comm_helper(app)
 

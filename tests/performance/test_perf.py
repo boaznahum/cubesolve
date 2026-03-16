@@ -2,7 +2,7 @@
 import pytest
 import time
 
-from cube.domain.algs import Algs
+from cube.domain.algs.Scramble import scramble
 from cube.application.config_impl import AppConfig
 from cube.application.state import ApplicationAndViewState
 from cube.application.commands.Operator import Operator
@@ -46,7 +46,7 @@ def test_solve_performance():
             scramble_key = s
             n = None
 
-        alg = Algs.scramble(cube.size, scramble_key, n)
+        alg = scramble(cube.size, scramble_key, n)
         op.op(alg, animation=False)
 
         c0 = op.count

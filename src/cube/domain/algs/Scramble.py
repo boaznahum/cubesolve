@@ -50,7 +50,7 @@ def _count(a: Alg) -> int:
         raise RuntimeError(f"Unknown Alg {type(a)}")
 
 
-def scramble(cube_size: int, seed: Any, n: int | None = None) -> SeqAlg:
+def scramble(cube_size: int, seed: Any = None, n: int | None = None) -> SeqAlg:
     """
 
     :param cube_size:

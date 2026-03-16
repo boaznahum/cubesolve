@@ -259,8 +259,8 @@ class CageNxNSolver(BaseSolver):
                         self._solve_corners(tracker_holder)
                     break  # Success - exit retry loop
 
-                except EvenCubeEdgeParityException as e:
-                    self.debug(lambda: f"Caught EvenCubeEdgeParityException on attempt {attempt}: {type(e)}")
+                except EvenCubeEdgeParityException:
+                    self.debug(f"Caught EvenCubeEdgeParityException on attempt {attempt}")
                     if attempt >= 4:
                         raise  # Give up after 5 attempts
 
@@ -353,8 +353,8 @@ class CageNxNSolver(BaseSolver):
                         self._solve_corners(tracker_holder)
                     break  # Success - exit retry loop
 
-                except EvenCubeEdgeParityException as e:
-                    self.debug(lambda: f"Caught EvenCubeEdgeParityException on attempt {attempt}: {type(e)}")
+                except EvenCubeEdgeParityException:
+                    self.debug(f"Caught EvenCubeEdgeParityException on attempt {attempt}")
                     if attempt >= 4:
                         raise
 

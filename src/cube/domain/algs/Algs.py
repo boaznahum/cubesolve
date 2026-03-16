@@ -7,7 +7,6 @@ from cube.domain.algs.MarkerMeetAlg import MarkerMeetAlg
 from cube.domain.algs.FaceAlg import FaceAlg
 from warnings import deprecated
 
-from cube.domain.algs.Scramble import ScrambleAlg
 from cube.domain.algs.Scramble import is_scramble as _is_scramble
 from cube.domain.algs.Scramble import scramble as create_scramble
 from cube.domain.algs.SeqAlg import SeqAlg

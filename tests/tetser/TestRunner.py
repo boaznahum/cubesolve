@@ -3,7 +3,7 @@ import traceback
 from collections.abc import Collection
 from typing import Any
 
-from cube.domain.algs import Algs
+from cube.domain.algs.Scramble import scramble as generate_scramble
 from cube.application.config_impl import AppConfig
 from cube.application.state import ApplicationAndViewState
 from cube.domain.model.Cube import Cube
@@ -112,7 +112,7 @@ def scramble(op: Operator,
              verbose=True):
     op.reset()  # cube and history
 
-    alg = Algs.scramble(op.cube.size, scramble_key, scramble_size)
+    alg = generate_scramble(op.cube.size, scramble_key, scramble_size)
 
     if op.app_state.is_debug(verbose):
         print(

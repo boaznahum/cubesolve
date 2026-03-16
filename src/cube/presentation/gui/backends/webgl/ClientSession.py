@@ -475,16 +475,16 @@ class ClientSession:
     @staticmethod
     def _classify_alg(alg: "Alg") -> str:
         """Classify an algorithm for history panel badges."""
-        from cube.domain.algs.Algs import Algs
         from cube.domain.algs.FaceAlgBase import FaceAlgBase
         from cube.domain.algs.HeadingAlg import HeadingAlg
+        from cube.domain.algs.Scramble import is_scramble
         from cube.domain.algs.SliceAlgBase import SliceAlgBase
         from cube.domain.algs.WholeCubeAlg import WholeCubeAlg
         from cube.domain.algs.WideLayerAlg import WideLayerAlg
 
         if isinstance(alg, HeadingAlg):
             return "heading"
-        if Algs.is_scramble(alg):
+        if is_scramble(alg):
             return "scramble"
         if isinstance(alg, WholeCubeAlg):
             return "rotation"
@@ -511,7 +511,7 @@ class ClientSession:
         Returns None for: empty redo, scrambles.
         Whole-cube rotations (x/y/z) are mapped to all layers on equivalent face.
         """
-        from cube.domain.algs.Algs import Algs
+        from cube.domain.algs.Scramble import is_scramble
 
         if not redo_list:
             return None
@@ -527,7 +527,7 @@ class ClientSession:
             return None
 
         # Skip scrambles
-        if Algs.is_scramble(alg):
+        if is_scramble(alg):
             return None
 
         face_name: str = self._alg_to_face_name(alg)

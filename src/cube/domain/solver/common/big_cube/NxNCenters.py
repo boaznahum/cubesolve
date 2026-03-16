@@ -1,6 +1,5 @@
 from collections.abc import Iterable, Iterator, Sequence, Set
 from enum import Enum, unique
-from typing import Tuple
 
 from cube.domain.exceptions import InternalSWError
 from cube.domain.model.PartSlice import CenterSlice
@@ -463,7 +462,7 @@ class NxNCenters(SolverHelper):
 
     def _do_center_from_face_direct(self, tracker_holder: "FacesTrackerHolder", face: Face,
                                      color: Color,
-                                     source_face: Face, faces: list[FaceTracker]) -> bool:
+                                     source_face: Face, faces: Iterable[FaceTracker]) -> bool:
         """
         Bring correct colored pieces from source_face to target face.
 
@@ -513,7 +512,7 @@ class NxNCenters(SolverHelper):
         return work_done
 
     def _do_complete_slices(self, tracker_holder: "FacesTrackerHolder", color: Color,
-                            face: Face, faces: list[FaceTracker]) -> bool:
+                            face: Face, faces: Iterable[FaceTracker]) -> bool:
         """Find and execute the best complete slice swaps for a target face.
 
         Searches ALL source faces for the best swap, executes it, and repeats

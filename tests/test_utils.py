@@ -1,7 +1,7 @@
 """
 Shared test utilities.
 
-Provides TestServiceProvider for tests that create Cube directly without full app.
+Provides StubServiceProvider for tests that create Cube directly without full app.
 """
 
 from cube.application.config_impl import AppConfig
@@ -12,7 +12,7 @@ from cube.utils.service_provider import IServiceProvider
 from cube.utils.logger_protocol import ILogger
 
 
-class TestServiceProvider(IServiceProvider):
+class StubServiceProvider(IServiceProvider):
     """Service provider for tests that create Cube directly without full app.
 
     Implements IServiceProvider protocol - can be passed to Cube(size, sp=test_sp).
@@ -42,4 +42,4 @@ class TestServiceProvider(IServiceProvider):
 
 
 # Create a shared instance for tests to use
-_test_sp = TestServiceProvider()
+_test_sp = StubServiceProvider()

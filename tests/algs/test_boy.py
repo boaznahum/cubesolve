@@ -1,6 +1,7 @@
 import pytest
 
 from cube.domain import algs
+from cube.domain.algs.Scramble import scramble
 from cube.application.AbstractApp import AbstractApp
 from cube.domain.model.Cube import Cube
 from cube.domain.solver.SolverName import SolverName
@@ -20,7 +21,7 @@ def test_scramble1_preserves_boy_large_cube() -> None:
 
     cube = Cube(size, sp=_test_sp)
 
-    a: algs.Alg = algs.Algs.scramble1(cube.size)
+    a: algs.Alg = scramble(cube.size, "scramble1")
     a.play(cube)
 
     assert cube.match_original_scheme
@@ -35,7 +36,7 @@ def test_solve_preserves_boy(solver: SolverName) -> None:
     app = AbstractApp.create_app(size, solver=solver)
     cube = app.cube
 
-    a: algs.Alg = algs.Algs.scramble1(cube.size)
+    a: algs.Alg = scramble(cube.size, "scramble1")
     a.play(cube)
 
     app.slv.solve()

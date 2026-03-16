@@ -1,6 +1,7 @@
 import pytest
 
 from cube.domain.algs import Algs
+from cube.domain.algs.Scramble import scramble
 from cube.application.AbstractApp import AbstractApp
 from cube.application import _config as config
 from cube.domain.solver.SolverName import SolverName
@@ -35,7 +36,7 @@ def test_scramble_and_solve(cube_size: int, sanity_check: bool, solver: SolverNa
     app = AbstractApp.create_app(cube_size, solver=solver)
     cube = app.cube
 
-    alg = Algs.scramble(cube.size, 4)
+    alg = scramble(cube.size, 4)
     alg.play(cube)
 
     result = app.slv.solve()

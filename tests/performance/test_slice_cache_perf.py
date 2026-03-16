@@ -9,13 +9,14 @@ import pytest
 
 from cube.application import _config as cfg
 from cube.domain.algs import Algs
+from cube.domain.algs.Scramble import scramble
 from cube.domain.model.Cube import Cube
-from tests.test_utils import TestServiceProvider
+from tests.test_utils import StubServiceProvider
 
 
 def _scramble_cube(cube: Cube, n_moves: int, seed: int) -> float:
     """Scramble cube and return elapsed time in seconds."""
-    alg = Algs.scramble(cube.size, seed, n_moves)
+    alg = scramble(cube.size, seed, n_moves)
     start = time.perf_counter()
     alg.play(cube)
     elapsed = time.perf_counter() - start
@@ -41,7 +42,7 @@ def test_slice_cache_performance():
     try:
         # ===== Test WITHOUT cache =====
         cfg.CONFIG_DEFAULTS.enable_cube_cache = False
-        sp_no_cache = TestServiceProvider()
+        sp_no_cache = StubServiceProvider()
 
         total_time_no_cache = 0.0
         for seed in range(n_scrambles):
@@ -51,7 +52,7 @@ def test_slice_cache_performance():
 
         # ===== Test WITH cache =====
         cfg.CONFIG_DEFAULTS.enable_cube_cache = True
-        sp_with_cache = TestServiceProvider()
+        sp_with_cache = StubServiceProvider()
 
         total_time_with_cache = 0.0
         for seed in range(n_scrambles):
@@ -102,7 +103,7 @@ def test_slice_only_rotations():
     try:
         # ===== Test WITHOUT cache =====
         cfg.CONFIG_DEFAULTS.enable_cube_cache = False
-        sp_no_cache = TestServiceProvider()
+        sp_no_cache = StubServiceProvider()
         cube = Cube(cube_size, sp=sp_no_cache)
 
         start = time.perf_counter()
@@ -114,7 +115,7 @@ def test_slice_only_rotations():
 
         # ===== Test WITH cache =====
         cfg.CONFIG_DEFAULTS.enable_cube_cache = True
-        sp_with_cache = TestServiceProvider()
+        sp_with_cache = StubServiceProvider()
         cube = Cube(cube_size, sp=sp_with_cache)
 
         start = time.perf_counter()

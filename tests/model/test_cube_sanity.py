@@ -11,11 +11,11 @@ from cube.domain.model.Cube3x3Colors import Cube3x3Colors, EdgeColors, CornerCol
 from cube.domain.model.Color import Color
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model._part import EdgeName, CornerName
-from tests.test_utils import TestServiceProvider
+from tests.test_utils import StubServiceProvider
 
 
 # Shared service provider for all tests
-_sp = TestServiceProvider()
+_sp = StubServiceProvider()
 
 
 class TestCubeSanityDetectsInvalidCubes:

@@ -3,6 +3,7 @@
 import pytest
 from cube.application.AbstractApp import AbstractApp
 from cube.domain.algs import Algs
+from cube.domain.algs.Scramble import scramble
 
 
 class TestSliceNotationDisplay:
@@ -310,8 +311,8 @@ class TestDiscontinuedSliceScramble:
     @pytest.mark.parametrize("cube_size", [6, 7, 8])
     def test_scramble_with_discontinued_slices_round_trip(self, seed, cube_size):
         """Scramble (which may produce discontinued slices) round-trips."""
-        scramble = Algs.scramble(cube_size, seed, seq_length=20)
-        printable = scramble.to_printable()
+        scramble_alg = scramble(cube_size, seed, n=20)
+        printable = scramble_alg.to_printable()
         s = str(printable)
         parsed = Algs.parse(s)
 

@@ -13,7 +13,7 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from cube.application import _config as cfg
-from cube.domain.algs import Algs
+from cube.domain.algs.Scramble import scramble
 from cube.domain.model.Cube import Cube
 from cube.application.config_impl import AppConfig
 from cube.application.Logger import Logger
@@ -53,7 +53,7 @@ def run_scramble(cube_size: int, n_moves: int, seed: int) -> None:
     """Run a scramble on a cube."""
     sp = ProfileServiceProvider()
     cube = Cube(cube_size, sp=sp)
-    alg = Algs.scramble(cube.size, seed, n_moves)
+    alg = scramble(cube.size, seed, n_moves)
     alg.play(cube)
 
 

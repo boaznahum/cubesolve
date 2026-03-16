@@ -5,6 +5,7 @@ from typing import Iterable
 from cube.application import _config as config
 from cube.domain import algs
 from cube.domain.algs import Algs, Alg
+from cube.domain.algs.Scramble import scramble
 from cube.domain.model.Cube import Cube
 from tests.test_utils import _test_sp
 
@@ -31,8 +32,8 @@ def _compare_inv(cube_size: int, algs_list: Iterable[Alg]):
     """Test that applying algorithms then their inverse returns to original state."""
     cube = Cube(cube_size, sp=_test_sp)
 
-    scramble = Algs.scramble(cube_size)
-    scramble.play(cube)
+    scramble_ = scramble(cube_size)
+    scramble_.play(cube)
 
     s1 = cube.cqr.get_sate()
 
@@ -48,12 +49,12 @@ def _compare_inv(cube_size: int, algs_list: Iterable[Alg]):
 def _test_simplify(alg: Alg, cube_size: int):
     """Test that simplifying an algorithm produces equivalent results."""
     cube = Cube(cube_size, sp=_test_sp)
-    scramble = Algs.scramble(cube.size, "1")
+    scramble_ = scramble(cube.size, "1")
 
     simplified = alg.simplify()
 
-    _compare_two_algs(cube_size, (scramble, alg), (scramble, simplified))
-    _compare_inv(cube_size, (scramble, alg))
+    _compare_two_algs(cube_size, (scramble_, alg), (scramble_, simplified))
+    _compare_inv(cube_size, (scramble_, alg))
 
     return simplified
 
@@ -63,16 +64,16 @@ def _test_flatten(alg: Alg, cube_size: int):
     config.CONFIG_DEFAULTS.check_cube_sanity = False
 
     cube = Cube(cube_size, sp=_test_sp)
-    scramble = Algs.scramble(cube.size, "1")
+    scramble_ = scramble(cube.size, "1")
 
-    scramble.play(cube)
+    scramble_.play(cube)
     alg.play(cube)
     s1 = cube.cqr.get_sate()
 
     flat = alg.flatten_alg()
 
     cube.reset()
-    scramble.play(cube)
+    scramble_.play(cube)
     flat.play(cube)
 
     assert cube.cqr.compare_state(s1)
@@ -92,7 +93,7 @@ class TestSimplify:
         cube_size = 8
         config.CONFIG_DEFAULTS.check_cube_sanity = False
 
-        alg = Algs.scramble(cube_size, seq_length=5000, seed=None)
+        alg = scramble(cube_size, n=5000, seed=None)
         _test_simplify(alg, cube_size)
 
     def test_simplify_inverse(self):
@@ -149,7 +150,7 @@ class TestFlatten:
     def test_flatten_scramble(self):
         """Test flattening of scramble algorithm."""
         cube_size = 7
-        a = Algs.scramble(cube_size, "aaa")
+        a = scramble(cube_size, "aaa")
         _test_flatten(a, cube_size)
 
     def test_flatten_adjacent_slices(self):
@@ -182,7 +183,7 @@ class TestSimplifyFlatten:
     def test_total_simplify_inverse_cancels(self):
         """Test that a - a simplifies to empty."""
         cube_size = 5
-        alg = Algs.scramble(cube_size)
+        alg = scramble(cube_size)
 
         s = _test_simplify(alg - alg, cube_size)
         _compare_two_algs(cube_size, (Algs.no_op(),), (s,))

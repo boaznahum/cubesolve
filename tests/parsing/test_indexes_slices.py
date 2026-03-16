@@ -2,6 +2,7 @@
 import pytest
 
 from cube.domain.algs import Algs
+from cube.domain.algs.Scramble import scramble
 from cube.application.AbstractApp import AbstractApp
 from cube.domain.model.CubeQueries2 import CubeQueries2
 
@@ -13,7 +14,7 @@ def test_slice_play_and_inverse():
     app = AbstractApp.create_app(n)
     cube = app.cube
 
-    alg = Algs.scramble(cube.size, 4)
+    alg = scramble(cube.size, 4)
     alg.play(cube)
 
     state = CubeQueries2(cube).get_sate()

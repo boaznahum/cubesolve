@@ -9,8 +9,8 @@ from typing_extensions import deprecated
 from cube.application.exceptions.app_exceptions import OpAborted
 from cube.application.state import ApplicationAndViewState
 from cube.domain.algs.Alg import Alg
-from cube.domain.algs.Algs import Algs
 from cube.domain.algs.AnnotationAlg import AnnotationAlg
+from cube.domain.algs.Scramble import is_scramble
 from cube.domain.algs.HeadingAlg import HeadingAlg
 from cube.domain.algs.SeqAlg import SeqAlg
 from cube.domain.algs.SimpleAlg import SimpleAlg
@@ -345,7 +345,7 @@ class Operator(OperatorProtocol):
 
         history = self._history
 
-        _is = Algs.is_scramble
+        _is = is_scramble
 
         if remove_scramble:
             history = [a for a in history if not _is(a)]

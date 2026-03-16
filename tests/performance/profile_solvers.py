@@ -52,7 +52,7 @@ from cube.application.Logger import Logger
 from cube.application.markers import IMarkerFactory, IMarkerManager, MarkerFactory, MarkerManager
 from cube.application.state import ApplicationAndViewState
 from cube.application.commands.Operator import Operator
-from cube.domain.algs import Algs
+from cube.domain.algs.Scramble import scramble
 from cube.domain.model.Cube import Cube
 from cube.domain.solver import Solver, Solvers
 from cube.domain.solver.SolverName import SolverName
@@ -152,7 +152,7 @@ def create_operator(cube_size: int) -> Operator:
 
 def scramble_cube(op: Operator, seed: int, n_moves: int | None = None) -> int:
     """Scramble a cube and return number of moves."""
-    alg = Algs.scramble(op.cube.size, seed, n_moves)
+    alg = scramble(op.cube.size, seed, n_moves)
     op.play(alg, animation=False)
     return alg.count()
 

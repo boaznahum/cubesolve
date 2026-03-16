@@ -77,7 +77,7 @@ def all_solver_names() -> list[SolverName]:
 
 @pytest.fixture
 def test_sp() -> IServiceProvider:
-    """Fixture providing a TestServiceProvider for tests that create Cube directly."""
+    """Fixture providing a StubServiceProvider for tests that create Cube directly."""
     return _test_sp
 
 

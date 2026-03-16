@@ -14,6 +14,7 @@ import pytest
 from cube.application.AbstractApp import AbstractApp
 from cube.application.commands.Operator import Operator
 from cube.domain.algs.Algs import Algs
+from cube.domain.algs.Scramble import scramble
 from cube.domain.model.Cube import Cube
 
 from tests.test_utils import _test_sp
@@ -30,7 +31,7 @@ class TestQueryRestoreState:
         op = Operator(cube, app.vs)
 
         # Scramble cube
-        scramble1 = Algs.scramble(3, seed=42)
+        scramble1 = scramble(3, seed=42)
         op.play(scramble1)
 
         # Take state snapshot
@@ -39,7 +40,7 @@ class TestQueryRestoreState:
 
         # Enter context, scramble again, exit
         with op.with_query_restore_state():
-            scramble2 = Algs.scramble(3, seed=123)
+            scramble2 = scramble(3, seed=123)
             op.play(scramble2)
 
             # Inside context, cube should be different
@@ -78,7 +79,7 @@ class TestQueryRestoreState:
         op = Operator(cube, app.vs)
 
         # Initial scramble
-        op.play(Algs.scramble(3, seed=42))
+        op.play(scramble(3, seed=42))
         state_outer = cube.cqr.get_sate()
 
         with op.with_query_restore_state():
@@ -132,7 +133,7 @@ class TestQueryRestoreState:
         op = Operator(cube, app.vs)
 
         # Scramble cube
-        op.play(Algs.scramble(3, seed=42))
+        op.play(scramble(3, seed=42))
         state_before = cube.cqr.get_sate()
 
         # Enter context, do moves, raise exception

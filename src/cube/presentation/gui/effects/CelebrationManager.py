@@ -110,8 +110,9 @@ class CelebrationManager:
             self._update_scheduled = False
 
         if self._current_effect:
-            self._current_effect.cleanup()
-            self._vs.debug(True, lambda: f"Celebration stopped: {self._current_effect.name}")
+            effect = self._current_effect
+            effect.cleanup()
+            self._vs.debug(True, lambda: f"Celebration stopped: {effect.name}")
             self._current_effect = None
 
     @property

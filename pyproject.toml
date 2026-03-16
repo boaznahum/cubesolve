@@ -144,4 +144,5 @@ ignore_missing_imports = true
 pythonVersion = "3.14"
 typeCheckingMode = "standard"
 reportUnsupportedDunderAll = "error"
+reportDeprecated = "warning"
 exclude = ["src/cube/domain/solver/direct", "**/_archive"]

@@ -2,6 +2,7 @@
 import pytest
 
 from cube.domain.algs import Algs
+from cube.domain.algs.Scramble import scramble
 from cube.domain.model.Cube import Cube
 from tests.test_utils import _test_sp
 
@@ -43,8 +44,8 @@ class TestParseMultiline:
         """)
 
         cube = Cube(3, sp=_test_sp)
-        scramble = Algs.scramble(3, seed="multiline_test")
-        scramble.play(cube)
+        scramble_ = scramble(3, seed="multiline_test")
+        scramble_.play(cube)
 
         state_before = cube.cqr.get_sate()
 

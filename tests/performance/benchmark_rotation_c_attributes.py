@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 
 from cube.domain.model.Cube import Cube
 from cube.domain.model.PartEdge import PartEdge
-from tests.test_utils import TestServiceProvider
+from tests.test_utils import StubServiceProvider
 
 
 def old_copy_color(dest: PartEdge, source: PartEdge):
@@ -128,7 +128,7 @@ def benchmark_rotation(cube: Cube, use_new_approach: bool, num_rotations: int = 
 
 def run_benchmark(cube_size: int = 9, num_rotations: int = 500):
     """Run the full benchmark suite."""
-    sp = TestServiceProvider()
+    sp = StubServiceProvider()
 
     print('=' * 60)
     print(f'BENCHMARK: c_attributes Copy vs Swap')

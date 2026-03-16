@@ -21,7 +21,7 @@ os.environ["CUBE_QUIET_ALL"] = "1"
 from cube.application.config_impl import AppConfig
 from cube.application.Logger import Logger
 from cube.application.markers import IMarkerFactory, IMarkerManager, MarkerFactory, MarkerManager
-from cube.domain.algs import Algs
+from cube.domain.algs.Scramble import scramble
 from cube.domain.model.Cube import Cube
 from cube.utils.config_protocol import ConfigProtocol
 from cube.utils.logger_protocol import ILogger
@@ -109,7 +109,7 @@ def profile_scramble(cube_size: int, n_moves: int, seed: int = 42) -> None:
     """Profile scramble which uses a mix of rotations."""
     sp = ProfileServiceProvider()
     cube = Cube(cube_size, sp=sp)
-    alg = Algs.scramble(cube_size, seed, n_moves)
+    alg = scramble(cube_size, seed, n_moves)
 
     print(f"\n{'='*70}")
     print(f"Profiling scramble on {cube_size}x{cube_size} cube")
@@ -153,7 +153,7 @@ def profile_solve_detailed(cube_size: int, seed: int = 0) -> None:
     solver = Solvers.beginner(op)
 
     # Scramble
-    alg = Algs.scramble(cube_size, seed, cube_size * 10)
+    alg = scramble(cube_size, seed, cube_size * 10)
     op.play(alg, animation=False)
 
     print(f"\n{'='*70}")
