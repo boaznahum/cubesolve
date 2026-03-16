@@ -6,6 +6,7 @@ from cube.domain.exceptions import InternalSWError
 from cube.domain.model import Color, Edge, EdgeWing, PartColorsID
 from cube.domain.model.Face import Face
 from cube.domain.model.ModelHelper import ModelHelper
+from cube.domain.tracker._face_trackers import FaceTracker
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.CommonOp import EdgeSliceTracker
 from cube.domain.solver.common.SolverHelper import SolverHelper
@@ -14,6 +15,29 @@ from cube.utils.OrderedSet import OrderedSet
 
 
 class NxNEdgesCommon(SolverHelper):
+    """Edge pairing solver for NxN cubes (N >= 4).
+
+    Pairs edge slices to reduce an NxN cube to an effective 3x3. Supports both
+    odd cubes (5x5, 7x7) and even cubes (4x4, 6x6, 8x8).
+
+    Two entry points:
+      - solve(): Pair ALL 12 edges at once (used by reduction solvers).
+      - solve_face_edges(face_tracker): Pair only the 4 edges containing a specific
+        color (used by layer-by-layer solvers that solve one face at a time).
+
+    Both entry points use the same core method _do_edge(edge, required_color) to
+    pair a single edge. When required_color is None, the color is auto-detected
+    from the edge's slices. When provided, the solver forces that color onto the
+    face (needed for LBL to maintain correct orientation).
+
+    Args:
+        slv: Solver elements provider (cube, operations, annotations).
+        advanced_edge_parity: If True, use R/L-based parity algorithm instead
+            of the simpler M-based one.
+        preserve_other_edges: If True, undo the rf alg after slicing to avoid
+            disturbing already-solved edges from previous layers (LBL mode).
+    """
+
     D_LEVEL = 3
 
     def __init__(self, slv: SolverElementsProvider, advanced_edge_parity: bool,
@@ -28,17 +52,18 @@ class NxNEdgesCommon(SolverHelper):
         return all((e.is3x3 for e in self.cube.edges))
 
     def solved(self) -> bool:
-        """
-
-        :return: if all centers have unique colors, and it is a boy
-        """
-
+        """Check if all 12 edges are paired (reduced to 3x3 state)."""
         return self._is_solved()
 
     def solve(self) -> bool:
-        """
+        """Pair ALL 12 edges at once (reduction solver entry point).
 
-        :return: True if edge parity was performed
+        Solves 11 edges normally, then handles the last edge with a parity
+        algorithm if needed. The last edge cannot be solved normally because
+        a single unpaired edge is always a parity case.
+
+        Returns:
+            True if edge parity was performed, False if no parity needed.
         """
 
         if self._is_solved():
@@ -62,12 +87,12 @@ class NxNEdgesCommon(SolverHelper):
             return True
 
     def _do_first_11(self):
-        """
+        """Solve up to 11 edges, stopping when only 1 remains (parity case).
 
-        :return:
+        Iterates over all cube edges, picking any unsolved one and pairing it.
+        Stops when only 1 unsolved edge remains — that one requires a parity
+        algorithm and is handled by _do_last_edge_parity().
         """
-
-        # We must not try to solve the last one - it is parity - even in even cube
         while self._left_to_fix > 1:
             n_to_fix = self._left_to_fix
             # we need to search again and gain because solving move all edges
@@ -86,7 +111,19 @@ class NxNEdgesCommon(SolverHelper):
         n_to_fix = sum(not e.is3x3 for e in self.cube.edges)
         return n_to_fix
 
-    def _do_edge(self, edge: Edge) -> bool:
+    def _do_edge(self, edge: Edge, required_color: Color | None = None) -> bool:
+        """Solve a single edge by pairing all its slices.
+
+        Args:
+            edge: The edge to solve.
+            required_color: If provided, ensure this color is used as the primary
+                color when determining ordered_color. Used by solve_face_edges()
+                to solve edges for a specific face. If None, auto-detects the
+                best color.
+
+        Returns:
+            True if the edge was solved, False if already solved.
+        """
 
         if edge.is3x3:
             self.debug( f"Edge {edge} is already solved", level=3)
@@ -106,12 +143,19 @@ class NxNEdgesCommon(SolverHelper):
             self.cmn.bring_edge_to_front_left_by_whole_rotate(edge)
             edge = self.cube.front.edge_left
 
-            # We can't do  it before  bringing to front because we don't know which edge will be on front
-            if n_slices % 2:
+            # Determine the ordered color to solve for
+            if required_color is not None:
+                ordered_color = self._determine_ordered_color_for_required_color(
+                    edge, required_color
+                )
+                color_un_ordered = frozenset(ordered_color)
+            elif n_slices % 2:
+                # Odd cube: use middle slice color (auto-detect)
                 _slice = edge.get_slice(n_slices // 2)
                 color_un_ordered = _slice.colors_id
                 ordered_color = self.get_slice_ordered_color(face, _slice)
             else:
+                # Even cube: find most common color (auto-detect)
                 ordered_color = self._find_max_of_color(face, edge)
                 color_un_ordered = frozenset(ordered_color)
 
@@ -128,13 +172,13 @@ class NxNEdgesCommon(SolverHelper):
             return True
 
     def _solve_on_front_left(self, color_un_ordered: PartColorsID, ordered_color: Tuple[Color, Color]):
-        """
-        Edge is on front left, and we need to solve it without moving it
-        :return:
-        """
+        """Pair all slices of the edge currently at front-left position.
 
-        # first we need to find the right color
-
+        Two phases:
+          1. Fix slices that are already on this edge but in wrong orientation
+             (flip them using a helper edge on front-right).
+          2. Find matching slices on other edges and slice them in.
+        """
         cube = self.cube
         face = cube.front
         edge: Edge = face.edge_left
@@ -150,7 +194,11 @@ class NxNEdgesCommon(SolverHelper):
 
     def _fix_all_slices_on_edge(self, face: Face, edge: Edge, ordered_color: Tuple[Color, Color],
                                 color_un_ordered: PartColorsID):
+        """Fix slices that have the right colors but wrong orientation on this edge.
 
+        Uses a helper edge (front-right) and the slice+rf technique to flip them.
+        If preserve_other_edges is set, undoes rf afterward to protect solved edges.
+        """
         n_slices = edge.n_slices
 
         inv = edge.inv
@@ -231,7 +279,12 @@ class NxNEdgesCommon(SolverHelper):
 
     def _fix_all_from_other_edges(self, face: Face, edge: Edge, ordered_color: Tuple[Color, Color],
                                   color_un_ordered: PartColorsID):
+        """Find matching slices on OTHER edges and slice them into the target edge.
 
+        Searches all 11 other edges for slices with the right color-pair. Brings
+        each source edge to front-right, then uses slice+rf to transfer slices.
+        If preserve_other_edges is set, undoes rf afterward.
+        """
         other_edges = OrderedSet(face.cube.edges) - {edge}
         assert len(other_edges) == 11
 
@@ -268,16 +321,10 @@ class NxNEdgesCommon(SolverHelper):
 
     def _fix_many_from_other_edges_same_order(self, face: Face, edge: Edge, ordered_color: Tuple[Color, Color],
                                               color_un_ordered: PartColorsID):
+        """Transfer matching slices from front-right edge into the target (front-left) edge.
 
-        """
-        Source edge is in front right
-
-        Slice all slices that are opposite of required color
-        :param face:
-        :param edge:
-        :param ordered_color:
-        :param color_un_ordered:
-        :return:
+        Finds all slices on front-right that match the required color-pair and orientation,
+        then slices them all at once into the target edge's opposite positions.
         """
 
         inv = edge.inv
@@ -344,7 +391,11 @@ class NxNEdgesCommon(SolverHelper):
         return True
 
     def _do_last_edge_parity(self):
+        """Handle the last unpaired edge — always a parity case.
 
+        A single remaining unpaired edge cannot be solved with normal slice moves.
+        This finds it and applies an OLL parity algorithm.
+        """
         assert self._left_to_fix == 1
 
         cube = self.cube
@@ -355,7 +406,11 @@ class NxNEdgesCommon(SolverHelper):
         self._do_edge_parity_on_edge(edge)
 
     def _do_edge_parity_on_edge(self, edge) -> None:
+        """Apply OLL parity algorithm to a single edge.
 
+        Brings edge to front-top position, determines which slices need fixing,
+        then applies either M-based (simple) or R/L-based (advanced) parity alg.
+        """
         with self._logger.tab(lambda: f"Doing odd edge parity on edge: {edge}"):
 
             cube = self.cube
@@ -451,7 +506,7 @@ class NxNEdgesCommon(SolverHelper):
 
     @staticmethod
     def _find_slice_in_edge_by_color_id(edge: Edge, color_un_ordered: PartColorsID) -> EdgeWing | None:
-
+        """Find the first slice in an edge that has the given unordered color-pair."""
         for i in range(edge.n_slices):
             s = edge.get_slice(i)
             if s.colors_id == color_un_ordered:
@@ -461,14 +516,25 @@ class NxNEdgesCommon(SolverHelper):
 
     @property
     def rf(self) -> Alg:
+        """The rf algorithm (R F' U R' F) used to cycle slices between front-left and front-right edges."""
         return Algs.R + Algs.F.prime + Algs.U + Algs.R.prime + Algs.F
 
-    def do_even_full_edge_parity_on_any_edge(self):
+    def do_even_full_edge_parity_on_any_edge(self) -> None:
+        """Apply edge parity algorithm on the front-left edge (even cubes only).
+
+        Called by 3x3 solvers when they detect OLL parity after reduction.
+        """
         assert self.cube.n_slices % 2 == 0
 
         self._do_edge_parity_on_edge(self.cube.front.edge_left)
 
-    def _find_max_of_color(self, face, edge) -> Tuple[Color, Color]:
+    def _find_max_of_color(self, face: Face, edge: Edge) -> Tuple[Color, Color]:
+        """Auto-detect the most common color pair on an even-cube edge.
+
+        Counts which color-pair appears most frequently across all slices,
+        then picks the orientation (face vs other-face) that appears most often.
+        Used when no required_color is specified (auto-detect mode for even cubes).
+        """
         c_max = None
         n_max = 0
 
@@ -515,3 +581,108 @@ class NxNEdgesCommon(SolverHelper):
         else:
             assert c2
             return c2
+
+    def solve_face_edges(self, face_tracker: FaceTracker) -> bool:
+        """Solve only the 4 edges that contain a specific color.
+
+        Used by layer-by-layer solver to solve one layer's edges at a time.
+
+        Args:
+            face_tracker: FaceTracker for the target face (tracks by color).
+
+        Returns:
+            True if edge parity was performed, False otherwise.
+        """
+        target_color = face_tracker.color
+        target_edges_by_color = [e for e in self.cube.edges
+                                if self._edge_contains_color(e, target_color)]
+
+        with self._logger.tab(lambda: f"Doing face {target_color} edges"):
+
+            # Even cubes may have more than 4 edges with the same color
+            assert (self.cube.is_even and len(target_edges_by_color) >= 4) or len(target_edges_by_color) == 4, \
+                f"Expected 4 edges with {target_color}, found {len(target_edges_by_color)}"
+
+            target_edges_by_color = target_edges_by_color[:4]
+
+            if all(e.is3x3 for e in target_edges_by_color):
+                return False
+
+            with self.ann.annotate(h1=f"Edges for {target_color.name}"):
+                parity_done = False
+                while True:
+                    unsolved = [e for e in self.cube.edges
+                               if self._edge_contains_color(e, target_color) and not e.is3x3]
+                    if not unsolved:
+                        break
+
+                    total_cube_unsolved = sum(1 for e in self.cube.edges if not e.is3x3)
+                    if total_cube_unsolved == 1 and len(unsolved) == 1:
+                        self._do_last_edge_parity()
+                        parity_done = True
+                        continue
+
+                    edge = unsolved[0]
+                    # Even cubes need required_color to force correct orientation
+                    required_color_param = target_color if self.cube.is_even else None
+                    self._do_edge(edge, required_color=required_color_param)
+
+                return parity_done
+
+    @staticmethod
+    def _edge_contains_color(edge: Edge, color: Color) -> bool:
+        """Check if this edge contains the given color.
+
+        For odd cubes: only checks representative slice (middle slice defines identity).
+        For even cubes: checks ALL slices (slices can have different color-pairs).
+        """
+        if edge.n_slices % 2 == 1:
+            return color in edge.colors_id
+
+        for i in range(edge.n_slices):
+            if color in edge.get_slice(i).colors_id:
+                return True
+        return False
+
+    def _determine_ordered_color_for_required_color(
+        self, edge: Edge, required_color: Color
+    ) -> Tuple[Color, Color]:
+        """Determine ordered_color with required_color as primary.
+
+        Returns (required_color, other_color) — always places required_color on face.
+        """
+        if not self._edge_contains_color(edge, required_color):
+            raise InternalSWError(
+                f"Edge {edge} does not contain required color {required_color} in any slice. "
+                f"Representative colors: {edge.colors_id}"
+            )
+
+        # Find all colors on this edge
+        all_colors: set[Color] = set()
+        for i in range(edge.n_slices):
+            all_colors.update(edge.get_slice(i).colors_id)
+
+        other_colors = all_colors - {required_color}
+        if len(other_colors) != 1:
+            other_color = self._find_most_common_pair_with_color(edge, required_color)
+        else:
+            other_color = next(iter(other_colors))
+
+        return (required_color, other_color)
+
+    def _find_most_common_pair_with_color(self, edge: Edge, required_color: Color) -> Color:
+        """Find the color that most commonly pairs with required_color on this edge."""
+        pair_counts: dict[Color, int] = defaultdict(int)
+
+        for i in range(edge.n_slices):
+            slice_colors = edge.get_slice(i).colors_id
+            if required_color in slice_colors:
+                other = next(c for c in slice_colors if c != required_color)
+                pair_counts[other] += 1
+
+        if not pair_counts:
+            raise InternalSWError(
+                f"Edge {edge} has no slices containing {required_color}"
+            )
+
+        return max(pair_counts, key=pair_counts.get)  # type: ignore
