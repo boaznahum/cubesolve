@@ -569,7 +569,7 @@ class NxNCenters(SolverHelper):
                     )
 
             self._slice_stats.get_topic(self.SLICE_SWAP_KEY).add_swap(
-                grade=best_grade, nn=nn,
+                grade=best_grade, nn=self.cube.n_slices,
             )
             work_done = True
 
