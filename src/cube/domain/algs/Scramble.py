@@ -10,7 +10,7 @@ from cube.domain.algs.SimpleAlg import SimpleAlg
 from cube.domain.algs.SliceAbleAlg import SliceAbleAlg
 
 
-class _Scramble(SeqAlg):
+class ScrambleAlg(SeqAlg):
     """
     A scramble sequence. All instances are frozen (immutable) after construction.
     """
@@ -22,6 +22,11 @@ class _Scramble(SeqAlg):
 
     def count(self) -> int:
         return 0
+
+
+def is_scramble(alg: Alg) -> bool:
+    """Check if an algorithm is a scramble sequence."""
+    return isinstance(alg, ScrambleAlg)
 
 
 _PROB_SLICE_AN_ALG = 1.0 / 3.0
@@ -45,7 +50,7 @@ def _count(a: Alg) -> int:
         raise RuntimeError(f"Unknown Alg {type(a)}")
 
 
-def _scramble(cube_size: int, seed: Any, n: int | None = None) -> SeqAlg:
+def scramble(cube_size: int, seed: Any, n: int | None = None) -> SeqAlg:
     """
 
     :param cube_size:
@@ -67,7 +72,7 @@ def _scramble(cube_size: int, seed: Any, n: int | None = None) -> SeqAlg:
         # noinspection SpellCheckingInspection
         name = f"random-scrm{n}"
 
-    a = _Scramble(name + "[" + str(n) + "]", *algs)
+    a = ScrambleAlg(name + "[" + str(n) + "]", *algs)
 
     # print(f"Scramble: {name} {n} moves {_count(a)}")
     # print(SeqAlg(None, *algs))

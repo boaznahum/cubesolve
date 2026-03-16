@@ -1,11 +1,15 @@
-from typing import Sequence
+from typing import Any, Sequence
 
 from cube.domain.algs._parser import parse_alg
 from cube.domain.algs.Alg import Alg
 from cube.domain.algs.AnnotationAlg import AnnotationAlg
 from cube.domain.algs.MarkerMeetAlg import MarkerMeetAlg
 from cube.domain.algs.FaceAlg import FaceAlg
-from cube.domain.algs.Scramble import _Scramble, _scramble
+from warnings import deprecated
+
+from cube.domain.algs.Scramble import ScrambleAlg
+from cube.domain.algs.Scramble import is_scramble as _is_scramble
+from cube.domain.algs.Scramble import scramble as create_scramble
 from cube.domain.algs.SeqAlg import SeqAlg
 from cube.domain.algs.SimpleAlg import NSimpleAlg
 from cube.domain.algs.MiddleSliceAlg import MiddleSliceAlg
@@ -215,16 +219,19 @@ class Algs:
         ]
 
     @classmethod
-    def scramble1(cls, cube_size):
-        return _scramble(cube_size, "scramble1")
+    @deprecated("Use Scramble.scramble() directly")
+    def scramble1(cls, cube_size: int) -> SeqAlg:
+        return create_scramble(cube_size, "scramble1")
 
     @classmethod
-    def scramble(cls, cube_size, seed=None, seq_length: int | None = None) -> SeqAlg:
-        return _scramble(cube_size, seed, seq_length)
+    @deprecated("Use Scramble.scramble() directly")
+    def scramble(cls, cube_size: int, seed: Any = None, seq_length: int | None = None) -> SeqAlg:
+        return create_scramble(cube_size, seed, seq_length)
 
     @classmethod
-    def is_scramble(cls, alg: Alg):
-        return isinstance(alg, _Scramble)
+    @deprecated("Use Scramble.is_scramble() directly")
+    def is_scramble(cls, alg: Alg) -> bool:
+        return _is_scramble(alg)
 
     @classmethod
     def alg(cls, name, *algs: Alg) -> Alg:

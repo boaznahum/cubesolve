@@ -4,7 +4,8 @@ from typing import Any
 
 from cube.application.AbstractApp import AbstractApp
 from cube.application.commands.Operator import Operator
-from cube.domain.algs import Alg, Algs
+from cube.domain.algs import Alg
+from cube.domain.algs.Scramble import scramble as create_scramble
 
 
 def scramble(app:AbstractApp,
@@ -18,7 +19,7 @@ def scramble(app:AbstractApp,
 
     op.reset()
 
-    alg = Algs.scramble(op.cube.size, scramble_key, scramble_size)
+    alg = create_scramble(op.cube.size, scramble_key, scramble_size)
 
     if op.app_state.is_debug(verbose):
         op.app_state.debug(verbose, f"Running scramble, cube size={op.cube.size} key={scramble_key}, {type(scramble_key)=}, n={scramble_size}, alg={alg}")
