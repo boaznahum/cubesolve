@@ -459,7 +459,7 @@ def get_center_row_pieces(cube,
     # Convert L1-relative distance to slice coordinate system
     cube_slice_index = slice_layout.distance_from_face_to_slice_index(
 
-        l1_tracker.face_name, face_row, cube.n_slices  # claude: why we need to pass n_slices !!! it should be in sized layout - slice !!
+        l1_tracker.face_name, face_row, cube.n_slices  # claude [#123]: why we need to pass n_slices !!! it should be in sized layout - slice !!
     )
 
     slice_name = cube.layout.get_slice_sandwiched_between_face_and_opposite(l1_tracker.face_name)
@@ -476,7 +476,7 @@ def get_center_row_pieces(cube,
 
         for_face: Face = for_face_t.face
 
-        # claude: to be optimized, most it is duplication of the method above
+        # claude [#124]: to be optimized, most it is duplication of the method above
         for cs in pieces[1]:
             if cs.face is for_face:
                 yield cs

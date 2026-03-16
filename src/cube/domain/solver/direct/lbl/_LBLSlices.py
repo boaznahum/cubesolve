@@ -347,7 +347,7 @@ class _LBLSlices(SolverHelper):
             self.debug(lambda : f"☑️☑️☑️☑️☑️☑️☑️☑️☑️ Protecting row {face_row} it contains center tracker ☑️☑️☑️☑️☑️☑️☑️☑️☑️ ")
             return None
 
-        # Count currently solved pieces (rotation 0) #claude: skip if it is the max available
+        # Count currently solved pieces (rotation 0) #claude [#125]: skip if it is the max available
         best_count = sum(1 for e in _get_row_pieces(cube, l1_tracker, face_row) if e.match_faces)
         if best_count == _common.get_expected_number_of_row_pieces(cube):
             return None  # already solved

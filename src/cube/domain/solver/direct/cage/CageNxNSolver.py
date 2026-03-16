@@ -77,7 +77,7 @@ class CageNxNSolver(BaseSolver):
     See module docstring for details.
 
     - NxNEdges.solve() returns True if parity was detected and fixed
-    - We track this in SolverResults._was_partial_edge_parity
+    - We track this in SolverResults.was_partial_edge_parity
     - For even cubes, additional "full" edge parity may exist (TODO)
     """
 
@@ -251,7 +251,7 @@ class CageNxNSolver(BaseSolver):
                 if not self._are_edges_solved():
                     had_parity = self._solve_edges()
                     if had_parity:
-                        sr._was_partial_edge_parity = True
+                        sr.was_partial_edge_parity = True
 
                 # PHASE 1b: CORNER SOLVING
                 try:
@@ -315,7 +315,7 @@ class CageNxNSolver(BaseSolver):
 
         had_parity = self._solve_edges()
         if had_parity:
-            sr._was_partial_edge_parity = True
+            sr.was_partial_edge_parity = True
         return sr
 
     def _solve_cage_only(self, sr: SolverResults) -> SolverResults:
@@ -345,7 +345,7 @@ class CageNxNSolver(BaseSolver):
                 if not self._are_edges_solved():
                     had_parity = self._solve_edges()
                     if had_parity:
-                        sr._was_partial_edge_parity = True
+                        sr.was_partial_edge_parity = True
 
                 # PHASE 1b: CORNER SOLVING
                 try:

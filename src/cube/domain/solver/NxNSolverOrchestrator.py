@@ -166,7 +166,7 @@ class NxNSolverOrchestrator(AbstractSolver):
 
         if what == SolveStep.NxNEdges:
             results = self._reducer.reduce(self._is_debug_enabled)
-            sr._was_partial_edge_parity = results.partial_edge_parity_detected
+            sr.was_partial_edge_parity = results.partial_edge_parity_detected
             return sr
 
         # Debug state is now handled by AbstractSolver.solve() template method
@@ -303,11 +303,11 @@ class NxNSolverOrchestrator(AbstractSolver):
 
         # Record results (same as original BeginnerSolver)
         if even_edge_parity_detected:
-            sr._was_even_edge_parity = True
+            sr.was_even_edge_parity = True
         if corner_swap_detected:
-            sr._was_corner_swap = True
+            sr.was_corner_swap = True
         if partial_edge_detected:
-            sr._was_partial_edge_parity = True
+            sr.was_partial_edge_parity = True
 
         # Report parity results
         if sr.has_parity:

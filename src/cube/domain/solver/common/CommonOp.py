@@ -469,7 +469,7 @@ class CommonOp(SolverHelper):
         up = cube.up
         assert edge.on_face(up), f"edge {edge} not on UP face"
 
-        # claude: hard coded, find the optimal path to rotate face on edge
+        # claude [#121]: hard coded, find the optimal path to rotate face on edge
         position: EdgePosition = up.get_edge_position(edge)
 
         with MarkedPartTracker.of(edge) as tracker:

@@ -853,14 +853,14 @@ class NxNCenters(SolverHelper):
 
         if fix_back_coords:
             # Fix:
-            # claude: we can fix it !!!, itis easy !!!
+            # claude [#126]: we can fix it !!!, itis easy !!!
             # lets understand all the callers and why it works today !!!
 
             # the logic here is hard code of the logic in slice rotate
             # it will be broken if cube layout is changed
             # here we assume we work on F, and UP has same coord system as F, and
             # back is mirrored in both direction
-            # claude: but now we know using geometry classes to translate
+            # claude [#126]: but now we know using geometry classes to translate
             inv = cube.inv
             rc1 = (inv(rc1[0]), inv(rc1[1]))
             rc2 = (inv(rc2[0]), inv(rc2[1]))

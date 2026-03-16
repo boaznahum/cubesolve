@@ -97,13 +97,25 @@ class SolverResults:
     def was_corner_swap(self) -> bool:
         return self._was_corner_swap
 
+    @was_corner_swap.setter
+    def was_corner_swap(self, value: bool) -> None:
+        self._was_corner_swap = value
+
     @property
     def was_even_edge_parity(self) -> bool:
         return self._was_even_edge_parity
 
+    @was_even_edge_parity.setter
+    def was_even_edge_parity(self, value: bool) -> None:
+        self._was_even_edge_parity = value
+
     @property
     def was_partial_edge_parity(self) -> bool:
         return self._was_partial_edge_parity
+
+    @was_partial_edge_parity.setter
+    def was_partial_edge_parity(self, value: bool) -> None:
+        self._was_partial_edge_parity = value
 
     @property
     def has_parity(self) -> bool:

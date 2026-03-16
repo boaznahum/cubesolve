@@ -1,4 +1,4 @@
-# claude document this class
+# claude [#127] document this class
 from cube.domain.model.Cube import Cube
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
