@@ -57,9 +57,6 @@ def _get_supported_pairs() -> list[tuple[FaceName, FaceName]]:
 
          ]
 
-    if True:
-        return worked + working
-    else:
-        return working
+    return worked + working
 
 

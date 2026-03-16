@@ -58,7 +58,7 @@ class L1Cross(SolverHelper):
         wf: Face = self.white_face
         return self.cqr.rotate_face_and_check(wf, self.is_cross, self.op) >= 0
 
-    def solve(self, with_rotations: bool = False):
+    def solve(self) -> None:
 
         if self.is_cross():  #
             return

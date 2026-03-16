@@ -128,7 +128,7 @@ class ApplicationAndViewState:
         """Access the configuration."""
         return self._config
 
-    def reset(self, not_view=False) -> None:
+    def reset(self) -> None:
         self._alpha_x = 0
         self._alpha_y = 0
         self._alpha_z = 0
@@ -415,90 +415,7 @@ class ApplicationAndViewState:
             backend_name: Optional backend name (e.g., "pyglet2", "tkinter").
         """
 
-        return
-
-        # Backend and OpenGL info - always print if provided (unless quiet)
-        if (backend_name or opengl_info) and not self._logger.quiet_all:
-            print("=" * 60)
-            if backend_name:
-                print(f"Backend: {backend_name}")
-            if opengl_info:
-                print("OpenGL Information:")
-                print(opengl_info)
-            print("=" * 60)
-
-        # State and config - debug(True) = shows without --debug-all
-        self.debug(True, "=" * 60)
-        self.debug(True, f"DUMP: {label}")
-        self.debug(True, "=" * 60)
-
-        # View state
-        self.debug(True, "View State:")
-        self.debug(True, f"  Initial rotation: alpha_x_0={self._alpha_x_0:.4f}, "
-                   f"alpha_y_0={self._alpha_y_0:.4f}, alpha_z_0={self._alpha_z_0:.4f}")
-        self.debug(True, f"  User rotation:    alpha_x={self._alpha_x:.4f}, "
-                   f"alpha_y={self._alpha_y:.4f}, alpha_z={self._alpha_z:.4f}")
-        self.debug(True, f"  Alpha delta: {self._alpha_delta}")
-        self.debug(True, f"  FOV: {self._fov_y} (initial: {self._fov_y_0})")
-        self.debug(True, f"  Offset: {self._offset} (initial: {self._offset_0})")
-
-        # Config values
-        self.debug(True, "Config:")
-        self.debug(True, f"  Cube size: {self.cube_size}")
-        self.debug(True, f"  Slice range: [{self.slice_start}, {self.slice_stop}]")
-        self.debug(True, f"  Shadow faces: '{self._draw_shadows}'")
-        self.debug(True, f"  Speed index: {self._speed} ({self.get_speed.get_speed()})")
-        self.debug(True, f"  Single step mode: {self.single_step_mode}")
-        self.debug(True, f"  Debug all: {self._logger.is_debug_all}, Quiet all: {self._logger.quiet_all}")
-
-        # Cube summary - debug(True)
-        self.debug(True, "Cube:")
-        self.debug(True, f"  Size: {cube.size}, Solved: {cube.solved}, "
-                   f"ModCounter: {cube._modify_counter}")
-
-        # Recording
-        if self.last_recording:
-            self.debug(True, f"  Last recording: {len(self.last_recording)} moves")
-
-        self.debug(True, "-" * 60)
-
-        # Cube slices detail - debug(False) = only with --debug-all
-        # Early return if not debug_all to avoid expensive computation
-        if not self._logger.is_debug_all:
-            self.debug(True, "(Use --debug-all for verbose cube slice details)")
-            self.debug(True, "=" * 60)
-            self.debug(True, f"END DUMP: {label}")
-            self.debug(True, "=" * 60)
-            return
-
-        state = cube.cqr.get_sate()
-        self.debug(False, f"State entries: {len(state)}")
-        self.debug(False, "-" * 60)
-        self.debug(False, "SLICES (verbose):")
-
-        all_slices = cube.get_all_part_slices()
-        for s in sorted(all_slices, key=lambda p: str(p.fixed_id)):
-            # _colors_id_by_colors is initialized in PartSlice.__init__
-            colors_cache = s._colors_id_by_colors
-            match_faces = s.match_faces
-            edges_str = ", ".join(f"{e.face.name.value}:{e.color.name}" for e in s.edges)
-
-            self.debug(False, f"  Slice: {s.fixed_id}")
-            self.debug(False, f"    index: {s._index}")
-            self.debug(False, f"    edges: [{edges_str}]")
-            self.debug(False, f"    colors: {s.colors}")
-            self.debug(False, f"    colors_id: {s.colors_id} (cache_was={colors_cache})")
-            self.debug(False, f"    match_faces: {match_faces}")
-
-        # Full state dictionary - debug(False)
-        self.debug(False, "-" * 60)
-        self.debug(False, "FULL STATE DICT:")
-        for fixed_id, colors in sorted(state.items(), key=lambda x: str(x[0])):
-            self.debug(False, f"  {fixed_id} -> {colors}")
-
-        self.debug(True, "=" * 60)
-        self.debug(True, f"END DUMP: {label}")
-        self.debug(True, "=" * 60)
+        pass
 
     # Celebration effect properties
     @property

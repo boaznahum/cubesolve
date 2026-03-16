@@ -14,7 +14,7 @@ _cached_visual_face_marker: dict[Color, MarkerCreator] = {}
 def tracer_visual_key(tracer_key: str) -> str:
     return _TRACKER_VISUAL_MARKER + tracer_key
 
-def _find_markable_center_slice(face: Face, color: Color) -> CenterSlice:
+def _find_markable_center_slice(face: Face) -> CenterSlice:
     """Find a center slice on the given face to mark.
 
     Prefers a slice matching our target color if available,
@@ -26,20 +26,12 @@ def _find_markable_center_slice(face: Face, color: Color) -> CenterSlice:
     Returns:
         A CenterSlice suitable for marking.
     """
-    if True:
-        n = face.n_slices
-        return face.center.get_slice((n // 2, n // 2))
-    else:
-        # Prefer a slice matching our target color
-        for s in face.center.all_slices:
-            if s.color == color:
-                return s
-        # Fallback to first available slice
-        return next(iter(face.center.all_slices))
+    n = face.n_slices
+    return face.center.get_slice((n // 2, n // 2))
 
 def find_and_track_slice(face: Face, key: str, color: Color) -> None:
 
-        center_slice = _find_markable_center_slice(face, color)
+        center_slice = _find_markable_center_slice(face)
 
         # 4. Mark it with our color (reuse existing key)
         edge = center_slice.edge

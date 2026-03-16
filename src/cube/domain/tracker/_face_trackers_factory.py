@@ -430,8 +430,6 @@ class NxNCentersFaceTrackers(SolverHelper):
 
         return f5_track, f6_track
 
-        return False
-
 
 
     def _create_f5_pred(self, four_first: Sequence[FaceTracker], color: Color) -> Pred[Face]:
