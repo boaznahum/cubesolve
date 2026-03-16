@@ -14,19 +14,17 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Tuple
 
 from cube.domain.algs import Algs, Alg
 from cube.domain.algs.SliceAlg import SliceAlg
 from cube.domain.geometric.Face2FaceTranslator import (
     Face2FaceTranslator,
     FaceTranslationResult,
-    SliceAlgorithmResult,
 )
 from cube.domain.geometric.block import Block
 from cube.domain.geometric.geometry_types import CLGColRow, Point
 from cube.domain.geometric.geometry_utils import inv
-from cube.domain.model import FaceName, Cube
+from cube.domain.model import FaceName
 from cube.domain.model.Face import Face
 from cube.domain.model.SliceName import SliceName
 from cube.domain.solver.common.SolverHelper import SolverHelper
@@ -577,8 +575,6 @@ class BlockBySliceSwapHelper(SolverHelper):
           [source_setup] → [target_setup] → slice → face_rotate → slice'
               → [target_setup'] → [source_setup']
         """
-        cube = self.cube
-
         # Get the base slice algorithm
         base_slice_alg = Algs.of_slice(slice_name)
 
