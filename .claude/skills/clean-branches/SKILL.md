@@ -1,6 +1,7 @@
 ---
 name: clean-branches
 user_invocable: true
+context: fork
 description: |
   Clean up git branches by analyzing merged/unmerged status, archiving completed work,
   and organizing active branches. This skill should be used when the user wants to clean
