@@ -407,91 +407,93 @@ class NxNEdgesCommon(SolverHelper):
 
     def _do_edge_parity_on_edge(self, edge) -> None:
 
-        cube = self.cube
-        n_slices = cube.n_slices
+        with self._logger.tab(lambda: f"Doing odd edge parity on edge: {edge}"):
 
-        face = cube.front
+            cube = self.cube
+            n_slices = cube.n_slices
 
-        tracer: EdgeSliceTracker
-        with self.cmn.track_e_slice(edge.get_slice(0)) as tracer:
-            self.debug( f"Doing parity on {edge}", level=1)
-            edge = self.cmn.bring_edge_to_front_left_by_whole_rotate(edge)
-            assert edge is face.edge_left
-            assert edge is cube.fl
-            self.op.play(Algs.F)
+            face = cube.front
 
-            # not true on even, edge is OK
-            # assert CubeQueries.find_edge(cube.edges, lambda e: not e.is3x3) is face.edge_top
+            tracer: EdgeSliceTracker
+            with self.cmn.track_e_slice(edge.get_slice(0)) as tracer:
+                self.debug( f"Doing parity on {edge}", level=1)
+                edge = self.cmn.bring_edge_to_front_left_by_whole_rotate(edge)
+                assert edge is face.edge_left
+                assert edge is cube.fl
+                self.op.play(Algs.F)
 
-            edge = tracer.the_slice_nl.parent
-            assert edge is face.edge_top
-            edge = cube.front.edge_top
+                # not true on even, edge is OK
+                # assert CubeQueries.find_edge(cube.edges, lambda e: not e.is3x3) is face.edge_top
 
-        if n_slices % 2:
-            required_color = self.get_slice_ordered_color(face, edge.get_slice(n_slices // 2))
-        else:
-            # In even, we can have partial and complete parity in cas eof complete, we reach here from solver after
-            # finding edge in 3x3 with partial we reach here from this solver so in first case we need to reverse all
-            # slices in second case we have no idea which, so we pick the first one (that can later cause and OLL
-            # parity when solving as 3x3)
-            required_color = self.get_slice_ordered_color(face, edge.get_slice(0))
-            required_color = required_color[::-1]
+                edge = tracer.the_slice_nl.parent
+                assert edge is face.edge_top
+                edge = cube.front.edge_top
 
-        slices_to_fix: list[EdgeWing] = []
-        slices_indices_to_fix: list[int] = []
-        _all = True
-        for i in range(n_slices // 2):
-
-            s = edge.get_slice(i)
-            color = self.get_slice_ordered_color(face, s)
-            # print(f"{i} ,{required_color}, {color}")
-            if color != required_color:
-                slices_indices_to_fix.append(i)
-                slices_to_fix.append(s)
+            if n_slices % 2:
+                required_color = self.get_slice_ordered_color(face, edge.get_slice(n_slices // 2))
             else:
-                _all = False
+                # In even, we can have partial and complete parity in cas eof complete, we reach here from solver after
+                # finding edge in 3x3 with partial we reach here from this solver so in first case we need to reverse all
+                # slices in second case we have no idea which, so we pick the first one (that can later cause and OLL
+                # parity when solving as 3x3)
+                required_color = self.get_slice_ordered_color(face, edge.get_slice(0))
+                required_color = required_color[::-1]
 
-        ann = "Fixing edge(OLL) Parity"
-        if n_slices % 2 == 0 and _all:
-            ann += "(Full even)"
+            slices_to_fix: list[EdgeWing] = []
+            slices_indices_to_fix: list[int] = []
+            _all = True
+            for i in range(n_slices // 2):
 
-        # self.op.toggle_animation_on(enable=True)
-        with self.ann.annotate((slices_to_fix, AnnWhat.Moved), h1=ann):
-            # slices are from [1 nn], so we need to add 1
-            # actually, simple alg doesn't care if we fix i or inv(i), because on
-            # Advance alg - I don't know, so I'm keeping the index matches R - for the advanced
-            # last edge they come in pairs i<->inv(i)
-            #
-            plus_one = [ i + 1 for i in slices_indices_to_fix]
+                s = edge.get_slice(i)
+                color = self.get_slice_ordered_color(face, s)
+                # print(f"{i} ,{required_color}, {color}")
+                if color != required_color:
+                    slices_indices_to_fix.append(i)
+                    slices_to_fix.append(s)
+                else:
+                    _all = False
 
-            if not self._advanced_edge_parity:
-                self.debug( f"*** Doing parity on M {plus_one}", level=2)
-                for _ in range(4):
+            ann = "Fixing edge(OLL) Parity"
+            if n_slices % 2 == 0 and _all:
+                ann += "(Full even)"
+
+            # self.op.toggle_animation_on(enable=True)
+            with self.ann.annotate((slices_to_fix, AnnWhat.Moved), h1=ann):
+                # slices are from [1 nn], so we need to add 1
+                # actually, simple alg doesn't care if we fix i or inv(i), because on
+                # Advance alg - I don't know, so I'm keeping the index matches R - for the advanced
+                # last edge they come in pairs i<->inv(i)
+                #
+                plus_one = [ i + 1 for i in slices_indices_to_fix]
+
+                if not self._advanced_edge_parity:
+                    self.debug( f"*** Doing parity on M {plus_one}", level=2)
+                    for _ in range(4):
+                        self.op.play(Algs.MM[plus_one].prime)
+                        self.op.play(Algs.U * 2)
                     self.op.play(Algs.MM[plus_one].prime)
-                    self.op.play(Algs.U * 2)
-                self.op.play(Algs.MM[plus_one].prime)
-            else:
-                # in case of R/L we need to add 1, because 1 is R, and slices begin with 2
-                plus_one = [i + 1 for i in plus_one]
+                else:
+                    # in case of R/L we need to add 1, because 1 is R, and slices begin with 2
+                    plus_one = [i + 1 for i in plus_one]
 
-                self.debug( f"*** Doing parity on R {plus_one}", level=2)
-                #  https://speedcubedb.com/a/6x6/6x6L2E
-                # 3R' U2 3L F2 3L' F2 3R2 U2 3R U2 3R' U2 F2 3R2 F2
+                    self.debug( f"*** Doing parity on R {plus_one}", level=2)
+                    #  https://speedcubedb.com/a/6x6/6x6L2E
+                    # 3R' U2 3L F2 3L' F2 3R2 U2 3R U2 3R' U2 F2 3R2 F2
 
-                # noinspection PyPep8Naming
-                Rs = Algs.R[plus_one]
-                # noinspection PyPep8Naming
-                Ls = Algs.L[plus_one]
+                    # noinspection PyPep8Naming
+                    Rs = Algs.R[plus_one]
+                    # noinspection PyPep8Naming
+                    Ls = Algs.L[plus_one]
 
-                # noinspection PyPep8Naming
-                U = Algs.U
-                # noinspection PyPep8Naming
-                F = Algs.F
+                    # noinspection PyPep8Naming
+                    U = Algs.U
+                    # noinspection PyPep8Naming
+                    F = Algs.F
 
-                alg = Rs.prime + U * 2 + Ls + F * 2 + Ls.prime + F * 2 + Rs * 2 + U * 2 + Rs + U * 2 + Rs.p + U * 2 + F * 2
-                alg += Rs * 2 + F * 2
+                    alg = Rs.prime + U * 2 + Ls + F * 2 + Ls.prime + F * 2 + Rs * 2 + U * 2 + Rs + U * 2 + Rs.p + U * 2 + F * 2
+                    alg += Rs * 2 + F * 2
 
-                self.op.play(alg)
+                    self.op.play(alg)
 
     @staticmethod
     def get_slice_ordered_color(f: Face, s: EdgeWing) -> Tuple[Color, Color]:
