@@ -7,17 +7,23 @@ description: |
   and organizing active branches. This skill should be used when the user wants to clean
   up branches, organize their git repository, or review branch status.
   Triggered by "/clean-branches", "/branches", "clean branches", "check branches", "check branch", or "branches".
+  Accepts optional argument: branch name to compare against (e.g., "/clean-branches webgl-dev").
 ---
 
 # Branch Cleanup Skill
 
 This skill provides an iterative workflow for cleaning up git branches by analyzing their merge status and organizing them into appropriate namespaces.
 
-## Step 0: Ask Which Branch to Compare Against
+**CRITICAL RULES:**
+1. **NEVER just delete branches.** Always offer ARCHIVE as the first/recommended option for merged branches.
+2. **Follow the FULL workflow** including archive steps — do not shortcut to deletion.
+3. **Run the analysis script** — do not do ad-hoc analysis with a separate agent.
 
-**ALWAYS ask the user first which branch to compare against before running analysis.**
+## Step 0: Determine Target Branch
 
-Use AskUserQuestion with these options:
+**If the user provided a branch name as an argument** (e.g., `/clean-branches webgl-dev`), use that directly — skip the question.
+
+**If no argument was provided**, ask the user which branch to compare against:
 
 1. **Default branch** - Compare against the repository's default branch (usually `main`)
 2. **Current branch** - Compare against the currently checked-out branch
@@ -36,7 +42,7 @@ git branch --show-current
 
 ## Quick Start - Run Analysis Script
 
-After the user selects a target branch, run the analysis script with the `--target` flag:
+After determining the target branch, run the analysis script with the `--target` flag:
 
 ```bash
 # Compare against default branch (or omit --target)
@@ -236,12 +242,16 @@ git push origin --delete <branch>  # if remote exists
 
 ### Step 8: Process Merged Branches (with remotes)
 
+**CRITICAL: ALWAYS archive first, NEVER just delete.** This is the most important step.
+
 For branches that have remotes and are confirmed as merged, offer these options:
 
 **Options (in order of preference):**
-1. **Archive remote + delete local** (Recommended) - Move remote to archive, delete local copy
+1. **Archive remote + delete local** (Recommended — DEFAULT) - Move remote to archive namespace, delete local copy
 2. **Delete both** - Delete both local and remote (work already in target branch)
 3. **Keep** - Leave as-is
+
+**NEVER skip this step. NEVER just `git push origin --delete` without offering archive first.**
 
 **Archive remote + delete local** (best option - preserves history on remote):
 ```bash
