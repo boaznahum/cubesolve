@@ -26,17 +26,19 @@ In the solver codebase, `cmn.white` doesn't mean the color white -- it means "th
 
 ## Fix
 
-Added `forced_start_color` attribute to `BeginnerSolver3x3`:
+Added `_forced_start_color` constructor parameter to `BeginnerSolver3x3`:
+- Passed via `Solvers3x3.beginner(op, logger, forced_start_color=color)`
 - When set (non-None), `_select_best_start_color()` skips auto-detection and uses the forced color
-- `_solve_layer1_with_shadow()` sets `shadow_solver.forced_start_color = self.cmn.white` before running
+- `_solve_layer1_with_shadow()` passes `self.cmn.white` at construction time
 
 This ensures the shadow solver always solves the face the Big LBL solver expects.
 
 ### Files modified
-- `src/cube/domain/solver/_3x3/beginner/BeginnerSolver3x3.py` -- added `forced_start_color` slot and parameter
-- `src/cube/domain/solver/direct/lbl/DirectLayerByLayerNxNSolver.py` -- sets forced color on shadow solver
-- `tests/sequences/s1_3000.txt` -- new 3000-seed file (extends s1_1000.txt with same base seed)
-- `tests/solvers/conftest.py` -- increased seed count from 300 to 3000
+- `src/cube/domain/solver/_3x3/beginner/BeginnerSolver3x3.py` -- added `_forced_start_color` constructor param
+- `src/cube/domain/solver/Solvers3x3.py` -- `beginner()` factory forwards `forced_start_color`
+- `src/cube/domain/solver/direct/lbl/DirectLayerByLayerNxNSolver.py` -- passes forced color at construction
+- `tests/sequences/s1_3000.txt` -- new 3000-seed file (extends s1_1000.txt with same base seed 1771092690)
+- `tests/solvers/conftest.py` -- documented bug history, seed config updated by user
 
 ## Coverage
 
@@ -57,7 +59,11 @@ L3 = opposite of L1, so forcing L1 = white means L3 = yellow (correct).
 
 `CageNxNSolver._solve_3x3_with_shadow()` also uses `Solvers3x3.beginner()` / `Solvers3x3.by_name()` on a shadow cube without forcing the start color. Same bug could manifest there. Not addressed in this session.
 
-## Status: IN PROGRESS
-- Fix implemented and verified with 3000 seeds
-- User is running their own test pass
-- Not yet committed
+## Commits
+
+1. `4737311e` -- Quick fix: public `forced_start_color` attribute set after construction
+2. (this commit) -- Clean fix: private `_forced_start_color` via constructor + factory
+
+## Status: DONE
+- Fix implemented and verified with 3000 seeds (78,965 passed, 0 failed)
+- Issue #119 closed

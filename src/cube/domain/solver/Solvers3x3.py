@@ -8,6 +8,7 @@ from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.protocols.Solver3x3Protocol import Solver3x3Protocol
 
 if TYPE_CHECKING:
+    from cube.domain.model.Color import Color
     from cube.utils.logger_protocol import ILogger
 
 
@@ -26,19 +27,25 @@ class Solvers3x3:
     """
 
     @staticmethod
-    def beginner(op: OperatorProtocol, parent_logger: "ILogger") -> Solver3x3Protocol:
+    def beginner(
+        op: OperatorProtocol,
+        parent_logger: "ILogger",
+        forced_start_color: "Color | None" = None,
+    ) -> Solver3x3Protocol:
         """
         Get beginner layer-by-layer 3x3 solver.
 
         Args:
             op: Operator for cube manipulation
             parent_logger: Parent logger (cube.sp.logger for root, parent._logger for child)
+            forced_start_color: If set, force L1 to this color instead of
+                auto-detecting. Used by NxN shadow cube solving. See issue #119.
 
         Returns:
             BeginnerSolver3x3 instance
         """
         from cube.domain.solver._3x3.beginner.BeginnerSolver3x3 import BeginnerSolver3x3
-        return BeginnerSolver3x3(op, parent_logger)
+        return BeginnerSolver3x3(op, parent_logger, forced_start_color=forced_start_color)
 
     @staticmethod
     def cfop(op: OperatorProtocol, parent_logger: "ILogger") -> Solver3x3Protocol:

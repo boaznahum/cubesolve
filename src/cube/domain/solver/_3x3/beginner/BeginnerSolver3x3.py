@@ -139,12 +139,13 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
     """
 
     __slots__ = ["l1_cross", "l1_corners", "l2", "l3_cross", "l3_corners",
-                 "forced_start_color"]
+                 "_forced_start_color"]
 
     def __init__(
         self,
         op: OperatorProtocol,
         parent_logger: "ILogger",
+        forced_start_color: "Color | None" = None,
     ) -> None:
         """
         Create a BeginnerSolver3x3.
@@ -152,9 +153,13 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
         Args:
             op: Operator for cube manipulation
             parent_logger: Parent logger (cube.sp.logger for root, parent._logger for child)
+            forced_start_color: If set, skip auto-detection and always use this
+                color as L1. Used by NxN shadow cube solving where the parent
+                solver dictates which face to solve as L1.
+                See .claude/sessions/lbl-crash.md and issue #119.
         """
         super().__init__(op, parent_logger, logger_prefix="Beginner3x3")
-        self.forced_start_color: Color | None = None
+        self._forced_start_color: Color | None = forced_start_color
 
         self.l1_cross = L1Cross(self)
         self.l1_corners = L1Corners(self)
@@ -204,7 +209,7 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
         if what is None:
             what = SolveStep.ALL
 
-        self._select_best_start_color(self.forced_start_color)
+        self._select_best_start_color(self._forced_start_color)
 
         # Execute appropriate solve steps
         # Note: L3 steps may raise parity exceptions on even cubes

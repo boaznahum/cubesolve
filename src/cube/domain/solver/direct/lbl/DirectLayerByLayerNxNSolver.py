@@ -568,12 +568,11 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
 
         # Use beginner method for L1 solving (same approach as CageNxNSolver)
         # we cannot use kochima becuase it konw to solve only valid cube and only whole cube
-        shadow_solver = Solvers3x3.beginner(dual_op, self._logger)
-
-        # Force the shadow solver to use the same L1 color as the parent solver.
-        # Without this, _select_best_start_color() may pick a different face,
-        # solving the wrong cross. See issue #119.
-        shadow_solver.forced_start_color = self.cmn.white  # type: ignore[attr-defined]
+        # Force L1 color to match parent solver's white face.
+        # Without this, _select_best_start_color() may pick a different face on the
+        # shadow cube, solving the wrong cross. See issue #119, .claude/sessions/lbl-crash.md
+        shadow_solver = Solvers3x3.beginner(dual_op, self._logger,
+                                            forced_start_color=self.cmn.white)
 
         # Solve only L1 (cross + corners)
         # Cast: BeginnerSolver3x3 is both Solver3x3Protocol AND Solver (via BaseSolver)

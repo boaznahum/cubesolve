@@ -50,7 +50,14 @@ PREDEFINED_SCRAMBLE_SEEDS: list[int] = GUI_SCRAMBLE_SEEDS + ADDITIONAL_SCRAMBLE_
 # =============================================================================
 # Set to None to disable, or to ("filename", count) to load seeds from tests/sequences/
 # Example: SEED_SEQUENCE_CONFIG = ("s1", 200)
-SEED_SEQUENCE_CONFIG: tuple[str, int] | None = ("s1", 3000)
+#
+# Bug history (issue #119, .claude/sessions/lbl-crash.md):
+#   With 300 seeds from s1, the Big LBL shadow L1 cross assertion was hard to
+#   reproduce. Extending to 3000 seeds (s1_3000.txt) exposed the bug reliably:
+#   BeginnerSolver3x3._select_best_start_color() picked a non-white face on the
+#   shadow cube, solving the wrong cross. Fixed via forced_start_color parameter.
+#   s1_3000.txt shares the same base seed (1771092690) as s1_1000.txt.
+SEED_SEQUENCE_CONFIG: tuple[str, int] | None = ("s3", 300)
 
 # =============================================================================
 # Fixtures
