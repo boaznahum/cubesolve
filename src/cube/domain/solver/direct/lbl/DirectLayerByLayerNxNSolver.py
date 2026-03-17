@@ -570,6 +570,11 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
         # we cannot use kochima becuase it konw to solve only valid cube and only whole cube
         shadow_solver = Solvers3x3.beginner(dual_op, self._logger)
 
+        # Force the shadow solver to use the same L1 color as the parent solver.
+        # Without this, _select_best_start_color() may pick a different face,
+        # solving the wrong cross. See issue #119.
+        shadow_solver.forced_start_color = self.cmn.white  # type: ignore[attr-defined]
+
         # Solve only L1 (cross + corners)
         # Cast: BeginnerSolver3x3 is both Solver3x3Protocol AND Solver (via BaseSolver)
         self._run_child_solver(cast(Solver, shadow_solver), what)

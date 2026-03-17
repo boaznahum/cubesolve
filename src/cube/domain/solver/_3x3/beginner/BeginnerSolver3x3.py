@@ -138,7 +138,8 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
     Inherits from Solver3x3Protocol to satisfy the project's convention.
     """
 
-    __slots__ = ["l1_cross", "l1_corners", "l2", "l3_cross", "l3_corners"]
+    __slots__ = ["l1_cross", "l1_corners", "l2", "l3_cross", "l3_corners",
+                 "forced_start_color"]
 
     def __init__(
         self,
@@ -153,6 +154,7 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
             parent_logger: Parent logger (cube.sp.logger for root, parent._logger for child)
         """
         super().__init__(op, parent_logger, logger_prefix="Beginner3x3")
+        self.forced_start_color: Color | None = None
 
         self.l1_cross = L1Cross(self)
         self.l1_corners = L1Corners(self)
@@ -202,7 +204,7 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
         if what is None:
             what = SolveStep.ALL
 
-        self._select_best_start_color()
+        self._select_best_start_color(self.forced_start_color)
 
         # Execute appropriate solve steps
         # Note: L3 steps may raise parity exceptions on even cubes
@@ -281,12 +283,21 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
 
         return s
 
-    def _select_best_start_color(self) -> None:
+    def _select_best_start_color(self, forced_start_color: "Color | None" = None) -> None:
         """Pick the best starting color for L1.
 
         Grades all 6 faces (0=none, 1=cross, 2=full L1) and picks the highest.
         Prefers white on tie. Only called before solving.
+
+        Args:
+            forced_start_color: If set, skip auto-detection and use this color.
+                Used by NxN shadow cube solving where the parent solver
+                dictates which face to solve as L1.
         """
+        if forced_start_color is not None:
+            self.cmn._start_color = forced_start_color
+            return
+
         white: Color = self.cmn.white
         best_face, grade = _find_best_l1_face(self._cube.faces, white)
 
