@@ -1,7 +1,7 @@
 ---
 name: clean-branches
 user_invocable: true
-context: fork
+context: conversation
 description: |
   Clean up git branches by analyzing merged/unmerged status, archiving completed work,
   and organizing active branches. This skill should be used when the user wants to clean
@@ -353,9 +353,8 @@ After processing, show updated branch list and ask if further cleanup is needed.
 
 ## Important Notes
 
-- **CRITICAL: EVERY action with side effects (delete, rename, move, push) MUST be approved by the user using AskUserQuestion BEFORE execution**
+- **CRITICAL: EVERY action with side effects (delete, rename, move, push) MUST be approved by the user BEFORE execution**
 - Query/read operations (git log, git branch --list, git branch --contains, etc.) do NOT require approval
-- Never batch multiple branch operations - ask for approval for each branch individually or show a clear list and get explicit confirmation
 - Even if analysis shows a branch is "safe to delete", still ask the user first
 - Skip branches that are already in `zzarchive/` or `wip/` namespaces (no action needed)
 - **Archive branches**: When analyzing, distinguish between:
@@ -366,20 +365,39 @@ After processing, show updated branch list and ask if further cleanup is needed.
 - If a branch has no remote tracking, note this in the report
 - Preserve the current checked-out branch (cannot delete/rename it while on it)
 
-### User Approval Flow
+### User Approval Flow — USE AskUserQuestion TOOL
 
-1. **Present the analysis** - Show the full report with recommendations
-2. **Ask for approval** - Use AskUserQuestion for each branch or group of branches
-3. **Execute only after approval** - Never assume user consent
-4. **Report results** - Show what was done after each action
+**CRITICAL: Use the `AskUserQuestion` tool for ALL decisions.** This presents a proper
+selectable menu in the Claude Code UI where the user can scroll, choose, and press enter.
 
-Example:
-```
-Analysis shows: branch-x is contained in main, safe to delete
+**Workflow after analysis:**
 
-[AskUserQuestion]: "Delete local branch `branch-x`? (already in main)"
-  - Yes, delete
-  - No, keep
+1. **Print the analysis report** as text output (branch tables, status, etc.)
 
-[Only proceed if user selects "Yes"]
-```
+2. **Use AskUserQuestion for merged branches** (one question):
+   - Question: "How to handle N merged branches?" with header "Merged"
+   - Options (up to 4):
+     - "Archive all (Recommended)" — description: "Move to zzarchive/completed/ + delete local+remote"
+     - "Delete all" — description: "Delete without archiving (work is in target)"
+     - "Review each" — description: "Decide per branch"
+     - "Skip" — description: "Keep all as-is"
+
+3. **Use AskUserQuestion for EACH unmerged branch** (one question per branch):
+   - Question: "What to do with `<branch>`? (N unique commits)" with header "<branch>"
+   - Options:
+     - "Archive stopped" — description: "Move to zzarchive/stopped/<branch>"
+     - "Archive claudez" — description: "Move to zzarchive/claudez/<branch>" (for claude/ branches)
+     - "Keep" — description: "Leave as-is"
+     - "Delete" — description: "Delete without archiving"
+
+4. **If "Review each" was selected for merged branches**, use AskUserQuestion per branch:
+   - Question: "What to do with `<branch>`?" with header "<branch>"
+   - Options:
+     - "Archive (Recommended)" — description: "Move to zzarchive/completed/<branch>"
+     - "Delete" — description: "Delete without archiving"
+     - "Keep" — description: "Leave as-is"
+
+5. **Execute** all chosen actions, then report results.
+
+**You can batch up to 4 questions in a single AskUserQuestion call** using the questions
+array. Use this to ask about multiple unmerged branches at once (max 4 per call).
