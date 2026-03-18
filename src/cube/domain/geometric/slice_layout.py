@@ -182,10 +182,10 @@ class SliceLayout(Protocol):
                                           n_slices: int
                                           ) -> int:
         """
-        Convert distance from a parallel face to slice index.
+        Low-level: convert distance from a parallel face to slice index.
 
-        Given a face that is parallel to the slice and a distance from that face,
-        return the corresponding 0-based slice index.
+        Prefer SizedCubeLayout.distance_from_face_to_slice_index() which
+        supplies n_slices automatically from the cube.
 
         Args:
             face_name: A face parallel to the slice (must be rotation_face or opposite_face)
@@ -194,12 +194,6 @@ class SliceLayout(Protocol):
 
         Returns:
             0-based slice index in range [0, n_slices-1]
-
-        Example for M slice (parallel to L and R) with n_slices=3:
-            - distance_from_face_to_slice_index(L, 0, 3) → 0 (closest to L)
-            - distance_from_face_to_slice_index(L, 2, 3) → 2 (farthest from L)
-            - distance_from_face_to_slice_index(R, 0, 3) → 2 (closest to R = farthest from L)
-            - distance_from_face_to_slice_index(R, 2, 3) → 0 (farthest from R = closest to L)
 
         Raises:
             GeometryError: If face_name is not parallel to this slice
@@ -467,25 +461,10 @@ class _SliceLayout(SliceLayout):
         """
         Convert distance from a parallel face to slice index.
 
-        Given a face that is parallel to the slice and a distance from that face,
-        return the corresponding 0-based slice index.
+        Low-level: convert distance from a parallel face to slice index.
 
-        Args:
-            face_name: A face parallel to the slice (must be rotation_face or opposite_face)
-            distance_from_face: 0-based distance from the face (0 = closest to face)
-            n_slices: Total number of inner slices (cube.size - 2)
-
-        Returns:
-            0-based slice index in range [0, n_slices-1]
-
-        Example for M slice (parallel to L and R) with n_slices=3:
-            - distance_from_face_to_slice_index(L, 0, 3) → 0 (closest to L)
-            - distance_from_face_to_slice_index(L, 2, 3) → 2 (farthest from L)
-            - distance_from_face_to_slice_index(R, 0, 3) → 2 (closest to R = farthest from L)
-            - distance_from_face_to_slice_index(R, 2, 3) → 0 (farthest from R = closest to L)
-
-        Raises:
-            GeometryError: If face_name is not parallel to this slice
+        Prefer SizedCubeLayout.distance_from_face_to_slice_index() which
+        supplies n_slices automatically from the cube.
         """
         faces: tuple[FaceName, FaceName] = self.get_slice_rotation_faces()
 

@@ -371,13 +371,10 @@ def _get_all_row_pieces(cube, l1_tracker: FaceTracker, face_row: int) -> tuple[S
     # Get the slice sandwiched between L1 face and its opposite
     # (e.g., L1=D → E slice, L1=L → M slice, L1=F → S slice)
     slice_name = cube.layout.get_slice_sandwiched_between_face_and_opposite(l1_tracker.face_name)
-    slice_layout = cube.layout.get_slice(slice_name)
-
-    n_slices = cube.n_slices
 
     # Convert L1-relative distance to slice coordinate system
-    cube_slice_index = slice_layout.distance_from_face_to_slice_index(
-        l1_tracker.face_name, face_row, n_slices
+    cube_slice_index = cube.sized_layout.distance_from_face_to_slice_index(
+        slice_name, l1_tracker.face_name, face_row
     )
 
     slice_obj: Slice = cube.get_slice(slice_name)
@@ -454,15 +451,12 @@ def get_center_row_pieces(cube,
     # Get the slice sandwiched between L1 face and its opposite
     # (e.g., L1=D → E slice, L1=L → M slice, L1=F → S slice)
     slice_name = cube.layout.get_slice_sandwiched_between_face_and_opposite(l1_tracker.face_name)
-    slice_layout = cube.layout.get_slice(slice_name)
 
     # Convert L1-relative distance to slice coordinate system
-    cube_slice_index = slice_layout.distance_from_face_to_slice_index(
-
-        l1_tracker.face_name, face_row, cube.n_slices  # claude [#123]: why we need to pass n_slices !!! it should be in sized layout - slice !!
+    cube_slice_index = cube.sized_layout.distance_from_face_to_slice_index(
+        slice_name, l1_tracker.face_name, face_row
     )
 
-    slice_name = cube.layout.get_slice_sandwiched_between_face_and_opposite(l1_tracker.face_name)
     slice_obj: Slice = cube.get_slice(slice_name)
 
     # Get edge wings and center slices at this slice index

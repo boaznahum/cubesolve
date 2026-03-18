@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     from cube.domain.model import EdgeWing
     from cube.domain.model.Cube import Cube
     from cube.domain.model.Face import Face
+    from cube.domain.model.FaceName import FaceName
     from cube.domain.model.Slice import Slice
     from cube.domain.model._part import EdgeName
 
@@ -108,6 +109,15 @@ class _SizedCubeLayout(SizedCubeLayout):
     def n_slices(self) -> int:
         """Get the cube's n_slices (cube_size - 2)."""
         return self._cube.n_slices
+
+    def distance_from_face_to_slice_index(self, slice_name: SliceName,
+                                          face_name: FaceName,
+                                          distance_from_face: int
+                                          ) -> int:
+        slice_layout = self._cube.layout.get_slice(slice_name)
+        return slice_layout.distance_from_face_to_slice_index(
+            face_name, distance_from_face, self._cube.n_slices
+        )
 
     # =========================================================================
     # CubeGeometric Protocol Implementation

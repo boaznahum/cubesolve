@@ -257,9 +257,8 @@ class _LBLSlices(SolverHelper):
 
         cube = self.cube
         slice_name = cube.layout.get_slice_sandwiched_between_face_and_opposite(l1_tracker.face_name)
-        slice_layout = cube.layout.get_slice(slice_name)
-        cube_slice_index = slice_layout.distance_from_face_to_slice_index(
-            l1_tracker.face_name, center_row, n_slices
+        cube_slice_index = cube.sized_layout.distance_from_face_to_slice_index(
+            slice_name, l1_tracker.face_name, center_row
         )
         center_slice_alg = Algs.of_slice(slice_name)[cube_slice_index + 1]
 
@@ -314,9 +313,8 @@ class _LBLSlices(SolverHelper):
                 return None
 
         slice_name = cube.layout.get_slice_sandwiched_between_face_and_opposite(l1_tracker.face_name)
-        slice_layout = cube.layout.get_slice(slice_name)
-        cube_slice_index = slice_layout.distance_from_face_to_slice_index(
-            l1_tracker.face_name, face_row, n_slices
+        cube_slice_index = cube.sized_layout.distance_from_face_to_slice_index(
+            slice_name, l1_tracker.face_name, face_row
         )
         return Algs.of_slice(slice_name)[cube_slice_index + 1]  # 1-based
 

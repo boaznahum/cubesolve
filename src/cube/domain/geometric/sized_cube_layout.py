@@ -38,6 +38,7 @@ if TYPE_CHECKING:
     from cube.domain.model._part import EdgeName
     from cube.domain.model.Edge import Edge
     from cube.domain.model.Face import Face
+    from cube.domain.model.FaceName import FaceName
     from cube.domain.model.PartSlice import EdgeWing
     from cube.domain.model.Slice import Slice
     from cube.domain.model.SliceName import SliceName
@@ -69,6 +70,26 @@ class SizedCubeLayout(Protocol):
 
         Returns:
             The Slice object from the underlying cube
+        """
+        ...
+
+    def distance_from_face_to_slice_index(self, slice_name: "SliceName",
+                                              face_name: "FaceName",
+                                              distance_from_face: int
+                                              ) -> int:
+        """
+        Convert distance from a parallel face to slice index.
+
+        Delegates to SliceLayout.distance_from_face_to_slice_index, supplying
+        n_slices from the cube automatically.
+
+        Args:
+            slice_name: Which slice (M, E, S)
+            face_name: A face parallel to the slice (must be rotation_face or opposite_face)
+            distance_from_face: 0-based distance from the face (0 = closest to face)
+
+        Returns:
+            0-based slice index in range [0, n_slices-1]
         """
         ...
 
