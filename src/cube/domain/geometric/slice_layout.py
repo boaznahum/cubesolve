@@ -182,10 +182,10 @@ class SliceLayout(Protocol):
                                           n_slices: int
                                           ) -> int:
         """
-        Low-level: convert distance from a parallel face to slice index.
+        Internal - do not call directly.
 
-        Prefer SizedCubeLayout.distance_from_face_to_slice_index() which
-        supplies n_slices automatically from the cube.
+        Use SizedCubeLayout.distance_from_face_to_slice_index() instead,
+        which supplies n_slices automatically from the cube.
 
         Args:
             face_name: A face parallel to the slice (must be rotation_face or opposite_face)
@@ -459,12 +459,10 @@ class _SliceLayout(SliceLayout):
                                           n_slices: int
                                           ) -> int:
         """
-        Convert distance from a parallel face to slice index.
+        Internal - do not call directly.
 
-        Low-level: convert distance from a parallel face to slice index.
-
-        Prefer SizedCubeLayout.distance_from_face_to_slice_index() which
-        supplies n_slices automatically from the cube.
+        Use SizedCubeLayout.distance_from_face_to_slice_index() instead,
+        which supplies n_slices automatically from the cube.
         """
         faces: tuple[FaceName, FaceName] = self.get_slice_rotation_faces()
 
