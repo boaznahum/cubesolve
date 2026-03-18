@@ -442,8 +442,13 @@ class AppConfig(ConfigProtocol):
         return self._data.last_scramble_path
 
     # ==========================================================================
-    # Mouse input settings
+    # Input debug settings
     # ==========================================================================
+    @property
+    def keyboard_input_debug(self) -> bool:
+        """Enable keyboard input debug output."""
+        return self._data.keyboard_input_debug
+
     @property
     def input_mouse_debug(self) -> bool:
         """Enable mouse input debug output."""

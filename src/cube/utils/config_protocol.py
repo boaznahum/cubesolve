@@ -530,8 +530,13 @@ class ConfigProtocol(Protocol):
         ...
 
     # ==========================================================================
-    # Mouse input settings
+    # Input debug settings
     # ==========================================================================
+    @property
+    def keyboard_input_debug(self) -> bool:
+        """Enable keyboard input debug output."""
+        ...
+
     @property
     def input_mouse_debug(self) -> bool:
         """Enable mouse input debug output."""

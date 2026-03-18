@@ -89,6 +89,9 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         # Note: pyglet.window.Window abstract methods are handled at runtime
         self._window: PygletWindow = PygletWindow(self, width, height, title)  # type: ignore[abstract]
 
+        # Cache debug flag to avoid property lookup on every key event
+        self._keyboard_debug = self._vs.config.keyboard_input_debug
+
         # Animation manager connection
         self._animation_manager = app.am
         if self._animation_manager:
@@ -584,7 +587,7 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         if self._popup.on_key_press(symbol, modifiers):
             return
 
-        self._vs.debug(False, f"on_key_press: symbol={symbol}, modifiers={modifiers}")
+        self._vs.debug(self._keyboard_debug, f"on_key_press: symbol={symbol}, modifiers={modifiers}")
 
         # Close dropdown on Escape before key bindings process it
         if self._toolbar and symbol == pyglet_key.ESCAPE:
