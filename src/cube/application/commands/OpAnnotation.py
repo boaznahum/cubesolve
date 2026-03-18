@@ -13,6 +13,7 @@ from typing import (
 )
 
 from cube.application.exceptions.app_exceptions import InternalSWError, OpAborted
+from cube.domain.model.QueryNotFound import SliceEdgeNotFound
 from cube.application.markers._marker_creator_protocol import MarkerCreator
 from cube.domain.algs.Algs import Algs
 from cube.domain.model import Corner, Edge, Part, PartColorsID, PartEdge, PartSlice
@@ -182,7 +183,7 @@ class OpAnnotation(AnnotationProtocol):
 
                 try:
                     e = cqr.find_slice_edge(parts, _c_pred(i, key))
-                except InternalSWError:
+                except SliceEdgeNotFound:
                     # During OpAborted, marker attributes may be inconsistent
                     # Skip cleanup for this marker and continue with others
                     continue

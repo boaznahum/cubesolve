@@ -11,6 +11,7 @@ from collections.abc import (
 from typing import TYPE_CHECKING, Callable, Tuple, TypeVar, Generator
 
 from cube.domain.exceptions import InternalSWError
+from cube.domain.model.QueryNotFound import SliceEdgeNotFound
 
 if TYPE_CHECKING:
     from cube.domain.solver.protocols.OperatorProtocol import OperatorProtocol
@@ -156,7 +157,7 @@ class CubeQueries2:
                     if pred(e):
                         return e
 
-        raise InternalSWError(f"No such edge in {parts}  slice for pred{pred}")
+        raise SliceEdgeNotFound(parts, pred)
 
     def find_corner_slice_edge_in_cube(self, pred: Pred[PartEdge]) -> PartEdge:
 
