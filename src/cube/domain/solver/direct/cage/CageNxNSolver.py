@@ -110,10 +110,8 @@ class CageNxNSolver(BaseSolver):
         # - False: Simple M-slice algorithm (fast, disturbs edges slightly)
         # - True: Advanced R/L-slice algorithm (preserves edges better)
         #
-        # TODO [#14]: Consider using advanced_edge_parity=True for cage method
-        # since we want to preserve edge pairing as much as possible.
         # =====================================================================
-        self._nxn_edges = NxNEdges(self, advanced_edge_parity=False)
+        self._nxn_edges = NxNEdges(self, advanced_edge_parity=True)
 
     @property
     def get_code(self) -> SolverName:
