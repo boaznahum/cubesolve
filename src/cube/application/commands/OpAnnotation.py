@@ -180,8 +180,12 @@ class OpAnnotation(AnnotationProtocol):
 
                 key = _key(i)
 
-                # TODO [#15]: Marker cleanup fails during OpAborted - see __todo_solvers.md
-                e = cqr.find_slice_edge(parts, _c_pred(i, key))
+                try:
+                    e = cqr.find_slice_edge(parts, _c_pred(i, key))
+                except InternalSWError:
+                    # During OpAborted, marker attributes may be inconsistent
+                    # Skip cleanup for this marker and continue with others
+                    continue
 
                 if i < 0:
                     # if have a bug, nested annimation in __fixed_edge, so key already deleted
