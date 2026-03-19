@@ -20,7 +20,10 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Generic, TypeVar
+from typing import TYPE_CHECKING, Generic, TypeVar
+
+if TYPE_CHECKING:
+    from cube.domain.solver.solver import SolverResults
 
 T = TypeVar("T", bound="StatsTopic")
 
@@ -152,6 +155,77 @@ class SliceSwapTopic(StatsTopic):
     @property
     def total_grade(self) -> int:
         return self._total_grade
+
+
+class MoveCountTopic(StatsTopic):
+    """Tracks raw and optimized move counts for a solver."""
+
+    def __init__(self) -> None:
+        self._move_count: int = 0
+        self._optimized_count: int = 0
+
+    def set_counts(self, raw: int, optimized: int) -> None:
+        """Set both raw and optimized move counts."""
+        self._move_count = raw
+        self._optimized_count = optimized
+
+    def merge(self, other: StatsTopic) -> None:
+        assert isinstance(other, MoveCountTopic)
+        self._move_count += other._move_count
+        self._optimized_count += other._optimized_count
+
+    def format_lines(self) -> list[str]:
+        if self._move_count == self._optimized_count:
+            return [f"Moves: {self._move_count}"]
+        return [f"Moves: {self._optimized_count} optimized ({self._move_count} non-optimized)"]
+
+    def is_empty(self) -> bool:
+        return self._move_count == 0
+
+    def reset(self) -> None:
+        self._move_count = 0
+        self._optimized_count = 0
+
+
+class ParityTopic(StatsTopic):
+    """Tracks parity flags detected during solving."""
+
+    def __init__(self) -> None:
+        self._edge_parity: bool = False
+        self._corner_swap: bool = False
+        self._partial_edge: bool = False
+
+    def set_from_results(self, sr: SolverResults) -> None:
+        """Copy parity flags from SolverResults."""
+        self._edge_parity = sr.was_even_edge_parity
+        self._corner_swap = sr.was_corner_swap
+        self._partial_edge = sr.was_partial_edge_parity
+
+    def merge(self, other: StatsTopic) -> None:
+        assert isinstance(other, ParityTopic)
+        self._edge_parity = self._edge_parity or other._edge_parity
+        self._corner_swap = self._corner_swap or other._corner_swap
+        self._partial_edge = self._partial_edge or other._partial_edge
+
+    def format_lines(self) -> list[str]:
+        parities: list[str] = []
+        if self._edge_parity:
+            parities.append("Edge(OLL)")
+        if self._corner_swap:
+            parities.append("Corner(PLL)")
+        if self._partial_edge:
+            parities.append("PartialEdge")
+        if parities:
+            return ["Parity: " + ", ".join(parities)]
+        return ["Parity: None"]
+
+    def is_empty(self) -> bool:
+        return not (self._edge_parity or self._corner_swap or self._partial_edge)
+
+    def reset(self) -> None:
+        self._edge_parity = False
+        self._corner_swap = False
+        self._partial_edge = False
 
 
 class SolverStatistics:

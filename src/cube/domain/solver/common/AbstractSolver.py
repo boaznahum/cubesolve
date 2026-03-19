@@ -3,10 +3,16 @@ from typing import TYPE_CHECKING, final
 
 from cube.domain.algs.Alg import Alg
 from cube.domain.algs.Algs import Algs
+from cube.domain.algs.SeqAlg import SeqAlg
 from cube.domain.exceptions import OpAborted
 from cube.domain.model import Cube
 from cube.domain.solver import Solver
-from cube.domain.solver.common.SolverStatistics import SolverStatistics
+from cube.domain.solver.common.SolverStatistics import (
+    MoveCountTopic,
+    ParityTopic,
+    SolverStatistics,
+    TopicKey,
+)
 from cube.domain.solver.common.CommonOp import CommonOp
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.solver import SolverResults, SolveStep
@@ -14,6 +20,9 @@ from cube.utils.logger_protocol import ILogger, LazyArg
 
 if TYPE_CHECKING:
     pass
+
+MOVE_COUNT_KEY = TopicKey("MoveCount", MoveCountTopic)
+PARITY_KEY = TopicKey("Parity", ParityTopic)
 
 
 class AbstractSolver(Solver, ABC):
@@ -93,11 +102,20 @@ class AbstractSolver(Solver, ABC):
                         return self._delegate_to_2x2(what)
 
                     self.reset_block_statistics()
+                    history_before = len(self._op.history())
                     count_before = self._op.count
                     result = self._solve_impl(what)
                     count_after = self._op.count
-                    self.debug(lambda: f"Solve {what.name} used {count_after - count_before} moves (total: {count_after})")
-                    self.display_statistics()
+                    raw_count = count_after - count_before
+                    history_slice = self._op.history()[history_before:]
+                    optimized_count = SeqAlg(None, *history_slice).simplify().count() if history_slice else 0
+
+                    # Populate statistics topics
+                    stats = self.get_block_statistics()
+                    stats.get_topic(MOVE_COUNT_KEY).set_counts(raw_count, optimized_count)
+                    stats.get_topic(PARITY_KEY).set_from_results(result)
+
+                    self._display_statistics(stats)
                     return result
                 except OpAborted:
                     # User aborted - this is normal, not an error
@@ -209,7 +227,10 @@ class AbstractSolver(Solver, ABC):
         display_statistics() runs (via solve() template method), so
         child solvers don't duplicate output.
         """
-        stats: SolverStatistics = self.get_block_statistics()
+        self._display_statistics(self.get_block_statistics())
+
+    def _display_statistics(self, stats: SolverStatistics) -> None:
+        """Display the given statistics."""
         if stats.is_empty():
             return
         my_prefix: str = self._logger.prefix + ":"

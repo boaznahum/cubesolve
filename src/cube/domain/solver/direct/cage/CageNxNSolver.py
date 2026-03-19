@@ -259,6 +259,7 @@ class CageNxNSolver(BaseSolver):
 
                 except EvenCubeEdgeParityException:
                     self.debug(f"Caught EvenCubeEdgeParityException on attempt {attempt}")
+                    sr.was_even_edge_parity = True
                     if attempt >= 4:
                         raise  # Give up after 5 attempts
 
@@ -271,6 +272,7 @@ class CageNxNSolver(BaseSolver):
                     # Parity fix broke edge pairing - loop will re-pair them
 
                 except EvenCubeCornerSwapException:
+                    sr.was_corner_swap = True
                     if attempt >= 4:
                         raise  # Give up after 5 attempts
 
@@ -283,6 +285,7 @@ class CageNxNSolver(BaseSolver):
                     # Loop will re-pair them
 
                 except EvenCubeEdgeSwapParityException:
+                    sr.was_even_edge_parity = True
                     if attempt >= 4:
                         raise  # Give up after 5 attempts
 
@@ -353,6 +356,7 @@ class CageNxNSolver(BaseSolver):
 
                 except EvenCubeEdgeParityException:
                     self.debug(f"Caught EvenCubeEdgeParityException on attempt {attempt}")
+                    sr.was_even_edge_parity = True
                     if attempt >= 4:
                         raise
 
@@ -360,6 +364,7 @@ class CageNxNSolver(BaseSolver):
                     self._nxn_edges.do_even_full_edge_parity_on_any_edge()
 
                 except EvenCubeCornerSwapException:
+                    sr.was_corner_swap = True
                     if attempt >= 4:
                         raise
 
@@ -367,6 +372,7 @@ class CageNxNSolver(BaseSolver):
                     self._nxn_corners.fix_corner_parity()
 
                 except EvenCubeEdgeSwapParityException:
+                    sr.was_even_edge_parity = True
                     if attempt >= 4:
                         raise
 
