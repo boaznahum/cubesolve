@@ -79,6 +79,10 @@ class FaceAlgBase(AnimationAbleAlg, ABC):
             if self._hide_single_slice and 1 == start and 1 == stop:
                 return s
 
+            # SiGN notation: single inner slice as nF (e.g., 2F, 3R)
+            if self._hide_single_slice and start and stop and start == stop:
+                return str(start) + s
+
             if start and not stop:
                 return "[" + str(start) + ":" + "]" + s
 

@@ -10,6 +10,7 @@ This document describes the algorithm notation used in this Rubik's cube solver.
 FACES:    R L U D F B          (clockwise when looking at face)
 PRIME:    R' L' U' ...         (counter-clockwise)
 DOUBLE:   R2 L2 U2 ...         (180 turn)
+INNER:    2F 2R 3R ...         (inner slice, SiGN standard)
 SLICE:    M E S                (single middle slice)
 ALL:      [:]M [:]E [:]S       (all middle slices)
 WIDE:     Rw r (2 layers)      (WCA standard)
@@ -96,6 +97,51 @@ Add `'` to reverse the direction:
 ### Double Moves
 
 `R2` = Do R twice (180 turn). Same as R + R. Direction doesn't matter for 180.
+
+---
+
+## Inner Slice Moves (SiGN Notation)
+
+On big cubes (4x4+), `nF` means "turn only the nth inner slice from that face".
+This is **SiGN standard notation**, used by Twizzle, speedsolving.com, and alg.cubing.net.
+
+```
++---------+--------------------------------------------------------+
+| Notation| Meaning                                                |
++---------+--------------------------------------------------------+
+|   2F    | Turn only the 2nd layer from Front (inner slice)       |
+|   2R    | Turn only the 2nd layer from Right (inner slice)       |
+|   3R    | Turn only the 3rd layer from Right (5x5+)              |
+|   2F'   | 2nd inner slice from Front, counter-clockwise          |
+|   2F2   | 2nd inner slice from Front, 180° turn                  |
++---------+--------------------------------------------------------+
+```
+
+**Key distinction:** The number goes BEFORE the face letter, NOT after.
+
+- `2F` = inner slice (2nd layer from F) — number before
+- `F2` = F face 180° turn — number after
+
+**Equivalence with bracket notation:**
+
+| SiGN | Bracket | Meaning |
+|------|---------|---------|
+| `2F` | `[2:2]F` | 2nd inner slice from F |
+| `3R` | `[3:3]R` | 3rd inner slice from R |
+
+On a 3x3, `2L` = `M`, `2D` = `E`, `2F` = `S` (there's only one inner slice).
+
+```
+5x5 Cube - 2R (2nd inner slice from R):
+
+    +-----+-----+-----+-----+-----+
+    |     |     |     |#####|     |
+    |  L  | M3  | M2  |#2R #|  R  |  <- Only this slice turns
+    |     |     |     |#####|     |
+    +-----+-----+-----+-----+-----+
+                        ^^^^^
+                    Only this layer
+```
 
 ---
 
@@ -452,6 +498,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
 | Move | 3x3 | 5x5 | Standard | Sliceable | Code |
 |------|-----|-----|----------|-----------|------|
 | `R` | 1 layer | 1 layer | 1 layer | Yes | `Algs.R` |
+| `2R` | 1 slice | 1 slice | SiGN | - | `Algs.parse("2R")` |
 | `Rw` / `r` | 2 layers | 2 layers | 2 layers | No | `Algs.Rw` / `Algs.r` |
 | `3Rw` / `3r` | 2 layers* | 3 layers | 3 layers | No | `Algs.parse("3Rw")` |
 | `[:-1]Rw` / `[:-1]r` | 2 layers | 4 layers | N/A | No | `Algs.RRw` / `Algs.rr` |
@@ -484,3 +531,5 @@ At play time, `_effective_layers(cube)` computes the actual count:
 - [Speedsolving Wiki - NxNxN Notation](https://www.speedsolving.com/wiki/index.php/NxNxN_Notation)
 - [Ruwix - Advanced Notation](https://ruwix.com/the-rubiks-cube/notation/advanced/)
 - [KewbzUK - 5x5 Notation](https://kewbz.co.uk/blogs/notations-1/5x5-notation)
+- [MZRG - SiGN Notation](https://mzrg.com/rubik/nota.shtml)
+- [Twizzle Explorer](https://alpha.twizzle.net/edit/)

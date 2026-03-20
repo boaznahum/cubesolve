@@ -67,6 +67,7 @@ def _build_help_sections() -> list[tuple[str, list[HelpEntry]]]:
             ("Equatorial slice counter-clockwise (E')", Commands.SLICE_E_PRIME),
             ("Standing slice parallel to F-face (like Fw without F)", Commands.SLICE_S),
             ("Standing slice counter-clockwise (S')", Commands.SLICE_S_PRIME),
+            ("Inner slice: 2F=2nd from F, 3R=3rd from R (SiGN)", None),
         ]),
 
         ("CUBE ROTATIONS (entire cube, not faces)", [

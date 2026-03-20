@@ -274,7 +274,9 @@ def _token_to_alg(t: str, *, compat_3x3: bool = False) -> _Alg:
     if not remaining:
         raise InternalSWError(f"Empty base token in: {t}")
 
-    # Check for digit prefix on wide moves: nRw or nr (e.g., 3Rw, 3r)
+    # Check for digit prefix: nRw/nr (wide move) or nF (inner slice, SiGN notation)
+    # SiGN: 2F = 2nd inner slice from F, 3R = 3rd inner slice from R
+    # WCA:  3Rw = 3-layer wide move, 2r = 2-layer wide move (= r)
     import re as _re
     base_alg: _Alg
     _wide_match = _re.match(r'^(\d+)(.+)$', remaining)
@@ -286,8 +288,13 @@ def _token_to_alg(t: str, *, compat_3x3: bool = False) -> _Alg:
         except InternalSWError:
             _inner_alg = None
         from cube.domain.algs.WideLayerAlg import WideLayerAlg
+        from cube.domain.algs.FaceAlg import FaceAlg
         if _inner_alg is not None and isinstance(_inner_alg, WideLayerAlg):
+            # nRw or nr → n-layer wide move
             base_alg = _inner_alg.with_layers(_n_layers)
+        elif _inner_alg is not None and isinstance(_inner_alg, FaceAlg):
+            # nF → inner slice move (SiGN notation: 2F = F[2])
+            base_alg = _inner_alg[_n_layers:_n_layers]
         else:
             base_alg = _token_to_alg_no_slice(remaining)
     else:

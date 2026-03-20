@@ -21,6 +21,7 @@ import pytest
 from cube.application.AbstractApp import AbstractApp
 from cube.domain.algs import Algs
 from cube.domain.algs.Scramble import scramble
+from tests.utils._alg_utils import assert_algs_equivalent
 
 
 # =============================================================================
@@ -401,3 +402,119 @@ def test_default_layer_same_cube_state(input_str: str, expected: str, cube_size:
     # Both should produce same state — apply inverse of one to the other
     Algs.parse(expected).inv().play(app1.cube)
     assert app1.cube.solved, f"'{input_str}' and '{expected}' should produce same state on {cube_size}x{cube_size}"
+
+
+# =============================================================================
+# Phase 5: SiGN Inner Slice Notation (nF = nth inner slice from face)
+# =============================================================================
+
+INNER_SLICE_MOVES = [
+    # Basic inner slice moves (SiGN: 2F = 2nd inner slice from F)
+    "2R", "2L", "2U", "2D", "2F", "2B",
+    # With modifiers
+    "2R'", "2L'", "2U'", "2D'", "2F'", "2B'",
+    "2R2", "2L2", "2U2", "2D2", "2F2", "2B2",
+]
+
+DEEP_INNER_SLICE_MOVES = [
+    # Deeper slices (need 5x5+)
+    "3R", "3L", "3U", "3D", "3F", "3B",
+]
+
+
+@pytest.mark.parametrize("move", INNER_SLICE_MOVES)
+@pytest.mark.parametrize("cube_size", [4, 5])
+def test_inner_slice_parse_round_trip(move: str, cube_size: int) -> None:
+    """Test that SiGN inner slice notation parses and round-trips (e.g., 2F)."""
+    parsed = Algs.parse(move)
+    result = str(parsed)
+    assert result == move, f"Round-trip failed: '{move}' -> '{result}'"
+
+
+@pytest.mark.parametrize("move", INNER_SLICE_MOVES)
+@pytest.mark.parametrize("cube_size", [4, 5])
+def test_inner_slice_inverse_returns_solved(move: str, cube_size: int) -> None:
+    """Test that SiGN inner slice + inverse returns to solved."""
+    app = AbstractApp.create_app(cube_size=cube_size)
+    assert app.cube.solved
+    parsed = Algs.parse(move)
+    parsed.play(app.cube)
+    parsed.inv().play(app.cube)
+    assert app.cube.solved, f"Move '{move}' + inverse should return to solved"
+
+
+@pytest.mark.parametrize("move", DEEP_INNER_SLICE_MOVES)
+@pytest.mark.parametrize("cube_size", [5, 6])
+def test_deep_inner_slice_round_trip(move: str, cube_size: int) -> None:
+    """Test deeper inner slices (3R etc.) on 5x5+ cubes."""
+    parsed = Algs.parse(move)
+    result = str(parsed)
+    assert result == move, f"Round-trip failed: '{move}' -> '{result}'"
+
+
+@pytest.mark.parametrize("move", DEEP_INNER_SLICE_MOVES)
+@pytest.mark.parametrize("cube_size", [5, 6])
+def test_deep_inner_slice_inverse(move: str, cube_size: int) -> None:
+    """Test deeper inner slices + inverse returns to solved."""
+    app = AbstractApp.create_app(cube_size=cube_size)
+    assert app.cube.solved
+    parsed = Algs.parse(move)
+    parsed.play(app.cube)
+    parsed.inv().play(app.cube)
+    assert app.cube.solved, f"Move '{move}' + inverse should return to solved"
+
+
+ALL_FACES = ["R", "L", "U", "D", "F", "B"]
+
+
+@pytest.mark.parametrize("face", ALL_FACES)
+@pytest.mark.parametrize("cube_size", [4, 5])
+def test_inner_slice_equivalent_to_bracket_all_faces(face: str, cube_size: int) -> None:
+    """Test that 2A (SiGN) and [2:2]A (bracket) produce the same cube state for all faces."""
+    assert_algs_equivalent(
+        Algs.parse(f"2{face}"),
+        Algs.parse(f"[2:2]{face}"),
+        cube_size,
+    )
+
+
+@pytest.mark.parametrize("face", ALL_FACES)
+@pytest.mark.parametrize("cube_size", [4, 5])
+def test_inner_slice_equals_wide_decomposition(face: str, cube_size: int) -> None:
+    """Test that 2A == A' Aw (inner slice = undo face, do 2-wide) for all faces.
+
+    Identity: nA == (n-1)Aw' nAw
+    For n=2:  2A == R' Rw (undo the face, then wide = only inner slice moves)
+    """
+    assert_algs_equivalent(
+        Algs.parse(f"2{face}"),
+        Algs.parse(f"{face}' {face}w"),
+        cube_size,
+    )
+
+
+@pytest.mark.parametrize("face", ALL_FACES)
+def test_deep_inner_slice_equals_wide_decomposition(face: str) -> None:
+    """Test that 3A == 2Aw' 3Aw on 5x5 for all faces.
+
+    Identity: nA == (n-1)Aw' nAw
+    For n=3:  3A == Rw' 3Rw (undo 2-wide, do 3-wide = only 3rd slice moves)
+    """
+    assert_algs_equivalent(
+        Algs.parse(f"3{face}"),
+        Algs.parse(f"{face}w' 3{face}w"),
+        cube_size=5,
+    )
+
+
+@pytest.mark.parametrize("face", ALL_FACES)
+@pytest.mark.parametrize("cube_size", [4, 5])
+def test_inner_slice_not_confused_with_wide(face: str, cube_size: int) -> None:
+    """Test that 2A (inner slice) differs from Aw (wide move) for all faces."""
+    inner = Algs.parse(f"2{face}")
+    wide = Algs.parse(f"{face}w")
+
+    assert str(inner) == f"2{face}"
+    assert str(wide) == f"{face}w"
+
+    assert_algs_equivalent(inner, wide, cube_size, expect_equal=False)

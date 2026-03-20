@@ -124,7 +124,8 @@ export class NotationGuide {
             ['All slice', '[:]M  [:]E  [:]S', 'all middle slices'],
             ['Wide', 'Rw  r  Fw  f ...', '2 layers together'],
             ['N-Wide', '3Rw  3Fw  3r ...', 'n layers together'],
-            ['Indexed', '[2]R  [1:3]M  [1,3]E', 'specific slice(s)'],
+            ['Inner', '2F  2R  3R ...', 'nth inner slice (SiGN)'],
+            ['Indexed', '[1:3]M  [1,3]E', 'slice range/set'],
             ['Cube', 'X  Y  Z', 'rotate whole cube'],
             ['Group', "(R U R' U')2", 'repeat group n times'],
         ]);
