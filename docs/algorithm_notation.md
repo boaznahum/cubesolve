@@ -569,8 +569,19 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>same</td>
 </tr>
 <tr>
-  <td>Turn slices 3 through 4 from R<br>
-      <em>6×6+: 2 inner slices</em></td>
+  <td>❌ WIP: Turn opposite face via R index (4R on 4×4 ≡ L')<br>
+      <em>Crashes: our code doesn't support spanning to opposite face<sup>⑩</sup></em></td>
+  <td><code>4R</code> = <code>L'</code></td>
+  <td><code>4R</code> = <code>L'</code></td>
+  <td>—</td>
+  <td>❌ <code>Algs.R[4:4]</code><sup>⑩</sup></td>
+  <td><code>4R</code></td>
+  <td>❌ crashes at play time<sup>⑩</sup></td>
+  <td>—</td>
+</tr>
+<tr>
+  <td>❌ WIP: Turn slices 3–4 from R (spans to opposite face)<br>
+      <em>4×4: ≡ 3R + L' · ❌ runtime error<sup>⑨</sup><sup>⑩</sup></em></td>
   <td><code>3-4R</code></td>
   <td><code>3-4R</code></td>
   <td>—</td>
@@ -791,10 +802,11 @@ At play time, `_effective_layers(cube)` computes the actual count:
 <sup>③</sup> MZRG (SiGN) uses only lowercase for wide moves — no `Rw` form.<br>
 <sup>④</sup> In `compat_3x3` mode, `parse("Rw")`/`parse("r")`/`parse("3Rw")` → adaptive (`[:-1]Rw`/`[:-1]r`).<br>
 <sup>⑤</sup> Standards use lowercase `x`/`y`/`z`. Our parser accepts uppercase `X`/`Y`/`Z`.<br>
-<sup>⑥</sup> In standard notation, `3Rw` on a 3×3 is an error (only 2 non-opposite layers exist). Our implementation clamps to `min(3, size-1)` = 2 layers, equivalent to `Rw`.<br>
-<sup>⑦</sup> Our parser does not yet support `3-4R` range syntax. Use bracket notation `[3:4]R` instead. TODO: add parser support for SiGN range notation.<br>
-<sup>⑧</sup> Bracket slicing on wide moves (`[3:4]Rw`, `[3:4]r`) is not supported. Parser throws `InternalSWError`.<br>
-<sup>⑨</sup> `[3:4]R` on 4×4 parses OK but crashes at play time with `AssertionError` (no error message) — slice indices 3-4 don't exist on a 4×4 (only 2 inner slices).
+❌<sup>⑥</sup> In standard notation, `3Rw` on a 3×3 is an error (only 2 non-opposite layers exist). Our implementation clamps to `min(3, size-1)` = 2 layers, equivalent to `Rw`.<br>
+❌<sup>⑦</sup> Our parser does not yet support `3-4R` range syntax. Use bracket notation `[3:4]R` instead. TODO: add parser support for SiGN range notation.<br>
+❌<sup>⑧</sup> Bracket slicing on wide moves (`[3:4]Rw`, `[3:4]r`) is not supported. Parser throws `InternalSWError`.<br>
+❌<sup>⑨</sup> `[3:4]R` on 4×4 parses OK but crashes at play time with `AssertionError` (no error message) — slice indices 3-4 don't exist on a 4×4 (only 2 inner slices).<br>
+❌<sup>⑩</sup> In SiGN, `4R` on a 4×4 = the L face rotated in R direction (≡ `L'`). Our code doesn't support indexing into the opposite face — `R[4:4]` crashes at play time.
 
 ---
 

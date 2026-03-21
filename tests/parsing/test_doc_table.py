@@ -186,6 +186,28 @@ class TestSpecialCases:
 
     # --- Known unsupported: bracket on wide moves ---
 
+    # --- Opposite face via inner slice indexing ---
+
+    @pytest.mark.xfail(reason="4R on 4x4 should equal L' but crashes (footnote ⑩)")
+    def test_4x4_4R_equals_L_prime(self) -> None:
+        """On 4x4, 4R (4th layer from R) == L' (opposite face, R direction)."""
+        from cube.domain.model.Cube import Cube
+        from tests.test_utils import _test_sp
+        alg = Algs.R[4:4]
+        cube = Cube(4, sp=_test_sp)
+        alg.play(cube)  # crashes here
+        assert_algs_equivalent(alg, Algs.L.prime, 4)
+
+    @pytest.mark.xfail(reason="5R on 5x5 should equal L' but crashes (footnote ⑩)")
+    def test_5x5_5R_equals_L_prime(self) -> None:
+        """On 5x5, 5R (5th layer from R) == L' (opposite face, R direction)."""
+        from cube.domain.model.Cube import Cube
+        from tests.test_utils import _test_sp
+        alg = Algs.R[5:5]
+        cube = Cube(5, sp=_test_sp)
+        alg.play(cube)  # crashes here
+        assert_algs_equivalent(alg, Algs.L.prime, 5)
+
     # --- Known unsupported ---
 
     @pytest.mark.xfail(reason="Bracket slicing on wide Rw not supported (footnote ⑧)", raises=Exception)
