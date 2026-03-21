@@ -580,14 +580,14 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>same</td>
 </tr>
 <tr>
-  <td>✅ Turn slices 3–4 from R (spans to opposite face)<br>
+  <td>✅ Turn slices 3–4 from R (can span to L)<br>
       <em>4×4: ≡ 3R + L' · 5×5: ≡ 3R + 4R</em></td>
-  <td><code>3-4R</code></td>
-  <td><code>3-4R</code></td>
+  <td>✅ <code>3-4R</code><br>✅ <code>3-4Rw</code><br>✅ <code>3-4r</code></td>
+  <td><code>3-4R</code> / <code>3-4r</code></td>
   <td>—</td>
-  <td><code>Algs.R[3:4]</code></td>
+  <td>✅ <code>Algs.R[3:4]</code> spans<br>❌ <code>[3:4]Rw</code> parser error<sup>⑧</sup><br>❌ <code>[3:4]r</code> parser error<sup>⑧</sup></td>
   <td><code>[3:4]R</code></td>
-  <td>✅ <code>"[3:4]R"</code><br>❌ <code>"3-4R"</code><sup>⑦</sup></td>
+  <td>✅ <code>"[3:4]R"</code> spans<br>❌ <code>"3-4R"</code> not parsed<sup>⑦</sup><br>❌ <code>"[3:4]Rw"</code> parser error<sup>⑧</sup><br>❌ <code>"[3:4]r"</code> parser error<sup>⑧</sup></td>
   <td>same</td>
 </tr>
 <tr>
@@ -644,37 +644,6 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td><code>[:-1]Rw</code> / <code>[:-1]r</code></td>
   <td><code>"[:-1]Rw"</code> / <code>"[:-1]r"</code></td>
   <td>same</td>
-</tr>
-<tr>
-  <td>Turn R layers 3–4 (can span to opposite face)<br>
-      <em>≡ 3R 4R · ✅ 4×4: 3R + L'<sup>⑨</sup></em></td>
-  <td>✅ <code>3-4R</code></td>
-  <td><code>3-4R</code></td>
-  <td>—</td>
-  <td><code>Algs.R[3:4]</code></td>
-  <td><code>[3:4]R</code></td>
-  <td>✅ <code>"[3:4]R"</code><br>❌ <code>"3-4R"</code><sup>⑦</sup></td>
-  <td>same</td>
-</tr>
-<tr>
-  <td>Turn R layers 3–4 (wide Rw, can span to L)</td>
-  <td>✅ <code>3-4Rw</code></td>
-  <td>—</td>
-  <td>—</td>
-  <td>❌ not supported<sup>⑧</sup></td>
-  <td>—</td>
-  <td>❌ <code>"[3:4]Rw"</code><sup>⑧</sup></td>
-  <td>—</td>
-</tr>
-<tr>
-  <td>Turn R layers 3–4 (lowercase r, can span to L)</td>
-  <td>✅ <code>3-4r</code></td>
-  <td><code>3-4r</code></td>
-  <td>—</td>
-  <td>❌ not supported<sup>⑧</sup></td>
-  <td>—</td>
-  <td>❌ <code>"[3:4]r"</code><sup>⑧</sup></td>
-  <td>—</td>
 </tr>
 <!-- ═══════════════════ 4. Slice Moves ═══════════════════ -->
 <tr><td colspan="8" style="border-top:2px solid #888; font-weight:bold; text-align:left;">Slice Moves — sources disagree on big cubes<sup>①②</sup></td></tr>
