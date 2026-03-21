@@ -828,25 +828,37 @@ class ExecuteFileAlgCommand(Command):
 
     def execute(self, ctx: CommandContext) -> CommandResult:
         from cube.domain.exceptions import InternalSWError
-        from cube.resources.algs import load_file_alg
+        from cube.resources.algs import load_file_content, parse_file_content
         try:
-            alg, raw_content = load_file_alg(self.slot)
+            file_name = f"f{self.slot}.txt"
+            _debug = ctx.app.config.solver_debug
+            raw_content = load_file_content(self.slot)
+
+            # Log raw file content before parsing
+            ctx.cube.sp.logger.debug(_debug,
+                                     lambda: f"--- BEGIN {file_name} ---\n{raw_content.strip()}\n--- END {file_name} ---")
+
+            alg = parse_file_content(raw_content, file_name)
             if self.inverse:
                 alg = alg.prime
 
-            # Log file name, raw string, and parsed algorithm
-            file_name = f"f{self.slot}.txt"
-            _debug = ctx.app.config.solver_debug
-            ctx.cube.sp.logger.debug(_debug,
-                                     lambda: f"--- BEGIN {file_name} ---\n{raw_content.strip()}\n--- END {file_name} ---\nParsed: {alg}")
+            ctx.cube.sp.logger.debug(_debug, lambda: f"Parsed: {alg}")
 
             ctx.op.play(alg, animation=not self.instant)
         except FileNotFoundError as e:
-            ctx.app.set_error(f"File not found: {e}")
+            msg = f"File not found: {e}"
+            ctx.cube.sp.logger.error(msg)
+            ctx.app.set_error(msg)
         except ValueError as e:
-            ctx.app.set_error(f"Invalid file: {e}")
+            msg = f"Invalid file: {e}"
+            ctx.cube.sp.logger.error(msg)
+            ctx.app.set_error(msg)
         except InternalSWError as e:
-            ctx.app.set_error(f"Parse error: {e}")
+            msg = f"Parse error: {e}"
+            ctx.cube.sp.logger.error(msg)
+            ctx.app.set_error(msg)
         except Exception as e:
-            ctx.app.set_error(f"Error: {e}")
+            msg = f"Error: {e}"
+            ctx.cube.sp.logger.error(msg)
+            ctx.app.set_error(msg)
         return CommandResult()

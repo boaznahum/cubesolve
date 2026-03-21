@@ -84,6 +84,10 @@ class ILogger(Protocol):
         """Return the raw prefix string (without 'DEBUG:' header)."""
         ...
 
+    def error(self, *args: "LazyArg") -> None:
+        """Print error information. Always prints, ignores quiet_all."""
+        ...
+
     def debug_prefix(self) -> str:
         """Return the standard debug prefix."""
         ...

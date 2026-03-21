@@ -231,6 +231,11 @@ class Logger(ILogger):
         print(*args, flush=True)
         self._emit_to_streams(*args)
 
+    def error(self, *args: LazyArg) -> None:
+        """Print error information. Always prints, ignores quiet_all."""
+        resolved_args = [_resolve_arg(a) for a in args]
+        self._print_line("ERROR:", *resolved_args)
+
     # --- Debug methods ---
 
     def is_debug(self, debug_on: bool | None = None, *, level: int | None = None) -> bool:

@@ -28,6 +28,8 @@ class DocRow:
     sizes: tuple[int, ...] = (3, 4, 5)
     compat_3x3_parser_str: str | None = None  # None means same as parser_str
     compat_3x3_expected_str: str | None = None  # None means same as expected_str
+    equivalent: Alg | None = None  # Decomposition into primitives
+    equiv_sizes: tuple[int, ...] = (3, 4, 5)  # Sizes where equivalence holds
 
 
 # fmt: off
@@ -40,29 +42,45 @@ DOC_ROWS: list[DocRow] = [
     # §2 Inner Slices
     DocRow("2R: 2nd layer from R only",          Algs.R[2:2],                     "2R",       "2R"),
     DocRow("3R: 3rd layer from R only",          Algs.R[3:3],                     "3R",       "3R",  sizes=(4, 5)),
+    DocRow("[3:4]R: slices 3–4 from R",          Algs.R[3:4],                     "[3:4]R",   "[3:4]R", sizes=(5,),
+           equivalent=Algs.R[3:3] + Algs.R[4:4], equiv_sizes=(5,)),
+    DocRow("[3:]R: all from 3rd to last",         Algs.R[3:],                      "[3:]R",    "[3:]R", sizes=(5,),
+           equivalent=Algs.R[3:3] + Algs.R[4:4], equiv_sizes=(5,)),
+    DocRow("[:4]R: slices 1–4 from R",           Algs.R[1:4],                     "[:4]R",    "[1:4]R", sizes=(5,),
+           equivalent=Algs.R + Algs.R[2:2] + Algs.R[3:3] + Algs.R[4:4], equiv_sizes=(5,)),
 
     # §3 Wide Moves
     DocRow("Rw: 2 outermost R-side layers",      Algs.Rw,                         "Rw",       "Rw",
-           compat_3x3_parser_str="Rw", compat_3x3_expected_str="[:-1]Rw"),
+           compat_3x3_parser_str="Rw", compat_3x3_expected_str="[:-1]Rw",
+           equivalent=Algs.R + Algs.R[2:2], equiv_sizes=(3, 4, 5)),
     DocRow("r: 2 outermost R-side layers",        Algs.r,                          "r",        "r",
-           compat_3x3_parser_str="r", compat_3x3_expected_str="[:-1]r"),
+           compat_3x3_parser_str="r", compat_3x3_expected_str="[:-1]r",
+           equivalent=Algs.R + Algs.R[2:2], equiv_sizes=(3, 4, 5)),
     DocRow("3Rw: 3 outermost R-side layers",      WideLayerAlg(FaceName.R, layers=3),  "3Rw",  "3Rw",
-           compat_3x3_parser_str="3Rw", compat_3x3_expected_str="[:-1]Rw"),
+           compat_3x3_parser_str="3Rw", compat_3x3_expected_str="[:-1]Rw",
+           equivalent=Algs.R + Algs.R[2:2] + Algs.R[3:3], equiv_sizes=(5,)),
     DocRow("3r: 3 outermost R-side layers",       WideLayerAlg(FaceName.R, layers=3, lowercase=True), "3r", "3r",
-           compat_3x3_parser_str="3r", compat_3x3_expected_str="[:-1]r"),
-    DocRow("[:-1]Rw: all-but-last (adaptive)",    Algs.RRw,                        "[:-1]Rw",  "[:-1]Rw"),
-    DocRow("[:-1]r: all-but-last (adaptive)",     Algs.rr,                         "[:-1]r",   "[:-1]r"),
+           compat_3x3_parser_str="3r", compat_3x3_expected_str="[:-1]r",
+           equivalent=Algs.R + Algs.R[2:2] + Algs.R[3:3], equiv_sizes=(5,)),
+    DocRow("[:-1]Rw: all-but-last (adaptive)",    Algs.RRw,                        "[:-1]Rw",  "[:-1]Rw",
+           equivalent=Algs.R + Algs.R[2:2] + Algs.R[3:3] + Algs.R[4:4], equiv_sizes=(5,)),
+    DocRow("[:-1]r: all-but-last (adaptive)",     Algs.rr,                         "[:-1]r",   "[:-1]r",
+           equivalent=Algs.R + Algs.R[2:2] + Algs.R[3:3] + Algs.R[4:4], equiv_sizes=(5,)),
 
     # §4 Slice Moves
     DocRow("M: single center slice, like L",     Algs.M,                          "M",        "M",
            compat_3x3_parser_str="M", compat_3x3_expected_str="[:]M"),
-    DocRow("[:]M: ALL inner slices, like L",      Algs.MM,                         "[:]M",     "[:]M"),
+    DocRow("[:]M: ALL inner slices, like L",      Algs.MM,                         "[:]M",     "[:]M",
+           equivalent=Algs.MM[1] + Algs.MM[2] + Algs.MM[3], equiv_sizes=(5,)),
 
     # §5 Slice Range & Indexing
-    DocRow("[1:2]R: R face + 1st inner (= Rw)",  Algs.R[1:2],                     "[1:2]R",   "[1:2]R"),
-    DocRow("[2:3]R: R layers 2–3 (no outer)",     Algs.R[2:3],                     "[2:3]R",   "[2:3]R", sizes=(5,)),
+    DocRow("[1:2]R: R face + 1st inner (= Rw)",  Algs.R[1:2],                     "[1:2]R",   "[1:2]R",
+           equivalent=Algs.R + Algs.R[2:2], equiv_sizes=(3, 4, 5)),
+    DocRow("[2:3]R: R layers 2–3 (no outer)",     Algs.R[2:3],                     "[2:3]R",   "[2:3]R", sizes=(5,),
+           equivalent=Algs.R[2:2] + Algs.R[3:3], equiv_sizes=(5,)),
     DocRow("[1:1]M: 1st M slice only",            Algs.MM[1],                      "[1]M",     "[1:1]M"),
-    DocRow("[1:2]M: M slices 1–2",                Algs.MM[1:2],                    "[1:2]M",   "[1:2]M", sizes=(4, 5)),
+    DocRow("[1:2]M: M slices 1–2",                Algs.MM[1:2],                    "[1:2]M",   "[1:2]M", sizes=(4, 5),
+           equivalent=Algs.MM[1] + Algs.MM[2], equiv_sizes=(4, 5)),
     DocRow("[1:]M: all M slices from 1st",        Algs.MM[1:],                     "[1:]M",    "[1:]M"),
 
     # §6 Whole Cube Rotations
@@ -94,6 +112,19 @@ class TestDocTable:
         """str(code) and str(parsed) both match expected_str."""
         assert str(row.code) == row.expected_str
         assert str(Algs.parse(row.parser_str)) == row.expected_str
+
+    @pytest.mark.parametrize(
+        "row",
+        [r for r in DOC_ROWS if r.equivalent is not None],
+        ids=[r.description for r in DOC_ROWS if r.equivalent is not None],
+    )
+    @pytest.mark.parametrize("cube_size", [3, 4, 5])
+    def test_equivalent_decomposition(self, row: DocRow, cube_size: int) -> None:
+        """Code equals its decomposition into primitives."""
+        assert row.equivalent is not None
+        if cube_size not in row.equiv_sizes:
+            pytest.skip(f"equivalence not applicable for {cube_size}x{cube_size}")
+        assert_algs_equivalent(row.code, row.equivalent, cube_size)
 
     @pytest.mark.parametrize(
         "row",
@@ -152,3 +183,26 @@ class TestSpecialCases:
     def test_5x5_Rw_not_equals_adaptive(self) -> None:
         """On 5x5, Rw (2 layers) != [:-1]Rw (4 layers)."""
         assert_algs_equivalent(Algs.Rw, Algs.RRw, 5, expect_equal=False)
+
+    # --- Known unsupported: bracket on wide moves ---
+
+    # --- Known unsupported ---
+
+    @pytest.mark.xfail(reason="Bracket slicing on wide Rw not supported (footnote ⑧)", raises=Exception)
+    def test_bracket_on_wide_Rw_not_supported(self) -> None:
+        """[3:4]Rw — bracket slicing on wide moves throws InternalSWError."""
+        Algs.parse("[3:4]Rw")
+
+    @pytest.mark.xfail(reason="Bracket slicing on lowercase r not supported (footnote ⑧)", raises=Exception)
+    def test_bracket_on_wide_r_not_supported(self) -> None:
+        """[3:4]r — bracket slicing on lowercase wide throws InternalSWError."""
+        Algs.parse("[3:4]r")
+
+    @pytest.mark.xfail(reason="[3:4]R on 4x4 crashes at play time (footnote ⑨)", raises=Exception)
+    def test_bracket_face_out_of_range_4x4(self) -> None:
+        """[3:4]R on 4x4 — slice indices don't exist, runtime AssertionError."""
+        from cube.domain.model.Cube import Cube
+        from tests.test_utils import _test_sp
+        alg = Algs.parse("[3:4]R")
+        cube = Cube(4, sp=_test_sp)
+        alg.play(cube)

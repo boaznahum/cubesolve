@@ -14,18 +14,17 @@ from cube.domain.algs.Alg import Alg
 from cube.domain.algs.Algs import Algs
 
 
-def load_file_alg(slot: int) -> tuple[Alg, str]:
-    """Load algorithm from f{slot}.txt resource file.
+def load_file_content(slot: int) -> str:
+    """Load raw content from f{slot}.txt resource file.
 
     Args:
         slot: File number 1-5
 
     Returns:
-        Tuple of (parsed Alg object, raw file content)
+        Raw file content as string
 
     Raises:
         FileNotFoundError: If file doesn't exist
-        ValueError: If file is empty or contains only comments
     """
     filename = f"f{slot}.txt"
 
@@ -45,7 +44,23 @@ def load_file_alg(slot: int) -> tuple[Alg, str]:
     if content is None:
         raise FileNotFoundError(f"Algorithm file '{filename}' not found")
 
+    return content
+
+
+def parse_file_content(content: str, filename: str) -> Alg:
+    """Parse raw file content into an algorithm.
+
+    Args:
+        content: Raw file content
+        filename: For error messages
+
+    Returns:
+        Parsed Alg object
+
+    Raises:
+        ValueError: If file is empty or contains only comments
+    """
     try:
-        return Algs.parse_multiline(content), content
+        return Algs.parse_multiline(content)
     except ValueError:
         raise ValueError(f"Algorithm file '{filename}' is empty")

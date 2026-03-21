@@ -568,6 +568,39 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td><code>"3R"</code></td>
   <td>same</td>
 </tr>
+<tr>
+  <td>Turn slices 3 through 4 from R<br>
+      <em>6×6+: 2 inner slices</em></td>
+  <td><code>3-4R</code></td>
+  <td><code>3-4R</code></td>
+  <td>—</td>
+  <td><code>Algs.R[3:4]</code></td>
+  <td><code>[3:4]R</code></td>
+  <td>✅ <code>"[3:4]R"</code><br>❌ <code>"3-4R"</code><sup>⑦</sup></td>
+  <td>same</td>
+</tr>
+<tr>
+  <td>Turn all slices from 3rd to last<br>
+      <em>5×5+: varies by size</em></td>
+  <td>?</td>
+  <td>?</td>
+  <td>—</td>
+  <td><code>Algs.R[3:]</code></td>
+  <td><code>[3:]R</code></td>
+  <td>✅ <code>"[3:]R"</code></td>
+  <td>same</td>
+</tr>
+<tr>
+  <td>Turn slices 1 through 4 from R<br>
+      <em>6×6+: 4 inner slices</em></td>
+  <td><code>1-4R</code>?</td>
+  <td><code>1-4R</code>?</td>
+  <td>—</td>
+  <td><code>Algs.R[1:4]</code></td>
+  <td><code>[1:4]R</code></td>
+  <td>✅ <code>"[:4]R"</code><br>❌ <code>"1-4R"</code><sup>⑦</sup></td>
+  <td>same</td>
+</tr>
 <!-- ═══════════════════ 3. Wide Moves ═══════════════════ -->
 <tr><td colspan="8" style="border-top:2px solid #888; font-weight:bold; text-align:left;">Wide Moves<sup>③④</sup></td></tr>
 <tr>
@@ -602,6 +635,39 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td><code>[:-1]Rw</code> / <code>[:-1]r</code></td>
   <td><code>"[:-1]Rw"</code> / <code>"[:-1]r"</code></td>
   <td>same</td>
+</tr>
+<tr>
+  <td>Turn R layers 3–4 (can span to opposite face)<br>
+      <em>≡ 3R 4R · ❌ 4×4: runtime error<sup>⑨</sup></em></td>
+  <td>✅ <code>3-4R</code></td>
+  <td><code>3-4R</code></td>
+  <td>—</td>
+  <td><code>Algs.R[3:4]</code></td>
+  <td><code>[3:4]R</code></td>
+  <td>✅ <code>"[3:4]R"</code><br>❌ <code>"3-4R"</code><sup>⑦</sup></td>
+  <td>same</td>
+</tr>
+<tr>
+  <td>Turn R layers 3–4 (range on wide Rw)<br>
+      <em>Twizzle: same as 3-4R</em></td>
+  <td>✅ <code>3-4Rw</code></td>
+  <td>—</td>
+  <td>—</td>
+  <td>❌ not supported<sup>⑧</sup></td>
+  <td>—</td>
+  <td>❌ <code>"[3:4]Rw"</code><sup>⑧</sup></td>
+  <td>—</td>
+</tr>
+<tr>
+  <td>Turn R layers 3–4 (range on lowercase r)<br>
+      <em>Twizzle: same as 3-4R</em></td>
+  <td>✅ <code>3-4r</code></td>
+  <td><code>3-4r</code></td>
+  <td>—</td>
+  <td>❌ not supported<sup>⑧</sup></td>
+  <td>—</td>
+  <td>❌ <code>"[3:4]r"</code><sup>⑧</sup></td>
+  <td>—</td>
 </tr>
 <!-- ═══════════════════ 4. Slice Moves ═══════════════════ -->
 <tr><td colspan="8" style="border-top:2px solid #888; font-weight:bold; text-align:left;">Slice Moves — sources disagree on big cubes<sup>①②</sup></td></tr>
@@ -725,7 +791,10 @@ At play time, `_effective_layers(cube)` computes the actual count:
 <sup>③</sup> MZRG (SiGN) uses only lowercase for wide moves — no `Rw` form.<br>
 <sup>④</sup> In `compat_3x3` mode, `parse("Rw")`/`parse("r")`/`parse("3Rw")` → adaptive (`[:-1]Rw`/`[:-1]r`).<br>
 <sup>⑤</sup> Standards use lowercase `x`/`y`/`z`. Our parser accepts uppercase `X`/`Y`/`Z`.<br>
-<sup>⑥</sup> In standard notation, `3Rw` on a 3×3 is an error (only 2 non-opposite layers exist). Our implementation clamps to `min(3, size-1)` = 2 layers, equivalent to `Rw`.
+<sup>⑥</sup> In standard notation, `3Rw` on a 3×3 is an error (only 2 non-opposite layers exist). Our implementation clamps to `min(3, size-1)` = 2 layers, equivalent to `Rw`.<br>
+<sup>⑦</sup> Our parser does not yet support `3-4R` range syntax. Use bracket notation `[3:4]R` instead. TODO: add parser support for SiGN range notation.<br>
+<sup>⑧</sup> Bracket slicing on wide moves (`[3:4]Rw`, `[3:4]r`) is not supported. Parser throws `InternalSWError`.<br>
+<sup>⑨</sup> `[3:4]R` on 4×4 parses OK but crashes at play time with `AssertionError` (no error message) — slice indices 3-4 don't exist on a 4×4 (only 2 inner slices).
 
 ---
 
