@@ -3,72 +3,47 @@
 ## Goal
 Overhaul the summary table in `docs/algorithm_notation.md` to be the definitive reference, cross-referenced against 3 standard sources (Twizzle, MZRG, SS Wiki) and verified with tests.
 
-## Key Files Modified
-- `docs/algorithm_notation.md` — single HTML summary table
-- `tests/parsing/test_doc_table.py` — 144 tests verifying every row
-- `src/cube/domain/algs/FaceAlgBase.py` — play() n_max fix for opposite face
-- `src/cube/domain/model/Cube.py` — rotate_face_and_slice handles opposite face index
-- `src/cube/presentation/gui/commands/concrete.py` — F1-F5 debug logging + error logging
-- `src/cube/resources/algs/__init__.py` — split load_file_content / parse_file_content
-- `src/cube/utils/logger.py` — added logger.error() bypasses quiet_all
-- `src/cube/utils/logger_protocol.py` — error() method in protocol
-
-## Fixes Implemented
-
-### Opposite face spanning (⑨⑩ — FIXED)
-- `4R` on 4×4 now equals `L'` (opposite face rotated in R direction)
-- `[3:4]R` on 4×4 now works: decomposes to `3R + L'`
-- Fixed in `FaceAlgBase.play()`: `n_max=cube.size` instead of `1+n_slices`
-- Fixed in `Cube.rotate_face_and_slice()`: handles `i == size-1` as opposite face
-- Fixed in `Cube.get_rotate_face_and_slice_involved_parts()`: same
-- Assertion in `get_face_and_rotation_info` updated to `0 <= i <= size-1`
-- Tested for ALL 6 faces × 3 sizes (3×3, 4×4, 5×5)
-
-### F1-F5 debug logging
-- `load_file_alg` split into `load_file_content` + `parse_file_content`
-- Logs raw file content BEFORE parsing (so you see it even on parse errors)
-- Uses `solver_debug` flag (not hardcoded True)
-- Errors use `logger.error()` which bypasses `quiet_all`
-- Format: `--- BEGIN f1.txt ---\n<content>\n--- END f1.txt ---\nParsed: <alg>`
-
-### logger.error()
-- New method on Logger and LoggerProtocol
-- Always prints to console AND webgl streams
-- Ignores `quiet_all` — errors should never be suppressed
-
-## Table Structure
-Single HTML table. Columns: Description/Effect | Twizzle | MZRG | SS Wiki | Code | str() | Parser (input) | Parser (3×3 mode)
-
-6 groups:
-1. **Face Moves** — R, R', R2
-2. **Inner Slices** — 2R, 3R, 4R(=L'), [3:4]R, [3:]R, [:4]R + range rows
-3. **Wide Moves** — Rw/r, 3Rw/3r, [:-1]Rw/rr, 3-4Rw, 3-4r
-4. **Slice Moves** — M, [:]M
-5. **Slice Range & Indexing** — [1:2]R, [2:3]R, [1]M, [1:2]M, [1:]M
-6. **Whole Cube Rotations** — X, Y, Z
-
-## Tests (144 passed, 27 skipped, 2 xfailed)
-- `TestDocTable.test_code_vs_parser` — code API vs parser equivalence
-- `TestDocTable.test_str_round_trip` — str(code) == str(parsed) == expected
-- `TestDocTable.test_equivalent_decomposition` — range/wide moves verified against primitive decomposition (e.g. [3:4]R == 3R+4R)
-- `TestDocTable.test_compat_3x3_str` — compat_3x3 mode produces expected str
-- `TestSpecialCases` — Rw≡r, [1:2]R≡Rw, 2L≡M, M≡MM on 3x3, M≠MM on 5x5, 3Rw clamping, Rw vs adaptive, opposite face for all 6 faces × 3 sizes, [3:4]R spans opposite on 4×4
-
-## Twizzle Verification (user manually checking)
-- ✅ `Rw`, `r` — verified (Twizzle also supports spanning)
-- ✅ `3Rw`, `3r` — verified (Twizzle also supports spanning)
-- ✅ `R` — verified
-- ✅ `3-4R`, `3-4Rw`, `3-4r` — verified on Twizzle
-- Remaining rows NOT yet verified
-
-## Remaining Bugs (❌ in table)
-- ❌⑦ Parser doesn't support SiGN range syntax (`3-4R`). Use bracket `[3:4]R` instead.
-- ❌⑧ Bracket slicing on wide moves (`[3:4]Rw`, `[3:4]r`) not supported. Parser throws InternalSWError. Twizzle supports this.
-- Missing `Algs` constants for 3-layer wide moves (table shows `WideLayerAlg(R,3)`)
-
-## Commits
+## Commits (in order)
 - `46b6e833` — Add verified summary table with standard sources and test coverage
 - `b8801f01` — Fix parser column to show input strings, add F1-F5 debug logging
 - `eadd0f03` — Add equivalent decompositions, logger.error(), wide bracket bugs
 - `0f5c7c72` — Add opposite face span tests and WIP rows
-- (pending) — Fix opposite face spanning, update table ✅⑨⑩
+- `8929b97e` — Consolidate 3-4R/Rw/r rows in Inner Slices
+- `af47c355` — Make WideLayerAlg sliceable, add SiGN range parser, fix animation DRY
+
+## What Was Done
+
+### Summary Table
+- Single HTML table in `docs/algorithm_notation.md` with 6 groups: Face Moves, Inner Slices, Wide Moves, Slice Moves, Slice Range & Indexing, Whole Cube Rotations
+- Columns: Description/Effect | Twizzle | MZRG | SS Wiki | Code | str() | Parser | Parser (3×3 mode)
+- Cross-referenced against 3 standard sources (Twizzle manually verified by user, MZRG/SS Wiki from web research)
+- ✅/❌ markers on verified/broken items, footnotes ①-⑩
+
+### Fixes Implemented
+1. **Opposite face spanning** — `4R` on 4×4 = `L'`. Fixed `FaceAlgBase._resolve_slices()` with `n_max=cube.size`. Tested all 6 faces × 3 sizes.
+2. **DRY refactor** — `FaceAlgBase._resolve_slices()` shared by `play()` and `get_animation_objects()`. `Cube._classify_layers()` shared by rotation and parts collection.
+3. **WideLayerAlg sliceable** — inherits `SliceAbleAlg`, `__getitem__` returns `SlicedFaceAlg`. `Rw[3:4]` == `R[3:4]`.
+4. **SiGN range parser** — `3-4R`, `3-4Rw`, `3-4r` now parsed (regex in `_parser.py`).
+5. **Scramble** — WideLayerAlg now included in slice generation.
+6. **F1-F5 debug logging** — split `load_file_content`/`parse_file_content`, logs raw content before parsing, errors via `logger.error()` (bypasses quiet_all).
+7. **WebGL animation fix** — `ClientSession` n_max patched to `cube.size`.
+
+### Tests: 161 passed, 32 skipped, 1 xfailed
+- `TestDocTable` — code vs parser, str round-trip, equivalent decomposition, compat_3x3
+- `TestSpecialCases` — opposite face all 6 faces × 3 sizes, Rw≡r, [1:2]R≡Rw, 2L≡M, M≡MM on 3x3, clamping, wide slicing, SiGN range parsing
+- Equivalents use `Algs.parse()` for decomposition (independent code path, not same slicing mechanism)
+
+## Known Bugs (remaining)
+1. **`[:]R` returns just `R`** — should be all layers (≡ X). xfail test exists. Next session fix.
+2. **#141: n_max duplication** — WebGL `ClientSession` calls `normalize_slice_index` directly instead of using `_resolve_slices()`. Patched but not DRY.
+3. **SiGN range on M/E/S** — `2-3M` not tested, may or may not work.
+
+## Twizzle Verification Status
+- ✅ Rw, r, 3Rw, 3r, R, 3-4R, 3-4Rw, 3-4r
+- ❌ 3Rw/3r: no span in Twizzle (error on 3×3)
+- ? remaining rows (M, m, 2R, 3R, X/Y/Z, [3:]R, [:3]R, etc.)
+
+## Next Session
+- Fix `[:]R` bug (should return all layers = X)
+- Continue Twizzle verification
+- Consider DRY cleanup for #141
