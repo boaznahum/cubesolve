@@ -153,9 +153,13 @@ class FaceAlgBase(AnimationAbleAlg, ABC):
         return [i - 1 for i in res]
 
     def play(self, cube: Cube, inv: bool = False) -> None:
-        """Play the face algorithm on the cube."""
+        """Play the face algorithm on the cube.
+
+        n_max = cube.size so that index cube.size maps to the opposite face.
+        Index 1 = this face, 2..size-1 = inner slices, size = opposite face.
+        """
         start_stop: Iterable[int] = self.normalize_slice_index(
-            n_max=1 + cube.n_slices, _default=[1]
+            n_max=cube.size, _default=[1]
         )
         cube.rotate_face_and_slice(_inv(inv, self._n), self._face, start_stop)
 

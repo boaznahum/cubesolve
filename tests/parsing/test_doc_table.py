@@ -42,10 +42,10 @@ DOC_ROWS: list[DocRow] = [
     # §2 Inner Slices
     DocRow("2R: 2nd layer from R only",          Algs.R[2:2],                     "2R",       "2R"),
     DocRow("3R: 3rd layer from R only",          Algs.R[3:3],                     "3R",       "3R",  sizes=(4, 5)),
-    DocRow("[3:4]R: slices 3–4 from R",          Algs.R[3:4],                     "[3:4]R",   "[3:4]R", sizes=(5,),
-           equivalent=Algs.R[3:3] + Algs.R[4:4], equiv_sizes=(5,)),
+    DocRow("[3:4]R: slices 3–4 from R",          Algs.R[3:4],                     "[3:4]R",   "[3:4]R", sizes=(4, 5),
+           equivalent=Algs.R[3:3] + Algs.R[4:4], equiv_sizes=(4, 5)),
     DocRow("[3:]R: all from 3rd to last",         Algs.R[3:],                      "[3:]R",    "[3:]R", sizes=(5,),
-           equivalent=Algs.R[3:3] + Algs.R[4:4], equiv_sizes=(5,)),
+           equivalent=Algs.R[3:3] + Algs.R[4:4] + Algs.R[5:5], equiv_sizes=(5,)),
     DocRow("[:4]R: slices 1–4 from R",           Algs.R[1:4],                     "[:4]R",    "[1:4]R", sizes=(5,),
            equivalent=Algs.R + Algs.R[2:2] + Algs.R[3:3] + Algs.R[4:4], equiv_sizes=(5,)),
 
@@ -188,25 +188,22 @@ class TestSpecialCases:
 
     # --- Opposite face via inner slice indexing ---
 
-    @pytest.mark.xfail(reason="4R on 4x4 should equal L' but crashes (footnote ⑩)")
-    def test_4x4_4R_equals_L_prime(self) -> None:
-        """On 4x4, 4R (4th layer from R) == L' (opposite face, R direction)."""
-        from cube.domain.model.Cube import Cube
-        from tests.test_utils import _test_sp
-        alg = Algs.R[4:4]
-        cube = Cube(4, sp=_test_sp)
-        alg.play(cube)  # crashes here
-        assert_algs_equivalent(alg, Algs.L.prime, 4)
+    # --- Opposite face via inner slice indexing (all faces) ---
 
-    @pytest.mark.xfail(reason="5R on 5x5 should equal L' but crashes (footnote ⑩)")
-    def test_5x5_5R_equals_L_prime(self) -> None:
-        """On 5x5, 5R (5th layer from R) == L' (opposite face, R direction)."""
-        from cube.domain.model.Cube import Cube
-        from tests.test_utils import _test_sp
-        alg = Algs.R[5:5]
-        cube = Cube(5, sp=_test_sp)
-        alg.play(cube)  # crashes here
-        assert_algs_equivalent(alg, Algs.L.prime, 5)
+    @pytest.mark.parametrize("cube_size", [3, 4, 5])
+    @pytest.mark.parametrize("face,opposite_prime", [
+        (Algs.R, Algs.L.prime),
+        (Algs.L, Algs.R.prime),
+        (Algs.U, Algs.D.prime),
+        (Algs.D, Algs.U.prime),
+        (Algs.F, Algs.B.prime),
+        (Algs.B, Algs.F.prime),
+    ])
+    def test_last_layer_equals_opposite_prime(self, face: Alg, opposite_prime: Alg, cube_size: int) -> None:
+        """nR on NxN (n=N) == opposite face prime (e.g. 4R on 4x4 == L')."""
+        last_index = cube_size
+        sliced = face[last_index:last_index]
+        assert_algs_equivalent(sliced, opposite_prime, cube_size)
 
     # --- Known unsupported ---
 
@@ -220,11 +217,6 @@ class TestSpecialCases:
         """[3:4]r — bracket slicing on lowercase wide throws InternalSWError."""
         Algs.parse("[3:4]r")
 
-    @pytest.mark.xfail(reason="[3:4]R on 4x4 crashes at play time (footnote ⑨)", raises=Exception)
-    def test_bracket_face_out_of_range_4x4(self) -> None:
-        """[3:4]R on 4x4 — slice indices don't exist, runtime AssertionError."""
-        from cube.domain.model.Cube import Cube
-        from tests.test_utils import _test_sp
-        alg = Algs.parse("[3:4]R")
-        cube = Cube(4, sp=_test_sp)
-        alg.play(cube)
+    def test_bracket_face_spans_opposite_4x4(self) -> None:
+        """[3:4]R on 4x4 — spans to opposite face: 3R + L'."""
+        assert_algs_equivalent(Algs.R[3:4], Algs.R[3:3] + Algs.L.prime, 4)

@@ -1315,7 +1315,7 @@ class Cube(CubeSupplier):
         size = self.size
 
         for i in _slices:
-            assert 0 <= i <= size - 2
+            assert 0 <= i <= size - 1, f"Slice index {i} out of range [0, {size - 1}]"
 
         neg_slice_index: bool
         slice_name: SliceName
@@ -1430,10 +1430,16 @@ class Cube(CubeSupplier):
         if neg_slice_index:
             slice_rotate_n = -slice_rotate_n
 
+        opposite_index = self.size - 1
+
         for i in actual_slices:
 
             if i == 0:
                 self.face(face_name).rotate(n)
+
+            elif i == opposite_index:
+                # Opposite face: rotate in reverse direction (4R on 4x4 = L')
+                self.face(face_name).opposite.rotate(-n)
 
             else:
                 # it is inner slice index
@@ -1463,10 +1469,17 @@ class Cube(CubeSupplier):
 
         parts: MutableSequence[PartSlice] = []
 
+        opposite_index = self.size - 1
+
         for i in actual_slices:
             if i == 0:
                 face = self.face(face_name)
                 parts.extend(face.slices)
+
+            elif i == opposite_index:
+                # Opposite face
+                opposite_face = self.face(face_name).opposite
+                parts.extend(opposite_face.slices)
 
             else:
 

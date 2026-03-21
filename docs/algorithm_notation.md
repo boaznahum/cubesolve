@@ -569,19 +569,19 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>same</td>
 </tr>
 <tr>
-  <td>❌ WIP: Turn opposite face via R index (4R on 4×4 ≡ L')<br>
-      <em>Crashes: our code doesn't support spanning to opposite face<sup>⑩</sup></em></td>
+  <td>✅ Turn opposite face via R index (4R on 4×4 ≡ L')<br>
+      <em>nR where n=cube size → opposite face prime</em></td>
   <td><code>4R</code> = <code>L'</code></td>
   <td><code>4R</code> = <code>L'</code></td>
   <td>—</td>
-  <td>❌ <code>Algs.R[4:4]</code><sup>⑩</sup></td>
+  <td><code>Algs.R[4:4]</code></td>
   <td><code>4R</code></td>
-  <td>❌ crashes at play time<sup>⑩</sup></td>
-  <td>—</td>
+  <td>✅ <code>"4R"</code></td>
+  <td>same</td>
 </tr>
 <tr>
-  <td>❌ WIP: Turn slices 3–4 from R (spans to opposite face)<br>
-      <em>4×4: ≡ 3R + L' · ❌ runtime error<sup>⑨</sup><sup>⑩</sup></em></td>
+  <td>✅ Turn slices 3–4 from R (spans to opposite face)<br>
+      <em>4×4: ≡ 3R + L' · 5×5: ≡ 3R + 4R</em></td>
   <td><code>3-4R</code></td>
   <td><code>3-4R</code></td>
   <td>—</td>
@@ -615,8 +615,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
 <!-- ═══════════════════ 3. Wide Moves ═══════════════════ -->
 <tr><td colspan="8" style="border-top:2px solid #888; font-weight:bold; text-align:left;">Wide Moves<sup>③④</sup></td></tr>
 <tr>
-  <td>Turn 2 outermost R-side layers<br>
-      <em>All sizes: face + 1 inner</em></td>
+  <td>Turn 2 outermost R-side layers</td>
   <td>✅ <code>Rw</code> ✅ <code>r</code></td>
   <td><code>r</code> only<sup>③</sup></td>
   <td><code>Rw</code> or <code>r</code></td>
@@ -626,12 +625,11 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>⚠ ≡ <code>Algs.RRw</code><sup>④</sup></td>
 </tr>
 <tr>
-  <td>Turn 3 outermost R-side layers<br>
-      <em>Standard: error on 3×3<sup>⑥</sup> · Ours: clamps to 2</em></td>
-  <td>✅ <code>3Rw</code> ✅ <code>3r</code></td>
+  <td>Turn 3 outermost R-side layers</td>
+  <td>✅ <code>3Rw</code> ✅ <code>3r</code><br>❌ no span</td>
   <td><code>3r</code> only<sup>③</sup></td>
   <td><code>3Rw</code> or <code>3r</code></td>
-  <td>✅ <code>WideLayerAlg(R, 3)</code></td>
+  <td>✅ <code>WideLayerAlg(R, 3)</code><br>3×3: clamps to 2</td>
   <td><code>3Rw</code></td>
   <td>✅ <code>"3Rw"</code> / <code>"3r"</code></td>
   <td>⚠ ≡ <code>Algs.RRw</code><sup>④</sup></td>
@@ -649,7 +647,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
 </tr>
 <tr>
   <td>Turn R layers 3–4 (can span to opposite face)<br>
-      <em>≡ 3R 4R · ❌ 4×4: runtime error<sup>⑨</sup></em></td>
+      <em>≡ 3R 4R · ✅ 4×4: 3R + L'<sup>⑨</sup></em></td>
   <td>✅ <code>3-4R</code></td>
   <td><code>3-4R</code></td>
   <td>—</td>
@@ -659,8 +657,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>same</td>
 </tr>
 <tr>
-  <td>Turn R layers 3–4 (range on wide Rw)<br>
-      <em>Twizzle: same as 3-4R</em></td>
+  <td>Turn R layers 3–4 (wide Rw, can span to L)</td>
   <td>✅ <code>3-4Rw</code></td>
   <td>—</td>
   <td>—</td>
@@ -670,8 +667,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>—</td>
 </tr>
 <tr>
-  <td>Turn R layers 3–4 (range on lowercase r)<br>
-      <em>Twizzle: same as 3-4R</em></td>
+  <td>Turn R layers 3–4 (lowercase r, can span to L)</td>
   <td>✅ <code>3-4r</code></td>
   <td><code>3-4r</code></td>
   <td>—</td>
@@ -805,8 +801,8 @@ At play time, `_effective_layers(cube)` computes the actual count:
 ❌<sup>⑥</sup> In standard notation, `3Rw` on a 3×3 is an error (only 2 non-opposite layers exist). Our implementation clamps to `min(3, size-1)` = 2 layers, equivalent to `Rw`.<br>
 ❌<sup>⑦</sup> Our parser does not yet support `3-4R` range syntax. Use bracket notation `[3:4]R` instead. TODO: add parser support for SiGN range notation.<br>
 ❌<sup>⑧</sup> Bracket slicing on wide moves (`[3:4]Rw`, `[3:4]r`) is not supported. Parser throws `InternalSWError`.<br>
-❌<sup>⑨</sup> `[3:4]R` on 4×4 parses OK but crashes at play time with `AssertionError` (no error message) — slice indices 3-4 don't exist on a 4×4 (only 2 inner slices).<br>
-❌<sup>⑩</sup> In SiGN, `4R` on a 4×4 = the L face rotated in R direction (≡ `L'`). Our code doesn't support indexing into the opposite face — `R[4:4]` crashes at play time.
+✅<sup>⑨</sup> `[3:4]R` on 4×4 now works — spans to opposite face (layer 4 = L face rotated in R direction = L').<br>
+✅<sup>⑩</sup> `nR` where n = cube size now rotates the opposite face (e.g. `4R` on 4×4 ≡ `L'`). Tested for all 6 faces on 3×3, 4×4, 5×5.
 
 ---
 
