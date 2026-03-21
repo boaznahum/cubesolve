@@ -495,19 +495,236 @@ At play time, `_effective_layers(cube)` computes the actual count:
 
 ## Summary Table
 
-| Move | 3x3 | 5x5 | Standard | Sliceable | Code |
-|------|-----|-----|----------|-----------|------|
-| `R` | 1 layer | 1 layer | 1 layer | Yes | `Algs.R` |
-| `2R` | 1 slice | 1 slice | SiGN | - | `Algs.parse("2R")` |
-| `Rw` / `r` | 2 layers | 2 layers | 2 layers | No | `Algs.Rw` / `Algs.r` |
-| `3Rw` / `3r` | 2 layers* | 3 layers | 3 layers | No | `Algs.parse("3Rw")` |
-| `[:-1]Rw` / `[:-1]r` | 2 layers | 4 layers | N/A | No | `Algs.RRw` / `Algs.rr` |
-| `M` | 1 slice | 1 slice | 1 slice | No | `Algs.M` |
-| `[:]M` | 1 slice | 3 slices | N/A | Yes | `Algs.MM` |
-| `R[1:2]` | 2 layers | 2 layers | = Rw | - | `Algs.R[1:2]` |
-| `X` | whole cube | whole cube | whole cube | No | `Algs.X` |
+> Using R as the example face — same pattern applies to L, U, D, F, B.<br>
+> Using M as the example slice — same for E (like D) and S (like F).<br>
+> Modifiers `'` (CCW) and `2` (180°) apply to all move types.
 
-*On 3x3, `3Rw` clamps to `min(3, 2)` = 2 layers.
+<table>
+<tr>
+  <th rowspan="2">Description / Effect</th>
+  <th colspan="3">Standard Sources</th>
+  <th colspan="4">Ours</th>
+</tr>
+<tr>
+  <th><a href="https://alpha.twizzle.net/edit/">Twizzle</a></th>
+  <th><a href="https://mzrg.com/rubik/nota.shtml">MZRG</a></th>
+  <th><a href="https://www.speedsolving.com/wiki/index.php?title=NxNxN_Notation">SS Wiki</a></th>
+  <th>Code</th>
+  <th>str()</th>
+  <th>parse("str") ≡</th>
+  <th>parse("str", 3×3) ≡</th>
+</tr>
+<!-- ═══════════════════ 1. Face Moves ═══════════════════ -->
+<tr><td colspan="8" style="border-top:2px solid #888; font-weight:bold; text-align:left;">Face Moves</td></tr>
+<tr>
+  <td>Turn outermost R layer CW · 1 layer, all sizes</td>
+  <td><code>R</code></td>
+  <td><code>R</code></td>
+  <td><code>R</code></td>
+  <td><code>Algs.R</code></td>
+  <td><code>R</code></td>
+  <td>≡ <code>Algs.R</code></td>
+  <td>same</td>
+</tr>
+<tr>
+  <td>Turn outermost R layer CCW · 1 layer, all sizes</td>
+  <td><code>R'</code></td>
+  <td><code>R'</code></td>
+  <td><code>R'</code></td>
+  <td><code>Algs.R.prime</code></td>
+  <td><code>R'</code></td>
+  <td>≡ <code>Algs.R.prime</code></td>
+  <td>same</td>
+</tr>
+<tr>
+  <td>Turn outermost R layer 180° · 1 layer, all sizes</td>
+  <td><code>R2</code></td>
+  <td><code>R2</code></td>
+  <td><code>R2</code></td>
+  <td><code>Algs.R.with_n(2)</code></td>
+  <td><code>R2</code></td>
+  <td>≡ <code>Algs.R.with_n(2)</code></td>
+  <td>same</td>
+</tr>
+<!-- ═══════════════════ 2. Inner Slices ═══════════════════ -->
+<tr><td colspan="8" style="border-top:2px solid #888; font-weight:bold; text-align:left;">Inner Slices</td></tr>
+<tr>
+  <td>Turn only the 2nd layer from R · 1 inner slice, all sizes</td>
+  <td><code>2R</code></td>
+  <td><code>2R</code></td>
+  <td>—</td>
+  <td><code>Algs.R[2:2]</code></td>
+  <td><code>2R</code></td>
+  <td>≡ <code>Algs.R[2:2]</code></td>
+  <td>same</td>
+</tr>
+<tr>
+  <td>Turn only the 3rd layer from R · 1 inner slice (5×5+)</td>
+  <td><code>3R</code></td>
+  <td><code>3R</code></td>
+  <td>—</td>
+  <td><code>Algs.R[3:3]</code></td>
+  <td><code>3R</code></td>
+  <td>≡ <code>Algs.R[3:3]</code></td>
+  <td>same</td>
+</tr>
+<!-- ═══════════════════ 3. Wide Moves ═══════════════════ -->
+<tr><td colspan="8" style="border-top:2px solid #888; font-weight:bold; text-align:left;">Wide Moves<sup>③④</sup></td></tr>
+<tr>
+  <td>Turn 2 outermost R-side layers<br>
+      <em>All sizes: face + 1 inner</em></td>
+  <td><code>Rw</code> or <code>r</code></td>
+  <td><code>r</code> only<sup>③</sup></td>
+  <td><code>Rw</code> or <code>r</code></td>
+  <td><code>Algs.Rw</code> / <code>Algs.r</code></td>
+  <td><code>Rw</code> / <code>r</code></td>
+  <td>≡ <code>Algs.Rw</code> / <code>Algs.r</code></td>
+  <td>⚠ ≡ <code>Algs.RRw</code><sup>④</sup></td>
+</tr>
+<tr>
+  <td>Turn 3 outermost R-side layers<br>
+      <em>3×3: clamped to 2 · 4×4+: 3 layers</em></td>
+  <td><code>3Rw</code> or <code>3r</code></td>
+  <td><code>3r</code> only<sup>③</sup></td>
+  <td><code>3Rw</code> or <code>3r</code></td>
+  <td><code>WideLayerAlg(R, 3)</code></td>
+  <td><code>3Rw</code></td>
+  <td>≡ <code>WideLayerAlg(R, 3)</code></td>
+  <td>⚠ ≡ <code>Algs.RRw</code><sup>④</sup></td>
+</tr>
+<tr>
+  <td>Turn all layers except opposite face (adaptive)<br>
+      <em>3×3: 2 · 4×4: 3 · 5×5: 4 · NxN: N−1</em></td>
+  <td>—</td>
+  <td>—</td>
+  <td>—</td>
+  <td><code>Algs.RRw</code> / <code>Algs.rr</code></td>
+  <td><code>[:-1]Rw</code> / <code>[:-1]r</code></td>
+  <td>≡ <code>Algs.RRw</code> / <code>Algs.rr</code></td>
+  <td>same</td>
+</tr>
+<!-- ═══════════════════ 4. Slice Moves ═══════════════════ -->
+<tr><td colspan="8" style="border-top:2px solid #888; font-weight:bold; text-align:left;">Slice Moves — sources disagree on big cubes<sup>①②</sup></td></tr>
+<tr>
+  <td>Turn single center slice between L&amp;R, like L<br>
+      <em>3×3: 1 slice · 4×4: N/A · 5×5: 1 slice</em></td>
+  <td><code>M</code></td>
+  <td>—<sup>①</sup></td>
+  <td><code>M</code></td>
+  <td><code>Algs.M</code></td>
+  <td><code>M</code></td>
+  <td>≡ <code>Algs.M</code></td>
+  <td>⚠ ≡ <code>Algs.MM</code><sup>②</sup></td>
+</tr>
+<tr>
+  <td>Turn ALL inner slices between L&amp;R, like L<br>
+      <em>3×3: 1 · 4×4: 2 · 5×5: 3 slices</em></td>
+  <td><code>m</code> (lowercase)</td>
+  <td><code>M</code><sup>①</sup></td>
+  <td>—</td>
+  <td><code>Algs.MM</code></td>
+  <td><code>[:]M</code></td>
+  <td>≡ <code>Algs.MM</code></td>
+  <td>same</td>
+</tr>
+<!-- ═══════════════════ 5. Slice Range & Indexing ═══════════════════ -->
+<tr><td colspan="8" style="border-top:2px solid #888; font-weight:bold; text-align:left;">Slice Range &amp; Indexing (ours only)</td></tr>
+<tr>
+  <td>Turn R face + 1st inner slice (= Rw)<br>
+      <em>All sizes: 2 layers</em></td>
+  <td>—</td>
+  <td>—</td>
+  <td>—</td>
+  <td><code>Algs.R[1:2]</code></td>
+  <td><code>[1:2]R</code></td>
+  <td>≡ <code>Algs.R[1:2]</code></td>
+  <td>same</td>
+</tr>
+<tr>
+  <td>Turn R layers 2–3 (no outer face)<br>
+      <em>5×5+: 2 inner slices</em></td>
+  <td>—</td>
+  <td>—</td>
+  <td>—</td>
+  <td><code>Algs.R[2:3]</code></td>
+  <td><code>[2:3]R</code></td>
+  <td>≡ <code>Algs.R[2:3]</code></td>
+  <td>same</td>
+</tr>
+<tr>
+  <td>Turn 1st M slice only (closest to L)<br>
+      <em>All sizes: 1 slice</em></td>
+  <td>—</td>
+  <td>—</td>
+  <td>—</td>
+  <td><code>Algs.MM[1]</code></td>
+  <td><code>[1:1]M</code></td>
+  <td>≡ <code>Algs.MM[1]</code></td>
+  <td>same</td>
+</tr>
+<tr>
+  <td>Turn M slices 1–2<br>
+      <em>4×4+: 2 slices</em></td>
+  <td>—</td>
+  <td>—</td>
+  <td>—</td>
+  <td><code>Algs.MM[1:2]</code></td>
+  <td><code>[1:2]M</code></td>
+  <td>≡ <code>Algs.MM[1:2]</code></td>
+  <td>same</td>
+</tr>
+<tr>
+  <td>Turn all M slices from 1st to last<br>
+      <em>= [:]M, all inner slices</em></td>
+  <td>—</td>
+  <td>—</td>
+  <td>—</td>
+  <td><code>Algs.MM[1:]</code></td>
+  <td><code>[1:]M</code></td>
+  <td>≡ <code>Algs.MM[1:]</code></td>
+  <td>same</td>
+</tr>
+<!-- ═══════════════════ 6. Whole Cube Rotations ═══════════════════ -->
+<tr><td colspan="8" style="border-top:2px solid #888; font-weight:bold; text-align:left;">Whole Cube Rotations<sup>⑤</sup></td></tr>
+<tr>
+  <td>Rotate whole cube like R · whole cube, all sizes</td>
+  <td><code>x</code></td>
+  <td><code>x</code></td>
+  <td><code>x</code></td>
+  <td><code>Algs.X</code></td>
+  <td><code>X</code></td>
+  <td>≡ <code>Algs.X</code></td>
+  <td>same</td>
+</tr>
+<tr>
+  <td>Rotate whole cube like U · whole cube, all sizes</td>
+  <td><code>y</code></td>
+  <td><code>y</code></td>
+  <td><code>y</code></td>
+  <td><code>Algs.Y</code></td>
+  <td><code>Y</code></td>
+  <td>≡ <code>Algs.Y</code></td>
+  <td>same</td>
+</tr>
+<tr>
+  <td>Rotate whole cube like F · whole cube, all sizes</td>
+  <td><code>z</code></td>
+  <td><code>z</code></td>
+  <td><code>z</code></td>
+  <td><code>Algs.Z</code></td>
+  <td><code>Z</code></td>
+  <td>≡ <code>Algs.Z</code></td>
+  <td>same</td>
+</tr>
+</table>
+
+**Notes:**
+
+<sup>①</sup> MZRG defines `M` as ALL inner slices (portable across sizes), not single center.<br>
+<sup>②</sup> In `compat_3x3` mode, `parse("M")` → all-slices (`[:]M`), so 3×3 algs work on bigger cubes.<br>
+<sup>③</sup> MZRG (SiGN) uses only lowercase for wide moves — no `Rw` form.<br>
+<sup>④</sup> In `compat_3x3` mode, `parse("Rw")`/`parse("r")`/`parse("3Rw")` → adaptive (`[:-1]Rw`/`[:-1]r`).<br>
+<sup>⑤</sup> Standards use lowercase `x`/`y`/`z`. Our parser accepts uppercase `X`/`Y`/`Z`.
 
 ---
 
