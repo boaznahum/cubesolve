@@ -830,13 +830,15 @@ class ExecuteFileAlgCommand(Command):
         from cube.domain.exceptions import InternalSWError
         from cube.resources.algs import load_file_alg
         try:
-            alg = load_file_alg(self.slot)
+            alg, raw_content = load_file_alg(self.slot)
             if self.inverse:
                 alg = alg.prime
 
-            # Log file name and algorithm
+            # Log file name, raw string, and parsed algorithm
             file_name = f"f{self.slot}.txt"
-            ctx.cube.sp.logger.debug(None, lambda: f"Executing algorithm from {file_name}: {alg}")
+            _debug = ctx.app.config.solver_debug
+            ctx.cube.sp.logger.debug(_debug,
+                                     lambda: f"--- BEGIN {file_name} ---\n{raw_content.strip()}\n--- END {file_name} ---\nParsed: {alg}")
 
             ctx.op.play(alg, animation=not self.instant)
         except FileNotFoundError as e:

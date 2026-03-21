@@ -523,7 +523,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td><code>R</code></td>
   <td><code>Algs.R</code></td>
   <td><code>R</code></td>
-  <td>≡ <code>Algs.R</code></td>
+  <td>✅ <code>"R"</code></td>
   <td>same</td>
 </tr>
 <tr>
@@ -533,7 +533,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td><code>R'</code></td>
   <td><code>Algs.R.prime</code></td>
   <td><code>R'</code></td>
-  <td>≡ <code>Algs.R.prime</code></td>
+  <td><code>"R'"</code></td>
   <td>same</td>
 </tr>
 <tr>
@@ -543,7 +543,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td><code>R2</code></td>
   <td><code>Algs.R.with_n(2)</code></td>
   <td><code>R2</code></td>
-  <td>≡ <code>Algs.R.with_n(2)</code></td>
+  <td><code>"R2"</code></td>
   <td>same</td>
 </tr>
 <!-- ═══════════════════ 2. Inner Slices ═══════════════════ -->
@@ -555,7 +555,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>—</td>
   <td><code>Algs.R[2:2]</code></td>
   <td><code>2R</code></td>
-  <td>≡ <code>Algs.R[2:2]</code></td>
+  <td><code>"2R"</code></td>
   <td>same</td>
 </tr>
 <tr>
@@ -565,7 +565,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>—</td>
   <td><code>Algs.R[3:3]</code></td>
   <td><code>3R</code></td>
-  <td>≡ <code>Algs.R[3:3]</code></td>
+  <td><code>"3R"</code></td>
   <td>same</td>
 </tr>
 <!-- ═══════════════════ 3. Wide Moves ═══════════════════ -->
@@ -573,23 +573,23 @@ At play time, `_effective_layers(cube)` computes the actual count:
 <tr>
   <td>Turn 2 outermost R-side layers<br>
       <em>All sizes: face + 1 inner</em></td>
-  <td><code>Rw</code> or <code>r</code></td>
+  <td>✅ <code>Rw</code> ✅ <code>r</code></td>
   <td><code>r</code> only<sup>③</sup></td>
   <td><code>Rw</code> or <code>r</code></td>
   <td><code>Algs.Rw</code> / <code>Algs.r</code></td>
   <td><code>Rw</code> / <code>r</code></td>
-  <td>≡ <code>Algs.Rw</code> / <code>Algs.r</code></td>
+  <td>✅ <code>"Rw"</code> / <code>"r"</code></td>
   <td>⚠ ≡ <code>Algs.RRw</code><sup>④</sup></td>
 </tr>
 <tr>
   <td>Turn 3 outermost R-side layers<br>
-      <em>3×3: clamped to 2 · 4×4+: 3 layers</em></td>
-  <td><code>3Rw</code> or <code>3r</code></td>
+      <em>Standard: error on 3×3<sup>⑥</sup> · Ours: clamps to 2</em></td>
+  <td>✅ <code>3Rw</code> ✅ <code>3r</code></td>
   <td><code>3r</code> only<sup>③</sup></td>
   <td><code>3Rw</code> or <code>3r</code></td>
-  <td><code>WideLayerAlg(R, 3)</code></td>
+  <td>✅ <code>WideLayerAlg(R, 3)</code></td>
   <td><code>3Rw</code></td>
-  <td>≡ <code>WideLayerAlg(R, 3)</code></td>
+  <td>✅ <code>"3Rw"</code> / <code>"3r"</code></td>
   <td>⚠ ≡ <code>Algs.RRw</code><sup>④</sup></td>
 </tr>
 <tr>
@@ -600,7 +600,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>—</td>
   <td><code>Algs.RRw</code> / <code>Algs.rr</code></td>
   <td><code>[:-1]Rw</code> / <code>[:-1]r</code></td>
-  <td>≡ <code>Algs.RRw</code> / <code>Algs.rr</code></td>
+  <td><code>"[:-1]Rw"</code> / <code>"[:-1]r"</code></td>
   <td>same</td>
 </tr>
 <!-- ═══════════════════ 4. Slice Moves ═══════════════════ -->
@@ -613,7 +613,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td><code>M</code></td>
   <td><code>Algs.M</code></td>
   <td><code>M</code></td>
-  <td>≡ <code>Algs.M</code></td>
+  <td><code>"M"</code></td>
   <td>⚠ ≡ <code>Algs.MM</code><sup>②</sup></td>
 </tr>
 <tr>
@@ -624,7 +624,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>—</td>
   <td><code>Algs.MM</code></td>
   <td><code>[:]M</code></td>
-  <td>≡ <code>Algs.MM</code></td>
+  <td><code>"[:]M"</code></td>
   <td>same</td>
 </tr>
 <!-- ═══════════════════ 5. Slice Range & Indexing ═══════════════════ -->
@@ -637,7 +637,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>—</td>
   <td><code>Algs.R[1:2]</code></td>
   <td><code>[1:2]R</code></td>
-  <td>≡ <code>Algs.R[1:2]</code></td>
+  <td><code>"[1:2]R"</code></td>
   <td>same</td>
 </tr>
 <tr>
@@ -648,7 +648,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>—</td>
   <td><code>Algs.R[2:3]</code></td>
   <td><code>[2:3]R</code></td>
-  <td>≡ <code>Algs.R[2:3]</code></td>
+  <td><code>"[2:3]R"</code></td>
   <td>same</td>
 </tr>
 <tr>
@@ -659,7 +659,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>—</td>
   <td><code>Algs.MM[1]</code></td>
   <td><code>[1:1]M</code></td>
-  <td>≡ <code>Algs.MM[1]</code></td>
+  <td><code>"[1]M"</code></td>
   <td>same</td>
 </tr>
 <tr>
@@ -670,7 +670,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>—</td>
   <td><code>Algs.MM[1:2]</code></td>
   <td><code>[1:2]M</code></td>
-  <td>≡ <code>Algs.MM[1:2]</code></td>
+  <td><code>"[1:2]M"</code></td>
   <td>same</td>
 </tr>
 <tr>
@@ -681,7 +681,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>—</td>
   <td><code>Algs.MM[1:]</code></td>
   <td><code>[1:]M</code></td>
-  <td>≡ <code>Algs.MM[1:]</code></td>
+  <td><code>"[1:]M"</code></td>
   <td>same</td>
 </tr>
 <!-- ═══════════════════ 6. Whole Cube Rotations ═══════════════════ -->
@@ -693,7 +693,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td><code>x</code></td>
   <td><code>Algs.X</code></td>
   <td><code>X</code></td>
-  <td>≡ <code>Algs.X</code></td>
+  <td><code>"X"</code></td>
   <td>same</td>
 </tr>
 <tr>
@@ -703,7 +703,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td><code>y</code></td>
   <td><code>Algs.Y</code></td>
   <td><code>Y</code></td>
-  <td>≡ <code>Algs.Y</code></td>
+  <td><code>"Y"</code></td>
   <td>same</td>
 </tr>
 <tr>
@@ -713,7 +713,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td><code>z</code></td>
   <td><code>Algs.Z</code></td>
   <td><code>Z</code></td>
-  <td>≡ <code>Algs.Z</code></td>
+  <td><code>"Z"</code></td>
   <td>same</td>
 </tr>
 </table>
@@ -724,7 +724,8 @@ At play time, `_effective_layers(cube)` computes the actual count:
 <sup>②</sup> In `compat_3x3` mode, `parse("M")` → all-slices (`[:]M`), so 3×3 algs work on bigger cubes.<br>
 <sup>③</sup> MZRG (SiGN) uses only lowercase for wide moves — no `Rw` form.<br>
 <sup>④</sup> In `compat_3x3` mode, `parse("Rw")`/`parse("r")`/`parse("3Rw")` → adaptive (`[:-1]Rw`/`[:-1]r`).<br>
-<sup>⑤</sup> Standards use lowercase `x`/`y`/`z`. Our parser accepts uppercase `X`/`Y`/`Z`.
+<sup>⑤</sup> Standards use lowercase `x`/`y`/`z`. Our parser accepts uppercase `X`/`Y`/`Z`.<br>
+<sup>⑥</sup> In standard notation, `3Rw` on a 3×3 is an error (only 2 non-opposite layers exist). Our implementation clamps to `min(3, size-1)` = 2 layers, equivalent to `Rw`.
 
 ---
 
