@@ -211,10 +211,33 @@ class TestSpecialCases:
 
     # --- Known unsupported ---
 
-    @pytest.mark.xfail(reason="[:]R should equal X but returns just R")
-    def test_all_slices_R_equals_X(self) -> None:
-        """[:]R should be all layers = X, but currently returns just face R."""
-        assert_algs_equivalent(Algs.R[:], Algs.X, 4)
+    @pytest.mark.parametrize("cube_size", [3, 4, 5])
+    def test_all_slices_R_equals_X(self, cube_size: int) -> None:
+        """[:]R = all layers = X on all sizes."""
+        assert_algs_equivalent(Algs.R[:], Algs.X, cube_size)
+
+    def test_all_slices_R_str(self) -> None:
+        """str(R[:]) == '[:]R'."""
+        assert str(Algs.R[:]) == "[:]R"
+
+    def test_all_slices_R_parse_round_trip(self) -> None:
+        """parse('[:]R') round-trips correctly."""
+        assert str(Algs.parse("[:]R")) == "[:]R"
+
+    @pytest.mark.parametrize("cube_size", [3, 4, 5])
+    def test_all_slices_R_parse_equals_X(self, cube_size: int) -> None:
+        """parse('[:]R') == X."""
+        assert_algs_equivalent(Algs.parse("[:]R"), Algs.X, cube_size)
+
+    @pytest.mark.xfail(reason="[:]Rw parser returns Rw (2 layers), ignores [:]")
+    def test_parse_all_slices_Rw_equals_X(self) -> None:
+        """parse('[:]Rw') should be all layers = X, but returns Rw."""
+        assert_algs_equivalent(Algs.parse("[:]Rw"), Algs.X, 4)
+
+    @pytest.mark.xfail(reason="[:]r parser returns r (2 layers), ignores [:]")
+    def test_parse_all_slices_r_equals_X(self) -> None:
+        """parse('[:]r') should be all layers = X, but returns r."""
+        assert_algs_equivalent(Algs.parse("[:]r"), Algs.X, 4)
 
     def test_bracket_on_wide_Rw_equals_R(self) -> None:
         """[3:4]Rw == [3:4]R — wide slicing produces same as face slicing."""

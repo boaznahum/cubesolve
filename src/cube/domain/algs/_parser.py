@@ -343,9 +343,14 @@ def _token_to_alg(t: str, *, compat_3x3: bool = False) -> _Alg:
             from cube.domain.algs.SliceAbleAlg import SliceAbleAlg
             if not isinstance(base_alg, SliceAbleAlg):
                 raise InternalSWError(f"Slice notation not supported for {base_alg}")
-            # [:]X means "all slices" — keep the unsliced SliceAlg so str() = "[:]M"
+            # [:]X means "all slices/layers"
             if isinstance(slice_spec, slice) and slice_spec.start is None and slice_spec.stop is None:
-                pass  # base_alg stays as unsliced SliceAlg (e.g., Algs.MM)
+                from cube.domain.algs.SliceAlg import SliceAlg
+                from cube.domain.algs.WideLayerAlg import WideLayerAlg
+                if isinstance(base_alg, (SliceAlg, WideLayerAlg)):
+                    pass  # keep as-is: [:]M stays SliceAlg, [:]Rw stays WideLayerAlg
+                else:
+                    base_alg = base_alg[:]  # FaceAlg: [:]R = all layers
             elif isinstance(slice_spec, slice):
                 base_alg = base_alg[slice_spec.start:slice_spec.stop]
             else:

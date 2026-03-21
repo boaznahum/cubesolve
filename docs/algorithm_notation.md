@@ -608,17 +608,21 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>?</td>
   <td>?</td>
   <td>✅ <code>Algs.X</code><br>
+      ✅ <code>Algs.R[:]</code><br>
+      ✅ <code>Algs.Rw[:]</code><br>
+      ✅ <code>Algs.r[:]</code><br>
       ✅ <code>Algs.R[1:]</code> adaptive<br>
-      ✅ <code>Algs.R[1:4]</code> 4×4 only<br>
-      ❌ <code>Algs.R[:]</code> → just R</td>
+      ✅ <code>Algs.R[1:4]</code> 4×4 only</td>
   <td>✅ <code>X</code><br>
+      ✅ <code>[:]R</code><br>
       ✅ <code>[1:]R</code><br>
-      ✅ <code>[1:4]R</code> 4×4 only<br>
-      ❌ <code>[:]R</code> → <code>R</code></td>
+      ✅ <code>[1:4]R</code> 4×4 only</td>
   <td>✅ <code>"X"</code><br>
+      ✅ <code>"[:]R"</code><br>
+      ❌ <code>"[:]Rw"</code> → Rw (2 layers, ignores [:])<br>
+      ❌ <code>"[:]r"</code> → r (2 layers, ignores [:])<br>
       ✅ <code>"[1:]R"</code><br>
-      ✅ <code>"[1:4]R"</code> 4×4 only<br>
-      ❌ <code>"[:]R"</code> → just R</td>
+      ✅ <code>"[1:4]R"</code> 4×4 only</td>
   <td>same</td>
 </tr>
 <tr>
