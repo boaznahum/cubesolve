@@ -602,26 +602,24 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>same</td>
 </tr>
 <tr>
-  <td>Turn ALL layers from R (adaptive, ≡ X)<br>
-      <em>3×3: 3 layers · 4×4: 4 · 5×5: 5</em></td>
+  <td>Turn ALL R layers (≡ X, whole cube like R)<br>
+      <em>3×3: 3 · 4×4: 4 · 5×5: 5 layers</em></td>
   <td>?</td>
   <td>?</td>
-  <td>—</td>
-  <td><code>Algs.R[1:]</code></td>
-  <td><code>[1:]R</code></td>
-  <td>✅ <code>"[1:]R"</code></td>
+  <td>?</td>
+  <td>✅ <code>Algs.X</code><br>
+      ✅ <code>Algs.R[1:]</code> adaptive<br>
+      ✅ <code>Algs.R[1:4]</code> 4×4 only<br>
+      ❌ <code>Algs.R[:]</code> → just R</td>
+  <td>✅ <code>X</code><br>
+      ✅ <code>[1:]R</code><br>
+      ✅ <code>[1:4]R</code> 4×4 only<br>
+      ❌ <code>[:]R</code> → <code>R</code></td>
+  <td>✅ <code>"X"</code><br>
+      ✅ <code>"[1:]R"</code><br>
+      ✅ <code>"[1:4]R"</code> 4×4 only<br>
+      ❌ <code>"[:]R"</code> → just R</td>
   <td>same</td>
-</tr>
-<tr>
-  <td>❌ [:]R should be all layers (≡ X) but returns just R<br>
-      <em>Bug: [:]R == R instead of all layers</em></td>
-  <td>?</td>
-  <td>?</td>
-  <td>—</td>
-  <td>❌ <code>Algs.R[:]</code> → just R</td>
-  <td><code>R</code></td>
-  <td>❌ <code>"[:]R"</code> → just R</td>
-  <td>—</td>
 </tr>
 <tr>
   <td>Turn layers 1–3 from R (≡ [1:3]R)<br>
