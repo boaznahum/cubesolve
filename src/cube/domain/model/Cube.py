@@ -1426,73 +1426,60 @@ class Cube(CubeSupplier):
         actual_slices, neg_slice_index, slice_name = self.get_face_and_rotation_info(face_name, _slices)
 
         slice_rotate_n = n
-
         if neg_slice_index:
             slice_rotate_n = -slice_rotate_n
 
-        opposite_index = self.size - 1
-
-        for i in actual_slices:
-
-            if i == 0:
-                self.face(face_name).rotate(n)
-
-            elif i == opposite_index:
-                # Opposite face: rotate in reverse direction (4R on 4x4 = L')
-                self.face(face_name).opposite.rotate(-n)
-
-            else:
-                # it is inner slice index
-
-                # slice index is cube index -1
-                si = i - 1
-                if neg_slice_index:
-                    si = self.inv(si)
-                # can be optimized, by passing sequence
-                self.rotate_slice(slice_name, slice_rotate_n, [si])
+        for layer_type, layer_face, layer_si in self._classify_layers(
+                face_name, actual_slices, neg_slice_index, slice_name):
+            if layer_type == "face":
+                layer_face.rotate(n)
+            elif layer_type == "opposite":
+                layer_face.rotate(-n)
+            else:  # "inner"
+                assert layer_si is not None
+                self.rotate_slice(slice_name, slice_rotate_n, [layer_si])
 
     def get_rotate_face_and_slice_involved_parts(self, face_name: FaceName, slices: Iterable[int] | None = None) -> \
             Collection[PartSlice]:
-
-        """
-
-        :param face_name:
-        :param slices: [0, n-2] not including last face
-        :return:
-        """
-
-        actual_slices: Iterable[int]
-        neg_slice_index: bool
-        slice_name: SliceName
+        """Get all parts involved in a face+slice rotation for animation."""
 
         actual_slices, neg_slice_index, slice_name = self.get_face_and_rotation_info(face_name, slices)
 
         parts: MutableSequence[PartSlice] = []
 
+        for layer_type, layer_face, layer_si in self._classify_layers(
+                face_name, actual_slices, neg_slice_index, slice_name):
+            if layer_type in ("face", "opposite"):
+                parts.extend(layer_face.slices)
+            else:  # "inner"
+                assert layer_si is not None
+                a_slice: Slice = self.get_slice(slice_name)
+                parts.extend(a_slice.get_rotate_involved_parts(layer_si))
+
+        return parts
+
+    def _classify_layers(self, face_name: FaceName, actual_slices: Iterable[int],
+                         neg_slice_index: bool, slice_name: SliceName
+                         ) -> Iterable[Tuple["str", "_Face | None", "int | None"]]:
+        """Classify each layer index as face, opposite, or inner slice.
+
+        Yields (layer_type, face, slice_index) tuples:
+        - ("face", face_obj, None) — the primary face
+        - ("opposite", opposite_face_obj, None) — the opposite face
+        - ("inner", None, concrete_slice_index) — an inner slice
+        """
         opposite_index = self.size - 1
 
         for i in actual_slices:
             if i == 0:
-                face = self.face(face_name)
-                parts.extend(face.slices)
-
+                yield ("face", self.face(face_name), None)
             elif i == opposite_index:
-                # Opposite face
-                opposite_face = self.face(face_name).opposite
-                parts.extend(opposite_face.slices)
-
+                yield ("opposite", self.face(face_name).opposite, None)
             else:
-
-                # slice index is cube index -1
-                a_slice: Slice = self.get_slice(slice_name)
                 si = i - 1
                 if neg_slice_index:
                     si = self.inv(si)
-
-                _slice_parts = a_slice.get_rotate_involved_parts(si)
-                parts.extend(_slice_parts)
-
-        return parts
+                yield ("inner", None, si)
 
     def modified(self) -> None:
         self._modify_counter += 1

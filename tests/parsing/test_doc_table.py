@@ -43,44 +43,48 @@ DOC_ROWS: list[DocRow] = [
     DocRow("2R: 2nd layer from R only",          Algs.R[2:2],                     "2R",       "2R"),
     DocRow("3R: 3rd layer from R only",          Algs.R[3:3],                     "3R",       "3R",  sizes=(4, 5)),
     DocRow("[3:4]R: slices 3–4 from R",          Algs.R[3:4],                     "[3:4]R",   "[3:4]R", sizes=(4, 5),
-           equivalent=Algs.R[3:3] + Algs.R[4:4], equiv_sizes=(4, 5)),
+           equivalent=Algs.parse("3R") + Algs.L.prime, equiv_sizes=(4,)),
+    DocRow("[3:4]R: slices 3–4 (5×5, no span)", Algs.R[3:4],                     "[3:4]R",   "[3:4]R", sizes=(5,),
+           equivalent=Algs.parse("3R 4R"), equiv_sizes=(5,)),
     DocRow("[3:]R: all from 3rd to last",         Algs.R[3:],                      "[3:]R",    "[3:]R", sizes=(5,),
-           equivalent=Algs.R[3:3] + Algs.R[4:4] + Algs.R[5:5], equiv_sizes=(5,)),
-    DocRow("[:4]R: slices 1–4 from R",           Algs.R[1:4],                     "[:4]R",    "[1:4]R", sizes=(5,),
-           equivalent=Algs.R + Algs.R[2:2] + Algs.R[3:3] + Algs.R[4:4], equiv_sizes=(5,)),
+           equivalent=Algs.parse("3R 4R") + Algs.L.prime, equiv_sizes=(5,)),
+    DocRow("[1:]R: all layers (adaptive, ≡ X)",   Algs.R[1:],                      "[1:]R",    "[1:]R",
+           equivalent=Algs.X, equiv_sizes=(3, 4, 5)),
+    DocRow("[:3]R: layers 1–3 (≡ [1:3]R)",      Algs.R[:3],                      "[:3]R",    "[1:3]R", sizes=(5,),
+           equivalent=Algs.parse("R 2R 3R"), equiv_sizes=(5,)),
 
     # §3 Wide Moves
     DocRow("Rw: 2 outermost R-side layers",      Algs.Rw,                         "Rw",       "Rw",
            compat_3x3_parser_str="Rw", compat_3x3_expected_str="[:-1]Rw",
-           equivalent=Algs.R + Algs.R[2:2], equiv_sizes=(3, 4, 5)),
+           equivalent=Algs.parse("R 2R"), equiv_sizes=(3, 4, 5)),
     DocRow("r: 2 outermost R-side layers",        Algs.r,                          "r",        "r",
            compat_3x3_parser_str="r", compat_3x3_expected_str="[:-1]r",
-           equivalent=Algs.R + Algs.R[2:2], equiv_sizes=(3, 4, 5)),
+           equivalent=Algs.parse("R 2R"), equiv_sizes=(3, 4, 5)),
     DocRow("3Rw: 3 outermost R-side layers",      WideLayerAlg(FaceName.R, layers=3),  "3Rw",  "3Rw",
            compat_3x3_parser_str="3Rw", compat_3x3_expected_str="[:-1]Rw",
-           equivalent=Algs.R + Algs.R[2:2] + Algs.R[3:3], equiv_sizes=(5,)),
+           equivalent=Algs.parse("R 2R 3R"), equiv_sizes=(5,)),
     DocRow("3r: 3 outermost R-side layers",       WideLayerAlg(FaceName.R, layers=3, lowercase=True), "3r", "3r",
            compat_3x3_parser_str="3r", compat_3x3_expected_str="[:-1]r",
-           equivalent=Algs.R + Algs.R[2:2] + Algs.R[3:3], equiv_sizes=(5,)),
+           equivalent=Algs.parse("R 2R 3R"), equiv_sizes=(5,)),
     DocRow("[:-1]Rw: all-but-last (adaptive)",    Algs.RRw,                        "[:-1]Rw",  "[:-1]Rw",
-           equivalent=Algs.R + Algs.R[2:2] + Algs.R[3:3] + Algs.R[4:4], equiv_sizes=(5,)),
+           equivalent=Algs.parse("R 2R 3R 4R"), equiv_sizes=(5,)),
     DocRow("[:-1]r: all-but-last (adaptive)",     Algs.rr,                         "[:-1]r",   "[:-1]r",
-           equivalent=Algs.R + Algs.R[2:2] + Algs.R[3:3] + Algs.R[4:4], equiv_sizes=(5,)),
+           equivalent=Algs.parse("R 2R 3R 4R"), equiv_sizes=(5,)),
 
     # §4 Slice Moves
     DocRow("M: single center slice, like L",     Algs.M,                          "M",        "M",
            compat_3x3_parser_str="M", compat_3x3_expected_str="[:]M"),
     DocRow("[:]M: ALL inner slices, like L",      Algs.MM,                         "[:]M",     "[:]M",
-           equivalent=Algs.MM[1] + Algs.MM[2] + Algs.MM[3], equiv_sizes=(5,)),
+           equivalent=Algs.parse("[1:1]M [2:2]M [3:3]M"), equiv_sizes=(5,)),
 
     # §5 Slice Range & Indexing
     DocRow("[1:2]R: R face + 1st inner (= Rw)",  Algs.R[1:2],                     "[1:2]R",   "[1:2]R",
-           equivalent=Algs.R + Algs.R[2:2], equiv_sizes=(3, 4, 5)),
+           equivalent=Algs.parse("R 2R"), equiv_sizes=(3, 4, 5)),
     DocRow("[2:3]R: R layers 2–3 (no outer)",     Algs.R[2:3],                     "[2:3]R",   "[2:3]R", sizes=(5,),
-           equivalent=Algs.R[2:2] + Algs.R[3:3], equiv_sizes=(5,)),
+           equivalent=Algs.parse("2R 3R"), equiv_sizes=(5,)),
     DocRow("[1:1]M: 1st M slice only",            Algs.MM[1],                      "[1]M",     "[1:1]M"),
     DocRow("[1:2]M: M slices 1–2",                Algs.MM[1:2],                    "[1:2]M",   "[1:2]M", sizes=(4, 5),
-           equivalent=Algs.MM[1] + Algs.MM[2], equiv_sizes=(4, 5)),
+           equivalent=Algs.parse("[1:1]M [2:2]M"), equiv_sizes=(4, 5)),
     DocRow("[1:]M: all M slices from 1st",        Algs.MM[1:],                     "[1:]M",    "[1:]M"),
 
     # §6 Whole Cube Rotations
@@ -207,15 +211,44 @@ class TestSpecialCases:
 
     # --- Known unsupported ---
 
-    @pytest.mark.xfail(reason="Bracket slicing on wide Rw not supported (footnote ⑧)", raises=Exception)
-    def test_bracket_on_wide_Rw_not_supported(self) -> None:
-        """[3:4]Rw — bracket slicing on wide moves throws InternalSWError."""
-        Algs.parse("[3:4]Rw")
+    @pytest.mark.xfail(reason="[:]R should equal X but returns just R")
+    def test_all_slices_R_equals_X(self) -> None:
+        """[:]R should be all layers = X, but currently returns just face R."""
+        assert_algs_equivalent(Algs.R[:], Algs.X, 4)
 
-    @pytest.mark.xfail(reason="Bracket slicing on lowercase r not supported (footnote ⑧)", raises=Exception)
-    def test_bracket_on_wide_r_not_supported(self) -> None:
-        """[3:4]r — bracket slicing on lowercase wide throws InternalSWError."""
-        Algs.parse("[3:4]r")
+    def test_bracket_on_wide_Rw_equals_R(self) -> None:
+        """[3:4]Rw == [3:4]R — wide slicing produces same as face slicing."""
+        assert_algs_equivalent(Algs.Rw[3:4], Algs.R[3:4], 5)
+
+    def test_bracket_on_wide_r_equals_R(self) -> None:
+        """[3:4]r == [3:4]R — lowercase wide slicing produces same as face slicing."""
+        assert_algs_equivalent(Algs.r[3:4], Algs.R[3:4], 5)
+
+    def test_parse_bracket_Rw_equals_R(self) -> None:
+        """parse("[3:4]Rw") == parse("[3:4]R")."""
+        assert_algs_equivalent(Algs.parse("[3:4]Rw"), Algs.parse("[3:4]R"), 5)
+
+    def test_parse_bracket_r_equals_R(self) -> None:
+        """parse("[3:4]r") == parse("[3:4]R")."""
+        assert_algs_equivalent(Algs.parse("[3:4]r"), Algs.parse("[3:4]R"), 5)
+
+    # --- SiGN range syntax (3-4R) ---
+
+    def test_parse_sign_range_R(self) -> None:
+        """parse("3-4R") == parse("[3:4]R")."""
+        assert_algs_equivalent(Algs.parse("3-4R"), Algs.parse("[3:4]R"), 5)
+
+    def test_parse_sign_range_Rw(self) -> None:
+        """parse("3-4Rw") == parse("[3:4]R")."""
+        assert_algs_equivalent(Algs.parse("3-4Rw"), Algs.parse("[3:4]R"), 5)
+
+    def test_parse_sign_range_r(self) -> None:
+        """parse("3-4r") == parse("[3:4]R")."""
+        assert_algs_equivalent(Algs.parse("3-4r"), Algs.parse("[3:4]R"), 5)
+
+    def test_parse_sign_range_str_round_trip(self) -> None:
+        """parse("3-4R") produces str == "[3:4]R"."""
+        assert str(Algs.parse("3-4R")) == "[3:4]R"
 
     def test_bracket_face_spans_opposite_4x4(self) -> None:
         """[3:4]R on 4x4 — spans to opposite face: 3R + L'."""

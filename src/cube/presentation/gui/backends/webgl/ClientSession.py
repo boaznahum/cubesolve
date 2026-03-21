@@ -1202,8 +1202,9 @@ class ClientSession:
 
         if isinstance(alg, alg_types.FaceAlgBase):
             # R, L, U, D, F, B face moves (including SlicedFaceAlg)
+            # n_max=cube.size so index cube.size maps to opposite face
             indices = list(alg.normalize_slice_index(
-                n_max=1 + cube.n_slices,
+                n_max=cube.size,
                 _default=[1]
             ))
             return self._face_indices_to_layers(indices, face_name, size)

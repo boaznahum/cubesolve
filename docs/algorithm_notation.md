@@ -585,9 +585,9 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>✅ <code>3-4R</code><br>✅ <code>3-4Rw</code><br>✅ <code>3-4r</code></td>
   <td><code>3-4R</code> / <code>3-4r</code></td>
   <td>—</td>
-  <td>✅ <code>Algs.R[3:4]</code> spans<br>❌ <code>[3:4]Rw</code> parser error<sup>⑧</sup><br>❌ <code>[3:4]r</code> parser error<sup>⑧</sup></td>
+  <td>✅ <code>R/Rw/r[3:4]</code></td>
   <td><code>[3:4]R</code></td>
-  <td>✅ <code>"[3:4]R"</code> spans<br>❌ <code>"3-4R"</code> not parsed<sup>⑦</sup><br>❌ <code>"[3:4]Rw"</code> parser error<sup>⑧</sup><br>❌ <code>"[3:4]r"</code> parser error<sup>⑧</sup></td>
+  <td>✅ <code>"[3:4]R/Rw/r"</code><br>✅ <code>"3-4R/Rw/r"</code></td>
   <td>same</td>
 </tr>
 <tr>
@@ -602,14 +602,36 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>same</td>
 </tr>
 <tr>
-  <td>Turn slices 1 through 4 from R<br>
-      <em>6×6+: 4 inner slices</em></td>
-  <td><code>1-4R</code>?</td>
-  <td><code>1-4R</code>?</td>
+  <td>Turn ALL layers from R (adaptive, ≡ X)<br>
+      <em>3×3: 3 layers · 4×4: 4 · 5×5: 5</em></td>
+  <td>?</td>
+  <td>?</td>
   <td>—</td>
-  <td><code>Algs.R[1:4]</code></td>
-  <td><code>[1:4]R</code></td>
-  <td>✅ <code>"[:4]R"</code><br>❌ <code>"1-4R"</code><sup>⑦</sup></td>
+  <td><code>Algs.R[1:]</code></td>
+  <td><code>[1:]R</code></td>
+  <td>✅ <code>"[1:]R"</code></td>
+  <td>same</td>
+</tr>
+<tr>
+  <td>❌ [:]R should be all layers (≡ X) but returns just R<br>
+      <em>Bug: [:]R == R instead of all layers</em></td>
+  <td>?</td>
+  <td>?</td>
+  <td>—</td>
+  <td>❌ <code>Algs.R[:]</code> → just R</td>
+  <td><code>R</code></td>
+  <td>❌ <code>"[:]R"</code> → just R</td>
+  <td>—</td>
+</tr>
+<tr>
+  <td>Turn layers 1–3 from R (≡ [1:3]R)<br>
+      <em>5×5: ≡ R + 2R + 3R</em></td>
+  <td>?</td>
+  <td>?</td>
+  <td>—</td>
+  <td><code>Algs.R[:3]</code></td>
+  <td><code>[1:3]R</code></td>
+  <td>✅ <code>"[:3]R"</code><br>✅ <code>"1-3R"</code></td>
   <td>same</td>
 </tr>
 <!-- ═══════════════════ 3. Wide Moves ═══════════════════ -->
@@ -768,8 +790,8 @@ At play time, `_effective_layers(cube)` computes the actual count:
 <sup>④</sup> In `compat_3x3` mode, `parse("Rw")`/`parse("r")`/`parse("3Rw")` → adaptive (`[:-1]Rw`/`[:-1]r`).<br>
 <sup>⑤</sup> Standards use lowercase `x`/`y`/`z`. Our parser accepts uppercase `X`/`Y`/`Z`.<br>
 ❌<sup>⑥</sup> In standard notation, `3Rw` on a 3×3 is an error (only 2 non-opposite layers exist). Our implementation clamps to `min(3, size-1)` = 2 layers, equivalent to `Rw`.<br>
-❌<sup>⑦</sup> Our parser does not yet support `3-4R` range syntax. Use bracket notation `[3:4]R` instead. TODO: add parser support for SiGN range notation.<br>
-❌<sup>⑧</sup> Bracket slicing on wide moves (`[3:4]Rw`, `[3:4]r`) is not supported. Parser throws `InternalSWError`.<br>
+✅<sup>⑦</sup> Parser now supports SiGN range syntax (`3-4R`, `3-4Rw`, `3-4r`) — equivalent to bracket `[3:4]R`.<br>
+✅<sup>⑧</sup> Bracket slicing on wide moves (`[3:4]Rw`, `[3:4]r`) now works — produces same result as `[3:4]R` (wide distinction irrelevant with explicit layers).<br>
 ✅<sup>⑨</sup> `[3:4]R` on 4×4 now works — spans to opposite face (layer 4 = L face rotated in R direction = L').<br>
 ✅<sup>⑩</sup> `nR` where n = cube size now rotates the opposite face (e.g. `4R` on 4×4 ≡ `L'`). Tested for all 6 faces on 3×3, 4×4, 5×5.
 

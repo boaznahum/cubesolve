@@ -152,25 +152,21 @@ class FaceAlgBase(AnimationAbleAlg, ABC):
 
         return [i - 1 for i in res]
 
-    def play(self, cube: Cube, inv: bool = False) -> None:
-        """Play the face algorithm on the cube.
+    def _resolve_slices(self, cube: Cube) -> Iterable[int]:
+        """Resolve slice indices for this cube size.
 
-        n_max = cube.size so that index cube.size maps to the opposite face.
         Index 1 = this face, 2..size-1 = inner slices, size = opposite face.
         """
-        start_stop: Iterable[int] = self.normalize_slice_index(
-            n_max=cube.size, _default=[1]
-        )
-        cube.rotate_face_and_slice(_inv(inv, self._n), self._face, start_stop)
+        return self.normalize_slice_index(n_max=cube.size, _default=[1])
+
+    def play(self, cube: Cube, inv: bool = False) -> None:
+        """Play the face algorithm on the cube."""
+        cube.rotate_face_and_slice(_inv(inv, self._n), self._face, self._resolve_slices(cube))
 
     def get_animation_objects(self, cube: Cube) -> Tuple[FaceName, Collection[PartSlice]]:
         """Get objects involved in this face algorithm for animation."""
-        face = self._face
-        slices: Iterable[int] = self.normalize_slice_index(
-            n_max=1 + cube.n_slices, _default=[1]
-        )
-        parts: Collection[Any] = cube.get_rotate_face_and_slice_involved_parts(face, slices)
-        return face, parts
+        parts = cube.get_rotate_face_and_slice_involved_parts(self._face, self._resolve_slices(cube))
+        return self._face, parts
 
     def _create_with_n(self, n: int) -> Self:
         """Create a new instance with the given n value. Subclasses must override."""

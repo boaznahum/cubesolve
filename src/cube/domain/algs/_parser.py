@@ -279,26 +279,44 @@ def _token_to_alg(t: str, *, compat_3x3: bool = False) -> _Alg:
     # WCA:  3Rw = 3-layer wide move, 2r = 2-layer wide move (= r)
     import re as _re
     base_alg: _Alg
-    _wide_match = _re.match(r'^(\d+)(.+)$', remaining)
-    if _wide_match:
-        _n_layers = int(_wide_match.group(1))
-        _inner_code = _wide_match.group(2)
+
+    # SiGN range notation: 3-4R, 3-4Rw, 3-4r (turn layers 3 through 4)
+    _range_match = _re.match(r'^(\d+)-(\d+)(.+)$', remaining)
+    if _range_match:
+        _range_start = int(_range_match.group(1))
+        _range_stop = int(_range_match.group(2))
+        _inner_code = _range_match.group(3)
         try:
             _inner_alg = _token_to_alg_no_slice(_inner_code)
         except InternalSWError:
             _inner_alg = None
-        from cube.domain.algs.WideLayerAlg import WideLayerAlg
-        from cube.domain.algs.FaceAlg import FaceAlg
-        if _inner_alg is not None and isinstance(_inner_alg, WideLayerAlg):
-            # nRw or nr → n-layer wide move
-            base_alg = _inner_alg.with_layers(_n_layers)
-        elif _inner_alg is not None and isinstance(_inner_alg, FaceAlg):
-            # nF → inner slice move (SiGN notation: 2F = F[2])
-            base_alg = _inner_alg[_n_layers:_n_layers]
+        from cube.domain.algs.SliceAbleAlg import SliceAbleAlg
+        if _inner_alg is not None and isinstance(_inner_alg, SliceAbleAlg):
+            base_alg = _inner_alg[_range_start:_range_stop]
+        else:
+            raise InternalSWError(f"Range notation not supported for: {remaining}")
+
+    else:
+        _wide_match = _re.match(r'^(\d+)(.+)$', remaining)
+        if _wide_match:
+            _n_layers = int(_wide_match.group(1))
+            _inner_code = _wide_match.group(2)
+            try:
+                _inner_alg = _token_to_alg_no_slice(_inner_code)
+            except InternalSWError:
+                _inner_alg = None
+            from cube.domain.algs.WideLayerAlg import WideLayerAlg
+            from cube.domain.algs.FaceAlg import FaceAlg
+            if _inner_alg is not None and isinstance(_inner_alg, WideLayerAlg):
+                # nRw or nr → n-layer wide move
+                base_alg = _inner_alg.with_layers(_n_layers)
+            elif _inner_alg is not None and isinstance(_inner_alg, FaceAlg):
+                # nF → inner slice move (SiGN notation: 2F = F[2])
+                base_alg = _inner_alg[_n_layers:_n_layers]
+            else:
+                base_alg = _token_to_alg_no_slice(remaining)
         else:
             base_alg = _token_to_alg_no_slice(remaining)
-    else:
-        base_alg = _token_to_alg_no_slice(remaining)
 
     # Track whether the original token had a slice prefix (for bare-token checks below)
     had_slice_prefix = slice_spec is not None
