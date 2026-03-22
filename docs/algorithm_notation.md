@@ -497,7 +497,8 @@ At play time, `_effective_layers(cube)` computes the actual count:
 
 > Using R as the example face — same pattern applies to L, U, D, F, B.<br>
 > Using M as the example slice — same for E (like D) and S (like F).<br>
-> Modifiers `'` (CCW) and `2` (180°) apply to all move types.
+> Modifiers `'` (CCW) and `2` (180°) apply to all move types.<br>
+> **Span:** When a slice index reaches the opposite face (e.g., `4R` on a 4×4 = `L'`), the move "spans" across the cube. Range moves like `3-4R` can also span.
 
 <table>
 <tr>
@@ -519,7 +520,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
 <tr style="border-top:2px solid #888;"><td></td><td style="font-weight:bold;">Face Moves</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
 <tr>
   <td>1</td>
-  <td>Turn outermost R layer CW · 1 layer, all sizes</td>
+  <td>Turn outermost R layer CW</td>
   <td><code>R</code></td>
   <td><code>R</code></td>
   <td><code>R</code></td>
@@ -530,7 +531,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
 </tr>
 <tr>
   <td>2</td>
-  <td>Turn outermost R layer CCW · 1 layer, all sizes</td>
+  <td>Turn outermost R layer CCW</td>
   <td><code>R'</code></td>
   <td><code>R'</code></td>
   <td><code>R'</code></td>
@@ -541,7 +542,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
 </tr>
 <tr>
   <td>3</td>
-  <td>Turn outermost R layer 180° · 1 layer, all sizes</td>
+  <td>Turn outermost R layer 180°</td>
   <td><code>R2</code></td>
   <td><code>R2</code></td>
   <td><code>R2</code></td>
@@ -554,54 +555,29 @@ At play time, `_effective_layers(cube)` computes the actual count:
 <tr style="border-top:2px solid #888;"><td></td><td style="font-weight:bold;">Inner Slices</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
 <tr>
   <td>4</td>
-  <td>Turn only the 2nd layer from R · 1 inner slice, all sizes</td>
-  <td><code>2R</code></td>
-  <td><code>2R</code></td>
+  <td>Turn only the nth inner slice from R<br>(can span)</td>
+  <td><code>2R</code>, <code>3R</code></td>
+  <td><code>2R</code>, <code>3R</code></td>
   <td>—</td>
-  <td><code>Algs.R[2:2]</code></td>
-  <td><code>2R</code></td>
-  <td><code>"2R"</code></td>
+  <td><code>Algs.R[2:2]</code>, <code>Algs.R[3:3]</code></td>
+  <td><code>2R</code>, <code>3R</code></td>
+  <td>✅ <code>"2R"</code>, <code>"3R"</code></td>
   <td>same</td>
 </tr>
 <tr>
   <td>5</td>
-  <td>Turn only the 3rd layer from R · 1 inner slice (5×5+)</td>
-  <td><code>3R</code></td>
-  <td><code>3R</code></td>
-  <td>—</td>
-  <td><code>Algs.R[3:3]</code></td>
-  <td><code>3R</code></td>
-  <td><code>"3R"</code></td>
-  <td>same</td>
-</tr>
-<tr>
-  <td>6</td>
-  <td>✅ Turn opposite face via R index (4R on 4×4 ≡ L')<br>
-      <em>nR where n=cube size → opposite face prime</em></td>
-  <td><code>4R</code> = <code>L'</code></td>
-  <td><code>4R</code> = <code>L'</code></td>
-  <td>—</td>
-  <td><code>Algs.R[4:4]</code></td>
-  <td><code>4R</code></td>
-  <td>✅ <code>"4R"</code></td>
-  <td>same</td>
-</tr>
-<tr>
-  <td>7</td>
-  <td>✅ Turn slices 3–4 from R (can span to L)<br>
-      <em>4×4: ≡ 3R + L' · 5×5: ≡ 3R + 4R</em></td>
+  <td>Turn inner slices n–m from R<br>(can span)</td>
   <td>✅ <code>3-4R</code><br>✅ <code>3-4Rw</code><br>✅ <code>3-4r</code></td>
   <td><code>3-4R</code> / <code>3-4r</code></td>
   <td>—</td>
-  <td>✅ <code>R/Rw/r[3:4]</code></td>
-  <td><code>[3:4]R</code></td>
-  <td>✅ <code>"[3:4]R/Rw/r"</code><br>✅ <code>"3-4R/Rw/r"</code></td>
+  <td>✅ <code>Algs.R[3:4]</code><br>✅ <code>Algs.Rw[3:4]</code><br>✅ <code>Algs.r[3:4]</code></td>
+  <td><code>[3:4]R</code><br><code>[3:4]Rw</code><br><code>[3:4]r</code></td>
+  <td>✅ <code>"3-4R"</code><br>✅ <code>"3-4Rw"</code><br>✅ <code>"3-4r"</code><br>✅ <code>"[3:4]R"</code><br>✅ <code>"[3:4]Rw"</code><br>✅ <code>"[3:4]r"</code></td>
   <td>same</td>
 </tr>
 <tr>
   <td>8</td>
-  <td>Turn all slices from 3rd to last<br>
-      <em>5×5+: varies by size</em></td>
+  <td>Turn all slices from nth to last</td>
   <td>?</td>
   <td>?</td>
   <td>—</td>
@@ -612,27 +588,23 @@ At play time, `_effective_layers(cube)` computes the actual count:
 </tr>
 <tr>
   <td>9</td>
-  <td>Turn ALL R layers (≡ X, whole cube like R)<br>
-      <em>3×3: 3 · 4×4: 4 · 5×5: 5 layers</em></td>
-  <td>?</td>
-  <td>?</td>
-  <td>?</td>
+  <td>Turn ALL R layers (≡ X, whole cube like R)</td>
+  <td><code>x</code></td>
+  <td><code>x</code></td>
+  <td><code>x</code></td>
   <td>✅ <code>Algs.X</code><br>
       ✅ <code>Algs.R[:]</code><br>
       ✅ <code>Algs.Rw[:]</code><br>
       ✅ <code>Algs.r[:]</code><br>
-      ✅ <code>Algs.R[1:]</code> adaptive<br>
-      ✅ <code>Algs.R[1:4]</code> 4×4 only</td>
+      ✅ <code>Algs.R[1:]</code></td>
   <td>✅ <code>X</code><br>
       ✅ <code>[:]R</code><br>
-      ✅ <code>[1:]R</code><br>
-      ✅ <code>[1:4]R</code> 4×4 only</td>
+      ✅ <code>[1:]R</code></td>
   <td>✅ <code>"X"</code><br>
       ✅ <code>"[:]R"</code><br>
       ❌ <code>"[:]Rw"</code> → Rw (2 layers, ignores [:])<br>
       ❌ <code>"[:]r"</code> → r (2 layers, ignores [:])<br>
-      ✅ <code>"[1:]R"</code><br>
-      ✅ <code>"[1:4]R"</code> 4×4 only</td>
+      ✅ <code>"[1:]R"</code></td>
   <td>same</td>
 </tr>
 <tr>
@@ -713,8 +685,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
 <tr style="border-top:2px solid #888;"><td></td><td style="font-weight:bold;">Slice Range &amp; Indexing (ours only)</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
 <tr>
   <td>16</td>
-  <td>Turn R face + 1st inner slice (= Rw)<br>
-      <em>All sizes: 2 layers</em></td>
+  <td>Turn R face + 1st inner slice (= Rw)</td>
   <td>—</td>
   <td>—</td>
   <td>—</td>
@@ -737,8 +708,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
 </tr>
 <tr>
   <td>18</td>
-  <td>Turn 1st M slice only (closest to L)<br>
-      <em>All sizes: 1 slice</em></td>
+  <td>Turn 1st M slice only (closest to L)</td>
   <td>—</td>
   <td>—</td>
   <td>—</td>
@@ -775,7 +745,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
 <tr style="border-top:2px solid #888;"><td></td><td style="font-weight:bold;">Whole Cube Rotations<sup>⑤</sup></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
 <tr>
   <td>21</td>
-  <td>Rotate whole cube like R · whole cube, all sizes</td>
+  <td>Rotate whole cube like R</td>
   <td><code>x</code></td>
   <td><code>x</code></td>
   <td><code>x</code></td>
@@ -786,7 +756,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
 </tr>
 <tr>
   <td>22</td>
-  <td>Rotate whole cube like U · whole cube, all sizes</td>
+  <td>Rotate whole cube like U</td>
   <td><code>y</code></td>
   <td><code>y</code></td>
   <td><code>y</code></td>
@@ -797,7 +767,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
 </tr>
 <tr>
   <td>23</td>
-  <td>Rotate whole cube like F · whole cube, all sizes</td>
+  <td>Rotate whole cube like F</td>
   <td><code>z</code></td>
   <td><code>z</code></td>
   <td><code>z</code></td>
