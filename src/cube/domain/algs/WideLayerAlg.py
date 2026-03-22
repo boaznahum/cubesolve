@@ -124,6 +124,10 @@ class WideLayerAlg(AnimationAbleAlg, SliceAbleAlg):
         display_code: str = self._code
         return SlicedFaceAlg(self._face, self._n, a_slice, display_code=display_code)
 
+    def __rmul__(self, layers: int) -> "WideLayerAlg":
+        """4 * Algs.r → 4r (4-layer wide move)."""
+        return self.with_layers(layers)
+
     def with_layers(self, layers: int) -> "WideLayerAlg":
         """Create a new WideLayerAlg with different layer count."""
         if layers == self._layers:

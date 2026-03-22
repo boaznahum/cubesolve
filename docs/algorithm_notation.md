@@ -640,9 +640,9 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>✅ <code>3Rw</code> ✅ <code>3r</code><br>❌ no span</td>
   <td><code>3r</code> only<sup>③</sup></td>
   <td><code>3Rw</code> or <code>3r</code></td>
-  <td>✅ <code>WideLayerAlg(R, 3)</code><br>3×3: clamps to 2</td>
-  <td><code>3Rw</code></td>
-  <td>✅ <code>"3Rw"</code> / <code>"3r"</code></td>
+  <td><code>3 * Algs.Rw</code><br><code>3 * Algs.r</code></td>
+  <td><code>3Rw</code><br><code>3r</code></td>
+  <td>✅ <code>"3Rw"</code><br>✅ <code>"3r"</code></td>
   <td>⚠ ≡ <code>Algs.RRw</code><sup>④</sup></td>
 </tr>
 <tr>
