@@ -43,7 +43,41 @@ Overhaul the summary table in `docs/algorithm_notation.md` to be the definitive 
 - ❌ 3Rw/3r: no span in Twizzle (error on 3×3)
 - ? remaining rows (M, m, 2R, 3R, X/Y/Z, [3:]R, [:3]R, etc.)
 
-## Next Session
-- Fix `[:]R` bug (should return all layers = X)
+## Current Session (2026-03-22) — Putting Order in the Table
+
+### Row Numbers Added
+Added WIP row numbers (#) column to summary table for easy reference during cleanup.
+Can use non-whole numbers (e.g., 6.5) to insert rows between existing ones.
+
+| # | Group | Description |
+|---|-------|-------------|
+| 1 | Face Moves | R CW |
+| 2 | Face Moves | R' CCW |
+| 3 | Face Moves | R2 180° |
+| 4 | Inner Slices | 2R (2nd layer) |
+| 5 | Inner Slices | 3R (3rd layer) |
+| 6 | Inner Slices | 4R on 4×4 ≡ L' (opposite face) |
+| 7 | Inner Slices | 3-4R SiGN range |
+| 8 | Inner Slices | [3:]R (3rd to last) |
+| 9 | Inner Slices | [:]R = all layers ≡ X |
+| 10 | Inner Slices | [:3]R (layers 1-3) |
+| 11 | Wide Moves | Rw/r (2 layers) |
+| 12 | Wide Moves | 3Rw/3r (3 layers) |
+| 13 | Wide Moves | [:-1]Rw adaptive (all-but-last) |
+| 14 | Slice Moves | M single center slice |
+| 15 | Slice Moves | [:]M all inner slices |
+| 16 | Slice Range | [1:2]R = Rw |
+| 17 | Slice Range | [2:3]R |
+| 18 | Slice Range | [1]M single slice |
+| 19 | Slice Range | [1:2]M |
+| 20 | Slice Range | [1:]M = [:]M |
+| 21 | Whole Cube | X (like R) |
+| 22 | Whole Cube | Y (like U) |
+| 23 | Whole Cube | Z (like F) |
+
+### TODO — Table Cleanup
+- Reorganize/reorder rows as needed
+- Fix any mess/inconsistencies user wants addressed
 - Continue Twizzle verification
+- Fix `[:]R` bug (already done in `1d91b16f`)
 - Consider DRY cleanup for #141
