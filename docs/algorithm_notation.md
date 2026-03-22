@@ -609,40 +609,18 @@ At play time, `_effective_layers(cube)` computes the actual count:
       ✅ <code>"[1:]R"</code></td>
   <td>same</td>
 </tr>
-<tr>
-  <td>10</td>
-  <td>Turn layers 1–3 from R (≡ [1:3]R)<br>
-      <em>5×5: ≡ R + 2R + 3R</em></td>
-  <td>?</td>
-  <td>?</td>
-  <td>—</td>
-  <td><code>Algs.R[:3]</code><br><code>Algs.r[:3]</code></td>
-  <td><code>[1:3]R</code><br><code>[1:3]r</code></td>
-  <td>✅ <code>"[:3]R"</code><br>✅ <code>"[:3]r"</code><br>✅ <code>"1-3R"</code></td>
-  <td>same</td>
-</tr>
 <!-- ═══════════════════ 3. Wide Moves ═══════════════════ -->
 <tr style="border-top:2px solid #888;"><td></td><td style="font-weight:bold;">Wide Moves<sup>③④</sup></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
 <tr>
   <td>11</td>
-  <td>Turn 2 outermost R-side layers</td>
-  <td>✅ <code>Rw</code> ✅ <code>r</code></td>
-  <td><code>r</code> only<sup>③</sup></td>
-  <td><code>Rw</code> or <code>r</code></td>
-  <td><code>Algs.Rw</code> / <code>Algs.r</code></td>
-  <td><code>Rw</code> / <code>r</code></td>
-  <td>✅ <code>"Rw"</code> / <code>"r"</code></td>
-  <td>⚠ ≡ <code>Algs.RRw</code><sup>④</sup></td>
-</tr>
-<tr>
-  <td>12</td>
-  <td>Turn 3 outermost R-side layers</td>
-  <td>✅ <code>3Rw</code> ✅ <code>3r</code><br>❌ no span</td>
-  <td><code>3r</code> only<sup>③</sup></td>
-  <td><code>3Rw</code> or <code>3r</code></td>
-  <td><code>3 * Algs.Rw</code><br><code>3 * Algs.r</code></td>
-  <td><code>3Rw</code><br><code>3r</code></td>
-  <td>✅ <code>"3Rw"</code><br>✅ <code>"3r"</code></td>
+  <td>Turn n outermost R-side layers<br>
+      <em>n=2 default, ≡ <code>R[:n]</code></em></td>
+  <td>✅ <code>Rw</code>, <code>r</code><br>✅ <code>3Rw</code>, <code>3r</code></td>
+  <td><code>r</code>, <code>3r</code><sup>③</sup></td>
+  <td><code>Rw</code>/<code>r</code><br><code>3Rw</code>/<code>3r</code></td>
+  <td><code>Algs.Rw</code>, <code>Algs.r</code><br><code>3 * Algs.Rw</code>, <code>3 * Algs.r</code><br><code>Algs.R[:2]</code>, <code>Algs.R[:3]</code><br><code>Algs.r[:2]</code>, <code>Algs.r[:3]</code></td>
+  <td><code>Rw</code>, <code>r</code><br><code>3Rw</code>, <code>3r</code><br><code>[1:2]R</code>, <code>[1:3]R</code><br><code>[1:2]r</code>, <code>[1:3]r</code></td>
+  <td>✅ <code>"Rw"</code>, <code>"r"</code><br>✅ <code>"3Rw"</code>, <code>"3r"</code><br>✅ <code>"[:2]R"</code>, <code>"[:3]R"</code><br>✅ <code>"[:2]r"</code>, <code>"[:3]r"</code><br>✅ <code>"1-3R"</code></td>
   <td>⚠ ≡ <code>Algs.RRw</code><sup>④</sup></td>
 </tr>
 <tr>
