@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from collections.abc import Iterable, Iterator, Sequence
-from typing import TYPE_CHECKING, Tuple, TypeAlias
+from typing import TYPE_CHECKING, Tuple
 
 from cube.domain.exceptions import InternalSWError
 
@@ -11,11 +13,8 @@ from .Part import Part
 from .PartEdge import PartEdge
 
 if TYPE_CHECKING:
-    from .Cube import Cube
     from .Face import Face
 
-_Face: TypeAlias = "Face"
-_Cube: TypeAlias = "Cube"  # type: ignore
 
 
 class Corner(Part):
@@ -53,7 +52,7 @@ class Corner(Part):
         """
         return Corner(self._slice.clone())
 
-    def get_other_faces_color(self, face: _Face) -> Tuple[Color, Color]:
+    def get_other_faces_color(self, face: Face) -> Tuple[Color, Color]:
 
         edges = self._slice.edges
         e1 = edges[0]

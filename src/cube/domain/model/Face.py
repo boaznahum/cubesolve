@@ -23,7 +23,6 @@ from .PartEdge import PartEdge
 from .SuperElement import SuperElement
 from ._part import EdgeName
 
-_Face: TypeAlias = "Face"
 _Cube: TypeAlias = "cube.Cube"  # type: ignore  # noqa: F821
 
 
@@ -68,7 +67,7 @@ class Face(SuperElement, Hashable, Colorable):
 
     _edge_to_position: dict[EdgeName, EdgePosition]
 
-    _opposite: _Face
+    _opposite: Face
 
     def __init__(self, cube: _Cube, name: FaceName, color: Color) -> None:
         super().__init__(cube)
@@ -448,7 +447,7 @@ class Face(SuperElement, Hashable, Colorable):
         e: PartEdge = PartEdge(self, self._original_color)
         return e
 
-    def _get_other_face(self, e: Edge) -> _Face:
+    def _get_other_face(self, e: Edge) -> Face:
         return e.get_other_face(self)
 
     def _get_rotation_cycles(self) -> tuple[
@@ -754,12 +753,12 @@ class Face(SuperElement, Hashable, Colorable):
                 return p
         return None
 
-    def adjusted_faces(self) -> Iterable[_Face]:
+    def adjusted_faces(self) -> Iterable[Face]:
         for e in self.edges:
             yield e.get_other_face(self)
 
     @property
-    def others_faces(self) -> Iterable[_Face]:
+    def others_faces(self) -> Iterable[Face]:
         """
         All other faces adjusted and opposite
         :return:
@@ -769,10 +768,10 @@ class Face(SuperElement, Hashable, Colorable):
         yield self.opposite
 
     @property
-    def opposite(self) -> _Face:
+    def opposite(self) -> Face:
         return self._opposite
 
-    def find_shared_edge(self, face2: _Face) -> Edge | None:
+    def find_shared_edge(self, face2: Face) -> Edge | None:
         """
         Find the edge shared by two faces, or None if they're opposite.
 
@@ -785,7 +784,7 @@ class Face(SuperElement, Hashable, Colorable):
                 return edge
         return None
 
-    def get_shared_edge(self, face2: _Face) -> Edge:
+    def get_shared_edge(self, face2: Face) -> Edge:
         """
         get the edge shared by two faces, or None if they're opposite.
 
@@ -809,7 +808,7 @@ class Face(SuperElement, Hashable, Colorable):
         return edge in self._edges
 
 
-    def set_opposite(self, o: _Face):
+    def set_opposite(self, o: Face):
         """
         By cube constructor only
         :return:

@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 from abc import abstractmethod
 from collections.abc import Iterable, Sequence
-from typing import TYPE_CHECKING, Tuple, TypeAlias
+from typing import TYPE_CHECKING, Tuple
 
 from ._elements import CubeElement
 from .PartSlice import PartSlice
@@ -8,10 +10,7 @@ from .Part import Part
 
 if TYPE_CHECKING:
     from .Cube import Cube
-    from .Face import Face
 
-_Face: TypeAlias = "Face"
-_Cube: TypeAlias = "Cube"  # type: ignore
 
 
 class SuperElement(CubeElement):
@@ -19,7 +18,7 @@ class SuperElement(CubeElement):
                  "_parts",
                  ]
 
-    def __init__(self, cube: _Cube) -> None:
+    def __init__(self, cube: Cube) -> None:
         super().__init__(cube)
         self._parts: Tuple[Part, ...] = ()
 

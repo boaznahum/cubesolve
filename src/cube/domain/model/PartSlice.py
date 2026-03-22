@@ -30,7 +30,6 @@ if TYPE_CHECKING:
     from cube.domain.tracker.MarkedPartTracker import MarkedPartTracker
     from cube.domain.tracker.PartSliceTracker import PartSliceTracker
 
-_Face: TypeAlias = "Face"
 _Cube: TypeAlias = "Cube"  # type: ignore
 
 _TPartSlice = TypeVar("_TPartSlice", bound="PartSlice[Any]")
@@ -144,7 +143,7 @@ class PartSlice(ABC, Generic[_TPartType], Hashable):
 
         return self._fixed_id == o._fixed_id
 
-    def get_face_edge(self, face: _Face) -> PartEdge:
+    def get_face_edge(self, face: Face) -> PartEdge:
         """
         return the edge belong to face, raise error if not found
         :param face:
@@ -180,7 +179,7 @@ class PartSlice(ABC, Generic[_TPartType], Hashable):
         """
         return all(e1.color == e2.color for e1, e2 in itertools.zip_longest(self.edges, other._edges))
 
-    def f_color(self, f: _Face):
+    def f_color(self, f: Face):
         """
         The color of part on given face
         :param f:
@@ -188,7 +187,7 @@ class PartSlice(ABC, Generic[_TPartType], Hashable):
         """
         return self.get_face_edge(f).color
 
-    def match_face(self, face: _Face):
+    def match_face(self, face: Face):
         """
         Part edge on given face matches its color
         :return:
@@ -337,7 +336,7 @@ class PartSlice(ABC, Generic[_TPartType], Hashable):
             if s._parent:
                 s._parent.reset_colors_id()
 
-    def on_face(self, f: _Face) -> PartEdge | None:
+    def on_face(self, f: Face) -> PartEdge | None:
         """
         :param f:
         :return: true if any edge/facet is on f
@@ -505,7 +504,7 @@ class EdgeWing(PartSlice["Edge"]):
         #return super().__str__()
         return self.parent_name_index_colors_position
 
-    def faces(self) -> Sequence[_Face]:
+    def faces(self) -> Sequence[Face]:
 
         """
         Not optimized
@@ -513,7 +512,7 @@ class EdgeWing(PartSlice["Edge"]):
         """
         return [ e.face for e in self._edges ]
 
-    def single_shared_face(self, other: "EdgeWing") -> _Face:
+    def single_shared_face(self, other: "EdgeWing") -> Face:
         """
         Return a face that appears in both edges
         raise error more than one (how can it be) or no one
@@ -525,11 +524,11 @@ class EdgeWing(PartSlice["Edge"]):
             raise RuntimeError(f"self={self.parent_name_index_colors_position} "
                                f"other={other.parent_name_index_colors_position} on the same parent edge")
 
-        f1: _Face = self.e1.face
-        f2: _Face = self.e2.face
+        f1: Face = self.e1.face
+        f2: Face = self.e2.face
 
-        of1: _Face = other.e1.face
-        of2: _Face = other.e2.face
+        of1: Face = other.e1.face
+        of2: Face = other.e2.face
 
         e11 = f1 is of1
         e12 = f1 is of2
@@ -554,7 +553,7 @@ class EdgeWing(PartSlice["Edge"]):
         else:
             return f2
 
-    def get_other_face_edge(self, f: _Face) -> "PartEdge":
+    def get_other_face_edge(self, f: Face) -> "PartEdge":
 
         """
         Get the edge that is on face that is not f
@@ -571,7 +570,7 @@ class EdgeWing(PartSlice["Edge"]):
         else:
             raise ValueError(f"Face {f} not in edge {self}")
 
-    def get_other_face(self, f: _Face) -> _Face:
+    def get_other_face(self, f: Face) -> Face:
 
         return self.get_other_face_edge(f).face
 
@@ -652,7 +651,7 @@ class CenterSlice(PartSlice["Center"]):
         return self.edge.color
 
     @property
-    def face(self) -> _Face:
+    def face(self) -> Face:
         return self.edge.face
 
     @property

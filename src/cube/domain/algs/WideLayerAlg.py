@@ -42,11 +42,16 @@ At play time, computes 0-based slice indices [0, 1, ..., layers-1]:
     nRw (layers=n): [0, ..., n-1] = face + (n-1) inner
 """
 
-from typing import Collection, Self, Sequence, Tuple
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Collection, Self, Sequence, Tuple
 
 from cube.domain.algs._internal_utils import _inv, n_to_str
 from cube.domain.algs.AnimationAbleAlg import AnimationAbleAlg
 from cube.domain.algs.SliceAbleAlg import SliceAbleAlg
+
+if TYPE_CHECKING:
+    from cube.domain.algs.SlicedFaceAlg import SlicedFaceAlg
 from cube.domain.algs.SimpleAlg import SimpleAlg
 from cube.domain.exceptions import InternalSWError
 from cube.domain.model import Cube, FaceName, PartSlice
@@ -96,7 +101,7 @@ class WideLayerAlg(AnimationAbleAlg, SliceAbleAlg):
         object.__setattr__(instance, "_frozen", True)
         return instance
 
-    def __getitem__(self, items: int | slice | Sequence[int]) -> "SlicedFaceAlg":
+    def __getitem__(self, items: int | slice | Sequence[int]) -> SlicedFaceAlg:
         """Slice this wide move, returning a SlicedFaceAlg.
 
         When explicit layers are specified via slicing, the wide/non-wide

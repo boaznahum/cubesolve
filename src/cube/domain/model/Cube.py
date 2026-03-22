@@ -1432,8 +1432,10 @@ class Cube(CubeSupplier):
         for layer_type, layer_face, layer_si in self._classify_layers(
                 face_name, actual_slices, neg_slice_index, slice_name):
             if layer_type == "face":
+                assert layer_face is not None
                 layer_face.rotate(n)
             elif layer_type == "opposite":
+                assert layer_face is not None
                 layer_face.rotate(-n)
             else:  # "inner"
                 assert layer_si is not None
@@ -1450,6 +1452,7 @@ class Cube(CubeSupplier):
         for layer_type, layer_face, layer_si in self._classify_layers(
                 face_name, actual_slices, neg_slice_index, slice_name):
             if layer_type in ("face", "opposite"):
+                assert layer_face is not None
                 parts.extend(layer_face.slices)
             else:  # "inner"
                 assert layer_si is not None
@@ -1460,7 +1463,7 @@ class Cube(CubeSupplier):
 
     def _classify_layers(self, face_name: FaceName, actual_slices: Iterable[int],
                          neg_slice_index: bool, slice_name: SliceName
-                         ) -> Iterable[Tuple["str", "_Face | None", "int | None"]]:
+                         ) -> Iterable[Tuple[str, Face | None, int | None]]:
         """Classify each layer index as face, opposite, or inner slice.
 
         Yields (layer_type, face, slice_index) tuples:

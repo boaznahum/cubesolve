@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from collections.abc import Iterable, Iterator
-from typing import TYPE_CHECKING, Sequence, TypeAlias
+from typing import TYPE_CHECKING, Sequence
 
 from cube.domain.exceptions import InternalSWError
 from cube.domain.model._elements import EdgePosition, SliceIndex
@@ -12,11 +14,8 @@ from ._elements import EdgeSliceIndex
 from .part_names import EdgeName, faces_to_edge_name
 
 if TYPE_CHECKING:
-    from .Cube import Cube
     from .Face import Face
 
-_Face: TypeAlias = "Face"
-_Cube: TypeAlias = "Cube"  # type: ignore
 
 
 class Edge(Part):
@@ -30,7 +29,7 @@ class Edge(Part):
     See: design2/edge-coordinate-system.md for visual explanation
     """
 
-    def __init__(self, f1: _Face, f2: _Face, right_top_left_same_direction: bool,
+    def __init__(self, f1: Face, f2: Face, right_top_left_same_direction: bool,
                  slices: Sequence[EdgeWing]) -> None:
         """
         Initialize an Edge between two faces.
@@ -45,8 +44,8 @@ class Edge(Part):
         """
         # assign before call to init because _edges is called from ctor
         self._slices: Sequence[EdgeWing] = slices
-        self._f1: _Face = f1
-        self._f2: _Face = f2
+        self._f1: Face = f1
+        self._f2: Face = f2
         self.right_top_left_same_direction = right_top_left_same_direction
         if not slices:
             self._cube = f1.cube  # 2x2: provide cube for Part.__init__ fallback
@@ -133,7 +132,7 @@ class Edge(Part):
         assert isinstance(index, int)
         return self._slices[index]
 
-    def get_face_ltr_index_from_edge_slice_index(self, face: _Face, i: int) -> int:
+    def get_face_ltr_index_from_edge_slice_index(self, face: Face, i: int) -> int:
         """
         Convert edge's internal slice index to face's ltr coordinate.
 
@@ -167,7 +166,7 @@ class Edge(Part):
             else:
                 return self.inv_index(i)  # type: ignore
 
-    def get_edge_slice_index_from_face_ltr_index(self, face: _Face, ltr_i: int) -> int:
+    def get_edge_slice_index_from_face_ltr_index(self, face: Face, ltr_i: int) -> int:
         """
         Convert face's ltr coordinate to edge's internal slice index.
 
@@ -206,7 +205,7 @@ class Edge(Part):
 
         return si
 
-    def get_edge_slice_index_from_face_ltr_index_arbitrary_n_slices(self, n_slices: int, face: _Face, ltr_i: int) -> int:
+    def get_edge_slice_index_from_face_ltr_index_arbitrary_n_slices(self, n_slices: int, face: Face, ltr_i: int) -> int:
         """
         Convert face's ltr coordinate to edge's internal slice index.
 
@@ -248,7 +247,7 @@ class Edge(Part):
 
         return si
 
-    def get_ltr_index_from_slice_index_arbitrary_n_slices(self, n_slices: int, face: _Face, i: int) -> int:
+    def get_ltr_index_from_slice_index_arbitrary_n_slices(self, n_slices: int, face: Face, i: int) -> int:
         """
         Convert edge's internal slice index to face's ltr coordinate.
 
@@ -286,7 +285,7 @@ class Edge(Part):
                 return geometry.inv(n_slices, i)
 
 
-    def get_slice_by_ltr_index(self, face: _Face, i) -> EdgeWing:
+    def get_slice_by_ltr_index(self, face: Face, i) -> EdgeWing:
         """
         Given an index of slice in direction from left to right, or left to top
         find it's actual slice.
@@ -297,7 +296,7 @@ class Edge(Part):
         """
         return self.get_slice(self.get_face_ltr_index_from_edge_slice_index(face, i))
 
-    def get_left_top_left_edge(self, face: _Face, i) -> PartEdge:
+    def get_left_top_left_edge(self, face: Face, i) -> PartEdge:
         """
         todo: optimize, combine both methods
         :param face:
@@ -317,7 +316,7 @@ class Edge(Part):
         else:
             yield from self.all_slices
 
-    def get_other_face_edge(self, f: _Face) -> "PartEdge":
+    def get_other_face_edge(self, f: Face) -> "PartEdge":
 
         """
         Get the edge that is on face that is not f
@@ -328,7 +327,7 @@ class Edge(Part):
             raise ValueError(f"Edge {self._name} has no slices (2x2 cube)")
         return self._slices[0].get_other_face_edge(f)
 
-    def get_other_face(self, f: _Face) -> _Face:
+    def get_other_face(self, f: Face) -> Face:
         if not self._slices:
             # 2x2: use stored face references
             if f is self._f1:
@@ -337,7 +336,7 @@ class Edge(Part):
                 return self._f1
         return self.get_other_face_edge(f).face
 
-    def get_position_on_face(self, face: _Face) -> EdgePosition:
+    def get_position_on_face(self, face: Face) -> EdgePosition:
         """
         Get the position (LEFT, RIGHT, TOP, BOTTOM) of this edge on the given face.
 
@@ -387,7 +386,7 @@ class Edge(Part):
         else:
             assert False
 
-    def _find_cw(self, face: _Face, cw: int) -> PartEdge:
+    def _find_cw(self, face: Face, cw: int) -> PartEdge:
         """
         Don't use, not optimized
         :param face:
@@ -400,9 +399,9 @@ class Edge(Part):
             if _cw == cw:
                 return e
 
-        assert False, f"No cw {cw} in edge {self} on face {_Face}"
+        assert False, f"No cw {cw} in edge {self} on face {face}"
 
-    def cw_s(self, face: _Face):
+    def cw_s(self, face: Face):
         """
 
         :param face:
@@ -418,14 +417,13 @@ class Edge(Part):
 
         return cw_s + " " + n_s
 
-    def opposite(self, face: _Face):
+    def opposite(self, face: Face):
         """
         todo: optimize !!!
         :param face:
         :return: opposite edge on face
         """
 
-        from .Face import Face
 
         my_other: Face = self.get_other_face(face)
         other_opposite = my_other.opposite

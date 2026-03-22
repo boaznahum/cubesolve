@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from collections.abc import Iterable, Iterator, Sequence
-from typing import TYPE_CHECKING, Self, TypeAlias
+from typing import TYPE_CHECKING, Self
 
 from cube.domain.model._elements import CenterSliceIndex, SliceIndex
 from cube.domain.model.Color import Color
@@ -13,16 +15,15 @@ from ..geometric.geometry_types import Point
 if TYPE_CHECKING:
     from .Face import Face
 
-_Face: TypeAlias = "Face"
 
 
 class Center(Part, Colorable):
     __slots__ = ("_slices", "_face_ref")
 
-    def __init__(self, center_slices: Sequence[Sequence[CenterSlice]], face: "_Face | None" = None) -> None:
+    def __init__(self, center_slices: Sequence[Sequence[CenterSlice]], face: "Face | None" = None) -> None:
         # assign before call to init because _edges is called from ctor
         self._slices: Sequence[Sequence[CenterSlice]] = center_slices
-        self._face_ref: "_Face | None" = face
+        self._face_ref: "Face | None" = face
         if not center_slices or not center_slices[0]:
             # 2x2: no center slices, provide cube for Part.__init__ fallback
             if face is not None:
@@ -30,7 +31,7 @@ class Center(Part, Colorable):
         super().__init__()
 
     @property
-    def face(self) -> _Face:
+    def face(self) -> Face:
         if self._face_ref is not None and not self._slices:
             return self._face_ref
         return self._slices[0][0].edges[0].face

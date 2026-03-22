@@ -26,8 +26,6 @@ class AxisName(Enum):
     Z = "Z"  # Over F,  With S
 
 
-_Face: TypeAlias = "Face"  # type: ignore  # noqa: F821
-
 if TYPE_CHECKING:
     from .Cube import Cube
 

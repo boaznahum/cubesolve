@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Collection, Iterable, Self, Sequence, Tuple
+from typing import Collection, Iterable, Self, Sequence, Tuple
 
 from cube.domain.algs._internal_utils import _format_slice_sequence, _inv, n_to_str
 from cube.domain.algs.AnimationAbleAlg import AnimationAbleAlg
