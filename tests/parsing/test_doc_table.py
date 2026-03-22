@@ -37,11 +37,13 @@ DOC_ROWS: list[DocRow] = [
     # §1 Face Moves
     DocRow("R: outermost R layer CW",           Algs.R,                          "R",        "R"),
     DocRow("R': outermost R layer CCW",          Algs.R.prime,                    "R'",       "R'"),
-    DocRow("R2: outermost R layer 180°",         Algs.R.with_n(2),                "R2",       "R2"),
+    DocRow("R2: outermost R layer 180°",         Algs.R * 2,                "R2",       "R2"),
 
     # §2 Inner Slices
     DocRow("2R: 2nd layer from R only",          Algs.R[2:2],                     "2R",       "2R"),
+    DocRow("R[2]: 2nd layer (int index)",        Algs.R[2],                       "2R",       "2R"),
     DocRow("3R: 3rd layer from R only",          Algs.R[3:3],                     "3R",       "3R",  sizes=(4, 5)),
+    DocRow("R[3]: 3rd layer (int index)",        Algs.R[3],                       "3R",       "3R",  sizes=(4, 5)),
     DocRow("[3:4]R: slices 3–4 from R",          Algs.R[3:4],                     "[3:4]R",   "[3:4]R", sizes=(4, 5),
            equivalent=Algs.parse("3R") + Algs.L.prime, equiv_sizes=(4,)),
     DocRow("[3:4]R: slices 3–4 (5×5, no span)", Algs.R[3:4],                     "[3:4]R",   "[3:4]R", sizes=(5,),
