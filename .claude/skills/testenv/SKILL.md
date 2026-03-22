@@ -98,5 +98,5 @@ After running all steps, print a summary:
 | kociemba test passes  | OK     |
 
 Environment is ready. You can run tests with:
-  CUBE_QUIET_ALL=1 uv run python -m pytest tests/ --ignore=tests/gui --ignore=tests/console --ignore=tests/webgl --ignore=tests/backends -v
+  CUBE_QUIET_ALL=1 uv run python -m pytest tests/ -v -m "not gui and not slow"
 ```

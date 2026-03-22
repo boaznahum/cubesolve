@@ -86,9 +86,18 @@ Overhaul the summary table in `docs/algorithm_notation.md` to be the definitive 
 | 22 | Whole Cube | Y (like U) |
 | 23 | Whole Cube | Z (like F) |
 
+### Table Rule: 1:1 correspondence
+**Every line in the Code column must have a matching line in str() and parser columns, and a test line in `test_doc_table.py`.**
+
+### Fixes in this session
+- **Parser `[:]Rw`/`[:]r` bug**: parser now calls `base_alg[:]` on WideLayerAlg (was `pass`)
+- **`SlicedFaceAlg` display_code**: new `_display_code` field preserves `Rw`/`r` in str() output
+- **`WideLayerAlg.__getitem__`**: passes `self._code` as display_code to SlicedFaceAlg
+- Removed xfail tests, added str round-trip and equivalence tests for `[:]Rw`, `[:]r`
+- Added DocRow entries for `R[:]`, `Rw[:]`, `r[:]`, `Rw[3:4]`, `r[3:4]`
+
 ### TODO — Next Session
 - Continue table cleanup (user is driving row-by-row review)
-- Table changes are uncommitted — commit when user is satisfied
 - Continue Twizzle verification for remaining ? rows
 - Consider DRY cleanup for #141
 - Fix #142 properly (discriminated union for _classify_layers)

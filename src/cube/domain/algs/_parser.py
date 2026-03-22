@@ -347,10 +347,10 @@ def _token_to_alg(t: str, *, compat_3x3: bool = False) -> _Alg:
             if isinstance(slice_spec, slice) and slice_spec.start is None and slice_spec.stop is None:
                 from cube.domain.algs.SliceAlg import SliceAlg
                 from cube.domain.algs.WideLayerAlg import WideLayerAlg
-                if isinstance(base_alg, (SliceAlg, WideLayerAlg)):
-                    pass  # keep as-is: [:]M stays SliceAlg, [:]Rw stays WideLayerAlg
+                if isinstance(base_alg, SliceAlg):
+                    pass  # keep as-is: [:]M stays SliceAlg (already all slices)
                 else:
-                    base_alg = base_alg[:]  # FaceAlg: [:]R = all layers
+                    base_alg = base_alg[:]  # FaceAlg: [:]R, WideLayerAlg: [:]Rw = all layers
             elif isinstance(slice_spec, slice):
                 base_alg = base_alg[slice_spec.start:slice_spec.stop]
             else:

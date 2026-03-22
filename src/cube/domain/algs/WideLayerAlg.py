@@ -120,7 +120,9 @@ class WideLayerAlg(AnimationAbleAlg, SliceAbleAlg):
         else:
             raise InternalSWError(f"Unknown type for slice: {items} {type(items)}")
 
-        return SlicedFaceAlg(self._face, self._n, a_slice)
+        # Preserve wide/lowercase display: Rw[:]  → [:]Rw, r[:] → [:]r
+        display_code: str = self._code
+        return SlicedFaceAlg(self._face, self._n, a_slice, display_code=display_code)
 
     def with_layers(self, layers: int) -> "WideLayerAlg":
         """Create a new WideLayerAlg with different layer count."""

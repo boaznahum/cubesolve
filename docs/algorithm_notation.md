@@ -581,9 +581,9 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>?</td>
   <td>?</td>
   <td>—</td>
-  <td><code>Algs.R[3:]</code></td>
-  <td><code>[3:]R</code></td>
-  <td>✅ <code>"[3:]R"</code></td>
+  <td><code>Algs.R[3:]</code><br><code>Algs.r[3:]</code></td>
+  <td><code>[3:]R</code><br><code>[3:]r</code></td>
+  <td>✅ <code>"[3:]R"</code><br>✅ <code>"[3:]r"</code></td>
   <td>same</td>
 </tr>
 <tr>
@@ -599,6 +599,8 @@ At play time, `_effective_layers(cube)` computes the actual count:
       ✅ <code>Algs.R[1:]</code></td>
   <td>✅ <code>X</code><br>
       ✅ <code>[:]R</code><br>
+      ✅ <code>[:]Rw</code><br>
+      ✅ <code>[:]r</code><br>
       ✅ <code>[1:]R</code></td>
   <td>✅ <code>"X"</code><br>
       ✅ <code>"[:]R"</code><br>
@@ -614,9 +616,9 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>?</td>
   <td>?</td>
   <td>—</td>
-  <td><code>Algs.R[:3]</code></td>
-  <td><code>[1:3]R</code></td>
-  <td>✅ <code>"[:3]R"</code><br>✅ <code>"1-3R"</code></td>
+  <td><code>Algs.R[:3]</code><br><code>Algs.r[:3]</code></td>
+  <td><code>[1:3]R</code><br><code>[1:3]r</code></td>
+  <td>✅ <code>"[:3]R"</code><br>✅ <code>"[:3]r"</code><br>✅ <code>"1-3R"</code></td>
   <td>same</td>
 </tr>
 <!-- ═══════════════════ 3. Wide Moves ═══════════════════ -->

@@ -46,12 +46,22 @@ DOC_ROWS: list[DocRow] = [
            equivalent=Algs.parse("3R") + Algs.L.prime, equiv_sizes=(4,)),
     DocRow("[3:4]R: slices 3–4 (5×5, no span)", Algs.R[3:4],                     "[3:4]R",   "[3:4]R", sizes=(5,),
            equivalent=Algs.parse("3R 4R"), equiv_sizes=(5,)),
+    DocRow("[3:4]Rw: slices 3–4 via Rw",        Algs.Rw[3:4],                    "[3:4]Rw",  "[3:4]Rw", sizes=(4, 5)),
+    DocRow("[3:4]r: slices 3–4 via r",           Algs.r[3:4],                     "[3:4]r",   "[3:4]r", sizes=(4, 5)),
     DocRow("[3:]R: all from 3rd to last",         Algs.R[3:],                      "[3:]R",    "[3:]R", sizes=(5,),
            equivalent=Algs.parse("3R 4R") + Algs.L.prime, equiv_sizes=(5,)),
+    DocRow("[3:]r: all from 3rd to last via r",  Algs.r[3:],                      "[3:]r",    "[3:]r", sizes=(5,)),
+    DocRow("[:]R: all R layers (≡ X)",             Algs.R[:],                       "[:]R",     "[:]R",
+           equivalent=Algs.X, equiv_sizes=(3, 4, 5)),
+    DocRow("[:]Rw: all R layers via Rw (≡ X)",    Algs.Rw[:],                      "[:]Rw",    "[:]Rw",
+           equivalent=Algs.X, equiv_sizes=(3, 4, 5)),
+    DocRow("[:]r: all R layers via r (≡ X)",       Algs.r[:],                       "[:]r",     "[:]r",
+           equivalent=Algs.X, equiv_sizes=(3, 4, 5)),
     DocRow("[1:]R: all layers (adaptive, ≡ X)",   Algs.R[1:],                      "[1:]R",    "[1:]R",
            equivalent=Algs.X, equiv_sizes=(3, 4, 5)),
     DocRow("[:3]R: layers 1–3 (≡ [1:3]R)",      Algs.R[:3],                      "[:3]R",    "[1:3]R", sizes=(5,),
            equivalent=Algs.parse("R 2R 3R"), equiv_sizes=(5,)),
+    DocRow("[:3]r: layers 1–3 via r",            Algs.r[:3],                      "[:3]r",    "[1:3]r", sizes=(5,)),
 
     # §3 Wide Moves
     DocRow("Rw: 2 outermost R-side layers",      Algs.Rw,                         "Rw",       "Rw",
@@ -224,20 +234,28 @@ class TestSpecialCases:
         """parse('[:]R') round-trips correctly."""
         assert str(Algs.parse("[:]R")) == "[:]R"
 
+    def test_all_slices_Rw_parse_round_trip(self) -> None:
+        """parse('[:]Rw') round-trips correctly."""
+        assert str(Algs.parse("[:]Rw")) == "[:]Rw"
+
+    def test_all_slices_r_parse_round_trip(self) -> None:
+        """parse('[:]r') round-trips correctly."""
+        assert str(Algs.parse("[:]r")) == "[:]r"
+
     @pytest.mark.parametrize("cube_size", [3, 4, 5])
     def test_all_slices_R_parse_equals_X(self, cube_size: int) -> None:
         """parse('[:]R') == X."""
         assert_algs_equivalent(Algs.parse("[:]R"), Algs.X, cube_size)
 
-    @pytest.mark.xfail(reason="[:]Rw parser returns Rw (2 layers), ignores [:]")
-    def test_parse_all_slices_Rw_equals_X(self) -> None:
-        """parse('[:]Rw') should be all layers = X, but returns Rw."""
-        assert_algs_equivalent(Algs.parse("[:]Rw"), Algs.X, 4)
+    @pytest.mark.parametrize("cube_size", [3, 4, 5])
+    def test_parse_all_slices_Rw_equals_X(self, cube_size: int) -> None:
+        """parse('[:]Rw') = all layers = X."""
+        assert_algs_equivalent(Algs.parse("[:]Rw"), Algs.X, cube_size)
 
-    @pytest.mark.xfail(reason="[:]r parser returns r (2 layers), ignores [:]")
-    def test_parse_all_slices_r_equals_X(self) -> None:
-        """parse('[:]r') should be all layers = X, but returns r."""
-        assert_algs_equivalent(Algs.parse("[:]r"), Algs.X, 4)
+    @pytest.mark.parametrize("cube_size", [3, 4, 5])
+    def test_parse_all_slices_r_equals_X(self, cube_size: int) -> None:
+        """parse('[:]r') = all layers = X."""
+        assert_algs_equivalent(Algs.parse("[:]r"), Algs.X, cube_size)
 
     def test_bracket_on_wide_Rw_equals_R(self) -> None:
         """[3:4]Rw == [3:4]R — wide slicing produces same as face slicing."""
