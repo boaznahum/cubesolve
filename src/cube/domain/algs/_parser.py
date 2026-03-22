@@ -371,12 +371,13 @@ def _token_to_alg(t: str, *, compat_3x3: bool = False) -> _Alg:
                 case SliceName.S:
                     base_alg = Algs.S
 
-    # For bare WideLayerAlg tokens (e.g., "Rw", "r"):
+    # For bare WideLayerAlg tokens with default layers (e.g., "Rw", "r", "2Rw", "2r"):
     # - compat_3x3=True: swap to all-but-last (RRw/rr) for CFOP solver algs on big cubes
     # - compat_3x3=False: keep as standard 2-layer wide move
+    # Explicit layer counts (3Rw, 4r, etc.) are NOT converted — they mean what they say.
     if not had_slice_prefix and compat_3x3:
         from cube.domain.algs.WideLayerAlg import WideLayerAlg
-        if isinstance(base_alg, WideLayerAlg):
+        if isinstance(base_alg, WideLayerAlg) and base_alg._layers == 2:
             base_alg = _wide_to_all_but_last(base_alg)
 
     # Apply modifiers in order

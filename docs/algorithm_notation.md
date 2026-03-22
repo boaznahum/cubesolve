@@ -621,7 +621,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td><code>Algs.Rw</code>, <code>Algs.r</code><br><code>3 * Algs.Rw</code>, <code>3 * Algs.r</code><br><code>Algs.R[:2]</code>, <code>Algs.R[:3]</code><br><code>Algs.r[:2]</code>, <code>Algs.r[:3]</code></td>
   <td><code>Rw</code>, <code>r</code><br><code>3Rw</code>, <code>3r</code><br><code>[1:2]R</code>, <code>[1:3]R</code><br><code>[1:2]r</code>, <code>[1:3]r</code></td>
   <td>✅ <code>"Rw"</code>, <code>"r"</code><br>✅ <code>"3Rw"</code>, <code>"3r"</code><br>✅ <code>"[:2]R"</code>, <code>"[:3]R"</code><br>✅ <code>"[:2]r"</code>, <code>"[:3]r"</code><br>✅ <code>"1-3R"</code></td>
-  <td>⚠ ≡ <code>Algs.RRw</code><sup>④</sup></td>
+  <td>⚠ <code>Rw</code>/<code>r</code>:<br>see RRw in next row<sup>④</sup></td>
 </tr>
 <tr>
   <td>13</td>
