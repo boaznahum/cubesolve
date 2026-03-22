@@ -18,14 +18,13 @@ class SlicedFaceAlg(FaceAlgBase):
     All instances are frozen (immutable) after construction.
     """
 
-    __slots__ = ("_slices", "_display_code")
+    __slots__ = ("_slices",)
 
     def __init__(
         self,
         face: FaceName,
         n: int,
         slices: "slice | Sequence[int]",
-        display_code: str | None = None,
     ) -> None:
         """
         Create a sliced face algorithm.
@@ -34,11 +33,9 @@ class SlicedFaceAlg(FaceAlgBase):
             face: The face name (R, L, U, D, F, B)
             n: The rotation count (1, -1, 2, etc.)
             slices: The slice specification (always set, never None)
-            display_code: Optional override for str() output (e.g., "Rw", "r")
         """
         super().__init__(face, n)
         self._slices: slice | Sequence[int] = slices
-        self._display_code: str | None = display_code
         self._freeze()
 
     @property
@@ -54,7 +51,6 @@ class SlicedFaceAlg(FaceAlgBase):
         object.__setattr__(instance, "_n", n)
         object.__setattr__(instance, "_face", self._face)
         object.__setattr__(instance, "_slices", self._slices)
-        object.__setattr__(instance, "_display_code", self._display_code)
         object.__setattr__(instance, "_frozen", True)
         return instance
 
@@ -89,12 +85,6 @@ class SlicedFaceAlg(FaceAlgBase):
             return list(my) == list(other)
         else:
             return False
-
-    def atomic_str(self) -> str:
-        if self._display_code is not None:
-            from cube.domain.algs._internal_utils import n_to_str
-            return self._add_to_str(n_to_str(self._display_code, self._n))
-        return super().atomic_str()
 
     # NOTE: No __getitem__ method - this class cannot be sliced again!
     # This is intentional type-level enforcement.

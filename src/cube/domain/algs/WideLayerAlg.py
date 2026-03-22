@@ -120,9 +120,7 @@ class WideLayerAlg(AnimationAbleAlg, SliceAbleAlg):
         else:
             raise InternalSWError(f"Unknown type for slice: {items} {type(items)}")
 
-        # Preserve wide/lowercase display: Rw[:]  → [:]Rw, r[:] → [:]r
-        display_code: str = self._code
-        return SlicedFaceAlg(self._face, self._n, a_slice, display_code=display_code)
+        return SlicedFaceAlg(self._face, self._n, a_slice)
 
     def __rmul__(self, layers: int) -> "WideLayerAlg":
         """4 * Algs.r → 4r (4-layer wide move)."""

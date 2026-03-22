@@ -570,9 +570,9 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>✅ <code>3-4R</code><br>✅ <code>3-4Rw</code><br>✅ <code>3-4r</code></td>
   <td><code>3-4R</code> / <code>3-4r</code></td>
   <td>—</td>
-  <td>✅ <code>Algs.R[3:4]</code><br>✅ <code>Algs.Rw[3:4]</code><br>✅ <code>Algs.r[3:4]</code></td>
-  <td><code>[3:4]R</code><br><code>[3:4]Rw</code><br><code>[3:4]r</code></td>
-  <td>✅ <code>"3-4R"</code><br>✅ <code>"3-4Rw"</code><br>✅ <code>"3-4r"</code><br>✅ <code>"[3:4]R"</code><br>✅ <code>"[3:4]Rw"</code><br>✅ <code>"[3:4]r"</code></td>
+  <td><code>Algs.R[3:4]</code><br><code>Algs.Rw[3:4]</code><br><code>Algs.r[3:4]</code></td>
+  <td><code>[3:4]R</code></td>
+  <td>✅ <code>"3-4R"</code><br>✅ <code>"3-4Rw"</code><br>✅ <code>"3-4r"</code><br>✅ <code>"[3:4]R"</code><br>✅ <code>"[3:4]Rw"</code> → <code>[3:4]R</code><br>✅ <code>"[3:4]r"</code> → <code>[3:4]R</code></td>
   <td>same</td>
 </tr>
 <tr>
@@ -582,8 +582,8 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>?</td>
   <td>—</td>
   <td><code>Algs.R[3:]</code><br><code>Algs.r[3:]</code></td>
-  <td><code>[3:]R</code><br><code>[3:]r</code></td>
-  <td>✅ <code>"[3:]R"</code><br>✅ <code>"[3:]r"</code></td>
+  <td><code>[3:]R</code></td>
+  <td>✅ <code>"[3:]R"</code><br>✅ <code>"[3:]r"</code> → <code>[3:]R</code></td>
   <td>same</td>
 </tr>
 <tr>
@@ -599,13 +599,11 @@ At play time, `_effective_layers(cube)` computes the actual count:
       ✅ <code>Algs.R[1:]</code></td>
   <td>✅ <code>X</code><br>
       ✅ <code>[:]R</code><br>
-      ✅ <code>[:]Rw</code><br>
-      ✅ <code>[:]r</code><br>
       ✅ <code>[1:]R</code></td>
   <td>✅ <code>"X"</code><br>
       ✅ <code>"[:]R"</code><br>
-      ✅ <code>"[:]Rw"</code><br>
-      ✅ <code>"[:]r"</code><br>
+      ✅ <code>"[:]Rw"</code> → <code>[:]R</code><br>
+      ✅ <code>"[:]r"</code> → <code>[:]R</code><br>
       ✅ <code>"[1:]R"</code></td>
   <td>same</td>
 </tr>
@@ -619,8 +617,8 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td><code>r</code>, <code>3r</code><sup>③</sup></td>
   <td><code>Rw</code>/<code>r</code><br><code>3Rw</code>/<code>3r</code></td>
   <td><code>Algs.Rw</code>, <code>Algs.r</code><br><code>3 * Algs.Rw</code>, <code>3 * Algs.r</code><br><code>Algs.R[:2]</code>, <code>Algs.R[:3]</code><br><code>Algs.r[:2]</code>, <code>Algs.r[:3]</code></td>
-  <td><code>Rw</code>, <code>r</code><br><code>3Rw</code>, <code>3r</code><br><code>[1:2]R</code>, <code>[1:3]R</code><br><code>[1:2]r</code>, <code>[1:3]r</code></td>
-  <td>✅ <code>"Rw"</code>, <code>"r"</code><br>✅ <code>"3Rw"</code>, <code>"3r"</code><br>✅ <code>"[:2]R"</code>, <code>"[:3]R"</code><br>✅ <code>"[:2]r"</code>, <code>"[:3]r"</code><br>✅ <code>"1-3R"</code></td>
+  <td><code>Rw</code>, <code>r</code><br><code>3Rw</code>, <code>3r</code><br><code>[1:2]R</code>, <code>[1:3]R</code></td>
+  <td>✅ <code>"Rw"</code>, <code>"r"</code><br>✅ <code>"3Rw"</code>, <code>"3r"</code><br>✅ <code>"[:2]R"</code>, <code>"[:3]R"</code><br>✅ <code>"[:2]r"</code> → <code>[1:2]R</code><br>✅ <code>"[:3]r"</code> → <code>[1:3]R</code><br>✅ <code>"1-3R"</code></td>
   <td>⚠ <code>Rw</code>/<code>r</code>:<br>see RRw in next row<sup>④</sup></td>
 </tr>
 <tr>
