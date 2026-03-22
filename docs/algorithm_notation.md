@@ -602,8 +602,8 @@ At play time, `_effective_layers(cube)` computes the actual count:
       ✅ <code>[1:]R</code></td>
   <td>✅ <code>"X"</code><br>
       ✅ <code>"[:]R"</code><br>
-      ❌ <code>"[:]Rw"</code> → Rw (2 layers, ignores [:])<br>
-      ❌ <code>"[:]r"</code> → r (2 layers, ignores [:])<br>
+      ✅ <code>"[:]Rw"</code><br>
+      ✅ <code>"[:]r"</code><br>
       ✅ <code>"[1:]R"</code></td>
   <td>same</td>
 </tr>
