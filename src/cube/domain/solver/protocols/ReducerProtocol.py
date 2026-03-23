@@ -79,11 +79,19 @@ class ReducerProtocol(Protocol):
         """
         ...
 
-    def fix_corner_parity(self) -> None:
+    def fix_corner_parity(self, advanced: bool = False) -> bool:
         """Fix even cube corner swap parity (PLL parity).
 
         Called by orchestrator when 3x3 solver detects corner swap parity.
-        Uses inner slice moves to swap two diagonal corners.
+
+        Args:
+            advanced: If True, use algorithm that preserves edge positions
+                      (edges move during execution but return to original positions).
+                      If False, use basic algorithm that moves edges to new positions.
+
+        Returns:
+            True if edges were preserved (no re-reduce needed),
+            False if edges were moved (re-reduce may be needed).
         """
         ...
 

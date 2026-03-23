@@ -35,7 +35,7 @@ from cube.domain.solver.SolverName import SolverName
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.common.SolverStatistics import SolverStatistics
 from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
-from cube.domain.solver.common.big_cube.NxNCorners import NxNCorners
+from cube.domain.solver.common.big_cube.CornerSwapParity import CornerSwapParity
 from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
 from cube.domain.solver.common.big_cube.ShadowCubeHelper import ShadowCubeHelper
 from cube.domain.solver.direct.lbl import _common
@@ -69,7 +69,7 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
     - Like Layer 1 but with restricted moves
     """
 
-    __slots__ = ["_nxn_edges", "_nxn_corners", "_shadow_helper", "_lbl_slices",
+    __slots__ = ["_nxn_edges", "_corner_swap", "_shadow_helper", "_lbl_slices",
                  "_l3_edges", "_accumulated_temp_stats"]
 
     def __init__(self, op: OperatorProtocol, parent_logger: "ILogger") -> None:
@@ -89,8 +89,8 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
         # Reuse NxNEdges for edge solving
         self._nxn_edges = NxNEdges(self, advanced_edge_parity=False)
 
-        # NxNCorners for even cube corner parity fix
-        self._nxn_corners = NxNCorners(self)
+        # Corner swap parity fix (basic and advanced algorithms)
+        self._corner_swap = CornerSwapParity(self)
 
         self._shadow_helper = ShadowCubeHelper(self)
 
@@ -275,7 +275,7 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
                     raise InternalSWError("Corner swap parity detected twice")
                 corner_swap_detected = True
                 self.debug("Even cube corner swap parity detected, fixing...")
-                self._nxn_corners.fix_corner_parity()
+                self._corner_swap.fix_corner_parity()
                 continue
 
         raise InternalSWError(f"Too many iterations ({max_iterations}) for solver")
@@ -807,7 +807,7 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
         self._lbl_slices.reset_block_statistics()
         self._l3_edges.reset_block_statistics()
         self._nxn_edges.reset_block_statistics()
-        self._nxn_corners.reset_block_statistics()
+        self._corner_swap.reset_block_statistics()
         self._shadow_helper.reset_block_statistics()
         self._accumulated_temp_stats.reset()
 
@@ -817,7 +817,7 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
         stats.accumulate(self._lbl_slices.get_block_statistics())
         stats.accumulate(self._l3_edges.get_block_statistics())
         stats.accumulate(self._nxn_edges.get_block_statistics())
-        stats.accumulate(self._nxn_corners.get_block_statistics())
+        stats.accumulate(self._corner_swap.get_block_statistics())
         stats.accumulate(self._shadow_helper.get_block_statistics())
         stats.accumulate(self._accumulated_temp_stats)
         return stats

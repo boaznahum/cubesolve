@@ -62,7 +62,8 @@ class NxNSolverOrchestrator(AbstractSolver):
     See PARITY_HANDLING_ORCHESTRATOR.md for details.
     """
 
-    __slots__ = ["_op", "_reducer", "_solver_3x3", "_solver_name", "_debug_override"]
+    __slots__ = ["_op", "_reducer", "_solver_3x3", "_solver_name", "_debug_override",
+                 "_advanced_corner_parity"]
 
     def __init__(
         self,
@@ -70,7 +71,8 @@ class NxNSolverOrchestrator(AbstractSolver):
         parent_logger: "ILogger",
         reducer: ReducerProtocol,
         solver_3x3: Solver3x3Protocol,
-        solver_name: SolverName
+        solver_name: SolverName,
+        advanced_corner_parity: bool = False,
     ) -> None:
         """
         Create an NxN solver orchestrator.
@@ -81,6 +83,8 @@ class NxNSolverOrchestrator(AbstractSolver):
             reducer: Reducer for NxN -> 3x3 reduction
             solver_3x3: Solver for 3x3 cube
             solver_name: Name identifier for this solver
+            advanced_corner_parity: If True, request corner parity fix that
+                                    preserves edge positions.
         """
         super().__init__(op, parent_logger, logger_prefix=f"Solver:{solver_name.display_name}")
         self._op = op
@@ -88,6 +92,7 @@ class NxNSolverOrchestrator(AbstractSolver):
         self._solver_3x3 = solver_3x3
         self._solver_name = solver_name
         self._debug_override: bool | None = None
+        self._advanced_corner_parity = advanced_corner_parity
 
     @property
     def get_code(self) -> SolverName:
@@ -291,9 +296,15 @@ class NxNSolverOrchestrator(AbstractSolver):
                     raise InternalSWError("Corner parity detected twice - fix_corner_parity failed")
                 corner_swap_detected = True
                 self._op.enter_single_step_mode(SSCode.NxN_CORNER_PARITY_FIX)
-                self._reducer.fix_corner_parity()  # Swap diagonal corners
-                self._reducer.reduce(debug)         # Re-reduce (fix disturbs edges)
-                continue  # retry
+                edges_preserved = self._reducer.fix_corner_parity(
+                    advanced=self._advanced_corner_parity
+                )
+                if not edges_preserved:
+                    # Basic fix moves edges to new positions (pairing intact).
+                    # Re-reduce is defensive — should be mostly a no-op.
+                    self._reducer.reduce(debug)
+                # else: advanced fix preserved edge positions, no re-reduce needed
+                continue  # retry 3x3 solve
 
             # Verify solved after ALL step (same check as original)
             if what == SolveStep.ALL and not self.is_solved:

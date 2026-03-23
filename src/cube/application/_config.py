@@ -175,7 +175,7 @@ class ConfigData:
     """
 
     # ── Core ──
-    cube_size: int = 3
+    cube_size: int = 6
     enable_cube_cache: bool = True
     prevent_random_face_pick_up_in_geometry: bool = False
 

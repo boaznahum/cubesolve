@@ -98,7 +98,8 @@ class Solvers:
         reducer = Reducers.beginner(op, advanced_edge_parity=True)
 
         return NxNSolverOrchestrator(
-            op, parent_logger, reducer, solver_3x3, SolverName.CFOP
+            op, parent_logger, reducer, solver_3x3, SolverName.CFOP,
+            advanced_corner_parity=True,
         )
 
     @staticmethod
@@ -120,7 +121,8 @@ class Solvers:
         reducer = Reducers.beginner(op, advanced_edge_parity=True)
 
         return NxNSolverOrchestrator(
-            op, parent_logger, reducer, solver_3x3, SolverName.KOCIEMBA
+            op, parent_logger, reducer, solver_3x3, SolverName.KOCIEMBA,
+            advanced_corner_parity=True,
         )
 
     @staticmethod

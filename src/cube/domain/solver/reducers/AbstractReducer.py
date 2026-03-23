@@ -40,7 +40,7 @@ class AbstractReducer(ReducerProtocol, SolverElementsProvider, ABC):
         - is_reduced() -> bool
         - reduce(debug: bool) -> ReductionResults
         - fix_edge_parity() -> None
-        - fix_corner_parity() -> None
+        - fix_corner_parity(advanced: bool) -> bool
         - solve_centers() -> None
         - solve_edges() -> bool
         - centers_solved() -> bool
@@ -155,8 +155,15 @@ class AbstractReducer(ReducerProtocol, SolverElementsProvider, ABC):
         ...
 
     @abstractmethod
-    def fix_corner_parity(self) -> None:
-        """Fix even cube corner swap parity (PLL parity)."""
+    def fix_corner_parity(self, advanced: bool = False) -> bool:
+        """Fix even cube corner swap parity (PLL parity).
+
+        Args:
+            advanced: If True, use algorithm that preserves edge positions.
+
+        Returns:
+            True if edges were preserved, False if edges were moved.
+        """
         ...
 
     @abstractmethod
