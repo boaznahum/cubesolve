@@ -29,7 +29,7 @@ class BeginnerReducer(AbstractReducer):
     NxNEdges, CornerSwapParity) directly without needing a facade class.
     """
 
-    __slots__ = ["_nxn_edges", "_corner_swap", "_accumulated_temp_stats"]
+    __slots__ = ["_nxn_edges", "_edge_parity", "_corner_swap", "_accumulated_temp_stats"]
 
     def __init__(
         self,
@@ -48,10 +48,12 @@ class BeginnerReducer(AbstractReducer):
 
         # Import here to avoid circular imports
         from cube.domain.solver.common.big_cube.CornerSwapParity import CornerSwapParity
+        from cube.domain.solver.common.big_cube.EdgeSliceParity import EdgeSliceParity
         from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
 
         # Pass self (we implement SolverElementsProvider via AbstractReducer)
         self._nxn_edges = NxNEdges(self, advanced_edge_parity)
+        self._edge_parity = EdgeSliceParity(self)
         self._corner_swap = CornerSwapParity(self)
         self._accumulated_temp_stats = SolverStatistics()
 
@@ -110,13 +112,19 @@ class BeginnerReducer(AbstractReducer):
         """
         return self._nxn_edges.solve()
 
-    def fix_edge_parity(self) -> None:
+    def fix_edge_parity(self, advanced: bool = False) -> bool:
         """Fix even cube edge parity (OLL parity).
 
         Called by orchestrator when 3x3 solver detects edge parity
         during L3 solving.
+
+        Args:
+            advanced: If True, request R/L-slice algorithm.
+
+        Returns:
+            True if advanced algorithm was used, False if basic.
         """
-        self._nxn_edges.do_even_full_edge_parity_on_any_edge()
+        return self._edge_parity.fix_edge_parity(advanced)
 
     def fix_corner_parity(self, advanced: bool = False) -> bool:
         """Fix even cube corner swap parity (PLL parity).

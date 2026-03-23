@@ -36,6 +36,7 @@ from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.common.SolverStatistics import SolverStatistics
 from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
 from cube.domain.solver.common.big_cube.CornerSwapParity import CornerSwapParity
+from cube.domain.solver.common.big_cube.EdgeSliceParity import EdgeSliceParity
 from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
 from cube.domain.solver.common.big_cube.ShadowCubeHelper import ShadowCubeHelper
 from cube.domain.solver.direct.lbl import _common
@@ -69,7 +70,7 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
     - Like Layer 1 but with restricted moves
     """
 
-    __slots__ = ["_nxn_edges", "_corner_swap", "_shadow_helper", "_lbl_slices",
+    __slots__ = ["_nxn_edges", "_edge_parity", "_corner_swap", "_shadow_helper", "_lbl_slices",
                  "_l3_edges", "_accumulated_temp_stats"]
 
     def __init__(self, op: OperatorProtocol, parent_logger: "ILogger") -> None:
@@ -88,6 +89,9 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
 
         # Reuse NxNEdges for edge solving
         self._nxn_edges = NxNEdges(self, advanced_edge_parity=False)
+
+        # Edge slice parity fix (basic and advanced algorithms)
+        self._edge_parity = EdgeSliceParity(self)
 
         # Corner swap parity fix (basic and advanced algorithms)
         self._corner_swap = CornerSwapParity(self)
@@ -267,7 +271,7 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
                     raise InternalSWError("Edge parity detected twice")
                 even_edge_parity_detected = True
                 self.debug("Even cube edge parity detected, fixing...")
-                self._nxn_edges.do_even_full_edge_parity_on_any_edge()
+                self._edge_parity.fix_edge_parity()
                 continue
 
             except EvenCubeCornerSwapException:

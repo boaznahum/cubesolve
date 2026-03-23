@@ -99,6 +99,7 @@ class Solvers:
 
         return NxNSolverOrchestrator(
             op, parent_logger, reducer, solver_3x3, SolverName.CFOP,
+            advanced_edge_parity=True,
             advanced_corner_parity=True,
         )
 
@@ -122,6 +123,7 @@ class Solvers:
 
         return NxNSolverOrchestrator(
             op, parent_logger, reducer, solver_3x3, SolverName.KOCIEMBA,
+            advanced_edge_parity=True,
             advanced_corner_parity=True,
         )
 

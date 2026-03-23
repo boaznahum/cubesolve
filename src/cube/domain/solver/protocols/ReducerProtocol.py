@@ -72,10 +72,16 @@ class ReducerProtocol(Protocol):
         """
         ...
 
-    def fix_edge_parity(self) -> None:
+    def fix_edge_parity(self, advanced: bool = False) -> bool:
         """Fix even cube edge parity (OLL parity).
 
         Called by orchestrator when 3x3 solver detects edge parity.
+
+        Args:
+            advanced: If True, request R/L-slice algorithm.
+
+        Returns:
+            True if advanced algorithm was used, False if basic.
         """
         ...
 

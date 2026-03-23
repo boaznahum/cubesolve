@@ -63,7 +63,7 @@ class NxNSolverOrchestrator(AbstractSolver):
     """
 
     __slots__ = ["_op", "_reducer", "_solver_3x3", "_solver_name", "_debug_override",
-                 "_advanced_corner_parity"]
+                 "_advanced_edge_parity", "_advanced_corner_parity"]
 
     def __init__(
         self,
@@ -72,6 +72,7 @@ class NxNSolverOrchestrator(AbstractSolver):
         reducer: ReducerProtocol,
         solver_3x3: Solver3x3Protocol,
         solver_name: SolverName,
+        advanced_edge_parity: bool = False,
         advanced_corner_parity: bool = False,
     ) -> None:
         """
@@ -83,6 +84,10 @@ class NxNSolverOrchestrator(AbstractSolver):
             reducer: Reducer for NxN -> 3x3 reduction
             solver_3x3: Solver for 3x3 cube
             solver_name: Name identifier for this solver
+            advanced_edge_parity: If True, use R/L-slice algorithm that preserves
+                                    edge pairing (no re-reduce needed after fix).
+                                    If False, use M-slice algorithm that disrupts
+                                    edge pairing (re-reduce needed after fix).
             advanced_corner_parity: If True, request corner parity fix that
                                     preserves edge positions.
         """
@@ -92,6 +97,7 @@ class NxNSolverOrchestrator(AbstractSolver):
         self._solver_3x3 = solver_3x3
         self._solver_name = solver_name
         self._debug_override: bool | None = None
+        self._advanced_edge_parity = advanced_edge_parity
         self._advanced_corner_parity = advanced_corner_parity
 
     @property
@@ -209,7 +215,8 @@ class NxNSolverOrchestrator(AbstractSolver):
         # WHY PARITY ONLY AFFECTS EVEN CUBES (from original design):
         # - Odd cubes (3x3, 5x5, 7x7) have a fixed center on each face.
         #   The center slice provides a reference during edge pairing.
-        #   When reduced, the virtual 3x3 is always solvable.
+        #   If a slice is flipped, the reducer sees the mismatch and fixes
+        #   it during pairing — so parity is always resolved before we get here.
         #
         # - Even cubes (4x4, 6x6, 8x8) have no fixed centers.
         #   All edge slices are "wings" with no reference point.
@@ -243,8 +250,8 @@ class NxNSolverOrchestrator(AbstractSolver):
         # - Iteration 3: After corner fix: should complete
         #
         # Each parity type can only occur once. Detecting same parity twice = bug.
-        MAX_RETRIES = 3
-        for attempt in range(1, MAX_RETRIES + 1):
+        max_retries = 3
+        for attempt in range(1, max_retries + 1):
 
             if self._cube.solved:
                 break
@@ -277,7 +284,9 @@ class NxNSolverOrchestrator(AbstractSolver):
                     raise InternalSWError("Edge parity detected twice - fix_edge_parity failed")
                 even_edge_parity_detected = True
                 self._op.enter_single_step_mode(SSCode.NxN_EDGE_PARITY_FIX)
-                self._reducer.fix_edge_parity()  # Flip all inner slices of any edge
+                self._reducer.fix_edge_parity(
+                    advanced=self._advanced_edge_parity
+                )
                 self._reducer.reduce(debug)       # Re-reduce (fix disturbs pairing)
                 continue  # retry
 

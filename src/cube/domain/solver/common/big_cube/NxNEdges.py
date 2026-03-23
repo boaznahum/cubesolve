@@ -47,7 +47,6 @@ class NxNEdges(SolverHelper):
         self._advanced_edge_parity = advanced_edge_parity
         self._preserve_other_edges = preserve_other_edges
 
-
     def _is_solved(self):
         return all((e.is3x3 for e in self.cube.edges))
 

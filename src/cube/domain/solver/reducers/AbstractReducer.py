@@ -150,8 +150,15 @@ class AbstractReducer(ReducerProtocol, SolverElementsProvider, ABC):
         ...
 
     @abstractmethod
-    def fix_edge_parity(self) -> None:
-        """Fix even cube edge parity (OLL parity)."""
+    def fix_edge_parity(self, advanced: bool = False) -> bool:
+        """Fix even cube edge parity (OLL parity).
+
+        Args:
+            advanced: If True, request R/L-slice algorithm.
+
+        Returns:
+            True if advanced algorithm was used, False if basic.
+        """
         ...
 
     @abstractmethod
