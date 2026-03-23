@@ -72,7 +72,7 @@ class ReducerProtocol(Protocol):
         """
         ...
 
-    def fix_edge_parity(self, advanced: bool = False) -> bool:
+    def fix_edge_parity(self, advanced: bool) -> bool:
         """Fix even cube edge parity (OLL parity).
 
         Called by orchestrator when 3x3 solver detects edge parity.
@@ -85,7 +85,7 @@ class ReducerProtocol(Protocol):
         """
         ...
 
-    def fix_corner_parity(self, advanced: bool = False) -> bool:
+    def fix_corner_parity(self, advanced: bool) -> bool:
         """Fix even cube corner swap parity (PLL parity).
 
         Called by orchestrator when 3x3 solver detects corner swap parity.

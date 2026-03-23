@@ -39,7 +39,7 @@ class AbstractReducer(ReducerProtocol, SolverElementsProvider, ABC):
     Subclasses must implement:
         - is_reduced() -> bool
         - reduce(debug: bool) -> ReductionResults
-        - fix_edge_parity() -> None
+        - fix_edge_parity(advanced: bool) -> bool
         - fix_corner_parity(advanced: bool) -> bool
         - solve_centers() -> None
         - solve_edges() -> bool
@@ -150,7 +150,7 @@ class AbstractReducer(ReducerProtocol, SolverElementsProvider, ABC):
         ...
 
     @abstractmethod
-    def fix_edge_parity(self, advanced: bool = False) -> bool:
+    def fix_edge_parity(self, advanced: bool) -> bool:
         """Fix even cube edge parity (OLL parity).
 
         Args:
@@ -162,7 +162,7 @@ class AbstractReducer(ReducerProtocol, SolverElementsProvider, ABC):
         ...
 
     @abstractmethod
-    def fix_corner_parity(self, advanced: bool = False) -> bool:
+    def fix_corner_parity(self, advanced: bool) -> bool:
         """Fix even cube corner swap parity (PLL parity).
 
         Args:

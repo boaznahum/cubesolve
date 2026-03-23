@@ -271,7 +271,7 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
                     raise InternalSWError("Edge parity detected twice")
                 even_edge_parity_detected = True
                 self.debug("Even cube edge parity detected, fixing...")
-                self._edge_parity.fix_edge_parity()
+                self._edge_parity.fix_edge_parity(False)
                 continue
 
             except EvenCubeCornerSwapException:
@@ -279,7 +279,7 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
                     raise InternalSWError("Corner swap parity detected twice")
                 corner_swap_detected = True
                 self.debug("Even cube corner swap parity detected, fixing...")
-                self._corner_swap.fix_corner_parity()
+                self._corner_swap.fix_corner_parity(False)
                 continue
 
         raise InternalSWError(f"Too many iterations ({max_iterations}) for solver")

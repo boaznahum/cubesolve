@@ -44,7 +44,7 @@ class EdgeSliceParity(SolverHelper):
     def __init__(self, solver: SolverElementsProvider) -> None:
         super().__init__(solver, "EdgeSliceParity")
 
-    def fix_edge_parity(self, advanced: bool = False) -> bool:
+    def fix_edge_parity(self, advanced: bool) -> bool:
         """Fix even cube full edge parity on front-left edge.
 
         Args:
@@ -135,7 +135,7 @@ class EdgeSliceParity(SolverHelper):
 
         Example on 6x6, flipping slice 3 of the FU edge:
             [3:3]M' U2  [3:3]M' U2  [3:3]M' U2  [3:3]M' U2  [3:3]M'
-
+le
         Net effect: flips the target edge slices in place.
 
         Disrupts edge pairing: M-slice moves rotate ONLY the inner

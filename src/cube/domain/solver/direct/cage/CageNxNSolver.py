@@ -269,7 +269,7 @@ class CageNxNSolver(BaseSolver):
 
                     # Fix parity by always applying to FR edge for consistency
                     # This avoids oscillation between different parity states
-                    self._edge_parity.fix_edge_parity()
+                    self._edge_parity.fix_edge_parity(False)
 
                     # Parity fix broke edge pairing - loop will re-pair them
 
@@ -281,7 +281,7 @@ class CageNxNSolver(BaseSolver):
                     self.debug("Corner swap parity detected during corner solve, fixing...")
 
                     # Fix corner parity using CornerSwapParity
-                    self._corner_swap.fix_corner_parity()
+                    self._corner_swap.fix_corner_parity(False)
 
                     # Corner swap moves edges to new positions but preserves pairing.
                     # Loop will re-pair them in the correct positions.
@@ -297,7 +297,7 @@ class CageNxNSolver(BaseSolver):
                     # Both types of parity are caused by the same underlying issue:
                     # edge slices were paired in a way that creates an impossible 3x3 state.
                     # Flipping an edge slice changes both orientation and permutation parity.
-                    self._edge_parity.fix_edge_parity()
+                    self._edge_parity.fix_edge_parity(False)
 
                     # Parity fix uses M-slice moves - breaks edge pairing
                     # Loop will re-pair them
@@ -363,7 +363,7 @@ class CageNxNSolver(BaseSolver):
                         raise
 
                     self.debug("Edge parity detected during corner solve, fixing...")
-                    self._edge_parity.fix_edge_parity()
+                    self._edge_parity.fix_edge_parity(False)
 
                 except EvenCubeCornerSwapException:
                     sr.was_corner_swap = True
@@ -371,7 +371,7 @@ class CageNxNSolver(BaseSolver):
                         raise
 
                     self.debug("Corner swap parity detected during corner solve, fixing...")
-                    self._corner_swap.fix_corner_parity()
+                    self._corner_swap.fix_corner_parity(False)
 
                 except EvenCubeEdgeSwapParityException:
                     sr.was_even_edge_parity = True
@@ -379,7 +379,7 @@ class CageNxNSolver(BaseSolver):
                         raise
 
                     self.debug("Edge swap parity (PLL) detected during corner solve, fixing...")
-                    self._edge_parity.fix_edge_parity()
+                    self._edge_parity.fix_edge_parity(False)
 
         return sr
 

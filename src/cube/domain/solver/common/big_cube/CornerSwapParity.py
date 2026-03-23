@@ -35,7 +35,7 @@ class CornerSwapParity(SolverHelper):
     def __init__(self, solver: SolverElementsProvider) -> None:
         super().__init__(solver, "CornerSwapParity")
 
-    def fix_corner_parity(self, advanced: bool = False) -> bool:
+    def fix_corner_parity(self, advanced) -> bool:
         """Fix corner swap parity on even cube.
 
         Args:
