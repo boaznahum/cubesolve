@@ -29,7 +29,8 @@ class BeginnerReducer(AbstractReducer):
     NxNEdges, CornerSwapParity) directly without needing a facade class.
     """
 
-    __slots__ = ["_nxn_edges", "_edge_parity", "_corner_swap", "_accumulated_temp_stats"]
+    __slots__ = ["_nxn_edges", "_edge_parity", "_corner_swap", "_advanced_edge_parity",
+                 "_accumulated_temp_stats"]
 
     def __init__(
         self,
@@ -52,6 +53,7 @@ class BeginnerReducer(AbstractReducer):
         from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
 
         # Pass self (we implement SolverElementsProvider via AbstractReducer)
+        self._advanced_edge_parity = advanced_edge_parity
         self._nxn_edges = NxNEdges(self, advanced_edge_parity)
         self._edge_parity = EdgeSliceParity(self)
         self._corner_swap = CornerSwapParity(self)
@@ -90,7 +92,11 @@ class BeginnerReducer(AbstractReducer):
 
         # Solve edges (returns True if parity was detected/fixed)
         if self.solve_edges():
-            results.partial_edge_parity_detected = True
+            from cube.domain.solver.solver import ParityFix
+            results.partial_edge_parity_fix = (
+                ParityFix.Preserving if self._advanced_edge_parity
+                else ParityFix.NonPreserving
+            )
 
         return results
 

@@ -25,7 +25,7 @@ from cube.domain.solver.common.SolverStatistics import SolverStatistics
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.protocols.ReducerProtocol import ReducerProtocol
 from cube.domain.solver.protocols.Solver3x3Protocol import Solver3x3Protocol
-from cube.domain.solver.solver import Solver, SolverResults, SolveStep
+from cube.domain.solver.solver import ParityFix, Solver, SolverResults, SolveStep
 from cube.domain.solver.SolverName import SolverName
 from cube.utils.SSCode import SSCode
 
@@ -164,11 +164,10 @@ class NxNSolverOrchestrator(AbstractSolver):
         if self._cube.solved:
             return sr
 
-        # Parity tracking flags (same as original BeginnerSolver)
-        # These track what parity was detected during the solve
-        even_edge_parity_detected = False
-        corner_swap_detected = False
-        partial_edge_detected = False
+        # Parity tracking — None means not detected, ParityFix records how it was fixed
+        even_edge_parity_fix: ParityFix | None = None
+        corner_swap_fix: ParityFix | None = None
+        partial_edge_fix: ParityFix | None = None
 
         # Handle reduction-only steps (equivalent to original _centers() and _edges())
         if what == SolveStep.NxNCenters:
@@ -177,7 +176,7 @@ class NxNSolverOrchestrator(AbstractSolver):
 
         if what == SolveStep.NxNEdges:
             results = self._reducer.reduce(self._is_debug_enabled)
-            sr.was_partial_edge_parity = results.partial_edge_parity_detected
+            sr.was_partial_edge_parity = results.partial_edge_parity_fix
             return sr
 
         # Debug state is now handled by AbstractSolver.solve() template method
@@ -205,8 +204,7 @@ class NxNSolverOrchestrator(AbstractSolver):
         # - Handled by the retry loop below via EvenCubeEdgeParityException
         #
         reduction_results = self._reducer.reduce(debug)
-        if reduction_results.partial_edge_parity_detected:
-            partial_edge_detected = True
+        partial_edge_fix = reduction_results.partial_edge_parity_fix
 
         # =================================================================
         # STEP 2: SOLVE AS 3x3 WITH PARITY HANDLING
@@ -280,12 +278,14 @@ class NxNSolverOrchestrator(AbstractSolver):
                 # L3Cross throws, orchestrator catches and fixes via reducer.
                 # After fix, edges are disturbed -> need to re-reduce
                 self.debug(lambda: f"Catch even edge parity in iteration #{attempt}")
-                if even_edge_parity_detected:
+                if even_edge_parity_fix is not None:
                     raise InternalSWError("Edge parity detected twice - fix_edge_parity failed")
-                even_edge_parity_detected = True
                 self._op.enter_single_step_mode(SSCode.NxN_EDGE_PARITY_FIX)
-                self._reducer.fix_edge_parity(
+                preserved = self._reducer.fix_edge_parity(
                     advanced=self._advanced_edge_parity
+                )
+                even_edge_parity_fix = (
+                    ParityFix.Preserving if preserved else ParityFix.NonPreserving
                 )
                 self._reducer.reduce(debug)       # Re-reduce (fix disturbs pairing)
                 continue  # retry
@@ -301,14 +301,16 @@ class NxNSolverOrchestrator(AbstractSolver):
                 # The corner swap algorithm swaps diagonal corners on U face.
                 # Any diagonal swap fixes parity - only requirement is yellow up.
                 self.debug(lambda: f"Catch corner swap in iteration #{attempt}")
-                if corner_swap_detected:
+                if corner_swap_fix is not None:
                     raise InternalSWError("Corner parity detected twice - fix_corner_parity failed")
-                corner_swap_detected = True
                 self._op.enter_single_step_mode(SSCode.NxN_CORNER_PARITY_FIX)
-                edges_preserved = self._reducer.fix_corner_parity(
+                preserved = self._reducer.fix_corner_parity(
                     advanced=self._advanced_corner_parity
                 )
-                if not edges_preserved:
+                corner_swap_fix = (
+                    ParityFix.Preserving if preserved else ParityFix.NonPreserving
+                )
+                if not preserved:
                     # Basic fix moves edges to new positions (pairing intact).
                     # Re-reduce is defensive — should be mostly a no-op.
                     self._reducer.reduce(debug)
@@ -321,13 +323,13 @@ class NxNSolverOrchestrator(AbstractSolver):
                     f"Not solved after iteration {attempt}, but no parity detected"
                 )
 
-        # Record results (same as original BeginnerSolver)
-        if even_edge_parity_detected:
-            sr.was_even_edge_parity = True
-        if corner_swap_detected:
-            sr.was_corner_swap = True
-        if partial_edge_detected:
-            sr.was_partial_edge_parity = True
+        # Record results — use actual fix types from the methods
+        if even_edge_parity_fix is not None:
+            sr.was_even_edge_parity = even_edge_parity_fix
+        if corner_swap_fix is not None:
+            sr.was_corner_swap = corner_swap_fix
+        if partial_edge_fix is not None:
+            sr.was_partial_edge_parity = partial_edge_fix
 
         return sr
 

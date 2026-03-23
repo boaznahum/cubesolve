@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from enum import Enum, auto
 from typing import TYPE_CHECKING
 
+from cube.domain.solver.ParityFix import ParityFix as ParityFix  # re-export
 from cube.domain.solver.protocols.OperatorProtocol import OperatorProtocol
 from cube.domain.solver.protocols.SolverElementsProvider import SolverElementsProvider
 from cube.domain.solver.SolverName import SolverName
@@ -85,55 +86,63 @@ class SolveStep(Enum):
         return self._description
 
 
-
 class SolverResults:
 
     def __init__(self) -> None:
         super().__init__()
-        self._was_corner_swap = False
-        self._was_partial_edge_parity = False
-        self._was_even_edge_parity = False
+        self._was_corner_swap : ParityFix | None = None
+        self._was_partial_edge_parity : ParityFix | None = None
+        self._was_even_edge_parity : ParityFix | None = None
 
     @property
-    def was_corner_swap(self) -> bool:
+    def was_corner_swap(self) -> ParityFix | None:
         return self._was_corner_swap
 
     @was_corner_swap.setter
-    def was_corner_swap(self, value: bool) -> None:
+    def was_corner_swap(self, value: ParityFix | None) -> None:
         self._was_corner_swap = value
 
     @property
-    def was_even_edge_parity(self) -> bool:
+    def was_even_edge_parity(self) -> ParityFix | None:
         return self._was_even_edge_parity
 
     @was_even_edge_parity.setter
-    def was_even_edge_parity(self, value: bool) -> None:
+    def was_even_edge_parity(self, value: ParityFix | None) -> None:
         self._was_even_edge_parity = value
 
     @property
-    def was_partial_edge_parity(self) -> bool:
+    def was_partial_edge_parity(self) -> ParityFix | None:
         return self._was_partial_edge_parity
 
     @was_partial_edge_parity.setter
-    def was_partial_edge_parity(self, value: bool) -> None:
+    def was_partial_edge_parity(self, value: ParityFix | None) -> None:
         self._was_partial_edge_parity = value
 
     @property
     def has_parity(self) -> bool:
         """Check if any parity was detected."""
-        return (self._was_corner_swap or
-                self._was_even_edge_parity or
-                self._was_partial_edge_parity)
+        return (self._was_corner_swap is not None or
+                self._was_even_edge_parity is not None or
+                self._was_partial_edge_parity is not None)
+
+    @staticmethod
+    def _format_parity(name: str, fix: ParityFix | None) -> str | None:
+        if fix is None:
+            return None
+        suffix = " [preserving]" if fix == ParityFix.Preserving else " [non-preserving]"
+        return name + suffix
 
     def parity_summary(self) -> str:
         """Return a summary of detected parities."""
         parities: list[str] = []
-        if self._was_even_edge_parity:
-            parities.append("Edge(OLL)")
-        if self._was_corner_swap:
-            parities.append("Corner(PLL)")
-        if self._was_partial_edge_parity:
-            parities.append("PartialEdge")
+        for name, fix in [
+            ("Even Edge(OLL)", self._was_even_edge_parity),
+            ("Corner(PLL)", self._was_corner_swap),
+            ("Partial Edge", self._was_partial_edge_parity),
+        ]:
+            s = self._format_parity(name, fix)
+            if s:
+                parities.append(s)
         if parities:
             return "Parity: " + ", ".join(parities)
         return "Parity: None"

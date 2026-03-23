@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Generic, TypeVar
 
 if TYPE_CHECKING:
-    from cube.domain.solver.solver import SolverResults
+    from cube.domain.solver.solver import ParityFix, SolverResults
 
 T = TypeVar("T", bound="StatsTopic")
 
@@ -191,11 +191,13 @@ class ParityTopic(StatsTopic):
     """Tracks parity flags detected during solving."""
 
     def __init__(self) -> None:
-        self._edge_parity: bool = False
-        self._corner_swap: bool = False
-        self._partial_edge: bool = False
+        from cube.domain.solver.solver import ParityFix
+        self._ParityFix = ParityFix  # keep reference for merge/format
+        self._edge_parity: ParityFix | None = None
+        self._corner_swap: ParityFix | None = None
+        self._partial_edge: ParityFix | None = None
 
-    def set_from_results(self, sr: SolverResults) -> None:
+    def set_from_results(self, sr: "SolverResults") -> None:
         """Copy parity flags from SolverResults."""
         self._edge_parity = sr.was_even_edge_parity
         self._corner_swap = sr.was_corner_swap
@@ -203,29 +205,45 @@ class ParityTopic(StatsTopic):
 
     def merge(self, other: StatsTopic) -> None:
         assert isinstance(other, ParityTopic)
-        self._edge_parity = self._edge_parity or other._edge_parity
-        self._corner_swap = self._corner_swap or other._corner_swap
-        self._partial_edge = self._partial_edge or other._partial_edge
+        # Keep non-None (if either detected parity, record it)
+        if other._edge_parity is not None:
+            self._edge_parity = other._edge_parity
+        if other._corner_swap is not None:
+            self._corner_swap = other._corner_swap
+        if other._partial_edge is not None:
+            self._partial_edge = other._partial_edge
+
+    @staticmethod
+    def _fmt(name: str, fix: "ParityFix | None") -> str | None:
+        if fix is None:
+            return None
+        from cube.domain.solver.solver import ParityFix
+        suffix = " [preserving]" if fix == ParityFix.Preserving else " [non-preserving]"
+        return name + suffix
 
     def format_lines(self) -> list[str]:
         parities: list[str] = []
-        if self._edge_parity:
-            parities.append("Edge(OLL)")
-        if self._corner_swap:
-            parities.append("Corner(PLL)")
-        if self._partial_edge:
-            parities.append("PartialEdge")
+        for name, fix in [
+            ("Even Edge(OLL)", self._edge_parity),
+            ("Corner(PLL)", self._corner_swap),
+            ("Partial Edge", self._partial_edge),
+        ]:
+            s = self._fmt(name, fix)
+            if s:
+                parities.append(s)
         if parities:
             return ["Parity: " + ", ".join(parities)]
         return ["Parity: None"]
 
     def is_empty(self) -> bool:
-        return not (self._edge_parity or self._corner_swap or self._partial_edge)
+        return (self._edge_parity is None and
+                self._corner_swap is None and
+                self._partial_edge is None)
 
     def reset(self) -> None:
-        self._edge_parity = False
-        self._corner_swap = False
-        self._partial_edge = False
+        self._edge_parity = None
+        self._corner_swap = None
+        self._partial_edge = None
 
 
 class SolverStatistics:

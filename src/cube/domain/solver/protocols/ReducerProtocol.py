@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Protocol
 
+from cube.domain.solver.ParityFix import ParityFix
+
 if TYPE_CHECKING:
     from cube.domain.solver.common.SolverStatistics import SolverStatistics
     from cube.domain.solver.protocols.OperatorProtocol import OperatorProtocol
@@ -15,19 +17,24 @@ class ReductionResults:
     Contains flags indicating what was detected during reduction.
     """
 
-    __slots__ = ["_partial_edge_parity_detected"]
+    __slots__ = ["_partial_edge_parity_fix"]
 
     def __init__(self) -> None:
-        self._partial_edge_parity_detected: bool = False
+        self._partial_edge_parity_fix: ParityFix | None = None
+
+    # @property
+    # def partial_edge_parity_detected(self) -> bool:
+    #     """Whether partial edge parity was detected during reduction."""
+    #     return self._partial_edge_parity_fix is not None
 
     @property
-    def partial_edge_parity_detected(self) -> bool:
-        """Whether partial edge parity was detected during reduction."""
-        return self._partial_edge_parity_detected
+    def partial_edge_parity_fix(self) -> ParityFix | None:
+        """How partial edge parity was fixed (None if not detected)."""
+        return self._partial_edge_parity_fix
 
-    @partial_edge_parity_detected.setter
-    def partial_edge_parity_detected(self, value: bool) -> None:
-        self._partial_edge_parity_detected = value
+    @partial_edge_parity_fix.setter
+    def partial_edge_parity_fix(self, value: ParityFix) -> None:
+        self._partial_edge_parity_fix = value
 
 
 class ReducerProtocol(Protocol):
