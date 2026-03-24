@@ -243,6 +243,17 @@ class ConfigProtocol(Protocol):
         ...
 
     @property
+    def cage_advanced_parity(self) -> bool:
+        """Use advanced parity algorithms in cage solver.
+
+        When True, cage solver uses R/L-slice edge parity (preserves pairing)
+        and advanced corner swap (preserves edge positions).
+        When False, uses basic M-slice and standard corner swap algorithms.
+        Default: False
+        """
+        ...
+
+    @property
     def first_face_color(self) -> "Color":
         """First face color for Layer 1 in beginner and LBL solvers.
 

@@ -51,6 +51,7 @@ export class AppState extends EventTarget {
         this.operatorBufferMode = true;
         this.queueHeadingH1 = true;
         this.queueHeadingH2 = false;
+        this.cageAdvancedParity = false;
         this.defaultScramble = '0';  // '0'-'9' or '*'
 
         // -- Text overlays --
@@ -141,6 +142,7 @@ export class AppState extends EventTarget {
             patch.operatorBufferMode = msg.toolbar.operator_buffer_mode;
             patch.queueHeadingH1 = msg.toolbar.queue_heading_h1;
             patch.queueHeadingH2 = msg.toolbar.queue_heading_h2;
+            patch.cageAdvancedParity = msg.toolbar.cage_advanced_parity;
             patch.defaultScramble = msg.toolbar.default_scramble;
         }
 

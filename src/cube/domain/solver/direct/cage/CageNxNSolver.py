@@ -252,7 +252,7 @@ class CageNxNSolver(BaseSolver):
                 if not self._are_edges_solved():
                     had_parity = self._solve_edges()
                     if had_parity:
-                        sr.was_partial_edge_parity = ParityFix.NonPreserving
+                        sr.was_partial_edge_parity = ParityFix.NonPreserving  # partial parity is always basic
 
                 # PHASE 1b: CORNER SOLVING
                 try:
@@ -262,46 +262,28 @@ class CageNxNSolver(BaseSolver):
 
                 except EvenCubeEdgeParityException:
                     self.debug(f"Caught EvenCubeEdgeParityException on attempt {attempt}")
-                    sr.was_even_edge_parity = ParityFix.NonPreserving
                     if attempt >= 4:
                         raise  # Give up after 5 attempts
 
                     self.debug("Edge parity detected during corner solve, fixing...")
-
-                    # Fix parity by always applying to FR edge for consistency
-                    # This avoids oscillation between different parity states
-                    self._edge_parity.fix_edge_parity(False)
-
-                    # Parity fix broke edge pairing - loop will re-pair them
+                    preserved = self._edge_parity.fix_edge_parity(self._cube.config.cage_advanced_parity)
+                    sr.was_even_edge_parity = ParityFix.Preserving if preserved else ParityFix.NonPreserving
 
                 except EvenCubeCornerSwapException:
-                    sr.was_corner_swap = ParityFix.NonPreserving
                     if attempt >= 4:
                         raise  # Give up after 5 attempts
 
                     self.debug("Corner swap parity detected during corner solve, fixing...")
-
-                    # Fix corner parity using CornerSwapParity
-                    self._corner_swap.fix_corner_parity(False)
-
-                    # Corner swap moves edges to new positions but preserves pairing.
-                    # Loop will re-pair them in the correct positions.
+                    preserved = self._corner_swap.fix_corner_parity(self._cube.config.cage_advanced_parity)
+                    sr.was_corner_swap = ParityFix.Preserving if preserved else ParityFix.NonPreserving
 
                 except EvenCubeEdgeSwapParityException:
-                    sr.was_even_edge_parity = ParityFix.NonPreserving
                     if attempt >= 4:
                         raise  # Give up after 5 attempts
 
                     self.debug("Edge swap parity (PLL) detected during corner solve, fixing...")
-
-                    # For PLL edge swap parity, use the same edge flip fix as OLL parity.
-                    # Both types of parity are caused by the same underlying issue:
-                    # edge slices were paired in a way that creates an impossible 3x3 state.
-                    # Flipping an edge slice changes both orientation and permutation parity.
-                    self._edge_parity.fix_edge_parity(False)
-
-                    # Parity fix uses M-slice moves - breaks edge pairing
-                    # Loop will re-pair them
+                    preserved = self._edge_parity.fix_edge_parity(self._cube.config.cage_advanced_parity)
+                    sr.was_even_edge_parity = ParityFix.Preserving if preserved else ParityFix.NonPreserving
 
             # PHASE 2: CENTER SOLVING
             if not self._are_centers_solved():
@@ -319,7 +301,7 @@ class CageNxNSolver(BaseSolver):
 
         had_parity = self._solve_edges()
         if had_parity:
-            sr.was_partial_edge_parity = ParityFix.NonPreserving
+            sr.was_partial_edge_parity = ParityFix.NonPreserving  # partial parity is always basic
         return sr
 
     def _solve_cage_only(self, sr: SolverResults) -> SolverResults:
@@ -349,7 +331,7 @@ class CageNxNSolver(BaseSolver):
                 if not self._are_edges_solved():
                     had_parity = self._solve_edges()
                     if had_parity:
-                        sr.was_partial_edge_parity = ParityFix.NonPreserving
+                        sr.was_partial_edge_parity = ParityFix.NonPreserving  # partial parity is always basic
 
                 # PHASE 1b: CORNER SOLVING
                 try:
@@ -359,28 +341,28 @@ class CageNxNSolver(BaseSolver):
 
                 except EvenCubeEdgeParityException:
                     self.debug(f"Caught EvenCubeEdgeParityException on attempt {attempt}")
-                    sr.was_even_edge_parity = ParityFix.NonPreserving
                     if attempt >= 4:
                         raise
 
                     self.debug("Edge parity detected during corner solve, fixing...")
-                    self._edge_parity.fix_edge_parity(False)
+                    preserved = self._edge_parity.fix_edge_parity(self._cube.config.cage_advanced_parity)
+                    sr.was_even_edge_parity = ParityFix.Preserving if preserved else ParityFix.NonPreserving
 
                 except EvenCubeCornerSwapException:
-                    sr.was_corner_swap = ParityFix.NonPreserving
                     if attempt >= 4:
                         raise
 
                     self.debug("Corner swap parity detected during corner solve, fixing...")
-                    self._corner_swap.fix_corner_parity(False)
+                    preserved = self._corner_swap.fix_corner_parity(self._cube.config.cage_advanced_parity)
+                    sr.was_corner_swap = ParityFix.Preserving if preserved else ParityFix.NonPreserving
 
                 except EvenCubeEdgeSwapParityException:
-                    sr.was_even_edge_parity = ParityFix.NonPreserving
                     if attempt >= 4:
                         raise
 
                     self.debug("Edge swap parity (PLL) detected during corner solve, fixing...")
-                    self._edge_parity.fix_edge_parity(False)
+                    preserved = self._edge_parity.fix_edge_parity(self._cube.config.cage_advanced_parity)
+                    sr.was_even_edge_parity = ParityFix.Preserving if preserved else ParityFix.NonPreserving
 
         return sr
 

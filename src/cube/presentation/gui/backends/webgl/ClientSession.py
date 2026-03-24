@@ -358,6 +358,7 @@ class ClientSession:
             operator_buffer_mode=cfg.operator_buffer_mode,
             queue_heading_h1=cfg.queue_heading_h1,
             queue_heading_h2=cfg.queue_heading_h2,
+            cage_advanced_parity=cfg.cage_advanced_parity,
             default_scramble="*" if self._default_scramble is None else str(self._default_scramble),
             # Text
             animation_text=anim_lines,
@@ -760,6 +761,7 @@ class ClientSession:
         "queue_heading_h1",
         "queue_heading_h2",
         "assist_enabled",
+        "cage_advanced_parity",
     )
 
     def _handle_set_config(self, settings: dict[str, object]) -> None:

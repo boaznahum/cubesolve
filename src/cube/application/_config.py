@@ -184,6 +184,7 @@ class ConfigData:
     solver_for_tests: str = "Beginner Reducer"
     default_2x2_solver: str = "2x2 Beginner"
     cage_3x3_solver: str = "cfop"
+    cage_advanced_parity: bool = False
     solver_debug: bool = True
     solver_pll_rotate_while_search: bool = False
     solver_sanity_check_is_a_boy: bool = False

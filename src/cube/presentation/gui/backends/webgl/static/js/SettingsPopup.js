@@ -61,6 +61,13 @@ const SETTINGS = [
         serverKey: 'assist_enabled',
     },
     {
+        id: 'settings-cage-parity',
+        label: 'Cage Advanced Parity',
+        desc: 'Cage solver uses edge/corner-preserving parity algorithms',
+        stateKey: 'cageAdvancedParity',
+        serverKey: 'cage_advanced_parity',
+    },
+    {
         id: 'settings-shadows',
         label: 'Show Shadows (LDB)',
         desc: 'Show hidden faces beside the cube',

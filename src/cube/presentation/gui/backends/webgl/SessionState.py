@@ -78,6 +78,7 @@ class SessionStateSnapshot:
     operator_buffer_mode: bool = True
     queue_heading_h1: bool = True
     queue_heading_h2: bool = False
+    cage_advanced_parity: bool = False
     default_scramble: str = "0"  # "0"-"9" or "*" (random)
 
     # -- Text overlays --
@@ -143,6 +144,7 @@ class SessionStateSnapshot:
                 "operator_buffer_mode": self.operator_buffer_mode,
                 "queue_heading_h1": self.queue_heading_h1,
                 "queue_heading_h2": self.queue_heading_h2,
+                "cage_advanced_parity": self.cage_advanced_parity,
                 "default_scramble": self.default_scramble,
             },
 
