@@ -168,6 +168,11 @@ class AppConfig(ConfigProtocol):
         """Use advanced parity algorithms in cage solver."""
         return self._data.cage_advanced_parity
 
+    @cage_advanced_parity.setter
+    def cage_advanced_parity(self, value: bool) -> None:
+        """Set cage advanced parity flag."""
+        self._data.cage_advanced_parity = value
+
     @property
     def first_face_color(self) -> Color:
         """First face color for Layer 1 in beginner and LBL solvers."""
