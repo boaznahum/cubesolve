@@ -1307,9 +1307,13 @@ class ClientSession:
         finally:
             am.set_blocking_mode(False)
         # Yield to event loop so any queued call_soon_threadsafe callbacks
-        # from the solver thread (e.g., annotate __exit__ removing markers)
-        # are processed before we send the final state.
-        await asyncio.sleep(0)
+        # from the solver thread (e.g., annotate __exit__ removing markers,
+        # statistics lines sent to console) are processed before we send
+        # the final state. Multiple yields needed because each
+        # call_soon_threadsafe schedules a create_task, and each task
+        # needs a turn to run.
+        for _ in range(5):
+            await asyncio.sleep(0)
         # One-phase solve: moves are in history, not redo queue.
         # Clear auto_play since the solve IS the play.
         self._fsm._auto_play = False

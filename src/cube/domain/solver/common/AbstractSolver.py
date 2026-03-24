@@ -230,19 +230,14 @@ class AbstractSolver(Solver, ABC):
         self._display_statistics(self.get_block_statistics())
 
     def _display_statistics(self, stats: SolverStatistics) -> None:
-        """Display the given statistics.
-
-        Always prints regardless of debug mode — statistics are a summary
-        the user wants to see even when debug logging is off.
-        Uses debug_on=True to bypass the solver's debug override.
-        """
+        """Display the given statistics."""
         if stats.is_empty():
             return
         my_prefix: str = self._logger.prefix + ":"
-        self._logger.debug(True, "[Solver Statistics]")
+        self.debug("[Solver Statistics]")
         for topic_name, lines in stats.format_all(strip_prefix=my_prefix):
             for line in lines:
-                self._logger.debug(True, f"  [{topic_name}] {line}")
+                self.debug(lambda: f"  [{topic_name}] {line}")
 
     def _run_child_solver(self, child: Solver, what: SolveStep) -> SolverResults:
         """Run a child solver, propagating debug override if set.
