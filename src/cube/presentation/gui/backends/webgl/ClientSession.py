@@ -29,6 +29,7 @@ from cube.presentation.gui.backends.webgl.FlowStateMachine import FlowEvent, Flo
 from cube.presentation.gui.backends.webgl.SessionState import SessionStateSnapshot
 from cube.presentation.gui.commands import Command, CommandContext
 from cube.utils.log_stream_buffer import LogStreamBuffer
+from cube.utils.std_logging import ColonPrefixFormatter, WebSocketLogHandler
 from cube.version import get_version
 
 if TYPE_CHECKING:
@@ -151,8 +152,8 @@ class ClientSession:
         self._log_buffer: LogStreamBuffer = LogStreamBuffer(max_lines=500)
         self._app.vs.logger.add_stream(self._log_buffer.append)
 
-        # Live console forwarding callback (added/removed on subscribe/unsubscribe)
-        self._console_live_cb: Callable[[str], None] | None = None
+        # Live console handler (added/removed on subscribe/unsubscribe)
+        self._console_ws_handler: WebSocketLogHandler | None = None
 
         # Client count — set externally by SessionManager
         self._client_count: int = 0
@@ -778,24 +779,23 @@ class ClientSession:
     # -- Console stream handlers --
 
     def _handle_console_subscribe(self) -> None:
-        """Client opened the console — send snapshot and add live stream."""
+        """Client opened the console — send snapshot and add live handler."""
         lines = self._log_buffer.snapshot()
         self._send(json.dumps({"type": "console_snapshot", "lines": lines}))
 
-        # Remove previous live callback if any, then add a fresh one
+        # Remove previous handler if any, then add a fresh one
         self._handle_console_unsubscribe()
 
-        def _on_line(line: str) -> None:
-            self._send(json.dumps({"type": "console_lines", "lines": [line]}))
-
-        self._console_live_cb = _on_line
-        self._app.vs.logger.add_stream(_on_line)
+        handler = WebSocketLogHandler(self._send)
+        handler.setFormatter(ColonPrefixFormatter())
+        self._console_ws_handler = handler
+        self._app.vs.logger.std_root_logger.addHandler(handler)
 
     def _handle_console_unsubscribe(self) -> None:
-        """Client closed the console — remove live stream."""
-        if self._console_live_cb is not None:
-            self._app.vs.logger.remove_stream(self._console_live_cb)
-            self._console_live_cb = None
+        """Client closed the console — remove live handler."""
+        if self._console_ws_handler is not None:
+            self._app.vs.logger.std_root_logger.removeHandler(self._console_ws_handler)
+            self._console_ws_handler = None
 
     def _handle_command(self, command_name: str) -> None:
         from cube.presentation.gui.commands import Commands

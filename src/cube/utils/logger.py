@@ -1,4 +1,4 @@
-"""Unified Logger implementation with prefix chaining and level-based filtering.
+"""Unified Logger implementation backed by Python's standard logging module.
 
 All logging functionality consolidated into a single Logger class:
 - Root logger owns quiet_all/debug_all (set delegate=None)
@@ -8,12 +8,18 @@ All logging functionality consolidated into a single Logger class:
 - Level-based filtering via set_level()
 - Indented sections via tab()
 
+Output is routed through a standard ``logging.Logger`` (name: ``cube``) so
+that handlers (console, WebSocket, buffer) are managed via the standard
+library.  The custom ``ColonPrefixFormatter`` in ``cube.utils.std_logging``
+converts dot-separated logger names to the colon-separated prefix convention.
+
 Environment Variables (for root logger):
     CUBE_QUIET_ALL: Set to "1", "true", or "yes" to suppress all debug output.
     CUBE_DEBUG_ALL: Set to "1", "true", or "yes" to enable all debug output.
 """
 from __future__ import annotations
 
+import logging
 import os
 import sys
 from contextlib import contextmanager
@@ -21,6 +27,11 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any, Callable, Generator
 
 from cube.utils.logger_protocol import DebugFlagType, ILogger, LazyArg
+from cube.utils.std_logging import (
+    ROOT_LOGGER_NAME,
+    ColonPrefixFormatter,
+    _StreamCallbackHandler,
+)
 
 
 class TabExceptionMode(Enum):
@@ -79,6 +90,11 @@ def _resolve_arg(arg: LazyArg, depth: int = 0) -> Any:
 class Logger(ILogger):
     """Unified logger with prefix chaining, debug flags, and level filtering.
 
+    Backed by Python's standard ``logging`` module.  Each Logger instance
+    wraps a ``logging.Logger`` whose dot-separated name mirrors the solver
+    hierarchy.  All records propagate to the root ``cube`` logger where
+    handlers (console, WebSocket, buffer) emit the formatted output.
+
     Can be used as:
     - Root logger: delegate=None, owns quiet_all/debug_all state
     - Child logger: delegate=parent, shares root's state via _root reference
@@ -109,7 +125,11 @@ class Logger(ILogger):
         step_log.debug(None, "verbose", level=5)  # Hidden: 5 > 3
     """
 
-    __slots__ = ["_delegate", "_root", "_prefix", "_debug_flag", "_level", "_quiet_all", "_debug_all", "_streams"]
+    __slots__ = [
+        "_delegate", "_root", "_base_name", "_indent", "_debug_flag",
+        "_level", "_quiet_all", "_debug_all",
+        "_std_logger", "_stream_handlers",
+    ]
 
     def __init__(
         self,
@@ -130,7 +150,8 @@ class Logger(ILogger):
             quiet_all: (Root only) Suppress all debug output by default.
         """
         self._delegate = delegate
-        self._prefix = prefix
+        self._base_name = prefix
+        self._indent: str = ""
         self._level: int | None = None
 
         if delegate is None:
@@ -150,14 +171,34 @@ class Logger(ILogger):
             self._quiet_all = env_quiet if env_quiet is not None else quiet_all
             self._debug_all = env_debug if env_debug is not None else debug_all
             self._root: Logger = self
-            self._streams: list[Callable[[str], None]] = []
+            self._stream_handlers: dict[Callable[[str], None], _StreamCallbackHandler] = {}
+
+            # --- Standard logging setup ---
+            self._std_logger: logging.Logger = logging.getLogger(ROOT_LOGGER_NAME)
+            self._std_logger.setLevel(logging.DEBUG)
+            self._std_logger.propagate = False
+            # Remove stale handlers from previous Logger() constructions
+            # (e.g. when ApplicationAndViewState is recreated in tests).
+            self._std_logger.handlers.clear()
+            # Console handler -> stdout
+            console = logging.StreamHandler(sys.stdout)
+            console.setFormatter(ColonPrefixFormatter())
+            self._std_logger.addHandler(console)
         else:
             # Child logger: shares root's state
-            # Access _root from delegate (works for Logger, may need cast for other ILogger)
             self._root = getattr(delegate, "_root", self)  # type: ignore[assignment]
             self._quiet_all = False  # Not used, but slot must be initialized
             self._debug_all = False  # Not used, but slot must be initialized
-            self._streams = []  # Not used, but slot must be initialized
+            self._stream_handlers = {}  # Not used, but slot must be initialized
+
+            # Get a standard logger whose name mirrors the solver hierarchy.
+            if prefix:
+                std_name = ROOT_LOGGER_NAME + "." + prefix.replace(":", ".")
+            else:
+                std_name = ROOT_LOGGER_NAME
+            self._std_logger = logging.getLogger(std_name)
+
+    # --- Internal helpers ---
 
     def _resolve_debug_flag(self, debug_on: bool | None) -> bool:
         """Resolve the effective debug_on value.
@@ -178,6 +219,15 @@ class Logger(ILogger):
 
         return self._debug_flag
 
+    def _emit(self, level: int, message: str) -> None:
+        """Emit a log record through the standard logging system.
+
+        The record's ``name`` is derived from ``_base_name`` (solver hierarchy)
+        so that ``ColonPrefixFormatter`` can produce the colon-separated prefix.
+        Indentation from ``tab()`` is passed via the ``indent`` extra field.
+        """
+        self._std_logger.log(level, message, extra={"indent": self._indent})
+
     # --- Properties ---
 
     @property
@@ -195,46 +245,43 @@ class Logger(ILogger):
         """Set quiet_all mode on root logger."""
         self._root._quiet_all = value
 
-    # --- Stream methods ---
+    # --- Standard-logging handler access ---
+
+    @property
+    def std_root_logger(self) -> logging.Logger:
+        """Return the root ``logging.Logger`` (name: ``cube``).
+
+        Use this to add/remove handlers directly (e.g. ``WebSocketLogHandler``).
+        """
+        return self._root._std_logger
+
+    # --- Stream methods (legacy API, backed by handlers) ---
 
     def add_stream(self, callback: Callable[[str], None]) -> None:
         """Register a stream callback on the root logger.
 
         Every debug line produced by this logger or any child logger
         will be forwarded to the callback as a single string.
+
+        Internally wraps the callback in a ``_StreamCallbackHandler`` and
+        attaches it to the root ``logging.Logger``.
         """
-        self._root._streams.append(callback)
+        handler = _StreamCallbackHandler(callback)
+        handler.setFormatter(ColonPrefixFormatter())
+        self._root._stream_handlers[callback] = handler
+        self._root._std_logger.addHandler(handler)
 
     def remove_stream(self, callback: Callable[[str], None]) -> None:
         """Unregister a previously registered stream callback."""
-        try:
-            self._root._streams.remove(callback)
-        except ValueError:
-            pass
-
-    def _emit_to_streams(self, *args: object) -> None:
-        """Forward a formatted line to all registered stream callbacks."""
-        streams = self._root._streams
-        if not streams:
-            return
-        line = " ".join(str(a) for a in args)
-        for cb in streams:
-            try:
-                cb(line)
-            except Exception as e:
-                import traceback
-                print(f"[Logger] Stream callback error: {e}", flush=True)
-                traceback.print_exc()
-
-    def _print_line(self, *args: object) -> None:
-        """Print a line to stdout and forward to all stream callbacks."""
-        print(*args, flush=True)
-        self._emit_to_streams(*args)
+        handler = self._root._stream_handlers.pop(callback, None)
+        if handler is not None:
+            self._root._std_logger.removeHandler(handler)
 
     def error(self, *args: LazyArg) -> None:
         """Print error information. Always prints, ignores quiet_all."""
         resolved_args = [_resolve_arg(a) for a in args]
-        self._print_line("ERROR:", *resolved_args)
+        message = " ".join(str(a) for a in resolved_args)
+        self._emit(logging.ERROR, message)
 
     # --- Debug methods ---
 
@@ -265,15 +312,15 @@ class Logger(ILogger):
 
     @property
     def prefix(self) -> str:
-        """Return the raw prefix string (without 'DEBUG:' header)."""
-        return self._prefix
+        """Return the base prefix string (solver hierarchy, without indentation)."""
+        return self._base_name
 
     def debug_prefix(self) -> str:
         """Return the combined prefix for output."""
-        if self._delegate is not None and self._prefix:
-            return f"{self._delegate.debug_prefix()} {self._prefix}:"
-        elif self._prefix:
-            return f"DEBUG: {self._prefix}:"
+        if self._delegate is not None and self._base_name:
+            return f"{self._delegate.debug_prefix()} {self._base_name}:"
+        elif self._base_name:
+            return f"DEBUG: {self._base_name}:"
         return "DEBUG:"
 
     def debug(self, debug_on: bool | None, *args: LazyArg, level: int | None = None) -> None:
@@ -289,11 +336,8 @@ class Logger(ILogger):
             return
         # Resolve any callables in args (lazy evaluation)
         resolved_args = [_resolve_arg(a) for a in args]
-        # Print directly with prefix
-        if self._prefix:
-            self._print_line("DEBUG:", f"{self._prefix}:", *resolved_args)
-        else:
-            self._print_line("DEBUG:", *resolved_args)
+        message = " ".join(str(a) for a in resolved_args)
+        self._emit(logging.DEBUG, message)
 
     # --- Prefix operations ---
 
@@ -303,7 +347,13 @@ class Logger(ILogger):
         Args:
             prefix: New prefix to use.
         """
-        self._prefix = prefix
+        self._base_name = prefix
+        # Update the underlying standard logger to match the new name.
+        if prefix:
+            std_name = ROOT_LOGGER_NAME + "." + prefix.replace(":", ".")
+        else:
+            std_name = ROOT_LOGGER_NAME
+        self._std_logger = logging.getLogger(std_name)
 
     def with_prefix(self, prefix: str, debug_flag: DebugFlagType = None) -> "Logger":
         """Create child logger with chained prefix.
@@ -318,8 +368,8 @@ class Logger(ILogger):
         Returns:
             New Logger with combined prefix.
         """
-        if self._prefix:
-            combined_prefix = f"{self._prefix}:{prefix}"
+        if self._base_name:
+            combined_prefix = f"{self._base_name}:{prefix}"
         else:
             combined_prefix = prefix
         effective_flag = debug_flag if debug_flag is not None else self._debug_flag
@@ -369,24 +419,17 @@ class Logger(ILogger):
             headline_str = headline() if callable(headline) else headline
 
         if headline_str:
-            # Print headline with current prefix
-            if self._prefix:
-                self._print_line("DEBUG:", f"{self._prefix}:", f"── {headline_str} ──")
-            else:
-                self._print_line("DEBUG:", f"── {headline_str} ──")
+            self._emit(logging.DEBUG, f"── {headline_str} ──")
 
-        # Save current prefix and add indent
-        saved_prefix = self._prefix
-        if self._prefix:
-            self._prefix = f"{self._prefix}{char}  "
-        else:
-            self._prefix = f"{char}  "
+        # Save current indent and push deeper
+        saved_indent = self._indent
+        self._indent = f"{self._indent}{char}  "
 
         try:
             yield is_enabled
         finally:
-            # Restore prefix
-            self._prefix = saved_prefix
+            # Restore indent
+            self._indent = saved_indent
 
             # Check if an exception is propagating
             exc_type = sys.exc_info()[0]
@@ -397,21 +440,10 @@ class Logger(ILogger):
                 if has_exception:
                     # Exception is propagating
                     if TAB_EXCEPTION_MODE == TabExceptionMode.ABORTED:
-                        if self._prefix:
-                            self._print_line("DEBUG:", f"{self._prefix}:", f"── ❌ ABORTED: {headline_str} ──")
-                        else:
-                            self._print_line("DEBUG:", f"── ❌ ABORTED: {headline_str} ──")
+                        self._emit(logging.DEBUG, f"── ❌ ABORTED: {headline_str} ──")
                     elif TAB_EXCEPTION_MODE == TabExceptionMode.NORMAL:
-                        if self._prefix:
-                            self._print_line("DEBUG:", f"{self._prefix}:", f"── end: {headline_str} ──")
-                        else:
-                            self._print_line("DEBUG:", f"── end: {headline_str} ──")
+                        self._emit(logging.DEBUG, f"── end: {headline_str} ──")
                     # SILENT: don't print anything
                 else:
                     # Normal exit
-                    if self._prefix:
-                        self._print_line("DEBUG:", f"{self._prefix}:", f"── end: {headline_str} ──")
-                    else:
-                        self._print_line("DEBUG:", f"── end: {headline_str} ──")
-
-
+                    self._emit(logging.DEBUG, f"── end: {headline_str} ──")
