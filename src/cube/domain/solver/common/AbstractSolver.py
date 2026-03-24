@@ -316,7 +316,7 @@ class AbstractSolver(Solver, ABC):
         with self._op.with_animation(animation=False):
 
             with self._op.save_history():  # not really needed
-                self.solve(debug=False, animation=False)
+                self.solve(debug=None, animation=False)
                 while n < len(self.op.history()):
                     step = self.op.undo(animation=False)
                     # s=str(step)
