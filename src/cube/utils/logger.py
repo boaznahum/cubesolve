@@ -331,7 +331,7 @@ def setup_root_logger(
 
     # Root level: allow everything through; individual loggers and
     # isEnabledFor() handle the actual gating.
-    root.setLevel(DEBUG_ALL_ONLY)
+    root.setLevel(logging.INFO)
     root.propagate = False
 
     # Remove stale handlers from previous setup_root_logger() calls
