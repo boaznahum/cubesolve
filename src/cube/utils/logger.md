@@ -1,225 +1,243 @@
-# Logger System Documentation
+# Cube Logger — Usage Guide
 
-## Overview
-
-The logging system uses Python's standard `logging` module with a thin
-`CubeLogger(logging.Logger)` subclass.  Only two custom extensions exist:
-
-- `tab()` — context manager for indented debug sections
-- `makeRecord()` — auto-injects indentation into every log record
-
-Everything else (levels, handlers, filters, hierarchy) is pure standard
-`logging`.
-
-## Architecture
-
-```
-logging.setLoggerClass(CubeLogger)
-
-                    Environment Variables
-                    CUBE_QUIET_ALL / CUBE_DEBUG_ALL
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│  CubeLogger (root, name="cube")                                      │
-│  Created by setup_root_logger()                                       │
-│  Owns: _quiet_all, _debug_all, console handler                       │
-│  Level: DEBUG_ALL_ONLY (5) — passes everything to handlers           │
-└───────────────────────────────────┬─────────────────────────────────┘
-                                    │
-                          getChild("LBL")
-                                    │
-                                    ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│  CubeLogger (name="cube.LBL")                                        │
-│  Level: NOTSET → inherits from root                                   │
-│  When solve(debug=True): setLevel(DEBUG)                              │
-└───────────────────────────────────┬─────────────────────────────────┘
-                                    │
-                          getChild("L1Cross")
-                                    │
-                                    ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│  CubeLogger (name="cube.LBL.L1Cross")                                │
-│  tab() → indented output                                              │
-│  set_cube_level(3) → verbosity filter                                 │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-## Key Classes
-
-| Class | Purpose |
-|-------|---------|
-| `CubeLogger` | `logging.Logger` subclass with `tab()` and `makeRecord()` |
-| `ColonPrefixFormatter` | Converts `cube.LBL.L1Cross` → `DEBUG: LBL:L1Cross:` |
-| `_CubeLevelFilter` | Filters by optional `cube_level` attribute (1-5) |
-
-## Root Logger Setup
+## Quick Start
 
 ```python
-from cube.utils.logger import setup_root_logger
+import logging
+from cube.utils.logger import CubeLogger, setup_root_logger
 
-root = setup_root_logger(debug_all=False, quiet_all=False)
-# Returns CubeLogger named "cube" with console handler
+# 1. Set up the root logger (done once at app startup)
+root = setup_root_logger()
+
+# 2. Get a child logger for your component
+logger: CubeLogger = root.getChild("MyComponent")
+
+# 3. Log messages — standard logging API
+logger.debug("solving edge...")
+logger.info("phase 1 complete")
+logger.error("invalid state")
+
+# 4. Indented sections (only custom extension)
+with logger.tab("Processing slice 1"):
+    logger.debug("nested message")
+    with logger.tab("Source face"):
+        logger.debug("deeper nested")
+
+# Output:
+# DEBUG: MyComponent: ── Processing slice 1 ──
+# DEBUG: MyComponent:│  nested message
+# DEBUG: MyComponent:│  ── Source face ──
+# DEBUG: MyComponent:│  │  deeper nested
+# DEBUG: MyComponent:│  ── end: Source face ──
+# DEBUG: MyComponent: ── end: Processing slice 1 ──
 ```
 
-## Debug Level Control
+## Controlling Debug Output
 
-Debug is controlled by standard `logging` levels:
+Debug output is controlled by **standard logging levels** — no custom flags.
 
-| State | Root level | Effect |
-|-------|-----------|--------|
-| Normal | INFO (20) | No debug output |
-| `config.solver_debug = True` | Set by app | `DEBUG` messages visible |
-| `quiet_all` | N/A | `isEnabledFor()` blocks everything below ERROR |
-| `debug_all` | N/A | `isEnabledFor()` allows everything |
-
-### Solver Debug via `solve()`
+### Per-solver debug via `solve()`
 
 ```python
-# AbstractSolver.solve() sets logger level:
-solve(debug=True)   # → self._logger.setLevel(DEBUG)
-solve(debug=False)  # → self._logger.setLevel(INFO)
-solve(debug=None)   # → inherit from root (NOTSET)
+solver.solve(debug=True)   # Logger set to DEBUG → debug messages visible
+solver.solve(debug=False)  # Logger set to INFO  → debug messages hidden
+solver.solve(debug=None)   # Logger inherits from root (default)
 ```
 
-### DEBUG_ALL_ONLY Level
+Inside `AbstractSolver.solve()`, the logger level is set and restored:
+```python
+saved_level = self.__logger.level
+self.__logger.setLevel(logging.DEBUG)  # or INFO
+try:
+    self._solve_impl(what)
+finally:
+    self.__logger.setLevel(saved_level)
+```
 
-A custom level (5) below DEBUG (10) for messages that should only appear
-with `--debug-all`:
+### Global debug via config
+
+When `config.solver_debug` is `True` (toggled via Ctrl+O in GUI), the app
+sets the root logger level to `DEBUG`, which propagates to all child loggers
+that haven't set their own level.
+
+## Non-Standard Constants
+
+### `DEBUG_ALL_ONLY` (level 5)
+
+A custom logging level **below** `DEBUG` (10). Messages logged at this level
+are only visible when `debug_all` mode is enabled.
 
 ```python
 from cube.utils.std_logging import DEBUG_ALL_ONLY
 
-# Application-level "verbose" debug:
-logger.log(DEBUG_ALL_ONLY, "only visible with --debug-all")
+# Visible only with --debug-all or CUBE_DEBUG_ALL=1
+logger.log(DEBUG_ALL_ONLY, "extra verbose info")
 
-# Normal debug:
-logger.debug("visible when solver debug is on")
+# Visible in normal debug mode
+logger.debug("normal debug info")
 ```
 
-### Decision Table
+**Where it's used:** `ApplicationAndViewState.debug(debug_on, *args)` — the
+`debug_on` parameter maps directly:
+- `debug_on=True` → `logger.debug(msg)` — level 10 (normal debug)
+- `debug_on=False` → `logger.log(DEBUG_ALL_ONLY, msg)` — level 5 (extra verbose)
 
-| `quiet_all` | `debug_all` | Logger level | `logger.debug("msg")` | `logger.log(DEBUG_ALL_ONLY, "msg")` |
-|-------------|-------------|-------------|------------------------|-------------------------------------|
-| True | * | * | **Suppressed** | **Suppressed** |
-| False | True | * | **Shown** | **Shown** |
-| False | False | DEBUG | **Shown** | Suppressed |
-| False | False | INFO | Suppressed | Suppressed |
+### `cube_level` (1-5 verbosity filter)
 
-## Cube-Level Filtering (1-5 Verbosity)
-
-For fine-grained verbosity within DEBUG, use `set_cube_level()`:
+For fine-grained verbosity **within** DEBUG, some solvers use a 1–5 scale:
 
 ```python
-self._logger.set_cube_level(3)  # Only show cube_level <= 3
+# Set threshold on the logger
+self._logger.set_cube_level(3)   # Only show messages with cube_level <= 3
 
-# In SolverHelper.debug():
-self.debug("important", level=1)   # Shown (1 <= 3)
-self.debug("normal", level=3)      # Shown (3 <= 3)
-self.debug("verbose", level=5)     # Hidden (5 > 3)
+# Log with a cube_level (via SolverHelper.debug())
+self.debug("important info", level=1)   # Shown (1 <= 3)
+self.debug("normal detail", level=3)    # Shown (3 <= 3)
+self.debug("verbose trace", level=5)    # Hidden (5 > 3)
 ```
 
-Only 5 solver classes use this (NxNCenters, NxNEdges, E2ECommutator,
-_LBLNxNEdges, _LBLL3Edges).
+Implemented as a standard `logging.Filter` (`_CubeLevelFilter`) attached to
+each `CubeLogger` instance. Only 5 solver classes use this:
+`NxNCenters`, `NxNEdges`, `E2ECommutator`, `_LBLNxNEdges`, `_LBLL3Edges`.
 
-## Indented Sections
+## Environment Variables
+
+| Variable | Values | Effect |
+|----------|--------|--------|
+| `CUBE_QUIET_ALL` | `1`, `true`, `yes` | Suppress ALL debug output (errors still pass) |
+| `CUBE_DEBUG_ALL` | `1`, `true`, `yes` | Enable ALL debug output, including `DEBUG_ALL_ONLY` |
+
+Read once at startup by `setup_root_logger()`. They override the
+`quiet_all` / `debug_all` constructor parameters.
+
+### How they work
+
+Both flags are checked in `CubeLogger.isEnabledFor()`, which overrides the
+standard method:
 
 ```python
-with self._logger.tab("Processing slice 1"):
-    self._logger.debug("nested message")
-    with self._logger.tab("Source face"):
-        self._logger.debug("deeper nested")
-
-# Output:
-# DEBUG: LBL:L1Cross: ── Processing slice 1 ──
-# DEBUG: LBL:L1Cross:│  nested message
-# DEBUG: LBL:L1Cross:│  ── Source face ──
-# DEBUG: LBL:L1Cross:│  │  deeper nested
-# DEBUG: LBL:L1Cross:│  ── end: Source face ──
-# DEBUG: LBL:L1Cross: ── end: Processing slice 1 ──
+def isEnabledFor(self, level):
+    if root._quiet_all and level < logging.ERROR:
+        return False    # Suppress everything below ERROR
+    if root._debug_all:
+        return True     # Allow everything
+    return super().isEnabledFor(level)
 ```
 
-## Solver Logger Hierarchy
+This means:
+- `quiet_all` wins over everything (even explicit `setLevel(DEBUG)` on a child)
+- `debug_all` overrides all level settings (even explicit `setLevel(INFO)`)
+- Errors (`logger.error(...)`) always pass, even with `quiet_all`
 
-### AbstractSolver
+### Priority
 
-```python
-class AbstractSolver(Solver, ABC):
-    def __init__(self, op, parent_logger: CubeLogger, logger_prefix=None):
-        prefix = logger_prefix or "Solver"
-        self.__logger = parent_logger.getChild(prefix)
-
-    def debug(self, *args):
-        """Resolve lazy args and log at DEBUG level."""
-        if not self.__logger.isEnabledFor(logging.DEBUG):
-            return
-        resolved = [_resolve_arg(a) for a in args]
-        self.__logger.debug(" ".join(str(a) for a in resolved))
 ```
-
-### SolverHelper
-
-```python
-class SolverHelper:
-    def __init__(self, solver, debug_prefix):
-        self.__logger = solver._logger.getChild(debug_prefix)
-
-    def debug(self, *args, level=None):
-        """Resolve lazy args with optional cube-level filtering."""
-        ...
-```
-
-### Factory Pattern
-
-```python
-# Root solvers receive the root cube logger:
-class Solvers:
-    @staticmethod
-    def lbl_big(op):
-        parent_logger = op.cube.sp.logger  # Root CubeLogger
-        return LayerByLayerNxNSolver(op, parent_logger)
-
-# Child solvers receive parent's logger:
-shadow_solver = Solvers3x3.beginner(dual_op, self._logger)
+quiet_all=True  →  suppress all (except errors)
+quiet_all=False, debug_all=True  →  show everything
+quiet_all=False, debug_all=False  →  use standard level filtering
 ```
 
 ## Lazy Argument Resolution
 
+Solver `debug()` methods accept callables for lazy evaluation:
+
 ```python
-# Callables are resolved only when debug is enabled:
+# Lambda only called if debug is actually enabled
 self.debug("Result:", lambda: expensive_computation())
 
-# Implemented in AbstractSolver.debug() / SolverHelper.debug():
-if not logger.isEnabledFor(DEBUG):
-    return  # Lambda never called
-resolved = [_resolve_arg(a) for a in args]
+# Multiple lazy args
+self.debug("Face:", lambda: face.color, "Grade:", lambda: calculate_grade())
+```
+
+Implemented in `AbstractSolver.debug()` and `SolverHelper.debug()` — they
+check `logger.isEnabledFor(DEBUG)` first, then resolve callables, then log.
+The standard `CubeLogger.debug()` itself does NOT resolve callables — that's
+the caller's responsibility.
+
+## Solver Logger Hierarchy
+
+```
+logging.getLogger("cube")              ← root, created by setup_root_logger()
+├── getChild("LBL")                    ← AbstractSolver (LayerByLayerNxNSolver)
+│   ├── getChild("Beginner3x3")        ← AbstractSolver (BeginnerSolver3x3)
+│   │   ├── getChild("L1Cross")        ← SolverHelper
+│   │   ├── getChild("L1Corners")      ← SolverHelper
+│   │   └── ...
+│   ├── getChild("NxNCenters")         ← SolverHelper
+│   └── getChild("NxNEdges")           ← SolverHelper
+├── getChild("Reducer")                ← AbstractReducer
+│   └── getChild("CommonOp")           ← SolverHelper
+└── getChild("Cage")                   ← AbstractSolver (CageNxNSolver)
+```
+
+Logger names are dot-separated (`cube.LBL.Beginner3x3.L1Cross`).
+`ColonPrefixFormatter` converts dots to colons for display:
+`DEBUG: LBL:Beginner3x3:L1Cross: message`.
+
+## Creating Loggers
+
+### In a solver (AbstractSolver subclass)
+
+```python
+class MySolver(AbstractSolver):
+    def __init__(self, op, parent_logger: CubeLogger):
+        super().__init__(op, parent_logger, logger_prefix="MySolver")
+        # self._logger is now cube.*.MySolver
+```
+
+### In a helper (SolverHelper subclass)
+
+```python
+class MyHelper(SolverHelper):
+    def __init__(self, solver):
+        super().__init__(solver, "MyHelper")
+        # self._logger is now cube.*.MySolver.MyHelper
+```
+
+### In a reducer (AbstractReducer subclass)
+
+```python
+class MyReducer(AbstractReducer):
+    def __init__(self, op):
+        super().__init__(op, logger_prefix="MyReducer")
+        # self._logger is now cube.MyReducer
 ```
 
 ## Stream Callbacks
 
-Legacy API for routing formatted log lines to callbacks:
+For routing log output to buffers or WebSocket clients:
 
 ```python
-logger.add_stream(buffer.append)   # Register
-logger.remove_stream(buffer.append) # Unregister
+# Register a callback to receive every formatted log line
+logger.add_stream(my_buffer.append)
+
+# Unregister
+logger.remove_stream(my_buffer.append)
 ```
 
-Internally wraps the callback as a `logging.Handler`.
+Internally wraps the callback in a standard `logging.Handler`. The root
+`CubeLogger` also IS-A `logging.Logger`, so you can directly use
+`addHandler()` / `removeHandler()` for full control.
 
-## Environment Variables
+## What's Standard vs Custom
 
-| Variable | Effect |
-|----------|--------|
-| `CUBE_QUIET_ALL=1` | Suppress ALL debug output (errors still pass) |
-| `CUBE_DEBUG_ALL=1` | Enable ALL debug output including DEBUG_ALL_ONLY |
+| Feature | Standard `logging` | Custom on `CubeLogger` |
+|---------|-------------------|----------------------|
+| `debug()`, `info()`, `error()` | Yes | |
+| `setLevel()`, `getChild()` | Yes | |
+| `addHandler()`, `removeHandler()` | Yes | |
+| `isEnabledFor()` | Yes (overridden) | quiet_all / debug_all check |
+| `makeRecord()` | Yes (overridden) | auto-inject indent |
+| `tab()` | | Yes |
+| `set_cube_level()` | | Yes (via `logging.Filter`) |
+| `add_stream()` / `remove_stream()` | | Yes (wraps `addHandler`) |
+| `quiet_all` / `debug_all` properties | | Yes |
 
 ## Files
 
-| File | Purpose |
-|------|---------|
-| `src/cube/utils/logger.py` | `CubeLogger`, `setup_root_logger()`, `_CubeLevelFilter` |
-| `src/cube/utils/logger_protocol.py` | `LazyArg` type alias |
-| `src/cube/utils/std_logging.py` | `ColonPrefixFormatter`, `WebSocketLogHandler`, `DEBUG_ALL_ONLY` |
-| `src/cube/application/Logger.py` | Re-export for backwards compatibility |
-| `src/cube/application/state.py` | Calls `setup_root_logger()` |
+| File | Contents |
+|------|----------|
+| `src/cube/utils/logger.py` | `CubeLogger`, `setup_root_logger()`, `_CubeLevelFilter`, `LazyArg`, `_resolve_arg` |
+| `src/cube/utils/std_logging.py` | `ColonPrefixFormatter`, `WebSocketLogHandler`, `DEBUG_ALL_ONLY`, `ROOT_LOGGER_NAME` |
+| `src/cube/utils/logger_protocol.py` | `LazyArg` type alias (re-export) |
+| `src/cube/application/Logger.py` | Re-exports `CubeLogger`, `setup_root_logger` |
