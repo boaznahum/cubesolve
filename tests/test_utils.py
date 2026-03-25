@@ -5,11 +5,10 @@ Provides StubServiceProvider for tests that create Cube directly without full ap
 """
 
 from cube.application.config_impl import AppConfig
-from cube.utils.logger import setup_root_logger
+from cube.utils.logging import CubeLogger, setup_root_logger
 from cube.application.markers import IMarkerFactory, IMarkerManager, MarkerFactory, MarkerManager
 from cube.utils.config_protocol import ConfigProtocol
 from cube.utils.service_provider import IServiceProvider
-from cube.utils.logger import CubeLogger
 
 
 class StubServiceProvider(IServiceProvider):

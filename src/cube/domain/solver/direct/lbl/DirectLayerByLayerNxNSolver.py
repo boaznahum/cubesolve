@@ -49,7 +49,7 @@ from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.tracker._face_trackers import FaceTracker
 
 if TYPE_CHECKING:
-    from cube.utils.logger import CubeLogger
+    from cube.utils.logging import CubeLogger
 
 class DirectLayerByLayerNxNSolver(BaseSolver):
     """

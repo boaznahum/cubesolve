@@ -30,7 +30,7 @@ from cube.domain.solver.SolverName import SolverName
 from cube.utils.SSCode import SSCode
 
 if TYPE_CHECKING:
-    from cube.utils.logger import CubeLogger
+    from cube.utils.logging import CubeLogger
 
 
 class NxNSolverOrchestrator(AbstractSolver):

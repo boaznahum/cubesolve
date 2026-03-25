@@ -11,7 +11,7 @@ from cube.application.markers import (
     NoopMarkerManager,
 )
 from cube.application.state import ApplicationAndViewState
-from cube.utils.logger import CubeLogger
+from cube.utils.logging import CubeLogger
 from cube.domain.algs import Alg
 from cube.domain.model.Cube import Cube
 from cube.domain.solver import Solver, Solvers

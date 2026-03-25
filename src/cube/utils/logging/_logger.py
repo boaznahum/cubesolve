@@ -25,9 +25,10 @@ import os
 import sys
 from contextlib import contextmanager
 from enum import Enum
+from collections.abc import Mapping
 from typing import Any, Callable, Generator
 
-from cube.utils.std_logging import (
+from cube.utils.logging._std_logging import (
     ROOT_LOGGER_NAME,
     ColonPrefixFormatter,
     DEBUG_ALL_ONLY,
@@ -167,17 +168,23 @@ class CubeLogger(logging.Logger):
     # --- Record creation ---
 
     def makeRecord(
-        self, name: str, level: int, fn: str, lno: int, msg: object,
-        args: Any, exc_info: Any,
-        func: str | None = None, extra: dict[str, Any] | None = None,
-        sinfo: str | None = None,
+            self,
+            name: str,
+            level: int,
+            fn: str,
+            lno: int,
+            msg: object,
+            args: Any,
+            exc_info: Any,
+            func: str | None = None,
+            extra: Mapping[str, object] | None = None,
+            sinfo: str | None = None,
     ) -> logging.LogRecord:
         """Inject the current ``indent`` into every log record."""
-        if extra is None:
-            extra = {}
-        extra.setdefault("indent", self._indent)
+        merged: dict[str, object] = dict(extra) if extra else {}
+        merged.setdefault("indent", self._indent)
         return super().makeRecord(name, level, fn, lno, msg, args, exc_info,
-                                  func, extra, sinfo)
+                                  func, merged, sinfo)
 
     # --- Cube-level filtering ---
 

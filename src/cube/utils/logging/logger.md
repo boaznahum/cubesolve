@@ -4,7 +4,7 @@
 
 ```python
 import logging
-from cube.utils.logger import CubeLogger, setup_root_logger
+from cube.utils.logging import CubeLogger, setup_root_logger
 
 # 1. Set up the root logger (done once at app startup)
 root = setup_root_logger()
@@ -68,7 +68,7 @@ A custom logging level **below** `DEBUG` (10). Messages logged at this level
 are only visible when `debug_all` mode is enabled.
 
 ```python
-from cube.utils.std_logging import DEBUG_ALL_ONLY
+from cube.utils.logging import DEBUG_ALL_ONLY
 
 # Visible only with --debug-all or CUBE_DEBUG_ALL=1
 logger.log(DEBUG_ALL_ONLY, "extra verbose info")
@@ -235,9 +235,16 @@ Internally wraps the callback in a standard `logging.Handler`. The root
 
 ## Files
 
-| File | Contents |
-|------|----------|
-| `src/cube/utils/logger.py` | `CubeLogger`, `setup_root_logger()`, `_CubeLevelFilter`, `LazyArg`, `_resolve_arg` |
-| `src/cube/utils/std_logging.py` | `ColonPrefixFormatter`, `WebSocketLogHandler`, `DEBUG_ALL_ONLY`, `ROOT_LOGGER_NAME` |
-| `src/cube/utils/logger_protocol.py` | `LazyArg` type alias (re-export) |
-| `src/cube/application/Logger.py` | Re-exports `CubeLogger`, `setup_root_logger` |
+All logging code lives in `src/cube/utils/logging/`:
+
+| File | Purpose |
+|------|---------|
+| `__init__.py` | Public API — the only file external code imports from |
+| `_logger.py` | `CubeLogger`, `setup_root_logger()`, `LazyArg`, `_resolve_arg` |
+| `_std_logging.py` | `ColonPrefixFormatter`, `WebSocketLogHandler`, `DEBUG_ALL_ONLY`, `ROOT_LOGGER_NAME` |
+| `_log_stream_buffer.py` | `LogStreamBuffer` |
+| `logger.md` | This documentation |
+
+```python
+from cube.utils.logging import CubeLogger, setup_root_logger
+```

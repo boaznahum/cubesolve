@@ -13,8 +13,7 @@ from abc import ABCMeta
 from typing import TYPE_CHECKING, Protocol
 
 from cube.utils.config_protocol import ConfigProtocol
-from cube.utils.logger import CubeLogger
-from cube.utils.logger import LazyArg
+from cube.utils.logging import CubeLogger, LazyArg
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube

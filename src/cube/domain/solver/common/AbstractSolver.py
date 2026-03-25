@@ -17,8 +17,7 @@ from cube.domain.solver.common.SolverStatistics import (
 from cube.domain.solver.common.CommonOp import CommonOp
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.solver import SolverResults, SolveStep
-from cube.utils.logger import CubeLogger, _resolve_arg, LazyArg
-from cube.utils.std_logging import ROOT_LOGGER_NAME
+from cube.utils.logging import CubeLogger, LazyArg, _resolve_arg
 
 if TYPE_CHECKING:
     pass
@@ -179,6 +178,8 @@ class AbstractSolver(Solver, ABC):
         for topic_name, lines in stats.format_all(strip_prefix=my_prefix):
             for line in lines:
                 self.debug(lambda: f"  [{topic_name}] {line}")
+        self.debug("==== End of Solver Statistics ===========")
+
 
     def _run_child_solver(self, child: Solver, what: SolveStep) -> SolverResults:
         if self._debug_override is not None:

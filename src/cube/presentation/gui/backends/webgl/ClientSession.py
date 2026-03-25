@@ -28,8 +28,7 @@ from cube.presentation.gui.backends.webgl.CubeStateSerializer import apply_cube_
 from cube.presentation.gui.backends.webgl.FlowStateMachine import FlowEvent, FlowState, FlowStateMachine
 from cube.presentation.gui.backends.webgl.SessionState import SessionStateSnapshot
 from cube.presentation.gui.commands import Command, CommandContext
-from cube.utils.log_stream_buffer import LogStreamBuffer
-from cube.utils.std_logging import ColonPrefixFormatter, WebSocketLogHandler
+from cube.utils.logging import ColonPrefixFormatter, LogStreamBuffer, WebSocketLogHandler
 from cube.version import get_version
 
 if TYPE_CHECKING:

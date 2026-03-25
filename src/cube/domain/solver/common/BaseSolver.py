@@ -8,7 +8,7 @@ from .AbstractSolver import AbstractSolver
 
 if TYPE_CHECKING:
     from .CommonOp import CommonOp
-    from cube.utils.logger import CubeLogger
+    from cube.utils.logging import CubeLogger
 
 _Common: TypeAlias = "CommonOp"
 

@@ -57,7 +57,7 @@ from cube.domain.solver.solver import SolverResults, SolveStep
 from cube.utils.SSCode import SSCode
 
 if TYPE_CHECKING:
-    from cube.utils.logger import CubeLogger
+    from cube.utils.logging import CubeLogger
 
 
 class CageNxNSolver(BaseSolver):

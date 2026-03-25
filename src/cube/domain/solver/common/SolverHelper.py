@@ -3,7 +3,7 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING, Callable, ContextManager, Tuple, TypeAlias, final
 
 from cube.utils.config_protocol import ConfigProtocol
-from cube.utils.logger import CubeLogger, _resolve_arg, LazyArg
+from cube.utils.logging import CubeLogger, LazyArg, _resolve_arg
 from cube.domain.model.Cube import Cube, CubeSupplier
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat

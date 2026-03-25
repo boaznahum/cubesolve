@@ -28,7 +28,7 @@ from cube.domain.solver.SolverName import SolverName
 from ...model import Color, Face
 
 if TYPE_CHECKING:
-    from cube.utils.logger import CubeLogger
+    from cube.utils.logging import CubeLogger
 
 from ._L1 import L1
 from ._L3Orient import L3Orient

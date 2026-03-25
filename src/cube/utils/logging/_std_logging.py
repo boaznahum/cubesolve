@@ -8,7 +8,7 @@ Provides:
 
 Usage:
     import logging
-    from cube.utils.std_logging import ROOT_LOGGER_NAME, ColonPrefixFormatter, WebSocketLogHandler
+    from cube.utils.logging import ColonPrefixFormatter, WebSocketLogHandler
 
     # Root logger with console output
     root = logging.getLogger(ROOT_LOGGER_NAME)
@@ -26,10 +26,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import TYPE_CHECKING, Callable
-
-if TYPE_CHECKING:
-    pass
+from typing import Callable
 
 # All solver loggers live under this namespace.
 ROOT_LOGGER_NAME = "cube"

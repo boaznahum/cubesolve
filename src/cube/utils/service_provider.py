@@ -12,7 +12,7 @@ from cube.utils.config_protocol import ConfigProtocol
 if TYPE_CHECKING:
     from cube.application.markers.IMarkerFactory import IMarkerFactory
     from cube.application.markers.IMarkerManager import IMarkerManager
-    from cube.utils.logger import CubeLogger
+    from cube.utils.logging import CubeLogger
 
 
 @runtime_checkable

@@ -19,7 +19,7 @@ from cube.domain.solver.protocols.ReducerProtocol import (
     ReductionResults,
 )
 from cube.domain.solver.protocols.SolverElementsProvider import SolverElementsProvider
-from cube.utils.logger import CubeLogger, _resolve_arg, LazyArg
+from cube.utils.logging import CubeLogger, LazyArg, _resolve_arg
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
@@ -104,16 +104,6 @@ class AbstractReducer(ReducerProtocol, SolverElementsProvider, ABC):
 
     def reset_block_statistics(self) -> None:
         pass
-
-    def display_statistics(self) -> None:
-        stats: SolverStatistics = self.get_block_statistics()
-        if stats.is_empty():
-            return
-        my_prefix: str = self._logger.name.split(".")[-1] + ":"
-        self.debug("[Solver Statistics]")
-        for topic_name, lines in stats.format_all(strip_prefix=my_prefix):
-            for line in lines:
-                self.debug(lambda: f"  [{topic_name}] {line}")
 
     # ---- ReducerProtocol interface (abstract) ----
 

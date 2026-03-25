@@ -19,12 +19,11 @@ sys.path.insert(0, str(project_root))
 os.environ["CUBE_QUIET_ALL"] = "1"
 
 from cube.application.config_impl import AppConfig
-from cube.utils.logger import setup_root_logger
+from cube.utils.logging import CubeLogger, setup_root_logger
 from cube.application.markers import IMarkerFactory, IMarkerManager, MarkerFactory, MarkerManager
 from cube.domain.algs.Scramble import scramble
 from cube.domain.model.Cube import Cube
 from cube.utils.config_protocol import ConfigProtocol
-from cube.utils.logger import CubeLogger
 from cube.utils.service_provider import IServiceProvider
 
 

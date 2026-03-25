@@ -140,7 +140,7 @@ from cube.domain.solver.SolverName import SolverName
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
     from cube.domain.model.Face import Face
-    from cube.utils.logger import CubeLogger
+    from cube.utils.logging import CubeLogger
 
 
 # Face order for Kociemba's 54-char string: U R F D L B

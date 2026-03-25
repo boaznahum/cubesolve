@@ -8,8 +8,7 @@ from typing import Any, Literal, Tuple
 from cube.application.animation.AnimationText import AnimationText
 import logging
 
-from cube.application.Logger import CubeLogger, setup_root_logger
-from cube.utils.std_logging import DEBUG_ALL_ONLY
+from cube.utils.logging import CubeLogger, DEBUG_ALL_ONLY, setup_root_logger
 
 # noinspection PyMethodMayBeStatic
 from cube.domain import algs

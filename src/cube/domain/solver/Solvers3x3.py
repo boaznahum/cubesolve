@@ -9,7 +9,7 @@ from cube.domain.solver.protocols.Solver3x3Protocol import Solver3x3Protocol
 
 if TYPE_CHECKING:
     from cube.domain.model.Color import Color
-    from cube.utils.logger import CubeLogger
+    from cube.utils.logging import CubeLogger
 
 
 class Solvers3x3:

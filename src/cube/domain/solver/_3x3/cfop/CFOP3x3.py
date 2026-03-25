@@ -12,7 +12,7 @@ from cube.domain.solver.solver import SolverResults, SolveStep
 from cube.domain.solver.SolverName import SolverName
 
 if TYPE_CHECKING:
-    from cube.utils.logger import CubeLogger
+    from cube.utils.logging import CubeLogger
 
 from ._F2L import F2L
 from ._OLL import OLL

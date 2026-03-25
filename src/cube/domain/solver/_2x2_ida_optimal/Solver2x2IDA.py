@@ -32,7 +32,7 @@ from cube.domain.solver.SolverName import SolverName
 if TYPE_CHECKING:
     from cube.domain.model.Corner import Corner
     from cube.domain.model.Cube import Cube
-    from cube.utils.logger import CubeLogger
+    from cube.utils.logging import CubeLogger
 
 # Move index → Alg mapping.
 # Indices 0–8: U, U2, U', R, R2, R', F, F2, F'

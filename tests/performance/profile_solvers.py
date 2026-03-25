@@ -48,7 +48,7 @@ os.environ["CUBE_QUIET_ALL"] = "1"
 
 from cube.application import _config as cfg
 from cube.application.config_impl import AppConfig
-from cube.utils.logger import setup_root_logger
+from cube.utils.logging import CubeLogger, setup_root_logger
 from cube.application.markers import IMarkerFactory, IMarkerManager, MarkerFactory, MarkerManager
 from cube.application.state import ApplicationAndViewState
 from cube.application.commands.Operator import Operator
@@ -57,7 +57,6 @@ from cube.domain.model.Cube import Cube
 from cube.domain.solver import Solver, Solvers
 from cube.domain.solver.SolverName import SolverName
 from cube.utils.config_protocol import ConfigProtocol
-from cube.utils.logger import CubeLogger
 from cube.utils.service_provider import IServiceProvider
 
 
