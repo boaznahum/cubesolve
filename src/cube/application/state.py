@@ -73,6 +73,12 @@ class ApplicationAndViewState:
 
         # Root cube logger — all solver loggers are children of this.
         self._logger: CubeLogger = setup_root_logger(debug_all=debug_all, quiet_all=quiet_all)
+
+        # Sync root logger level when config.solver_debug changes (Ctrl+O).
+        if config.solver_debug:
+            self._logger.setLevel(logging.DEBUG)
+        config.add_config_listener(self._on_config_change)
+
         self._speed: float = config.animation_speed_config.default_index
 
         # self._alpha_x_0: float = 0.3
@@ -364,6 +370,11 @@ class ApplicationAndViewState:
             self._last_scramble_key_size = (None, None)
 
         return self._last_scramble_key_size
+
+    def _on_config_change(self, field_name: str, value: object) -> None:
+        """React to config changes — sync root logger level with solver_debug."""
+        if field_name == "solver_debug":
+            self._logger.setLevel(logging.DEBUG if value else logging.INFO)
 
     @property
     def logger(self) -> CubeLogger:
