@@ -32,7 +32,7 @@ from cube.domain.solver.SolverName import SolverName
 if TYPE_CHECKING:
     from cube.domain.model.Corner import Corner
     from cube.domain.model.Cube import Cube
-    from cube.utils.logger_protocol import ILogger
+    from cube.utils.logger import CubeLogger
 
 # Move index → Alg mapping.
 # Indices 0–8: U, U2, U', R, R2, R', F, F2, F'
@@ -139,7 +139,7 @@ class Solver2x2IDA(Solver2x2Base):
     def __init__(
         self,
         op: OperatorProtocol,
-        parent_logger: ILogger,
+        parent_logger: CubeLogger,
     ) -> None:
         super().__init__(op, parent_logger, logger_prefix="Solver2x2IDA")
 

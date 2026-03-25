@@ -43,7 +43,7 @@ class NxNEdges(SolverHelper):
     def __init__(self, slv: SolverElementsProvider, advanced_edge_parity: bool,
                  preserve_other_edges: bool = False) -> None:
         super().__init__(slv, "NxNEdges")
-        self._logger.set_level(NxNEdges.D_LEVEL)
+        self._logger.set_cube_level(NxNEdges.D_LEVEL)
         self._advanced_edge_parity = advanced_edge_parity
         self._preserve_other_edges = preserve_other_edges
 

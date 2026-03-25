@@ -133,7 +133,7 @@ class NxNCenters(SolverHelper):
                 where face 5/6 use MarkedFaceTracker.
         """
         super().__init__(slv, "NxNCenters")
-        self._logger.set_level(NxNCenters.D_LEVEL)
+        self._logger.set_cube_level(NxNCenters.D_LEVEL)
 
         self._preserve_cage = preserve_cage
         self._tracker_holder: FacesTrackerHolder | None = tracker_holder

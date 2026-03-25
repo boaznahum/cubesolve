@@ -1,8 +1,9 @@
+import logging
 from abc import abstractmethod
 from typing import TYPE_CHECKING, Callable, ContextManager, Tuple, TypeAlias, final
 
 from cube.utils.config_protocol import ConfigProtocol
-from cube.utils.logger_protocol import ILogger, LazyArg
+from cube.utils.logger import CubeLogger, _resolve_arg, LazyArg
 from cube.domain.model.Cube import Cube, CubeSupplier
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
@@ -38,7 +39,7 @@ class SolverHelper(CubeSupplier, SolverElementsProvider):
         self._solver = solver
         self._cube = solver.cube
         self._cqr = solver.cube.cqr
-        self.__logger: ILogger = solver._logger.with_prefix(debug_prefix)
+        self.__logger: CubeLogger = solver._logger.getChild(debug_prefix)  # type: ignore[assignment]
 
         if _is_common_op:
             self._cmn = self  # type: ignore  # CommonOp is its own cmn
@@ -47,7 +48,7 @@ class SolverHelper(CubeSupplier, SolverElementsProvider):
             self._cmn = CommonOp(self)
 
     @property
-    def _logger(self) -> ILogger:
+    def _logger(self) -> CubeLogger:
         return self.__logger
 
     def debug(self, *args: LazyArg, level: int | None = None) -> None:
@@ -56,9 +57,20 @@ class SolverHelper(CubeSupplier, SolverElementsProvider):
         Args:
             *args: Arguments to print. Can be regular values or Callable[[], Any]
                    for lazy evaluation.
-            level: Optional debug level. If set, checks level <= threshold.
+            level: Optional cube-level (1-5). If set, checks against threshold.
         """
-        self._logger.debug(None, *args, level=level)
+        if not self._logger.isEnabledFor(logging.DEBUG):
+            return
+        if level is not None:
+            threshold = self._logger.cube_level_threshold
+            if threshold is not None and level > threshold:
+                return
+        resolved_args = [_resolve_arg(a) for a in args]
+        message = " ".join(str(a) for a in resolved_args)
+        if level is not None:
+            self._logger.debug(message, extra={'cube_level': level})
+        else:
+            self._logger.debug(message)
 
     @property
     def cube(self) -> Cube:
@@ -89,9 +101,6 @@ class SolverHelper(CubeSupplier, SolverElementsProvider):
         """
         :deprecated: use annotate() directly
         """
-        # Resolve dynamically from the operator — the annotation protocol may be
-        # replaced after solver construction (e.g. when enable_animation() swaps
-        # NoopAnnotation for OpAnnotation).
         return self._solver.op.annotation
 
     def annotate(self, *elements: Tuple[SupportsAnnotation, AnnWhat],
@@ -138,7 +147,3 @@ class StepSolver(SolverHelper):
     @abstractmethod
     def is_solved(self) -> bool:
         pass
-
-
-
-

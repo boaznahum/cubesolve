@@ -34,6 +34,12 @@ if TYPE_CHECKING:
 # All solver loggers live under this namespace.
 ROOT_LOGGER_NAME = "cube"
 
+# Custom level below DEBUG (10).  Messages logged at this level are only
+# visible when ``debug_all`` is enabled — they represent "extra verbose"
+# information that should be hidden during normal debug sessions.
+DEBUG_ALL_ONLY: int = 5
+logging.addLevelName(DEBUG_ALL_ONLY, "DEBUG_ALL")
+
 
 class ColonPrefixFormatter(logging.Formatter):
     """Format log records using the solver's colon-separated prefix convention.
@@ -122,7 +128,7 @@ class _StreamCallbackHandler(logging.Handler):
     """
 
     def __init__(self, callback: Callable[[str], None]) -> None:
-        super().__init__(logging.DEBUG)
+        super().__init__(DEBUG_ALL_ONLY)
         self.callback = callback
 
     def emit(self, record: logging.LogRecord) -> None:

@@ -12,7 +12,7 @@ from cube.domain.solver.solver import SolverResults, SolveStep
 from cube.domain.solver.SolverName import SolverName
 
 if TYPE_CHECKING:
-    from cube.utils.logger_protocol import ILogger
+    from cube.utils.logger import CubeLogger
 
 from ._F2L import F2L
 from ._OLL import OLL
@@ -46,7 +46,7 @@ class CFOP3x3(BaseSolver, Solver3x3Protocol):
     def __init__(
         self,
         op: OperatorProtocol,
-        parent_logger: "ILogger",
+        parent_logger: "CubeLogger",
     ) -> None:
         """
         Create a CFOP3x3 solver.

@@ -57,7 +57,7 @@ from cube.domain.solver.solver import SolverResults, SolveStep
 from cube.utils.SSCode import SSCode
 
 if TYPE_CHECKING:
-    from cube.utils.logger_protocol import ILogger
+    from cube.utils.logger import CubeLogger
 
 
 class CageNxNSolver(BaseSolver):
@@ -85,7 +85,7 @@ class CageNxNSolver(BaseSolver):
 
     __slots__ = ["_nxn_edges", "_edge_parity", "_corner_swap"]
 
-    def __init__(self, op: OperatorProtocol, parent_logger: "ILogger") -> None:
+    def __init__(self, op: OperatorProtocol, parent_logger: "CubeLogger") -> None:
         """
         Create a Cage method solver.
 

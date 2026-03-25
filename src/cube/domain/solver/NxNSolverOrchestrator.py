@@ -30,7 +30,7 @@ from cube.domain.solver.SolverName import SolverName
 from cube.utils.SSCode import SSCode
 
 if TYPE_CHECKING:
-    from cube.utils.logger_protocol import ILogger
+    from cube.utils.logger import CubeLogger
 
 
 class NxNSolverOrchestrator(AbstractSolver):
@@ -68,7 +68,7 @@ class NxNSolverOrchestrator(AbstractSolver):
     def __init__(
         self,
         op: OperatorProtocol,
-        parent_logger: "ILogger",
+        parent_logger: "CubeLogger",
         reducer: ReducerProtocol,
         solver_3x3: Solver3x3Protocol,
         solver_name: SolverName,

@@ -36,7 +36,7 @@ class _LBLNxNEdges(SolverHelper):
 
     def __init__(self, slv: SolverElementsProvider) -> None:
         super().__init__(slv, "_LBLNxNEdges")
-        self._logger.set_level(_LBLNxNEdges.D_LEVEL)
+        self._logger.set_cube_level(_LBLNxNEdges.D_LEVEL)
         self._e2e_comm = E2ECommutator(slv)
 
     def solve_single_center_face_row(

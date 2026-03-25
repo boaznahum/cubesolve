@@ -12,7 +12,7 @@ from cube.utils.config_protocol import ConfigProtocol
 if TYPE_CHECKING:
     from cube.application.markers.IMarkerFactory import IMarkerFactory
     from cube.application.markers.IMarkerManager import IMarkerManager
-    from cube.utils.logger_protocol import ILogger
+    from cube.utils.logger import CubeLogger
 
 
 @runtime_checkable
@@ -42,6 +42,6 @@ class IServiceProvider(Protocol):
         ...
 
     @property
-    def logger(self) -> "ILogger":
-        """Get the logger for debug output control."""
+    def logger(self) -> "CubeLogger":
+        """Get the root cube logger for debug output control."""
         ...

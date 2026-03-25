@@ -789,12 +789,12 @@ class ClientSession:
         handler = WebSocketLogHandler(self._send)
         handler.setFormatter(ColonPrefixFormatter())
         self._console_ws_handler = handler
-        self._app.vs.logger.std_root_logger.addHandler(handler)
+        self._app.vs.logger.addHandler(handler)
 
     def _handle_console_unsubscribe(self) -> None:
         """Client closed the console — remove live handler."""
         if self._console_ws_handler is not None:
-            self._app.vs.logger.std_root_logger.removeHandler(self._console_ws_handler)
+            self._app.vs.logger.removeHandler(self._console_ws_handler)
             self._console_ws_handler = None
 
     def _handle_command(self, command_name: str) -> None:

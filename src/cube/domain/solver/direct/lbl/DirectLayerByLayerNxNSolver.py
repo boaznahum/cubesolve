@@ -49,7 +49,7 @@ from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.tracker._face_trackers import FaceTracker
 
 if TYPE_CHECKING:
-    from cube.utils.logger_protocol import ILogger
+    from cube.utils.logger import CubeLogger
 
 class DirectLayerByLayerNxNSolver(BaseSolver):
     """
@@ -73,7 +73,7 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
     __slots__ = ["_nxn_edges", "_edge_parity", "_corner_swap", "_shadow_helper", "_lbl_slices",
                  "_l3_edges", "_accumulated_temp_stats"]
 
-    def __init__(self, op: OperatorProtocol, parent_logger: "ILogger") -> None:
+    def __init__(self, op: OperatorProtocol, parent_logger: "CubeLogger") -> None:
         """
         Create a Layer-by-Layer solver.
 

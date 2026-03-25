@@ -23,7 +23,7 @@ class E2ECommutator(SolverHelper):
 
     def __init__(self, slv: SolverElementsProvider) -> None:
         super().__init__(slv, "E2EComm")
-        self._logger.set_level(E2ECommutator.D_LEVEL)
+        self._logger.set_cube_level(E2ECommutator.D_LEVEL)
 
     def try_right_or_left_edge_to_edge_commutator_by_wings(self,
                                                            target_wing: EdgeWing,

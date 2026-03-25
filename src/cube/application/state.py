@@ -6,7 +6,10 @@ from pathlib import Path
 from typing import Any, Literal, Tuple
 
 from cube.application.animation.AnimationText import AnimationText
-from cube.application.Logger import Logger
+import logging
+
+from cube.application.Logger import CubeLogger, setup_root_logger
+from cube.utils.std_logging import DEBUG_ALL_ONLY
 
 # noinspection PyMethodMayBeStatic
 from cube.domain import algs
@@ -68,8 +71,8 @@ class ApplicationAndViewState:
         # Store config reference for access throughout the class
         self._config = config
 
-        # Logger handles debug/quiet flags with env var override
-        self._logger = Logger(debug_all=debug_all, quiet_all=quiet_all)
+        # Root cube logger — all solver loggers are children of this.
+        self._logger: CubeLogger = setup_root_logger(debug_all=debug_all, quiet_all=quiet_all)
         self._speed: float = config.animation_speed_config.default_index
 
         # self._alpha_x_0: float = 0.3
@@ -363,14 +366,14 @@ class ApplicationAndViewState:
         return self._last_scramble_key_size
 
     @property
-    def logger(self) -> Logger:
-        """Return the logger instance."""
+    def logger(self) -> CubeLogger:
+        """Return the root cube logger."""
         return self._logger
 
     @property
     def is_debug_all(self) -> bool:
         """Return True if debug_all mode is enabled."""
-        return self._logger.is_debug_all
+        return self._logger.debug_all
 
     @property
     def quiet_all(self) -> bool:
@@ -383,16 +386,30 @@ class ApplicationAndViewState:
         self._logger.quiet_all = value
 
     def is_debug(self, debug_on: bool = False) -> bool:
-        """Check if debug output should happen."""
-        return self._logger.is_debug(debug_on)
+        """Check if debug output should happen.
 
-    def debug_prefix(self) -> str:
-        """Return the standard debug prefix."""
-        return self._logger.debug_prefix()
+        Args:
+            debug_on: If True, checks at DEBUG level.
+                      If False, checks at DEBUG_ALL_ONLY level.
+        """
+        if debug_on:
+            return self._logger.isEnabledFor(logging.DEBUG)
+        else:
+            return self._logger.isEnabledFor(DEBUG_ALL_ONLY)
 
     def debug(self, debug_on: bool, *args: Any) -> None:
-        """Print debug information if allowed by flags."""
-        self._logger.debug(debug_on, *args)
+        """Print debug information if allowed by flags.
+
+        Args:
+            debug_on: True → log at DEBUG (normal debug).
+                      False → log at DEBUG_ALL_ONLY (only with --debug-all).
+        """
+        level = logging.DEBUG if debug_on else DEBUG_ALL_ONLY
+        if not self._logger.isEnabledFor(level):
+            return
+        resolved = [a() if callable(a) else a for a in args]
+        message = " ".join(str(a) for a in resolved)
+        self._logger.log(level, message)
 
     def debug_dump(
         self,

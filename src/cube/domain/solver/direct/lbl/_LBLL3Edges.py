@@ -75,7 +75,7 @@ class _LBLL3Edges(SolverHelper):
 
     def __init__(self, slv: DirectLayerByLayerNxNSolver) -> None:
         super().__init__(slv, "_LBLL3Edges")
-        self._logger.set_level(_LBLL3Edges.D_LEVEL)
+        self._logger.set_cube_level(_LBLL3Edges.D_LEVEL)
 
         # Composition: reuse existing edge methods
         self._nxn_edges = _LBLNxNEdges(slv)

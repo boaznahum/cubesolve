@@ -16,11 +16,11 @@ from cube.application import _config as cfg
 from cube.domain.algs.Scramble import scramble
 from cube.domain.model.Cube import Cube
 from cube.application.config_impl import AppConfig
-from cube.application.Logger import Logger
+from cube.utils.logger import setup_root_logger
 from cube.application.markers import MarkerFactory, MarkerManager
 from cube.utils.config_protocol import ConfigProtocol
 from cube.utils.service_provider import IServiceProvider
-from cube.utils.logger_protocol import ILogger
+from cube.utils.logger import CubeLogger
 from cube.application.markers import IMarkerFactory, IMarkerManager
 
 
@@ -30,7 +30,7 @@ class ProfileServiceProvider(IServiceProvider):
         self._config = AppConfig()
         self._marker_factory = MarkerFactory()
         self._marker_manager = MarkerManager()
-        self._logger = Logger()
+        self._logger = setup_root_logger()
 
     @property
     def config(self) -> ConfigProtocol:
@@ -45,7 +45,7 @@ class ProfileServiceProvider(IServiceProvider):
         return self._marker_manager
 
     @property
-    def logger(self) -> ILogger:
+    def logger(self) -> CubeLogger:
         return self._logger
 
 
