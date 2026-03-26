@@ -1,4 +1,5 @@
 import functools
+import logging
 import warnings
 from collections.abc import Generator, MutableSequence, Reversible, Sequence
 from contextlib import contextmanager
@@ -124,7 +125,7 @@ class Operator(OperatorProtocol):
     def check_clear_rais_abort(self):
         if self._aborted:
             self._aborted = False
-            self._app_state.debug(True, lambda: f"A signal abort was raise, not in loop, raising an exception {OpAborted}")
+            self._app_state.logger.log_lazy(logging.DEBUG,lambda: f"A signal abort was raise, not in loop, raising an exception {OpAborted}")
             raise OpAborted()
 
     def play(self, alg: Alg, inv: Any = False, animation: Any = True) -> None:
@@ -215,8 +216,7 @@ class Operator(OperatorProtocol):
                     algs: list[SimpleAlg] = [*alg.flatten()]
 
                     if self._app_state.single_step_mode:
-                        self._app_state.debug(True,
-                                              lambda: f"In SS mode: going to run: {' '.join([str(a) for a in algs])}")
+                        self._app_state.logger.log_lazy(logging.DEBUG,lambda: f"In SS mode: going to run: {' '.join([str(a) for a in algs])}")
 
                     cube = self.cube
                     op = self.play
@@ -617,7 +617,8 @@ class Operator(OperatorProtocol):
         Only animation from top can be aborted
         :return:
         """
-        self._app_state.debug(True, "Operator: raised an abort signal")
+        self._app_state.logger.debug("Operator: raised an abort signal")
+
         self._aborted = True
 
     @property

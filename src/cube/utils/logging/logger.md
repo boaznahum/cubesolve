@@ -60,27 +60,24 @@ When `config.solver_debug` is `True` (toggled via Ctrl+O in GUI), the app
 sets the root logger level to `DEBUG`, which propagates to all child loggers
 that haven't set their own level.
 
-## Non-Standard Constants
+## Verbose Debug
 
-### `DEBUG_ALL_ONLY` (level 5)
+### `debug_verbose()` — only visible with `debug_all`
 
-A custom logging level **below** `DEBUG` (10). Messages logged at this level
-are only visible when `debug_all` mode is enabled.
+For low-importance messages that would clutter normal debug output
+(e.g. brightness/texture status). Hidden during normal debug sessions,
+only visible when `debug_all` is enabled.
 
 ```python
-from cube.utils.logging import DEBUG_ALL_ONLY
+# Normal debug — visible when logger level is DEBUG
+logger.debug("solving edge...")
 
-# Visible only with --debug-all or CUBE_DEBUG_ALL=1
-logger.log(DEBUG_ALL_ONLY, "extra verbose info")
-
-# Visible in normal debug mode
-logger.debug("normal debug info")
+# Verbose — only visible with CUBE_DEBUG_ALL=1 or debug_all=True
+logger.debug_verbose("Brightness: 0.75")
 ```
 
-**Where it's used:** `ApplicationAndViewState.debug(debug_on, *args)` — the
-`debug_on` parameter maps directly:
-- `debug_on=True` → `logger.debug(msg)` — level 10 (normal debug)
-- `debug_on=False` → `logger.log(DEBUG_ALL_ONLY, msg)` — level 5 (extra verbose)
+Internally uses a custom logging level (5) below DEBUG (10), but this
+level is not part of the public API.
 
 ### `cube_level` (1-5 verbosity filter)
 
@@ -229,6 +226,7 @@ Internally wraps the callback in a standard `logging.Handler`. The root
 | `isEnabledFor()` | Yes (overridden) | quiet_all / debug_all check |
 | `makeRecord()` | Yes (overridden) | auto-inject indent |
 | `tab()` | | Yes |
+| `debug_verbose()` | | Yes (logs at level 5, below DEBUG) |
 | `set_cube_level()` | | Yes (via `logging.Filter`) |
 | `add_stream()` / `remove_stream()` | | Yes (wraps `addHandler`) |
 | `quiet_all` / `debug_all` properties | | Yes |

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from cube.domain.solver.common.SolverStatistics import SolverStatistics
 from cube.domain.solver.protocols.OperatorProtocol import OperatorProtocol
@@ -19,7 +19,7 @@ from cube.domain.solver.protocols.ReducerProtocol import (
     ReductionResults,
 )
 from cube.domain.solver.protocols.SolverElementsProvider import SolverElementsProvider
-from cube.utils.logging import CubeLogger, LazyArg, _resolve_arg
+from cube.utils.logging import CubeLogger
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
@@ -76,13 +76,9 @@ class AbstractReducer(ReducerProtocol, SolverElementsProvider, ABC):
     def cmn(self) -> "CommonOp":
         return self._cmn
 
-    def debug(self, *args: LazyArg) -> None:
-        """Output debug information."""
-        if not self.__logger.isEnabledFor(logging.DEBUG):
-            return
-        resolved_args = [_resolve_arg(a) for a in args]
-        message = " ".join(str(a) for a in resolved_args)
-        self.__logger.debug(message)
+    def debug(self, *args: Any) -> None:
+        """Output debug information with lazy arg resolution."""
+        self.__logger.log_lazy(logging.DEBUG, *args)
 
     @property
     def _logger(self) -> CubeLogger:

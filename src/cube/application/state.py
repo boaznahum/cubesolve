@@ -8,7 +8,7 @@ from typing import Any, Literal, Tuple
 from cube.application.animation.AnimationText import AnimationText
 import logging
 
-from cube.utils.logging import CubeLogger, DEBUG_ALL_ONLY, setup_root_logger
+from cube.utils.logging import CubeLogger, setup_root_logger
 
 # noinspection PyMethodMayBeStatic
 from cube.domain import algs
@@ -394,32 +394,6 @@ class ApplicationAndViewState:
     def quiet_all(self, value: bool) -> None:
         """Set quiet_all mode."""
         self._logger.quiet_all = value
-
-    def is_debug(self, debug_on: bool = False) -> bool:
-        """Check if debug output should happen.
-
-        Args:
-            debug_on: If True, checks at DEBUG level.
-                      If False, checks at DEBUG_ALL_ONLY level.
-        """
-        if debug_on:
-            return self._logger.isEnabledFor(logging.DEBUG)
-        else:
-            return self._logger.isEnabledFor(DEBUG_ALL_ONLY)
-
-    def debug(self, debug_on: bool, *args: Any) -> None:
-        """Print debug information if allowed by flags.
-
-        Args:
-            debug_on: True → log at DEBUG (normal debug).
-                      False → log at DEBUG_ALL_ONLY (only with --debug-all).
-        """
-        level = logging.DEBUG if debug_on else DEBUG_ALL_ONLY
-        if not self._logger.isEnabledFor(level):
-            return
-        resolved = [a() if callable(a) else a for a in args]
-        message = " ".join(str(a) for a in resolved)
-        self._logger.log(level, message)
 
     def debug_dump(
         self,

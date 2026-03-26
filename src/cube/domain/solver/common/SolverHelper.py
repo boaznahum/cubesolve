@@ -1,9 +1,9 @@
 import logging
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Callable, ContextManager, Tuple, TypeAlias, final
+from typing import TYPE_CHECKING, Any, Callable, ContextManager, Tuple, TypeAlias, final
 
 from cube.utils.config_protocol import ConfigProtocol
-from cube.utils.logging import CubeLogger, LazyArg, _resolve_arg
+from cube.utils.logging import CubeLogger
 from cube.domain.model.Cube import Cube, CubeSupplier
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
@@ -51,26 +51,14 @@ class SolverHelper(CubeSupplier, SolverElementsProvider):
     def _logger(self) -> CubeLogger:
         return self.__logger
 
-    def debug(self, *args: LazyArg, level: int | None = None) -> None:
-        """Output debug information with optional level filtering.
+    def debug(self, *args: Any, level: int | None = None) -> None:
+        """Output debug information with lazy arg resolution and optional level filtering.
 
         Args:
-            *args: Arguments to print. Can be regular values or Callable[[], Any]
-                   for lazy evaluation.
-            level: Optional cube-level (1-5). If set, checks against threshold.
+            *args: Values or callables (``lambda: expensive()``). Resolved lazily.
+            level: Optional cube-level (1-5). If set, filtered by ``set_cube_level()`` threshold.
         """
-        if not self._logger.isEnabledFor(logging.DEBUG):
-            return
-        if level is not None:
-            threshold = self._logger.cube_level_threshold
-            if threshold is not None and level > threshold:
-                return
-        resolved_args = [_resolve_arg(a) for a in args]
-        message = " ".join(str(a) for a in resolved_args)
-        if level is not None:
-            self._logger.debug(message, extra={'cube_level': level})
-        else:
-            self._logger.debug(message)
+        self._logger.log_lazy(logging.DEBUG, *args, cube_level=level)
 
     @property
     def cube(self) -> Cube:

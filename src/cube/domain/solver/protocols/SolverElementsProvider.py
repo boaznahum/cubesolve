@@ -13,7 +13,7 @@ from abc import ABCMeta
 from typing import TYPE_CHECKING, Protocol
 
 from cube.utils.config_protocol import ConfigProtocol
-from cube.utils.logging import CubeLogger, LazyArg
+from cube.utils.logging import CubeLogger
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
@@ -52,7 +52,7 @@ class SolverElementsProvider(Protocol, metaclass=ABCMeta):
         """Common operations' helper."""
         ...
 
-    def debug(self, *args: LazyArg) -> None:
+    def debug(self, *args: object) -> None:
         """Output debug information.
 
         Args:

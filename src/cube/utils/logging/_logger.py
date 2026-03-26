@@ -36,7 +36,7 @@ from cube.utils.logging._std_logging import (
 )
 
 # Re-export for convenience
-__all__ = ["CubeLogger", "DEBUG_ALL_ONLY", "TabExceptionMode", "setup_root_logger"]
+__all__ = ["CubeLogger", "TabExceptionMode", "setup_root_logger"]
 
 # Type for lazy debug arguments: a value OR a callable returning another LazyArg.
 LazyArg = Callable[[], "LazyArg"] | Any
@@ -164,6 +164,53 @@ class CubeLogger(logging.Logger):
             if root._debug_all:
                 return True
         return super().isEnabledFor(level)
+
+    # --- Verbose level ---
+
+    @staticmethod
+    def verbose_level(enabled: bool = False) -> int:
+        """Return a logging level based on a debug flag.
+
+        Args:
+            enabled: True → ``logging.DEBUG`` (10), visible in normal debug.
+                     False → internal verbose level (5), only visible with ``debug_all``.
+
+        Usage::
+
+            logger.log(logger.verbose_level(mouse_debug), "msg")
+            logger.log_lazy(logger.verbose_level(flag), lambda: f"expensive: {x}")
+        """
+        return logging.DEBUG if enabled else DEBUG_ALL_ONLY
+
+    # --- Lazy-arg logging ---
+
+    def log_lazy(self, level: int, *args: LazyArg, cube_level: int | None = None) -> None:
+        """Log with lazy argument resolution.
+
+        Arguments can be plain values or callables (``lambda: expensive()``).
+        Callables are only evaluated if the message will actually be emitted.
+        All resolved args are joined with spaces into a single message.
+
+        Args:
+            level: Logging level (e.g. ``logging.DEBUG``).
+            *args: Values or callables. Callables resolved only if enabled.
+            cube_level: Optional 1-5 verbosity. If set, filtered by
+                        ``set_cube_level()`` threshold.
+
+        Usage::
+
+            logger.log_lazy(logging.DEBUG, "Face:", lambda: face.color)
+            logger.log_lazy(logger.verbose_level(flag), lambda: f"msg")
+            logger.log_lazy(logging.DEBUG, "detail", level=3)
+        """
+        if not self.isEnabledFor(level):
+            return
+        resolved = [_resolve_arg(a) for a in args]
+        msg = " ".join(str(a) for a in resolved)
+        if cube_level is not None:
+            self._log(level, msg, (), extra={"cube_level": cube_level})
+        else:
+            self._log(level, msg, ())
 
     # --- Record creation ---
 

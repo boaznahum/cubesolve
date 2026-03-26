@@ -10,6 +10,7 @@ from typing import Any, Tuple
 import numpy as np
 from numpy import ndarray
 
+from cube.utils.logging import CubeLogger
 from cube.application.AbstractApp import AbstractApp
 from cube.application.exceptions.app_exceptions import InternalSWError
 from cube.application.state import ApplicationAndViewState
@@ -106,10 +107,10 @@ def _handle_face_slice_rotate_by_drag(window: AppWindow, x, y, dx, dy):
     vs = window.app.vs
     mouse_debug = vs.config.input_mouse_debug
 
-    vs.debug(mouse_debug, lambda: f"[DRAG] Handler: x={x}, y={y}, dx={dx}, dy={dy}")
+    vs.logger.log_lazy(CubeLogger.verbose_level(mouse_debug), lambda: f"[DRAG] Handler: x={x}, y={y}, dx={dx}, dy={dy}")
 
     if _FACE_ROTATING_BY_MOUSE_MOUSE_ALG_IS_RUNNING:
-        vs.debug(mouse_debug, "[DRAG] Skipped - already running")
+        vs.logger.log_lazy(CubeLogger.verbose_level(mouse_debug), "[DRAG] Skipped - already running")
         return
 
     global _DRAG_VECTOR_DETECTION_DATA
@@ -125,7 +126,7 @@ def _handle_face_slice_rotate_by_drag(window: AppWindow, x, y, dx, dy):
     if n == 1:  # first point
         _DRAG_VECTOR_DETECTION_DATA_X0_Y0 = (x, y)
 
-    vs.debug(mouse_debug, lambda: f"[DRAG] Data points: {n}/{_DRAG_VECTOR_DETECTION_DATA_LENGTH}")
+    vs.logger.log_lazy(CubeLogger.verbose_level(mouse_debug), lambda: f"[DRAG] Data points: {n}/{_DRAG_VECTOR_DETECTION_DATA_LENGTH}")
 
     if n < _DRAG_VECTOR_DETECTION_DATA_LENGTH:
         # Since we add a texture, draw become expansive (don't know why)
@@ -145,7 +146,7 @@ def _handle_face_slice_rotate_by_drag(window: AppWindow, x, y, dx, dy):
     selected: tuple[PartEdge, ndarray, Any] | None = _get_selected_slice(app.vs, window, x, y)
 
     if not selected:
-        vs.debug(mouse_debug, lambda: f"Mouse drag: Didn't find selected element: {x=}, {y=})")
+        vs.logger.log_lazy(CubeLogger.verbose_level(mouse_debug), lambda: f"Mouse drag: Didn't find selected element: {x=}, {y=})")
         return
 
     # print(f"{selected}")
@@ -154,7 +155,7 @@ def _handle_face_slice_rotate_by_drag(window: AppWindow, x, y, dx, dy):
     left_to_right = selected[1]
     left_to_top = selected[2]
 
-    vs.debug(mouse_debug, lambda: f"[ROTATE] Selected: face={slice_edge.face.name}, left_to_right={left_to_right}, left_to_top={left_to_top}")
+    vs.logger.log_lazy(CubeLogger.verbose_level(mouse_debug), lambda: f"[ROTATE] Selected: face={slice_edge.face.name}, left_to_right={left_to_right}, left_to_top={left_to_top}")
 
     p0 = _screen_to_model(app.vs, window, x, y)  # TODO [#4]: we already in selected !!!
     p1 = _screen_to_model(app.vs, window, x + dx, y + dy)
@@ -166,7 +167,7 @@ def _handle_face_slice_rotate_by_drag(window: AppWindow, x, y, dx, dy):
     part_slice: PartSlice = slice_edge.parent
     part: Part = part_slice.parent
 
-    vs.debug(mouse_debug, lambda: f"[ROTATE] part={type(part).__name__}, d_vector={d_vector}, ltr={on_left_to_right:.2f}, ltt={on_left_to_top:.2f}")
+    vs.logger.log_lazy(CubeLogger.verbose_level(mouse_debug), lambda: f"[ROTATE] part={type(part).__name__}, d_vector={d_vector}, ltr={on_left_to_right:.2f}, ltt={on_left_to_top:.2f}")
 
     it_left_to_right = abs(on_left_to_right) > abs(on_left_to_top)
 
@@ -215,10 +216,10 @@ def _handle_face_slice_rotate_by_drag(window: AppWindow, x, y, dx, dy):
         if alg:
             if inv:
                 alg = alg.inv()
-            vs.debug(mouse_debug, lambda: f"[ROTATE] Playing: {alg}")
+            vs.logger.log_lazy(CubeLogger.verbose_level(mouse_debug), lambda: f"[ROTATE] Playing: {alg}")
             _play(window, alg)
         else:
-            vs.debug(mouse_debug, "[ROTATE] No alg to play")
+            vs.logger.log_lazy(CubeLogger.verbose_level(mouse_debug), "[ROTATE] No alg to play")
 
     finally:
         _FACE_ROTATING_BY_MOUSE_MOUSE_ALG_IS_RUNNING = False
@@ -425,7 +426,7 @@ def _play(window: AppWindow, alg: Alg):
     vs = window.app.vs
     op = window.app.op
 
-    vs.debug(vs.config.input_mouse_debug, lambda: f"[PLAY] Playing {alg}")
+    vs.logger.log_lazy(CubeLogger.verbose_level(vs.config.input_mouse_debug), lambda: f"[PLAY] Playing {alg}")
 
     # Use op.play() with animation enabled (modern GL animation now available)
     # Animation will run if globally enabled (op.animation_enabled)
@@ -621,7 +622,7 @@ def _get_selected_slice(vs, window, x, y) -> Tuple[PartEdge, np.ndarray, np.ndar
     modern_viewer = window.modern_viewer
     mouse_debug = vs.config.input_mouse_debug
 
-    vs.debug(mouse_debug, lambda: f"[PICK] screen=({x}, {y}), window=({window.width}, {window.height})")
+    vs.logger.log_lazy(CubeLogger.verbose_level(mouse_debug), lambda: f"[PICK] screen=({x}, {y}), window=({window.width}, {window.height})")
 
     # Pass view state to ensure matrix is up-to-date for picking
     result = modern_viewer.get_part_edge_at_screen(
@@ -629,9 +630,9 @@ def _get_selected_slice(vs, window, x, y) -> Tuple[PartEdge, np.ndarray, np.ndar
     )
 
     if result is None:
-        vs.debug(mouse_debug, "[PICK] No hit")
+        vs.logger.log_lazy(CubeLogger.verbose_level(mouse_debug), "[PICK] No hit")
         return None
 
     part_edge, right_dir, up_dir = result
-    vs.debug(mouse_debug, lambda: f"[PICK] Hit: {part_edge.face.name} part={type(part_edge.parent.parent).__name__}")
+    vs.logger.log_lazy(CubeLogger.verbose_level(mouse_debug), lambda: f"[PICK] Hit: {part_edge.face.name} part={type(part_edge.parent.parent).__name__}")
     return (part_edge, right_dir, up_dir)

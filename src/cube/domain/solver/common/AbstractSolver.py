@@ -1,6 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, final
+from typing import TYPE_CHECKING, Any, final
 
 from cube.domain.algs.Alg import Alg
 from cube.domain.algs.Algs import Algs
@@ -17,7 +17,7 @@ from cube.domain.solver.common.SolverStatistics import (
 from cube.domain.solver.common.CommonOp import CommonOp
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.solver import SolverResults, SolveStep
-from cube.utils.logging import CubeLogger, LazyArg, _resolve_arg
+from cube.utils.logging import CubeLogger
 
 if TYPE_CHECKING:
     pass
@@ -207,24 +207,16 @@ class AbstractSolver(Solver, ABC):
 
     @property
     def is_debug_enabled(self):
-        return self.op.app_state.is_debug(self._is_debug_enabled)
+        return self.__logger.isEnabledFor(logging.DEBUG)
 
     @property
     def _logger(self) -> CubeLogger:
         """The logger for this solver."""
         return self.__logger
 
-    def debug(self, *args: LazyArg) -> None:
-        """Output debug information.
-
-        Resolves lazy callables and joins args into a single message,
-        then delegates to the standard logger.
-        """
-        if not self.__logger.isEnabledFor(logging.DEBUG):
-            return
-        resolved_args = [_resolve_arg(a) for a in args]
-        message = " ".join(str(a) for a in resolved_args)
-        self.__logger.debug(message)
+    def debug(self, *args: Any) -> None:
+        """Output debug information with lazy argument resolution."""
+        self.__logger.log_lazy(logging.DEBUG, *args)
 
     @property
     @final
