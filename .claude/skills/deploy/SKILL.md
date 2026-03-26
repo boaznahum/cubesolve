@@ -49,10 +49,10 @@ Push the branch and run the PowerShell deploy script:
 
 ```bash
 # Dev (default):
-powershell.exe -ExecutionPolicy Bypass -File gh_acreate_pr.ps1
+pwsh -ExecutionPolicy Bypass -File gh_acreate_pr.ps1
 
 # Production:
-powershell.exe -ExecutionPolicy Bypass -File gh_acreate_pr.ps1 -branch main
+pwsh -ExecutionPolicy Bypass -File gh_acreate_pr.ps1 -branch main
 ```
 
 This script:
