@@ -125,8 +125,15 @@ class CubeLogger(logging.Logger):
         """Check if a message at *level* would be emitted.
 
         Adds two global overrides on top of standard behaviour:
+
         - ``quiet_all``: blocks everything below ERROR.
         - ``debug_all``: allows everything (overrides individual levels).
+
+        These cannot be replaced with standard ``setLevel()`` because
+        standard levels don't propagate as overrides — a child logger
+        with its own level (e.g. ``setLevel(DEBUG)``) would ignore a
+        root ``setLevel(1000000)``.  These flags bypass the hierarchy
+        entirely, overriding ALL loggers regardless of their own level.
         """
         root = CubeLogger._root_cube
         if root is not None:

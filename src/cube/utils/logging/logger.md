@@ -62,40 +62,52 @@ that haven't set their own level.
 
 ## Verbose Debug
 
-### `debug_verbose()` — only visible with `debug_all`
+### `verbose_level()` — verbose messages only visible with `debug_all`
 
-For low-importance messages that would clutter normal debug output
-(e.g. brightness/texture status). Hidden during normal debug sessions,
-only visible when `debug_all` is enabled.
+For low-importance messages (e.g. brightness/texture status) that
+would clutter normal debug output. Uses an internal logging level (5)
+below DEBUG (10).
 
 ```python
-# Normal debug — visible when logger level is DEBUG
+# Normal debug
 logger.debug("solving edge...")
 
 # Verbose — only visible with CUBE_DEBUG_ALL=1 or debug_all=True
-logger.debug_verbose("Brightness: 0.75")
+logger.log(CubeLogger.verbose_level(), "Brightness: 0.75")
+
+# With a config flag — True=DEBUG, False=verbose
+logger.log(CubeLogger.verbose_level(mouse_debug), "mouse event")
+logger.log_lazy(CubeLogger.verbose_level(flag), lambda: f"expensive: {x}")
 ```
 
-Internally uses a custom logging level (5) below DEBUG (10), but this
-level is not part of the public API.
+### `cube_level()` — sub-DEBUG verbosity (1-5)
 
-### `cube_level` (1-5 verbosity filter)
-
-For fine-grained verbosity **within** DEBUG, some solvers use a 1–5 scale:
+Maps solver verbosity levels 1–5 to standard logging sub-levels (10–6).
+Uses pure `setLevel()` / `isEnabledFor()` — no custom filters.
 
 ```python
-# Set threshold on the logger
-self._logger.set_cube_level(3)   # Only show messages with cube_level <= 3
+# Set threshold — show levels 1-3, hide 4-5
+self._logger.set_cube_level(3)   # calls setLevel(8)
 
-# Log with a cube_level (via SolverHelper.debug())
-self.debug("important info", level=1)   # Shown (1 <= 3)
-self.debug("normal detail", level=3)    # Shown (3 <= 3)
-self.debug("verbose trace", level=5)    # Hidden (5 > 3)
+# Log with a cube_level
+self._logger.log_lazy(CubeLogger.cube_level(1), "important")  # level 10 → shown
+self._logger.log_lazy(CubeLogger.cube_level(3), "detail")     # level 8  → shown
+self._logger.log_lazy(CubeLogger.cube_level(5), "trace")      # level 6  → hidden
 ```
 
-Implemented as a standard `logging.Filter` (`_CubeLevelFilter`) attached to
-each `CubeLogger` instance. Only 5 solver classes use this:
-`NxNCenters`, `NxNEdges`, `E2ECommutator`, `_LBLNxNEdges`, `_LBLL3Edges`.
+Used by 5 solver classes: `NxNCenters`, `NxNEdges`, `E2ECommutator`,
+`_LBLNxNEdges`, `_LBLL3Edges`.
+
+### `log_lazy()` — lazy argument resolution
+
+All debug logging goes through `log_lazy()`. Arguments can be plain
+values or callables — callables are only evaluated if the message will
+be emitted.
+
+```python
+logger.log_lazy(logging.DEBUG, "Face:", lambda: face.color)
+logger.log_lazy(CubeLogger.cube_level(3), lambda: f"detail: {x}")
+```
 
 ## Environment Variables
 
@@ -125,6 +137,12 @@ This means:
 - `quiet_all` wins over everything (even explicit `setLevel(DEBUG)` on a child)
 - `debug_all` overrides all level settings (even explicit `setLevel(INFO)`)
 - Errors (`logger.error(...)`) always pass, even with `quiet_all`
+
+**Why not standard `setLevel()`?** These flags cannot be replaced with
+`setLevel()` on the root logger, because standard logging levels don't
+propagate as overrides — a child logger with its own level (e.g.
+`setLevel(DEBUG)`) ignores the root's level. These flags bypass the
+hierarchy entirely, overriding ALL loggers regardless of their own level.
 
 ### Priority
 
@@ -223,13 +241,15 @@ Internally wraps the callback in a standard `logging.Handler`. The root
 | `debug()`, `info()`, `error()` | Yes | |
 | `setLevel()`, `getChild()` | Yes | |
 | `addHandler()`, `removeHandler()` | Yes | |
-| `isEnabledFor()` | Yes (overridden) | quiet_all / debug_all check |
+| `isEnabledFor()` | Yes (overridden) | quiet_all / debug_all global override |
 | `makeRecord()` | Yes (overridden) | auto-inject indent |
 | `tab()` | | Yes |
-| `debug_verbose()` | | Yes (logs at level 5, below DEBUG) |
-| `set_cube_level()` | | Yes (via `logging.Filter`) |
+| `log_lazy()` | | Yes (lazy arg resolution) |
+| `verbose_level()` | | Yes (returns DEBUG or level 5) |
+| `cube_level()` | | Yes (maps 1-5 to sub-DEBUG levels 10-6) |
+| `set_cube_level()` | | Yes (calls `setLevel()` with sub-level) |
 | `add_stream()` / `remove_stream()` | | Yes (wraps `addHandler`) |
-| `quiet_all` / `debug_all` properties | | Yes |
+| `quiet_all` / `debug_all` properties | | Yes (hierarchy-bypassing overrides) |
 
 ## Files
 
@@ -238,8 +258,8 @@ All logging code lives in `src/cube/utils/logging/`:
 | File | Purpose |
 |------|---------|
 | `__init__.py` | Public API — the only file external code imports from |
-| `_logger.py` | `CubeLogger`, `setup_root_logger()`, `LazyArg`, `_resolve_arg` |
-| `_std_logging.py` | `ColonPrefixFormatter`, `WebSocketLogHandler`, `DEBUG_ALL_ONLY`, `ROOT_LOGGER_NAME` |
+| `_logger.py` | `CubeLogger`, `setup_root_logger()`, lazy arg resolution |
+| `_std_logging.py` | `ColonPrefixFormatter`, `WebSocketLogHandler`, sub-level constants |
 | `_log_stream_buffer.py` | `LogStreamBuffer` |
 | `logger.md` | This documentation |
 
