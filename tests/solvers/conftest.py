@@ -57,7 +57,7 @@ PREDEFINED_SCRAMBLE_SEEDS: list[int] = GUI_SCRAMBLE_SEEDS + ADDITIONAL_SCRAMBLE_
 #   BeginnerSolver3x3._select_best_start_color() picked a non-white face on the
 #   shadow cube, solving the wrong cross. Fixed via forced_start_color parameter.
 #   s1_3000.txt shares the same base seed (1771092690) as s1_1000.txt.
-SEED_SEQUENCE_CONFIG: tuple[str, int] | None = ("s3", 300)
+SEED_SEQUENCE_CONFIG: tuple[str, int] | None = ("s3", 700)
 
 # =============================================================================
 # Fixtures
