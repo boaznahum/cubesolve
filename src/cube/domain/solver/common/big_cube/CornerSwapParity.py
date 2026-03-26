@@ -16,6 +16,7 @@ Generalized for NxN by mapping:
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 from cube.domain.algs import Algs
@@ -67,7 +68,7 @@ class CornerSwapParity(SolverHelper):
         n_slices = self.cube.n_slices
         assert n_slices % 2 == 0, "Corner parity fix only applies to even cubes"
 
-        self.debug("Doing corner swap (basic — edges move)")
+        self._logger.log_lazy(logging.DEBUG, "Doing corner swap (basic — edges move)")
 
         nh = n_slices // 2
 
@@ -96,7 +97,7 @@ class CornerSwapParity(SolverHelper):
         n_slices = self.cube.n_slices
         assert n_slices % 2 == 0, "Corner parity fix only applies to even cubes"
 
-        self.debug("Doing corner swap (advanced — edges preserved)")
+        self._logger.log_lazy(logging.DEBUG, "Doing corner swap (advanced — edges preserved)")
 
         nh = n_slices // 2
 

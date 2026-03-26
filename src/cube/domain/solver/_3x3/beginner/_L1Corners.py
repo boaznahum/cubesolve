@@ -1,3 +1,4 @@
+import logging
 from typing import Sequence
 
 from cube.domain.algs import Algs
@@ -126,17 +127,17 @@ class L1Corners(SolverHelper):
         self._bring_l1_target_corner_to_front_right_up(tc())
 
         if sc().on_face(wf):
-            self.debug(lambda: f"LO-Corners C1. source {sc()} is on top")
+            self._logger.log_lazy(logging.DEBUG, lambda: f"LO-Corners C1. source {sc()} is on top")
             self._bring_top_corner_to_f_r_d(sc())
         else:
-            self.debug(lambda: f"LO-Corners C2. source {sc()} is on bottom")
+            self._logger.log_lazy(logging.DEBUG, lambda: f"LO-Corners C2. source {sc()} is on bottom")
             self._bring_bottom_corner_to_f_r_d(sc())
 
         assert self.cube.front.corner_bottom_right is sc()
 
         # is the white is on the down
         if sc().face_color(wf.opposite) == wf.color:
-            self.debug(lambda: f"LO-Corners C3.  {wf.color} is on bottom")
+            self._logger.log_lazy(logging.DEBUG, lambda: f"LO-Corners C3.  {wf.color} is on bottom")
             self.op.play(Algs.R.prime + Algs.D.prime * 2 + Algs.R + Algs.D)
             assert self.cube.front.corner_bottom_right is sc()
             assert sc().face_color(wf.opposite) != wf.color

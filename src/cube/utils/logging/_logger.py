@@ -32,6 +32,7 @@ from cube.utils.logging._std_logging import (
     ROOT_LOGGER_NAME,
     ColonPrefixFormatter,
     DEBUG_ALL_ONLY,
+    DEBUG_SUB,
     _StreamCallbackHandler,
 )
 
@@ -89,33 +90,6 @@ def _resolve_arg(arg: LazyArg, depth: int = 0) -> Any:
 
 
 # ---------------------------------------------------------------------------
-# Custom level-within-debug filter
-# ---------------------------------------------------------------------------
-
-class _CubeLevelFilter(logging.Filter):
-    """Filter log records by an optional ``cube_level`` attribute.
-
-    Solvers that call ``set_cube_level(3)`` attach a ``cube_level`` integer
-    to individual log records.  This filter drops records whose
-    ``cube_level`` exceeds the configured threshold.
-
-    Records without a ``cube_level`` attribute always pass.
-    """
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.threshold: int | None = None
-
-    def filter(self, record: logging.LogRecord) -> bool:
-        if self.threshold is None:
-            return True
-        cube_level: int | None = getattr(record, "cube_level", None)
-        if cube_level is None:
-            return True
-        return cube_level <= self.threshold
-
-
-# ---------------------------------------------------------------------------
 # CubeLogger
 # ---------------------------------------------------------------------------
 
@@ -128,8 +102,7 @@ class CubeLogger(logging.Logger):
       every log record so that ``ColonPrefixFormatter`` can render it.
     - ``isEnabledFor()`` — respects the root cube logger's ``quiet_all``
       and ``debug_all`` flags.
-    - ``set_cube_level(n)`` — sets a threshold for the ``cube_level``
-      record attribute (1-5 verbosity system).
+    - ``set_cube_level(n)`` — sets verbosity threshold using sub-DEBUG levels.
 
     Everything else is inherited from ``logging.Logger``.
     """
@@ -140,8 +113,6 @@ class CubeLogger(logging.Logger):
     def __init__(self, name: str, level: int = logging.NOTSET) -> None:
         super().__init__(name, level)
         self._indent: str = ""
-        self._cube_level_filter = _CubeLevelFilter()
-        self.addFilter(self._cube_level_filter)
 
         # Root-only flags (only meaningful on the root "cube" logger).
         self._quiet_all: bool = False
@@ -184,33 +155,23 @@ class CubeLogger(logging.Logger):
 
     # --- Lazy-arg logging ---
 
-    def log_lazy(self, level: int, *args: LazyArg, cube_level: int | None = None) -> None:
+    def log_lazy(self, level: int, *args: LazyArg) -> None:
         """Log with lazy argument resolution.
 
         Arguments can be plain values or callables (``lambda: expensive()``).
         Callables are only evaluated if the message will actually be emitted.
         All resolved args are joined with spaces into a single message.
 
-        Args:
-            level: Logging level (e.g. ``logging.DEBUG``).
-            *args: Values or callables. Callables resolved only if enabled.
-            cube_level: Optional 1-5 verbosity. If set, filtered by
-                        ``set_cube_level()`` threshold.
-
         Usage::
 
             logger.log_lazy(logging.DEBUG, "Face:", lambda: face.color)
             logger.log_lazy(logger.verbose_level(flag), lambda: f"msg")
-            logger.log_lazy(logging.DEBUG, "detail", level=3)
+            logger.log_lazy(CubeLogger.cube_level(3), "detail msg")
         """
         if not self.isEnabledFor(level):
             return
         resolved = [_resolve_arg(a) for a in args]
-        msg = " ".join(str(a) for a in resolved)
-        if cube_level is not None:
-            self._log(level, msg, (), extra={"cube_level": cube_level})
-        else:
-            self._log(level, msg, ())
+        self._log(level, " ".join(str(a) for a in resolved), ())
 
     # --- Record creation ---
 
@@ -233,20 +194,38 @@ class CubeLogger(logging.Logger):
         return super().makeRecord(name, level, fn, lno, msg, args, exc_info,
                                   func, merged, sinfo)
 
-    # --- Cube-level filtering ---
+    # --- Cube-level (sub-DEBUG verbosity) ---
 
-    @property
-    def cube_level_threshold(self) -> int | None:
-        """Current cube-level threshold, or None for no filtering."""
-        return self._cube_level_filter.threshold
+    @staticmethod
+    def cube_level(level: int) -> int:
+        """Convert a cube verbosity level (1-5) to a logging level.
+
+        - ``cube_level(1)`` → 10 (same as DEBUG, most important)
+        - ``cube_level(2)`` → 9
+        - ``cube_level(3)`` → 8
+        - ``cube_level(4)`` → 7
+        - ``cube_level(5)`` → 6 (most verbose)
+
+        Usage::
+
+            logger.log_lazy(CubeLogger.cube_level(3), "detail")
+        """
+        return DEBUG_SUB[level]
 
     def set_cube_level(self, level: int | None) -> None:
-        """Set the cube-level threshold.
+        """Set the cube-level verbosity threshold.
 
-        Messages logged with ``extra={'cube_level': N}`` where N > threshold
-        will be dropped.  ``None`` disables the filter.
+        Messages logged at ``cube_level(N)`` where N > threshold
+        will be hidden.  ``None`` resets to DEBUG (show all).
+
+        Usage::
+
+            logger.set_cube_level(3)  # show levels 1-3, hide 4-5
         """
-        self._cube_level_filter.threshold = level
+        if level is None:
+            self.setLevel(logging.DEBUG)
+        else:
+            self.setLevel(DEBUG_SUB[level])
 
     # --- Global flags (root only) ---
 

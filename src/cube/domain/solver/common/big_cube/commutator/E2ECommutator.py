@@ -4,6 +4,8 @@ Edge-to-Edge Commutator for NxN cubes.
 This helper provides commutator algorithms for edge solving
 in the layer-by-layer approach.
 """
+import logging
+
 from cube.domain.algs import Alg, Algs
 from cube.domain.model import EdgeWing
 from cube.domain.model.Slice import Slice
@@ -62,11 +64,11 @@ class E2ECommutator(SolverHelper):
         with self._logger.tab(
                     lambda: f"Trying commutator from wing {source_wing.parent_name_and_index} to wing {target_wing.parent_name_and_index}"):
 
-            self.debug(lambda: f"required_source_wing_face_column_index: {required_source_wing_face_column_index}")
-            self.debug(lambda: f"face_column_on_source_edge: {face_column_on_source_edge}")
+            self._logger.log_lazy(logging.DEBUG, lambda: f"required_source_wing_face_column_index: {required_source_wing_face_column_index}")
+            self._logger.log_lazy(logging.DEBUG, lambda: f"face_column_on_source_edge: {face_column_on_source_edge}")
 
             if required_source_wing_face_column_index != face_column_on_source_edge:
-                self.debug(lambda: "❌❌ Source index and target don't match")
+                self._logger.log_lazy(logging.DEBUG, lambda: "❌❌ Source index and target don't match")
                 assert source_wing is not None, "We calculate it it must be equal"
                 return False  # can't perform
 

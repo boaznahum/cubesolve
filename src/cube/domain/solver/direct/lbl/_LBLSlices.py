@@ -30,6 +30,7 @@ Algorithm for ring center solving:
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Tuple
 
 from cube.domain.algs import SlicedSliceAlg
@@ -277,9 +278,9 @@ class _LBLSlices(SolverHelper):
                         best_rot = n_rot
 
         if best_rot > 0:
-            self.debug(lambda : f"Global center-slice pre-align: {best_rot}x rotation "
+            self._logger.log_lazy(logging.DEBUG, lambda : f"Global center-slice pre-align: {best_rot}x rotation "
                        f"({best_count} total pieces aligned)")
-            self.debug(lambda :f"[LBL] Global center-slice pre-align: {best_rot}x rotation "
+            self._logger.log_lazy(logging.DEBUG, lambda :f"[LBL] Global center-slice pre-align: {best_rot}x rotation "
                   f"({best_count} total pieces aligned)")
             # Rotate the center E-slice to change equatorial face colors
 
@@ -342,7 +343,7 @@ class _LBLSlices(SolverHelper):
 
         contains_center_tracer = any(1 for e in _common.get_center_row_pieces(cube, l1_tracker, None, face_row) if parent.contain_center_tracker(e))
         if contains_center_tracer:
-            self.debug(lambda : f"☑️☑️☑️☑️☑️☑️☑️☑️☑️ Protecting row {face_row} it contains center tracker ☑️☑️☑️☑️☑️☑️☑️☑️☑️ ")
+            self._logger.log_lazy(logging.DEBUG, lambda : f"☑️☑️☑️☑️☑️☑️☑️☑️☑️ Protecting row {face_row} it contains center tracker ☑️☑️☑️☑️☑️☑️☑️☑️☑️ ")
             return None
 
         # Count currently solved pieces (rotation 0) #claude [#125]: skip if it is the max available
@@ -411,7 +412,7 @@ class _LBLSlices(SolverHelper):
                 if alg_best_rotations is not None:
                     slice_alg = alg_best_rotations[0]
                     best_rotations = alg_best_rotations[1]
-                    self.debug(lambda: f"Pre-align row {face_row}: rotating slice {best_rotations}x")
+                    self._logger.log_lazy(logging.DEBUG, lambda: f"Pre-align row {face_row}: rotating slice {best_rotations}x")
                     # Preserve tracker positions across the slice rotation.
                     # The rotation moves center pieces (and their tracker marks) between
                     # faces. We want the pieces to move, but tracker marks must stay on
@@ -470,7 +471,7 @@ class _LBLSlices(SolverHelper):
 
 
         # and still i dont understand why !!!!
-        self.debug(lambda : f"Solving row {face_row} took {n_iteration} iterations ‼️‼️‼️")
+        self._logger.log_lazy(logging.DEBUG, lambda : f"Solving row {face_row} took {n_iteration} iterations ‼️‼️‼️")
 
 
 

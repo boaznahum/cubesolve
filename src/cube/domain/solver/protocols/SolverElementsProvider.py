@@ -52,15 +52,6 @@ class SolverElementsProvider(Protocol, metaclass=ABCMeta):
         """Common operations' helper."""
         ...
 
-    def debug(self, *args: object) -> None:
-        """Output debug information.
-
-        Args:
-            *args: Arguments to print. Can be regular values or Callable[[], Any]
-                   for lazy evaluation.
-        """
-        ...
-
     @property
     def _logger(self) -> CubeLogger:
         """The CubeLogger for this solver/reducer.

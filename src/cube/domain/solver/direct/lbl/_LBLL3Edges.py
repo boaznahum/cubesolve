@@ -8,6 +8,7 @@ See: L3_EDGES_DIAGRAMS.md (same directory) for full algorithm details.
 """
 from __future__ import annotations
 
+import logging
 from typing import cast, TYPE_CHECKING
 
 from cube.domain.algs import Alg, Algs, SeqAlg
@@ -142,7 +143,7 @@ class _LBLL3Edges(SolverHelper):
 
         left = cube.front.edge_left
         if self._is_edge_solved(left):
-            self.debug(lambda : f"✅✅💚💚 {left.name} is solved 💚💚💚")
+            self._logger.log_lazy(logging.DEBUG, lambda : f"✅✅💚💚 {left.name} is solved 💚💚💚")
 
 
 
@@ -160,23 +161,23 @@ class _LBLL3Edges(SolverHelper):
 
             # Skip if already solved
             if target_wing.match_faces:
-                self.debug(lambda: f"Wing {target_wing.parent_name_index_position} already solved")
+                self._logger.log_lazy(logging.DEBUG, lambda: f"Wing {target_wing.parent_name_index_position} already solved")
                 return
 
             # Find all matching source wings (may be 1 or 2)
             assert l3t.face is cube.front  # that what _find_sources_for_target excepts
             source_wings = self._find_sources_for_target(l3t.parent, target_wing)
 
-            self.debug(lambda: f"Found {len(source_wings)} sources for {target_wing.parent_name_and_index}")
+            self._logger.log_lazy(logging.DEBUG, lambda: f"Found {len(source_wings)} sources for {target_wing.parent_name_and_index}")
 
             # Try each source until one works
             for source_wing in source_wings:
                 self._dispatch_to_case_handler(l3t, source_wing, target_wing)
 
                 if target_wing.match_faces:
-                    self.debug(lambda: f"✅✅✅ Wing {target_wing.parent_name_index_colors_position} solved")
+                    self._logger.log_lazy(logging.DEBUG, lambda: f"✅✅✅ Wing {target_wing.parent_name_index_colors_position} solved")
                 else:
-                    self.debug(lambda: f"‼️‼️‼️  Wing {target_wing.parent_name_index_colors_position} was solved")
+                    self._logger.log_lazy(logging.DEBUG, lambda: f"‼️‼️‼️  Wing {target_wing.parent_name_index_colors_position} was solved")
 
                 # After handling, the target should be solved
                 # (future: could check and try next source if failed)

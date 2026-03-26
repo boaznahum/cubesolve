@@ -8,9 +8,8 @@ See: src/cube/domain/solver/SOLVER_ARCHITECTURE.md for class hierarchy.
 
 from __future__ import annotations
 
-import logging
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from cube.domain.solver.common.SolverStatistics import SolverStatistics
 from cube.domain.solver.protocols.OperatorProtocol import OperatorProtocol
@@ -75,10 +74,6 @@ class AbstractReducer(ReducerProtocol, SolverElementsProvider, ABC):
     @property
     def cmn(self) -> "CommonOp":
         return self._cmn
-
-    def debug(self, *args: Any) -> None:
-        """Output debug information with lazy arg resolution."""
-        self.__logger.log_lazy(logging.DEBUG, *args)
 
     @property
     def _logger(self) -> CubeLogger:

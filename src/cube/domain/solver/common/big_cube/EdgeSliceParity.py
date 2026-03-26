@@ -16,6 +16,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Tuple
 
+from cube.utils.logging import CubeLogger
+
 from cube.domain.algs import Algs
 from cube.domain.model import Color, Edge, EdgeWing
 from cube.domain.model.Face import Face
@@ -83,7 +85,7 @@ class EdgeSliceParity(SolverHelper):
 
             tracer: EdgeSliceTracker
             with self.cmn.track_e_slice(edge.get_slice(0)) as tracer:
-                self.debug(lambda: f"Doing parity on {edge}", level=1)
+                self._logger.log_lazy(CubeLogger.cube_level(1), lambda: f"Doing parity on {edge}")
                 edge = self.cmn.bring_edge_to_front_left_by_whole_rotate(edge)
                 assert edge is face.edge_left
                 assert edge is cube.fl
@@ -143,7 +145,7 @@ le
         wing slices on the FL, FR, BL, BR edges that share the same
         M-layer. Caller must re-reduce (re-pair edges) after this fix.
         """
-        self.debug(lambda: f"*** Doing parity on M {plus_one}", level=2)
+        self._logger.log_lazy(CubeLogger.cube_level(2), lambda: f"*** Doing parity on M {plus_one}")
         for _ in range(4):
             self.op.play(Algs.MM[plus_one].prime)
             self.op.play(Algs.U * 2)
@@ -162,7 +164,7 @@ le
         # In case of R/L we need to add 1, because 1 is R, and slices begin with 2
         plus_one = [i + 1 for i in plus_one]
 
-        self.debug(lambda: f"*** Doing parity on R {plus_one}", level=2)
+        self._logger.log_lazy(CubeLogger.cube_level(2), lambda: f"*** Doing parity on R {plus_one}")
 
         rs = Algs.R[plus_one]
         ls = Algs.L[plus_one]

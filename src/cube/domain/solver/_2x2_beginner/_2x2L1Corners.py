@@ -1,3 +1,5 @@
+import logging
+
 from cube.domain.algs import Algs, Alg, WholeCubeAlg
 from cube.domain.exceptions import InternalSWError
 from cube.domain.geometric.Face2FaceTranslator import Face2FaceTranslator
@@ -307,10 +309,10 @@ class _2x2L1Corners(SolverHelper):
             # now bring source cornet into under it  FRD
 
             if sc().on_face(wf):
-                self.debug(lambda: f"LO-Corners C1. source {sc()} is on top")
+                self._logger.log_lazy(logging.DEBUG, lambda: f"LO-Corners C1. source {sc()} is on top")
                 self._bring_top_corner_to_f_r_d(sc())
             else:
-                self.debug(lambda: f"LO-Corners C2. source {sc()} is on bottom")
+                self._logger.log_lazy(logging.DEBUG, lambda: f"LO-Corners C2. source {sc()} is on bottom")
                 self._bring_bottom_corner_to_f_r_d(sc())
 
             # Now source is on FRD
@@ -318,7 +320,7 @@ class _2x2L1Corners(SolverHelper):
 
             # is the white is on the down
             if sc().face_color(wf.opposite) == white_color:
-                self.debug(lambda: f"{white_color} is on bottom")
+                self._logger.log_lazy(logging.DEBUG, lambda: f"{white_color} is on bottom")
                 self.op.play(Algs.R.prime + Algs.D.prime * 2 + Algs.R + Algs.D)
                 assert self.cube.front.corner_bottom_right is sc()
                 assert sc().face_color(wf.opposite) != white_color

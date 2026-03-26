@@ -37,6 +37,13 @@ ROOT_LOGGER_NAME = "cube"
 DEBUG_ALL_ONLY: int = 5
 logging.addLevelName(DEBUG_ALL_ONLY, "DEBUG_ALL")
 
+# Sub-levels within DEBUG for fine-grained solver verbosity.
+# cube_level 1 = DEBUG (10, most important) through cube_level 5 = 6 (most verbose).
+# Use set_cube_level(N) which calls setLevel(DEBUG_SUB[N]) to filter.
+DEBUG_SUB: dict[int, int] = {1: 10, 2: 9, 3: 8, 4: 7, 5: 6}
+for _cl, _ll in DEBUG_SUB.items():
+    logging.addLevelName(_ll, f"DEBUG_{_cl}")
+
 
 class ColonPrefixFormatter(logging.Formatter):
     """Format log records using the solver's colon-separated prefix convention.

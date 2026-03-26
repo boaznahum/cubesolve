@@ -1,6 +1,6 @@
 import logging
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, final
+from typing import TYPE_CHECKING, final
 
 from cube.domain.algs.Alg import Alg
 from cube.domain.algs.Algs import Algs
@@ -153,7 +153,7 @@ class AbstractSolver(Solver, ABC):
 
     def _delegate_to_2x2(self, what: SolveStep) -> SolverResults:
         solver_2x2 = self._get_2x2_delegate()
-        self.debug("Delegating to 2x2 solver")
+        self._logger.log_lazy(logging.DEBUG, "Delegating to 2x2 solver")
         return solver_2x2.solve(
             debug=self._debug_override,
             animation=None,
@@ -174,11 +174,11 @@ class AbstractSolver(Solver, ABC):
         if stats.is_empty():
             return
         my_prefix: str = self._logger.name.split(".")[-1] + ":"
-        self.debug("[Solver Statistics]")
+        self._logger.log_lazy(logging.DEBUG, "[Solver Statistics]")
         for topic_name, lines in stats.format_all(strip_prefix=my_prefix):
             for line in lines:
-                self.debug(lambda: f"  [{topic_name}] {line}")
-        self.debug("==== End of Solver Statistics ===========")
+                self._logger.log_lazy(logging.DEBUG, lambda: f"  [{topic_name}] {line}")
+        self._logger.log_lazy(logging.DEBUG, "==== End of Solver Statistics ===========")
 
 
     def _run_child_solver(self, child: Solver, what: SolveStep) -> SolverResults:
@@ -213,10 +213,6 @@ class AbstractSolver(Solver, ABC):
     def _logger(self) -> CubeLogger:
         """The logger for this solver."""
         return self.__logger
-
-    def debug(self, *args: Any) -> None:
-        """Output debug information with lazy argument resolution."""
-        self.__logger.log_lazy(logging.DEBUG, *args)
 
     @property
     @final

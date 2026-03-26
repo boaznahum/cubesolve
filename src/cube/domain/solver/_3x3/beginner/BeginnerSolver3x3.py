@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
@@ -307,7 +308,7 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
         best_face, grade = _find_best_l1_face(self._cube.faces, white)
 
         if best_face is not None and best_face.color != white:
-            self.debug(lambda: f"L1 grade {grade} on {best_face.color}, using as start color")
+            self._logger.log_lazy(logging.DEBUG, lambda: f"L1 grade {grade} on {best_face.color}, using as start color")
             self.cmn._start_color = best_face.color
         else:
             self.cmn._start_color = white

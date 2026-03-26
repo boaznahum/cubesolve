@@ -1,6 +1,8 @@
 from collections.abc import Iterable, Iterator, Sequence, Set
 from enum import Enum, unique
 
+from cube.utils.logging import CubeLogger
+
 from cube.domain.exceptions import InternalSWError
 from cube.domain.model.PartSlice import CenterSlice
 from cube.domain.solver.AnnWhat import AnnWhat
@@ -362,7 +364,7 @@ class NxNCenters(SolverHelper):
         return best
 
     def _do_faces(self, tracker_holder: "FacesTrackerHolder", faces: Sequence[FaceTracker]) -> bool:
-        self.debug( "_do_faces:", *faces, level=3)
+        self._logger.log_lazy(CubeLogger.cube_level(3), "_do_faces:", *faces)
         work_done = False
         for f in faces:
             # we must trace faces, because they are moved by algorith
@@ -391,7 +393,7 @@ class NxNCenters(SolverHelper):
                    faces: Iterable[FaceTracker]) -> bool:
 
         if self._is_face_solved(face_loc.face, face_loc.color):
-            self.debug(lambda: f"Face is already done {face_loc.face}", level=1)
+            self._logger.log_lazy(CubeLogger.cube_level(1), lambda: f"Face is already done {face_loc.face}")
             return False
 
         color = face_loc.color
@@ -399,15 +401,15 @@ class NxNCenters(SolverHelper):
         sources: Set[Face] = OrderedSet(self.cube.faces) - {face_loc.face}
 
         if all(not self._has_color_on_face(f, color) for f in sources):
-            self.debug(lambda: f"For face {face_loc.face}, No color {color} available on  {sources}", level=1)
+            self._logger.log_lazy(CubeLogger.cube_level(1), lambda: f"For face {face_loc.face}, No color {color} available on  {sources}")
             return False
 
-        self.debug(lambda: f"Need to work on {face_loc.face}", level=1)
+        self._logger.log_lazy(CubeLogger.cube_level(1), lambda: f"Need to work on {face_loc.face}")
 
         work_done = self.__do_center(tracker_holder, face_loc, faces)
 
-        self.debug(lambda: f"After working on {face_loc.face} {work_done=}, "
-                           f"solved={self._is_face_solved(face_loc.face, face_loc.color)}", level=1)
+        self._logger.log_lazy(CubeLogger.cube_level(1), lambda: f"After working on {face_loc.face} {work_done=}, "
+                           f"solved={self._is_face_solved(face_loc.face, face_loc.color)}")
 
         return work_done
 
@@ -428,12 +430,12 @@ class NxNCenters(SolverHelper):
         color: Color = face_loc.color
 
         if self._is_face_solved(face, color):
-            self.debug(lambda: f"Face is already done {face}", level=1)
+            self._logger.log_lazy(CubeLogger.cube_level(1), lambda: f"Face is already done {face}")
             return False
 
         cmn = self.cmn
 
-        self.debug(lambda: f"Working on face {face}", level=1)
+        self._logger.log_lazy(CubeLogger.cube_level(1), lambda: f"Working on face {face}")
 
         with self.ann.annotate(h2=lambda: f"{face_loc.color.long} face"):
             cube = self.cube
@@ -506,7 +508,7 @@ class NxNCenters(SolverHelper):
                         raise InternalSWError(f"Slice was not fixed {rc}, " +
                                               f"required={color}, " +
                                               f"actual={after_fixed_color}")
-                    self.debug(lambda: f"Fixed slice {rc}", level=3)
+                    self._logger.log_lazy(CubeLogger.cube_level(3), lambda: f"Fixed slice {rc}")
                     work_done = True
 
         return work_done
@@ -645,13 +647,13 @@ class NxNCenters(SolverHelper):
         )
 
         if not big_blocks:
-            self.debug(lambda: f"  No unsolved blocks found for {color} on {face.name}", level=2)
+            self._logger.log_lazy(CubeLogger.cube_level(2), lambda: f"  No unsolved blocks found for {color} on {face.name}")
             return False
 
         # Log found blocks
         large_blocks = [(b.size, b) for _, b in big_blocks if b.size > 1]
-        self.debug(lambda: f"  Found {len(big_blocks)} unsolved blocks on {face.name}, "
-                   f"{len(large_blocks)} larger than 1x1", level=1)
+        self._logger.log_lazy(CubeLogger.cube_level(1), lambda: f"  Found {len(big_blocks)} unsolved blocks on {face.name}, "
+                   f"{len(large_blocks)} larger than 1x1")
 
         for _, big_block in big_blocks:
             block_size = big_block.size
@@ -665,8 +667,8 @@ class NxNCenters(SolverHelper):
                                         source_face,
                                         big_block,
                                         _SearchBlockMode.ExactMatch, faces):
-                self.debug(lambda: f"    ✓ Block {block_dims[0]}x{block_dims[1]} ({block_size} pieces) "
-                           f"from {source_face.name} to {face.name}", level=1)
+                self._logger.log_lazy(CubeLogger.cube_level(1), lambda: f"    ✓ Block {block_dims[0]}x{block_dims[1]} ({block_size} pieces) "
+                           f"from {source_face.name} to {face.name}")
                 work_done = True
 
         return work_done

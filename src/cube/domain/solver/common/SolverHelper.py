@@ -1,6 +1,5 @@
-import logging
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Any, Callable, ContextManager, Tuple, TypeAlias, final
+from typing import TYPE_CHECKING, Callable, ContextManager, Tuple, TypeAlias, final
 
 from cube.utils.config_protocol import ConfigProtocol
 from cube.utils.logging import CubeLogger
@@ -51,14 +50,6 @@ class SolverHelper(CubeSupplier, SolverElementsProvider):
     def _logger(self) -> CubeLogger:
         return self.__logger
 
-    def debug(self, *args: Any, level: int | None = None) -> None:
-        """Output debug information with lazy arg resolution and optional level filtering.
-
-        Args:
-            *args: Values or callables (``lambda: expensive()``). Resolved lazily.
-            level: Optional cube-level (1-5). If set, filtered by ``set_cube_level()`` threshold.
-        """
-        self._logger.log_lazy(logging.DEBUG, *args, cube_level=level)
 
     @property
     def cube(self) -> Cube:
