@@ -119,6 +119,9 @@ class Algs:
 
     # X, Y, Z: Identity/naming only - _X() binds to AxisName.X (just gives the alg its name).
     # Geometric relationships (X↔R axis, direction) are defined in CubeLayout.get_axis_face()
+    #     X = "X"  # Over R , against M
+    #     Y = "Y"  # over U , against E
+    #     Z = "Z"  # Over F,  With S
     X = _X()
     Y = _Y()
     Z = _Z()

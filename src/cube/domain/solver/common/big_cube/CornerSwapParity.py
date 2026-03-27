@@ -19,6 +19,7 @@ Generalized for NxN by mapping:
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from cube.domain.algs import Algs, Alg
@@ -26,6 +27,11 @@ from cube.domain.solver.common.SolverHelper import SolverHelper
 
 if TYPE_CHECKING:
     from cube.domain.solver.protocols import SolverElementsProvider
+
+@dataclass(frozen=True)
+class CornerFixResults:
+    cube_unreduced:bool
+    need_resolve_3x3: bool
 
 
 class CornerSwapParity(SolverHelper):
@@ -39,34 +45,45 @@ class CornerSwapParity(SolverHelper):
     def __init__(self, solver: SolverElementsProvider) -> None:
         super().__init__(solver, "CornerSwapParity")
 
-    def fix_corner_parity(self, advanced: bool) -> bool:
+    def fix_corner_parity(self, advanced: bool) -> CornerFixResults:
         """Fix corner swap parity on even cube.
 
+        Non-advanced: swaps two arbitrary U-face corners (not necessarily the
+        out-of-position pair). The cube remains reduced (is3x3) but needs a
+        full 3x3 re-solve (L1+L2+L3).
+
+        Advanced: detects which corners are out of position (diagonal vs
+        adjacent) and applies the matching algorithm. Only L3 corner
+        orientation may still be needed after the fix.
+
         Args:
-            advanced: If True, detect diagonal vs adjacent and use the
-                      matching edge-preserving algorithm.
-                      else swap any top two corners. but relies on reducer to later fix it
+            advanced: If True, detect diagonal vs adjacent and use the matching
+                edge-preserving algorithm. Requires the cube to be L1+L2+L3cross
+                solved so corner positions can be analyzed.
+                If False, swap any two U-face corners — the solver will redo
+                L1+L2+L3 anyway. Use this when parity was detected by a query
+                probe (not the real solver), so the cube isn't L1/L2 solved.
+
+                Neither mode un-reduces the cube (edges stay paired).
 
         Returns:
-            True if edges were preserved (no re-reduce needed),
-            False if edges were moved to new positions.
+            CornerFixResults with cube_unreduced and need_resolve_3x3 flags.
 
-        IMPORTANT — color provider requirement for even cubes:
-            The advanced path uses colors_id/position_id to detect which corners
-            need swapping. On even cubes (Cage solver), face colors come from
-            tracked centers, not fixed centers. Callers on even cubes MUST set
-            up the faces color provider (via cube.with_faces_color_provider)
-            before calling this method.
-
-            Color lookups happen only BEFORE and AFTER the swap algorithm.
-            Each algorithm undoes its own whole-cube rotations (Y + alg + Y'),
-            so face colors are restored after the algorithm runs. It is safe
-            to use color-based queries at both points.
+        Color safety for even cubes:
+            Uses colors_id/position_id which require correct face colors.
+            On even cubes, callers must ensure centers are reduced (face colors
+            are then determined by majority center color).
+            Whole-cube rotations (Y, X, Z) do NOT invalidate face colors —
+            all slices rotate together. Only independent inner slice moves
+            (e.g. R[2:3]) would invalidate, and neither the 3x3 solver nor
+            our swap algorithms do that.
         """
         if advanced:
-            return self._fix_advanced()
-        self._fix_basic()
-        return False
+            self._fix_advanced()
+            return CornerFixResults(cube_unreduced=False, need_resolve_3x3=False)
+        else:
+            self._fix_basic()
+            return CornerFixResults(cube_unreduced=False, need_resolve_3x3=True)
 
     def _fix_basic(self) -> None:
         """Basic corner swap — swaps diagonal corners, moves edges to new positions.
@@ -107,11 +124,11 @@ class CornerSwapParity(SolverHelper):
         Falls back to basic if the cube state doesn't allow detection
         (e.g. no corner in position, or not exactly 2 in position).
 
-        Color safety: we use colors_id/position_id to detect corner positions
-        BEFORE the algorithm runs, and to verify AFTER. Each swap algorithm
-        includes its own Y setup and Y' unsetup (e.g. Y + diagonal + Y'),
-        so face colors are restored after the algorithm. Color queries are
-        safe at both points. No color queries happen DURING the algorithm.
+        Color safety: whole-cube rotations (Y, X, Z) do NOT invalidate
+        the color provider — all slices rotate together. The swap algorithms
+        use only outer face moves, wide half-cube moves, and whole-cube
+        rotations — none of which move inner slices independently. So
+        colors_id/position_id queries are safe at any point.
 
         Returns:
             True if advanced algorithm was used (edges preserved),
@@ -125,9 +142,8 @@ class CornerSwapParity(SolverHelper):
         # (face colors may not be standard BOY scheme).
         yf = self.cube.up
 
-        #claude: leann and documnet !!!
-        # Find which corners are out of position
-        # cube elements never moved, so these constnats need not to refershed !!!
+        # Corner references: cube elements are fixed in space (only colors move),
+        # so fru/flu/blu/bru are constant references — no need to refresh after moves.
         fru = yf.corner_bottom_right
         flu = yf.corner_bottom_left
         blu = yf.corner_top_left
@@ -135,27 +151,36 @@ class CornerSwapParity(SolverHelper):
 
         # Ensure one in-position corner is at FRU.
         # Detectors (L3Corners, PLL) normally set this up, but we don't rely on it.
-
-        # claude: need to assert that disorder is up, L1 a, L2 and L3 cross are solved
+        # Precondition: L1, L2, and L3 cross must be solved (yellow face up).
 
         cqr = self.cqr
         fru_actual = cqr.get_corner_actual_position(fru)
-        assert fru_actual.on_face(yf)
+        assert fru_actual.on_face(yf), "FRU actual is not on y face"
+
+        #  BLU  |  BRU
+        #--------------
+        #  FLU  |  FRU
+        #
+        #  Y is over U !!!
+
 
         if not fru.in_position:
-            for c, y_alg in [(bru, Algs.Y), (blu, Algs.Y * 2), (flu, Algs.Y.prime)]:
+            # what the point in rotating all cube !!! this is stupid, positon id is changed too
+            # so we need again different color id !!
+            for c, u_alg in [(bru, Algs.U), (blu, Algs.U * 2), (flu, Algs.U.prime)]:
                 if fru_actual is c:
-                    self.op.play(y_alg)
+                    self.op.play(u_alg)
                     break
 
-        assert fru.in_position, "FRU in position"
 
-        # Count how many of the other 3 corners are in position
-        others_in_position = sum(c.in_position for c in [flu, blu, bru])
+        assert fru.in_position, f"FRU in not position after trying to fix {fru.position_id} <> {fru.colors_id}"
 
-        if others_in_position == 3:
-            # All 4 in position — no parity to fix
-            assert False, "All corners in position — no parity detected"
+        # # Count how many of the other 3 corners are in position
+        # others_in_position = sum(c.in_position for c in [flu, blu, bru])
+        #
+        # if others_in_position == 3:
+        #     # All 4 in position — no parity to fix
+        #     assert False, "All corners in position — no parity detected"
 
         _3_cycle_alg = self.cmn.top_3_corner_cycle
 

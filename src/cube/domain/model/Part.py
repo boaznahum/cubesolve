@@ -357,7 +357,7 @@ class Part(ABC, CubeElement):
 
         by_pos: PartColorsID | None = self._colors_id_by_pos
 
-        if not by_pos or (self.config.dont_optimized_part_id):
+        if not by_pos or self.config.dont_optimized_part_id:
             rep_edges = self._3x3_representative_edges
             assert rep_edges, f"position_id should not be called on 2x2 part {self} with no slices"
             by_pos = frozenset(e.face.color for e in rep_edges)

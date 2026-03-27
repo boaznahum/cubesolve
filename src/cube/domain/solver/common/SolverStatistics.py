@@ -217,8 +217,7 @@ class ParityTopic(StatsTopic):
     def _fmt(name: str, fix: "ParityFix | None") -> str | None:
         if fix is None:
             return None
-        from cube.domain.solver.solver import ParityFix
-        suffix = " [preserving]" if fix == ParityFix.Preserving else " [non-preserving]"
+        suffix = " [Advanced]" if fix.advanced else " [non-Advanced]"
         return name + suffix
 
     def format_lines(self) -> list[str]:

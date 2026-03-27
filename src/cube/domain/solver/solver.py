@@ -129,7 +129,7 @@ class SolverResults:
     def _format_parity(name: str, fix: ParityFix | None) -> str | None:
         if fix is None:
             return None
-        suffix = " [preserving]" if fix == ParityFix.Preserving else " [non-preserving]"
+        suffix = " [Advanced]" if fix.advanced else " [non-Advanced]"
         return name + suffix
 
     def parity_summary(self) -> str:

@@ -20,6 +20,7 @@ from cube.domain.algs import Algs
 from cube.domain.model import Color, Edge, EdgeWing
 from cube.domain.model.Face import Face
 from cube.domain.solver.AnnWhat import AnnWhat
+from cube.domain.solver.ParityFix import ParityFix
 from cube.domain.solver.common.CommonOp import EdgeSliceTracker
 from cube.domain.solver.common.SolverHelper import SolverHelper
 
@@ -44,7 +45,7 @@ class EdgeSliceParity(SolverHelper):
     def __init__(self, solver: SolverElementsProvider) -> None:
         super().__init__(solver, "EdgeSliceParity")
 
-    def fix_edge_parity(self, advanced: bool) -> bool:
+    def fix_edge_parity(self, advanced: bool) -> ParityFix:
         """Fix even cube full edge parity on front-left edge.
 
         Args:
@@ -57,10 +58,10 @@ class EdgeSliceParity(SolverHelper):
             False if basic algorithm was used (re-reduce needed).
         """
         assert self.cube.n_slices % 2 == 0
-        self._do_edge_parity_on_edge(self.cube.front.edge_left, advanced)
-        return advanced
+        return self._do_edge_parity_on_edge(self.cube.front.edge_left, advanced)
 
-    def do_edge_parity_on_edge(self, edge: Edge, advanced: bool = False) -> None:
+
+    def do_edge_parity_on_edge(self, edge: Edge, advanced: bool = False) -> ParityFix:
         """Fix edge parity on a specific edge.
 
         Brings edge to front-top position, determines which slices need fixing,
@@ -70,9 +71,9 @@ class EdgeSliceParity(SolverHelper):
             edge: The edge to fix.
             advanced: If True, use R/L-slice algorithm.
         """
-        self._do_edge_parity_on_edge(edge, advanced)
+        return self._do_edge_parity_on_edge(edge, advanced)
 
-    def _do_edge_parity_on_edge(self, edge: Edge, advanced: bool) -> None:
+    def _do_edge_parity_on_edge(self, edge: Edge, advanced: bool) -> ParityFix:
         """Apply OLL parity algorithm to a single edge."""
         with self._logger.tab(lambda: f"Doing edge parity on edge: {edge}"):
 
@@ -127,8 +128,10 @@ class EdgeSliceParity(SolverHelper):
 
                 if not advanced:
                     self._do_basic(plus_one)
+                    return ParityFix.NonAdvanced
                 else:
                     self._do_advanced(plus_one)
+                    return ParityFix.NonAdvanced
 
     def _do_basic(self, plus_one: list[int]) -> None:
         """Basic M-slice parity fix: 4×([i]M' U2) [i]M'.

@@ -8,6 +8,7 @@ from cube.domain.solver.ParityFix import ParityFix
 
 if TYPE_CHECKING:
     from cube.domain.solver.common.SolverStatistics import SolverStatistics
+    from cube.domain.solver.common.big_cube.CornerSwapParity import CornerFixResults
     from cube.domain.solver.protocols.OperatorProtocol import OperatorProtocol
 
 
@@ -79,7 +80,7 @@ class ReducerProtocol(Protocol):
         """
         ...
 
-    def fix_edge_parity(self, advanced: bool) -> bool:
+    def fix_edge_parity(self, advanced: bool) -> ParityFix:
         """Fix even cube edge parity (OLL parity).
 
         Called by orchestrator when 3x3 solver detects edge parity.
@@ -92,7 +93,7 @@ class ReducerProtocol(Protocol):
         """
         ...
 
-    def fix_corner_parity(self, advanced: bool) -> bool:
+    def fix_corner_parity(self, advanced: bool) -> CornerFixResults:
         """Fix even cube corner swap parity (PLL parity).
 
         Called by orchestrator when 3x3 solver detects corner swap parity.
@@ -112,7 +113,7 @@ class ReducerProtocol(Protocol):
         """Solve only centers (first part of reduction)."""
         ...
 
-    def solve_edges(self) -> bool:
+    def solve_edges(self) -> ParityFix | None:
         """Solve only edges (second part of reduction).
 
         Returns:

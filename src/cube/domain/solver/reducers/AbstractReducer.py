@@ -11,6 +11,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
+from cube.domain.solver.ParityFix import ParityFix
 from cube.domain.solver.common.SolverStatistics import SolverStatistics
 from cube.domain.solver.protocols.OperatorProtocol import OperatorProtocol
 from cube.domain.solver.protocols.ReducerProtocol import (
@@ -23,6 +24,7 @@ from cube.utils.logger_protocol import ILogger, LazyArg
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
     from cube.domain.solver.common.CommonOp import CommonOp
+    from cube.domain.solver.common.big_cube.CornerSwapParity import CornerFixResults
 
 
 class AbstractReducer(ReducerProtocol, SolverElementsProvider, ABC):
@@ -150,7 +152,7 @@ class AbstractReducer(ReducerProtocol, SolverElementsProvider, ABC):
         ...
 
     @abstractmethod
-    def fix_edge_parity(self, advanced: bool) -> bool:
+    def fix_edge_parity(self, advanced: bool) -> ParityFix:
         """Fix even cube edge parity (OLL parity).
 
         Args:
@@ -162,7 +164,7 @@ class AbstractReducer(ReducerProtocol, SolverElementsProvider, ABC):
         ...
 
     @abstractmethod
-    def fix_corner_parity(self, advanced: bool) -> bool:
+    def fix_corner_parity(self, advanced: bool) -> CornerFixResults:
         """Fix even cube corner swap parity (PLL parity).
 
         Args:
@@ -179,7 +181,7 @@ class AbstractReducer(ReducerProtocol, SolverElementsProvider, ABC):
         ...
 
     @abstractmethod
-    def solve_edges(self) -> bool:
+    def solve_edges(self) -> ParityFix | None:
         """Solve only edges (second part of reduction)."""
         ...
 

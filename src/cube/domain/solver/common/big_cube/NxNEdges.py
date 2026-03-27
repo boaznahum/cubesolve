@@ -1,6 +1,8 @@
 from collections import defaultdict
 from typing import Tuple
 
+from cube.domain.solver.ParityFix import ParityFix
+
 from cube.domain.algs import Alg, Algs
 from cube.domain.exceptions import InternalSWError
 from cube.domain.model import Color, Edge, EdgeWing, PartColorsID
@@ -57,7 +59,7 @@ class NxNEdges(SolverHelper):
         """Check if all 12 edges are paired (reduced to 3x3 state)."""
         return self._is_solved()
 
-    def solve(self) -> bool:
+    def solve(self) -> ParityFix | None :
         """Pair ALL 12 edges at once (reduction solver entry point).
 
         Solves 11 edges normally, then handles the last edge with a parity
@@ -69,24 +71,25 @@ class NxNEdges(SolverHelper):
         """
 
         if self._is_solved():
-            return False
+            return None
 
         with self.ann.annotate(h1="Big cube edges"):
             self._do_first_11()
 
             if self._is_solved():
-                return False
+                return None
 
             assert self._left_to_fix == 1
 
-            # even cube can have edge parity too
-            self._do_last_edge_parity()
+            # if after solving 11 edges are not solved so the last is parity
+            # even cube can have edge parity too but it connot detected in thos stage
+            parity_fix = self._do_last_edge_parity()
 
             self._do_first_11()
 
             assert self._is_solved()
 
-            return True
+            return parity_fix
 
     def _do_first_11(self):
         """Solve up to 11 edges, stopping when only 1 remains (parity case).
@@ -392,11 +395,13 @@ class NxNEdges(SolverHelper):
 
         return True
 
-    def _do_last_edge_parity(self):
+    def _do_last_edge_parity(self) -> ParityFix:
         """Handle the last unpaired edge — always a parity case.
 
         A single remaining unpaired edge cannot be solved with normal slice moves.
         This finds it and applies an OLL parity algorithm.
+
+        return ture if advance
         """
         assert self._left_to_fix == 1
 
@@ -405,14 +410,14 @@ class NxNEdges(SolverHelper):
         edge = self.cqr.find_edge(cube.edges, lambda e: not e.is3x3)
         assert edge
 
-        self._do_edge_parity_on_edge(edge)
+        return self._do_edge_parity_on_edge(edge)
 
-    def _do_edge_parity_on_edge(self, edge) -> None:
+    def _do_edge_parity_on_edge(self, edge) -> ParityFix:
         """Apply OLL parity algorithm to a single edge.
 
         Delegates to EdgeSliceParity which owns both basic and advanced algorithms.
         """
-        self._edge_parity.do_edge_parity_on_edge(edge, self._advanced_edge_parity)
+        return self._edge_parity.do_edge_parity_on_edge(edge, self._advanced_edge_parity)
 
     @staticmethod
     def get_slice_ordered_color(f: Face, s: EdgeWing) -> Tuple[Color, Color]:

@@ -6,6 +6,8 @@ Uses FacesTrackerHolder for even cube matching - see:
 
 from __future__ import annotations
 
+from cube.domain.solver.ParityFix import ParityFix
+from cube.domain.solver.common.big_cube.CornerSwapParity import CornerFixResults
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.solver.common.SolverStatistics import SolverStatistics
 from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
@@ -91,12 +93,9 @@ class BeginnerReducer(AbstractReducer):
         self.solve_centers()
 
         # Solve edges (returns True if parity was detected/fixed)
-        if self.solve_edges():
-            from cube.domain.solver.solver import ParityFix
-            results.partial_edge_parity_fix = (
-                ParityFix.Preserving if self._advanced_edge_parity
-                else ParityFix.NonPreserving
-            )
+        parity_fix = self.solve_edges()
+        if parity_fix:
+            results.partial_edge_parity_fix = parity_fix
 
         return results
 
@@ -110,7 +109,7 @@ class BeginnerReducer(AbstractReducer):
                 centers.get_block_statistics(), topic_prefix="Centers"
             )
 
-    def solve_edges(self) -> bool:
+    def solve_edges(self) -> ParityFix | None:
         """Solve only edges (second part of reduction).
 
         Returns:
@@ -118,7 +117,7 @@ class BeginnerReducer(AbstractReducer):
         """
         return self._nxn_edges.solve()
 
-    def fix_edge_parity(self, advanced: bool) -> bool:
+    def fix_edge_parity(self, advanced: bool) -> ParityFix:
         """Fix even cube edge parity (OLL parity).
 
         Called by orchestrator when 3x3 solver detects edge parity
@@ -132,7 +131,7 @@ class BeginnerReducer(AbstractReducer):
         """
         return self._edge_parity.fix_edge_parity(advanced)
 
-    def fix_corner_parity(self, advanced: bool) -> bool:
+    def fix_corner_parity(self, advanced: bool) -> CornerFixResults:
         """Fix even cube corner swap parity (PLL parity).
 
         Called by orchestrator when 3x3 solver detects corner swap parity.
