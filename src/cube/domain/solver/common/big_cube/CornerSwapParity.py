@@ -50,6 +50,18 @@ class CornerSwapParity(SolverHelper):
         Returns:
             True if edges were preserved (no re-reduce needed),
             False if edges were moved to new positions.
+
+        IMPORTANT — color provider requirement for even cubes:
+            The advanced path uses colors_id/position_id to detect which corners
+            need swapping. On even cubes (Cage solver), face colors come from
+            tracked centers, not fixed centers. Callers on even cubes MUST set
+            up the faces color provider (via cube.with_faces_color_provider)
+            before calling this method.
+
+            Color lookups happen only BEFORE and AFTER the swap algorithm.
+            Each algorithm undoes its own whole-cube rotations (Y + alg + Y'),
+            so face colors are restored after the algorithm runs. It is safe
+            to use color-based queries at both points.
         """
         if advanced:
             return self._fix_advanced()
@@ -94,6 +106,12 @@ class CornerSwapParity(SolverHelper):
 
         Falls back to basic if the cube state doesn't allow detection
         (e.g. no corner in position, or not exactly 2 in position).
+
+        Color safety: we use colors_id/position_id to detect corner positions
+        BEFORE the algorithm runs, and to verify AFTER. Each swap algorithm
+        includes its own Y setup and Y' unsetup (e.g. Y + diagonal + Y'),
+        so face colors are restored after the algorithm. Color queries are
+        safe at both points. No color queries happen DURING the algorithm.
 
         Returns:
             True if advanced algorithm was used (edges preserved),

@@ -274,7 +274,10 @@ class CageNxNSolver(BaseSolver):
                         raise  # Give up after 5 attempts
 
                     self.debug("Corner swap parity detected during corner solve, fixing...")
-                    preserved = self._corner_swap.fix_corner_parity(self._cube.config.cage_advanced_parity)
+                    # Color provider needed for advanced path on even cubes —
+                    # see CornerSwapParity.fix_corner_parity docstring.
+                    with self._cube.with_faces_color_provider(tracker_holder):
+                        preserved = self._corner_swap.fix_corner_parity(self._cube.config.cage_advanced_parity)
                     sr.was_corner_swap = ParityFix.Preserving if preserved else ParityFix.NonPreserving
 
                 except EvenCubeEdgeSwapParityException:
@@ -353,7 +356,8 @@ class CageNxNSolver(BaseSolver):
                         raise
 
                     self.debug("Corner swap parity detected during corner solve, fixing...")
-                    preserved = self._corner_swap.fix_corner_parity(self._cube.config.cage_advanced_parity)
+                    with self._cube.with_faces_color_provider(tracker_holder):
+                        preserved = self._corner_swap.fix_corner_parity(self._cube.config.cage_advanced_parity)
                     sr.was_corner_swap = ParityFix.Preserving if preserved else ParityFix.NonPreserving
 
                 except EvenCubeEdgeSwapParityException:
