@@ -69,6 +69,20 @@ class CommonOp(SolverHelper):
 
         return f
 
+    # =========================================================
+    #  Common Algs
+
+
+    @property
+    def top_3_corner_cycle(self) -> Alg:
+        """
+        TOP Face 3 corners cycle LFU -> BRU -> BLU -> LFU
+        """
+        return Algs.alg(None, Algs.U, Algs.R, Algs.U.prime, Algs.L.prime, Algs.U, Algs.R.prime, Algs.U.prime, Algs.L)
+
+    # =========================================================
+
+
     def l2_edges(self) -> Sequence[Edge]:
 
         edges: list[Edge] = []

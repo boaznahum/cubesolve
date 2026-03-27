@@ -76,6 +76,17 @@ class CubeQueries2:
 
         raise InternalSWError(f"Can't find corner with pred {pred}")
 
+    def get_corner_actual_position(self, c : Corner) -> Corner:
+        """
+        Given corner,
+        Where corner is actually is in
+        """
+        c_id = c.position_id
+        return self.find_corner(lambda corner: corner.colors_id == c_id)
+
+
+
+
     def find_slice_in_cube_edges(self, pred: Pred[EdgeWing]) -> EdgeWing | None:
 
         cube = self._cube

@@ -21,9 +21,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from cube.domain.algs import Algs
-from cube.domain.model.Corner import Corner
-from cube.domain.model.Face import Face
+from cube.domain.algs import Algs, Alg
 from cube.domain.solver.common.SolverHelper import SolverHelper
 
 if TYPE_CHECKING:
@@ -47,6 +45,7 @@ class CornerSwapParity(SolverHelper):
         Args:
             advanced: If True, detect diagonal vs adjacent and use the
                       matching edge-preserving algorithm.
+                      else swap any top two corners. but relies on reducer to later fix it
 
         Returns:
             True if edges were preserved (no re-reduce needed),
@@ -108,7 +107,9 @@ class CornerSwapParity(SolverHelper):
         # (face colors may not be standard BOY scheme).
         yf = self.cube.up
 
+        #claude: leann and documnet !!!
         # Find which corners are out of position
+        # cube elements never moved, so these constnats need not to refershed !!!
         fru = yf.corner_bottom_right
         flu = yf.corner_bottom_left
         blu = yf.corner_top_left
@@ -116,22 +117,20 @@ class CornerSwapParity(SolverHelper):
 
         # Ensure one in-position corner is at FRU.
         # Detectors (L3Corners, PLL) normally set this up, but we don't rely on it.
-        if not fru.in_position:
-            for c, y_alg in [(bru, Algs.Y), (blu, Algs.Y * 2), (flu, Algs.Y.prime)]:
-                if c.in_position:
-                    self.op.play(y_alg)
-                    break
-            # Re-read after rotation
-            fru = yf.corner_bottom_right
-            flu = yf.corner_bottom_left
-            blu = yf.corner_top_left
-            bru = yf.corner_top_right
+
+        # claude: need to assert that disorder is up, L1 a, L2 and L3 cross are solved
+
+        cqr = self.cqr
+        fru_actual = cqr.get_corner_actual_position(fru)
+        assert fru_actual.on_face(yf)
 
         if not fru.in_position:
-            # No corner in position — can't determine diagonal vs adjacent.
-            self.debug("Advanced: no corner in position, falling back to basic")
-            self._fix_basic()
-            return False
+            for c, y_alg in [(bru, Algs.Y), (blu, Algs.Y * 2), (flu, Algs.Y.prime)]:
+                if fru_actual is c:
+                    self.op.play(y_alg)
+                    break
+
+        assert fru.in_position, "FRU in position"
 
         # Count how many of the other 3 corners are in position
         others_in_position = sum(c.in_position for c in [flu, blu, bru])
@@ -140,63 +139,117 @@ class CornerSwapParity(SolverHelper):
             # All 4 in position — no parity to fix
             assert False, "All corners in position — no parity detected"
 
-        if others_in_position == 0:
-            # 3-cycle: none of FLU/BLU/BRU in position.
-            # Apply UR 3-corner-cycle to convert to a 2-swap case.
-            ur = Algs.alg(None, Algs.U, Algs.R, Algs.U.prime, Algs.L.prime,
-                          Algs.U, Algs.R.prime, Algs.U.prime, Algs.L)
-            self.debug("Advanced: 3-cycle detected, applying UR to reduce to 2-swap")
-            self.op.play(ur)
-            flu = yf.corner_bottom_left
-            blu = yf.corner_top_left
-            bru = yf.corner_top_right
-            others_in_position = sum(c.in_position for c in [flu, blu, bru])
+        _3_cycle_alg = self.cmn.top_3_corner_cycle
 
-            if others_in_position == 3:
-                assert False, "All corners in position after UR — no parity"
+        # so now we have 6 cases ##
 
-            if others_in_position == 0:
-                # Wrong cycle direction — undo and try UR'
-                self.debug("Advanced: still 3-cycle after UR, trying UR'")
-                self.op.play(ur.prime)  # undo UR
-                self.op.play(ur.prime)  # apply UR' (inverse cycle)
-                flu = yf.corner_bottom_left
-                blu = yf.corner_top_left
-                bru = yf.corner_top_right
-                others_in_position = sum(c.in_position for c in [flu, blu, bru])
+        a = blu
+        b = bru
+        c = flu
 
-                if others_in_position == 3:
-                    assert False, "All corners in position after UR' — no parity"
-                assert others_in_position == 1, (
-                    f"Expected 1 in position after UR', got {others_in_position}"
-                )
+        # A - blu
+        # B - bru
+        # C - flu
+        # D - fru    always in positon, see assert above
 
-        assert others_in_position == 1, (
-            f"Expected exactly 1 of FLU/BLU/BRU in position, got {others_in_position}"
-        )
+        blu_pos = cqr.get_corner_actual_position(blu)
+        bru_pos = cqr.get_corner_actual_position(bru)
+        flu_pos = cqr.get_corner_actual_position(flu)
 
-        # Now exactly 2 corners in position (FRU + one other), 2 out of position
-        out_of_position: list[Corner] = [c for c in [flu, blu, bru] if not c.in_position]
-        assert len(out_of_position) == 2
 
-        c1, c2 = out_of_position
+        assert blu_pos.on_face(yf)
+        assert bru_pos.on_face(yf)
+        assert bru_pos.on_face(yf)
 
-        # Determine diagonal vs adjacent
-        diagonal_pairs = [{flu, bru}]  # FRU is in position, so only FLU↔BRU is diagonal
-        is_diagonal = {c1, c2} in diagonal_pairs
+        a_b_c = (blu_pos, bru_pos, flu_pos)
 
-        if is_diagonal:
-            self._fix_diagonal(c1, c2, yf)
+
+        # 6 permutations of 3 corners (FRU always in position):
+        #  a = blu, b = bru, c = flu, D = fru (always in position)
+
+        y: Alg = Algs.Y
+        y2: Alg = y * 2
+
+        alg: Alg
+
+        # case 1: all in position — no parity
+        #  A A-pos | B B-pos
+        #  C C-pos | D D-pos
+        if a_b_c == (a, b, c):
+            assert False, "All corners in position — no parity detected"
+
+
+
+        # case 2: flu↔bru diagonal swap
+        #  A A-pos | C B-pos
+        #  B C-pos | D D-pos
+        # Y brings FLU→FRU, BRU→BLU → diagonal alg swaps FRU↔BLU
+        elif a_b_c == (a, c, b):
+            self.debug("Case 2: flu↔bru diagonal swap")
+            alg = y + self._fix_diagonal_fru_blu() + y.prime
+
+        # case 3: blu↔bru adjacent swap (back)
+        #  B A-pos | A B-pos
+        #  C C-pos | D D-pos
+        # Y2 brings BLU→FRU, BRU→FLU → adjacent alg swaps FRU↔FLU
+        elif a_b_c == (b, a, c):
+            self.debug("Case 3: blu↔bru adjacent swap (back)")
+            alg = y2 + self._fix_adjacent_fru_flu() + y2.prime
+
+        # case 4: 3-cycle CW (blu→bru→flu→blu)
+        #  B A-pos | C B-pos
+        #  A C-pos | D D-pos
+        # cycle moves: FLU→BRU, BRU→BLU, BLU→FLU
+        # after cycle: blu(at bru)→blu, bru(at flu)→bru, flu(at blu)→flu → all in position
+        # if all in position after cycle → parity was just a 3-cycle, assert
+        elif a_b_c == (b, c, a):
+            self.debug("Case 4: 3-cycle CW, applying cycle")
+            alg = _3_cycle_alg
+
+        # case 5: 3-cycle CCW (blu→flu→bru→blu)
+        #  C A-pos | A B-pos
+        #  B C-pos | D D-pos
+        # cycle' moves: FLU→BLU, BLU→BRU, BRU→FLU
+        # after cycle': blu(at flu)→blu... wait need inverse
+        # cycle' = FLU←BRU←BLU←FLU = BRU→FLU, BLU→BRU, FLU→BLU
+        # after: flu(at bru)→flu, blu(at flu)→blu, bru(at blu)... no
+        # Just apply cycle' and let the assert check
+        elif a_b_c == (c, a, b):
+            self.debug("Case 5: 3-cycle CCW, applying cycle'")
+            alg = _3_cycle_alg.prime
+
+        # case 6: flu↔blu adjacent swap (left)
+        #  C A-pos | B B-pos
+        #  A C-pos | D D-pos
+        # Y' brings FLU→FRU, BLU→FLU → adjacent alg swaps FRU↔FLU
+        elif a_b_c == (c, b, a):
+            self.debug("Case 6: flu↔blu adjacent swap (left)")
+            alg = y.prime + self._fix_adjacent_fru_flu() + y
+
         else:
-            self._fix_adjacent(c1, c2, yf)
+            assert False, f"Unexpected permutation: {a_b_c}"
+
+        assert alg is not None
+        with self.ann.annotate(h1="Advanced corner swap fix"):
+            self.op.play(alg)
 
         # Verify all corners are now in position
         from cube.domain.model import Part
         assert Part.all_in_position(yf.corners), "Not all corners in position after advanced swap"
         return True
 
-    def _fix_diagonal(self, c1: Corner, c2: Corner, yf: "Face") -> None:
+    def _fix_diagonal_fru_blu(self) -> Alg:
         """Swap two diagonal corners — edges return to original positions.
+
+        # tested in pyglet2
+        #Diagonal (6x6): FRU <--> BLU
+        # 3Rw2 2-3F2 U2 3Fw2 U' 3Rw2 U2 3Fw2 U 3Fw2 R2 U2 F2 3Rw2 U
+
+        # tested in pyglet2
+        #Diagonal (8x8): FRU <--> BLU
+        4Rw2 2-4F2 U2 4Fw2 U' 4Rw2 U2 4Fw2 U 4Fw2 R2 U2 F2 4Rw2 U
+
+
 
         Uses Gallet's 15-move diagonal corner swap generalized for NxN:
             Rw2 f2 U2 Fw2 U' Rw2 U2 Fw2 U Fw2 R2 U2 F2 Rw2 U
@@ -229,14 +282,25 @@ class CornerSwapParity(SolverHelper):
                        Algs.F * 2, r_wide * 2, Algs.U,
                        )
 
-        with self.ann.annotate(h1="Diagonal Corner Swap (edges preserved)"):
-            self.op.play(alg)
+        return alg
 
-    def _fix_adjacent(self, c1: Corner, c2: Corner, yf: "Face") -> None:
+
+
+    def _fix_adjacent_fru_flu(self) -> Alg:
         """Swap two adjacent corners — edges return to original positions.
 
         Uses Mowla's 17-move adjacent corner swap generalized for NxN:
             z r2 U2 R' U2 R' U2 R x U2 Rw2 U2 B2 L U2 L' U2 Rw2 U2 z' y'
+
+
+        # tested in pyglet2
+        #Adjacent (6x6): FRU <--> FLU
+        # Z 2-3R2 U2 R' U2 R' U2 R X U2 3Rw2 U2 B2 L U2 L' U2 3Rw2 U2 Z' Y'
+
+        # tested in pyglet2
+        #Adjacent (8x8): FRU <--> FLU
+         Z 2-4R2 U2 R' U2 R' U2 R X U2 4Rw2 U2 B2 L U2 L' U2 4Rw2 U2 Z' Y'
+
 
         The algorithm swaps FRU ↔ BRU (right-side adjacent pair).
         If the out-of-position pair is not on the right side, we rotate
@@ -247,35 +311,23 @@ class CornerSwapParity(SolverHelper):
             R  = Algs.R     — outer R layer only
             Rw = R[1:nh+1]  — wide R half-cube
         """
-        n_slices = self.cube.n_slices
-        nh = n_slices // 2
+        nh = self.cube.n_slices // 2
 
         self.debug("Doing adjacent corner swap (advanced — edges preserved)")
-
-        # The algorithm swaps the two corners on the right side (FRU ↔ BRU).
-        # We need to Y-rotate so the out-of-position pair is on the right.
-        flu = yf.corner_bottom_left
-        blu = yf.corner_top_left
-        bru = yf.corner_top_right
-
-        pair = {c1, c2}
-        # FRU is always in position, so the adjacent out-of-position pairs are:
-        #   FLU+BLU (left side) → Y2 to bring to right
-        #   BLU+BRU (back side) → Y to bring to right
-        if pair == {flu, blu}:
-            setup_alg = Algs.Y * 2
-        elif pair == {bru, blu}:
-            setup_alg = Algs.Y
-        else:
-            assert False, f"Unexpected adjacent pair: {c1}, {c2}"
-
-        if setup_alg.count() > 0:
-            self.op.play(setup_alg)
 
         r_inner = Algs.R[2:nh + 1]   # r
         r_wide = Algs.R[1:nh + 1]    # Rw
         u2 = Algs.U * 2
         b2 = Algs.B * 2
+
+
+        #  Z
+        #  2-4R2 U2 R' U2 R' U2 R
+        #  X
+        #  U2
+        #  4Rw2 U2 B2 L U2 L' U2
+        #  4Rw2 U2
+        #  Z' Y'
 
         # Mowla's 17-move adjacent corner swap (swaps FRU ↔ BRU):
         # z r2 U2 R' U2 R' U2 R x U2 Rw2 U2 B2 L U2 L' U2 Rw2 U2 z' y'
@@ -287,10 +339,10 @@ class CornerSwapParity(SolverHelper):
                        Algs.Z,
                        r_inner * 2, u2, Algs.R.prime, u2, Algs.R.prime, u2, Algs.R,
                        Algs.X,
-                       u2, r_wide * 2, u2, b2, Algs.L, u2, Algs.L.prime, u2,
+                       u2,
+                       r_wide * 2, u2, b2, Algs.L, u2, Algs.L.prime, u2,
                        r_wide * 2, u2,
                        Algs.Z.prime, Algs.Y.prime,
                        )
 
-        with self.ann.annotate(h1="Adjacent Corner Swap (edges preserved)"):
-            self.op.play(alg)
+        return alg

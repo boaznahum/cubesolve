@@ -84,6 +84,8 @@ markers = [
     "gui: marks tests as GUI tests (require display, run with 'pytest tests/gui -v')",
     "console: marks tests as console tests (run with 'pytest tests/console -v')",
     "webgl: marks tests as WebGL browser E2E tests (run with 'pytest tests/webgl -v -n0')",
+    "even: even cube sizes (4x4, 6x6, 8x8, ...)",
+    "odd: odd cube sizes (3x3, 5x5, 7x7, ...)",
 ]
 addopts = "-n auto"
 

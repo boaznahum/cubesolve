@@ -132,7 +132,7 @@ class L3Corners(SolverHelper):
 
     @property
     def _ur(self) -> Alg:
-        return Algs.alg(None, Algs.U, Algs.R, Algs.U.prime, Algs.L.prime, Algs.U, Algs.R.prime, Algs.U.prime, Algs.L)
+        return self.cmn.top_3_corner_cycle
 
     def bring_corner_to_front_right(self, c: Corner):
         """
