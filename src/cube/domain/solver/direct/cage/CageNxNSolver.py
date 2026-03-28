@@ -33,8 +33,8 @@ This is simpler than the reduction method because:
 
 4. For EVEN cubes (4x4, 6x6):
    - "Partial" edge parity (detectable during pairing) is handled
-   - "Full" edge parity may appear as OLL/PLL parity on shadow cube
-   - Solution: Use beginner solver for even cube shadows (not CFOP)
+   - "Full" edge parity may appear as OLL/PLL parity during 3x3 solve
+   - Solution: Use beginner solver for even cubes (not CFOP)
    - Beginner solver doesn't detect/raise parity exceptions
    - CFOP would cause oscillation: fix parity -> re-pair -> new parity
 """
@@ -51,7 +51,6 @@ from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
 from cube.domain.solver.common.big_cube.CornerSwapParity import CornerSwapParity, CornerFixResults
 from cube.domain.solver.common.big_cube.EdgeSliceParity import EdgeSliceParity
 from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
-from cube.domain.solver.common.big_cube.ShadowCubeHelper import ShadowCubeHelper
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.solver import SolverResults, SolveStep
 from cube.utils.SSCode import SSCode
@@ -97,8 +96,6 @@ class CageNxNSolver(BaseSolver):
 
         # Corner swap parity fix (basic and advanced algorithms)
         self._corner_swap = CornerSwapParity(self)
-
-        self._shadow_helper = ShadowCubeHelper(self)
 
         # =====================================================================
         # EDGE SOLVER SETUP
@@ -425,23 +422,24 @@ class CageNxNSolver(BaseSolver):
     # =========================================================================
 
     def _solve_corners(self, tracker_holder: FacesTrackerHolder) -> None:
-        """Solve corners using shadow cube approach with DualOperator.
+        """Solve corners by running a 3x3 solver directly on the NxN cube.
+
+        Uses with_faces_color_provider to give the 3x3 solver correct face
+        colors (critical for even cubes where center colors are unreliable).
+
+        The 3x3 solver only uses outer face moves (R, L, U, D, F, B) and
+        whole cube rotations, which keep the face color provider valid.
 
         Works identically for odd and even cubes:
-        - Build shadow 3x3 with face colors from trackers
-        - Solve shadow cube using DualOperator
-        - DualOperator automatically plays moves on both shadow AND real cube
-        - Annotations from 3x3 solver appear on real cube!
-
-        For odd cubes: trackers return fixed center colors
-        For even cubes: trackers return majority/tracked colors
+        - For odd cubes: trackers return fixed center colors
+        - For even cubes: trackers return majority/tracked colors
 
         May raise EvenCubeEdgeParityException or EvenCubeCornerSwapException
         which _solve_impl catches to fix parity and retry.
-
-        See docs/design/dual_operator_annotations.md for design details.
         """
-        self.debug("Starting corner solving (using DualOperator)")
+        from cube.domain.solver.Solvers3x3 import Solvers3x3
+
+        self.debug("Starting corner solving (using faces color provider)")
 
         # Get face colors from tracker holder
         face_colors = tracker_holder.get_face_colors()
@@ -452,56 +450,21 @@ class CageNxNSolver(BaseSolver):
         for edge in self._cube.edges:
             self.debug(lambda: f"  {edge._name}: {edge.e1.color}-{edge.e2.color}, is3x3={edge.is3x3}")
 
-        # Solve using DualOperator - moves are applied to real cube automatically
-        self._solve_with_dual_operator(tracker_holder)
-
-    def _solve_with_dual_operator(self, th: FacesTrackerHolder) -> None:
-        """Create shadow 3x3 and solve using DualOperator.
-
-        DualOperator wraps both the shadow cube and real operator:
-        - Solver logic operates on shadow cube (op.cube returns shadow)
-        - Moves are played on BOTH cubes (shadow direct, real via operator)
-        - Annotations are mapped from shadow pieces to real pieces
-        - User sees full animation with h1/h2/h3 text and visual markers!
-
-        This replaces the old approach of collecting history and playing at once.
-        """
-        from cube.application.commands.DualOperator import DualOperator
-        from cube.domain.solver.Solvers3x3 import Solvers3x3
-
-        # Create shadow 3x3 cube
-        shadow_cube = self._shadow_helper.create_shadow_cube_from_faces_and_cube(th)
-
-        # Debug: print all edges on shadow cube
-        self.debug("Shadow cube edges:")
-        for edge in shadow_cube.edges:
-            self.debug(lambda: f"  {edge._name}: {edge.e1.color}-{edge.e2.color}")
-
-        if shadow_cube.solved:
-            self.debug("Shadow cube is already solved")
-            return
-
-        # Create DualOperator: wraps shadow cube + real operator
-        # When solver calls op.play(), moves go to BOTH cubes
-        # Annotations are mapped from shadow pieces → real pieces
-        dual_op = DualOperator(shadow_cube, self._op)
-
         # For even cubes, use beginner solver to avoid CFOP parity detection issues.
         # CFOP raises exceptions for OLL/PLL parity which causes oscillation when fixing.
         # Beginner solver handles these states without raising exceptions.
         if self._cube.n_slices % 2 == 0:
             solver_name = "beginner"
-            self.debug("Using beginner solver for even cube shadow")
+            self.debug("Using beginner solver for even cube")
         else:
             solver_name = self._cube.config.cage_3x3_solver
 
-        # Create solver with DualOperator
-        # Solver sees shadow cube via dual_op.cube
-        # But moves and annotations go to real cube too!
-        shadow_solver = Solvers3x3.by_name(solver_name, dual_op, self._logger)
-        shadow_solver.solve_3x3()
-
-        # No need to apply history - DualOperator already played on real cube!
+        # Solve directly on the NxN cube with correct face colors.
+        # The color provider overrides Face.color so the 3x3 solver sees
+        # correct colors even on even cubes with moveable centers.
+        with self._cube.with_faces_color_provider(tracker_holder):
+            solver_3x3 = Solvers3x3.by_name(solver_name, self._op, self._logger)
+            solver_3x3.solve_3x3()
 
 
     # =========================================================================
@@ -543,7 +506,7 @@ class CageNxNSolver(BaseSolver):
     def _supported_steps_impl(self) -> list[SolveStep]:
         """Return list of solve steps this solver supports.
 
-        Cage method solves edges first, then corners (via shadow 3x3),
+        Cage method solves edges first, then corners (via 3x3 solver),
         then centers. Steps are:
         - NxNEdges: Pair all wing edges
         - Cage: Edges + Corners (no centers)

@@ -674,7 +674,13 @@ class Face(SuperElement, Hashable, Colorable):
             return all(corner.face_color(self) == c for corner in self._corners[1:])
 
         if not self.is3x3:
-            return False
+            # When a color provider is active, face color comes from the
+            # provider (not centers), so center reduction isn't needed.
+            # Only edges need to be paired for the 3x3 solved check.
+            if self._color_provider is None:
+                return False
+            if not all(e.is3x3 for e in self.edges):
+                return False
 
         c = self.color
 
