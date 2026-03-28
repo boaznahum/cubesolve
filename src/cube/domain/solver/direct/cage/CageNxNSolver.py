@@ -439,20 +439,10 @@ class CageNxNSolver(BaseSolver):
         """
         from cube.domain.solver.Solvers3x3 import Solvers3x3
 
-        self.debug("Starting corner solving (using faces color provider)")
 
-        # Get face colors from tracker holder
-        face_colors = tracker_holder.get_face_colors()
-        self.debug(lambda: f"Face colors: {face_colors}")
-
-        # Debug: show current edge state
-        self.debug("Current edges:")
-        for edge in self._cube.edges:
-            self.debug(lambda: f"  {edge._name}: {edge.e1.color}-{edge.e2.color}, is3x3={edge.is3x3}")
-
-        # For even cubes, use beginner solver to avoid CFOP parity detection issues.
-        # CFOP raises exceptions for OLL/PLL parity which causes oscillation when fixing.
-        # Beginner solver handles these states without raising exceptions.
+        # WORKAROUND (#147): Even cubes forced to beginner solver because CFOP
+        # raises parity exceptions that cause oscillation in the orchestrator.
+        # CFOP should be usable here — fix tracked in #147.
         if self._cube.n_slices % 2 == 0:
             solver_name = "beginner"
             self.debug("Using beginner solver for even cube")
@@ -462,7 +452,7 @@ class CageNxNSolver(BaseSolver):
         # Solve directly on the NxN cube with correct face colors.
         # The color provider overrides Face.color so the 3x3 solver sees
         # correct colors even on even cubes with moveable centers.
-        with self._cube.with_faces_color_provider(tracker_holder):
+        with self._cube.with_faces_color_provider(tracker_holder, True):
             solver_3x3 = Solvers3x3.by_name(solver_name, self._op, self._logger)
             solver_3x3.solve_3x3()
 

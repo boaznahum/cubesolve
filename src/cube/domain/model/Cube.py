@@ -134,7 +134,7 @@ The model uses the BOY (Blue-Orange-Yellow) color scheme by default:
 """
 
 from collections.abc import Generator, Iterable, Iterator, MutableSequence
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from typing import TYPE_CHECKING, Collection, Protocol, Tuple
 
 from cube.domain.exceptions import InternalSWError
@@ -903,33 +903,29 @@ class Cube(CubeSupplier):
         self.modified()
 
     @contextmanager
-    def with_faces_color_provider(self, provider: "FacesColorsProvider") -> Generator[None, None, None]:
+    def with_faces_color_provider(self, provider: "FacesColorsProvider", center_3x3_mode:bool = False) -> Generator[None, None, None]:
         """Set a FacesColorsProvider on all faces for the duration of the block.
 
         On even cubes, Face.color reads from a center piece that moves during
         solving. This context manager overrides Face.color to return
         tracker-assigned colors instead.
 
-        Stack-safe: nested contexts save and restore the previous provider,
-        so inner contexts don't destroy the outer provider.
+        Stack-safe: uses ExitStack to combine per-face context managers,
+        so nested contexts restore correctly.
 
         Args:
             provider: A FacesColorsProvider (e.g., FacesTrackerHolder).
+            center_3x3_mode: if true face assume center is solved with the provide color
 
         Yields:
             None -- all faces use provider colors within the block.
         """
-        # Save previous providers (for stack safety with nested contexts)
-        prev_providers = {f: f._color_provider for f in self.faces}
-        try:
+        with ExitStack() as stack:
             for f in self.faces:
-                f.set_color_provider(provider)
+                stack.enter_context(f.with_color_provider(provider, center_3x3_mode))
             self.reset_after_faces_changes()
             yield
-        finally:
-            for f in self.faces:
-                f.set_color_provider(prev_providers[f])
-            self.reset_after_faces_changes()
+        self.reset_after_faces_changes()
 
     def clear_moveable_attributes(self) -> None:
         """

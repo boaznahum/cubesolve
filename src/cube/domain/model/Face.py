@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import contextlib
 from collections.abc import Hashable, Iterable, Sequence
+from itertools import chain
 from typing import TYPE_CHECKING, Tuple, TypeAlias
 
 from cube.domain.exceptions import InternalSWError
@@ -43,7 +45,6 @@ class Face(SuperElement, Hashable, Colorable):
                  "_edges_of_corner",  # Lookup table: Corner -> (Edge, Edge) for O(1) access
                  "_opposite",
                  "_cache_manager",  # CacheManager for rotation cycle caching
-                 "_color_provider",  # FacesColorsProvider | None - overrides color property on even cubes
                  "_init_finished",  # True after finish_init() — guards set_edge/set_corner
                  ]
 
@@ -77,7 +78,6 @@ class Face(SuperElement, Hashable, Colorable):
         self._center = self._create_center(color)
         self._direction = Direction.D0
         self._parts: Tuple[Part]
-        self._color_provider: FacesColorsProvider | None = None
         self._init_finished: bool = False
 
         # Cache manager for rotation cycles (respects config.enable_cube_cache)
@@ -374,18 +374,13 @@ class Face(SuperElement, Hashable, Colorable):
     @property
     def color(self) -> Color:
         """
-        The DYNAMIC color of the face's center.
+        The DYNAMIC color of the face — delegates to center.
 
-        When a FacesColorsProvider is set (via Cube.with_faces_color_provider),
-        returns the tracker-assigned color -- reliable on even cubes during solving.
+        Center handles color provider logic: returns tracker-assigned color
+        if a provider is set, else reads from center piece sticker.
 
-        Otherwise reads from center piece at (n//2, n//2), which is unreliable
-        on even cubes when commutators move center pieces.
-
-        :return: Tracker-assigned color if provider set, else center piece color
+        :return: Face color (from center)
         """
-        if self._color_provider is not None:
-            return self._color_provider.get_face_color(self._name)
         return self.center.color
 
     @property
@@ -422,16 +417,10 @@ class Face(SuperElement, Hashable, Colorable):
         """
         return self._original_color
 
-    def set_color_provider(self, provider: FacesColorsProvider | None) -> None:
-        """Set or clear the face color provider.
-
-        When set, Face.color returns tracker-assigned colors instead of
-        reading from the center piece. Used on even cubes during solving.
-
-        Args:
-            provider: Provider to set, or None to clear.
-        """
-        self._color_provider = provider
+    def with_color_provider(self, provider: FacesColorsProvider | None,
+                            center_3x3_mode: bool = False) -> contextlib.AbstractContextManager[None]:
+        """Context manager — delegates to center's with_color_provider."""
+        return self.center.with_color_provider(provider, center_3x3_mode)
 
     def __str__(self) -> str:
         c = self.color
@@ -674,31 +663,18 @@ class Face(SuperElement, Hashable, Colorable):
             return all(corner.face_color(self) == c for corner in self._corners[1:])
 
         if not self.is3x3:
-            # When a color provider is active, face color comes from the
-            # provider (not centers), so center reduction isn't needed.
-            # Only edges need to be paired for the 3x3 solved check.
-            if self._color_provider is None:
-                return False
-            if not all(e.is3x3 for e in self.edges):
-                return False
+            return False
 
         c = self.color
 
-        return (c ==
-                self._edge_top.face_color(self) ==
-                self._edge_right.face_color(self) ==
-                self._edge_bottom.face_color(self) ==
-                self._edge_left.face_color(self) ==
-                self._corner_top_left.face_color(self) ==
-                self._corner_top_right.face_color(self) ==
-                self._corner_bottom_left.face_color(self) ==
-                self._corner_bottom_right.face_color(self)
-                )
+        return all(part.face_color(self) == c
+                   for part in chain(self._corners, self._edges))
 
     @property
     def is3x3(self):
         if self.cube.n_slices == 0:
             return True  # 2x2: no edges/centers, trivially reduced
+
         return all(p.is3x3 for p in self.edges) and self.center.is3x3
 
     def reset_after_faces_changes(self):
