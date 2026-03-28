@@ -5,7 +5,10 @@ from cube.domain.algs.Alg import Alg
 from cube.domain.algs.AnnotationAlg import AnnotationAlg
 from cube.domain.algs.MarkerMeetAlg import MarkerMeetAlg
 from cube.domain.algs.FaceAlg import FaceAlg
-from warnings import deprecated
+try:
+    from warnings import deprecated  # Python 3.13+
+except ImportError:
+    from typing_extensions import deprecated
 
 from cube.domain.algs.Scramble import is_scramble as _is_scramble
 from cube.domain.algs.Scramble import scramble as create_scramble
