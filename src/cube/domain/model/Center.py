@@ -16,7 +16,6 @@ from ..geometric.geometry_types import Point
 if TYPE_CHECKING:
     from .Face import Face
     from .FacesColorsProvider import FacesColorsProvider
-    from .FaceName import FaceName as _FaceName
 
 
 

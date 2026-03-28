@@ -230,7 +230,7 @@ class CornerSwapParity(SolverHelper):
         #  B C-pos | D D-pos
         # Y brings FLU→FRU, BRU→BLU → diagonal alg swaps FRU↔BLU
         elif a_b_c == (a, c, b):
-            self.debug("Case 2: flu↔bru diagonal swap")
+            self._logger.debug("Case 2: flu↔bru diagonal swap")
             alg = y + self._fix_diagonal_fru_blu() + y.prime
 
         # case 3: blu↔bru adjacent swap (back)
@@ -238,7 +238,7 @@ class CornerSwapParity(SolverHelper):
         #  C C-pos | D D-pos
         # Y2 brings BLU→FRU, BRU→FLU → adjacent alg swaps FRU↔FLU
         elif a_b_c == (b, a, c):
-            self.debug("Case 3: blu↔bru adjacent swap (back)")
+            self._logger.debug("Case 3: blu↔bru adjacent swap (back)")
             alg = y2 + self._fix_adjacent_fru_flu() + y2.prime
 
         # case 4: 3-cycle CW (blu→bru→flu→blu)
@@ -248,7 +248,7 @@ class CornerSwapParity(SolverHelper):
         # after cycle: blu(at bru)→blu, bru(at flu)→bru, flu(at blu)→flu → all in position
         # if all in position after cycle → parity was just a 3-cycle, assert
         elif a_b_c == (b, c, a):
-            self.debug("Case 4: 3-cycle CW, applying cycle")
+            self._logger.debug("Case 4: 3-cycle CW, applying cycle")
             alg = _3_cycle_alg
 
         # case 5: 3-cycle CCW (blu→flu→bru→blu)
@@ -260,7 +260,7 @@ class CornerSwapParity(SolverHelper):
         # after: flu(at bru)→flu, blu(at flu)→blu, bru(at blu)... no
         # Just apply cycle' and let the assert check
         elif a_b_c == (c, a, b):
-            self.debug("Case 5: 3-cycle CCW, applying cycle'")
+            self._logger.debug("Case 5: 3-cycle CCW, applying cycle'")
             alg = _3_cycle_alg.prime
 
         # case 6: flu↔blu adjacent swap (left)
@@ -268,7 +268,7 @@ class CornerSwapParity(SolverHelper):
         #  A C-pos | D D-pos
         # Y' brings FLU→FRU, BLU→FLU → adjacent alg swaps FRU↔FLU
         elif a_b_c == (c, b, a):
-            self.debug("Case 6: flu↔blu adjacent swap (left)")
+            self._logger.debug("Case 6: flu↔blu adjacent swap (left)")
             alg = y.prime + self._fix_adjacent_fru_flu() + y
 
         else:
@@ -309,7 +309,7 @@ class CornerSwapParity(SolverHelper):
         n_slices = self.cube.n_slices
         nh = n_slices // 2
 
-        self.debug("Doing diagonal corner swap (advanced — edges preserved)")
+        self._logger.debug("Doing diagonal corner swap (advanced — edges preserved)")
 
         r_wide = Algs.R[1:nh + 1]    # Rw
         f_wide = Algs.F[1:nh + 1]    # Fw
@@ -358,7 +358,7 @@ class CornerSwapParity(SolverHelper):
         """
         nh = self.cube.n_slices // 2
 
-        self.debug("Doing adjacent corner swap (advanced — edges preserved)")
+        self._logger.debug("Doing adjacent corner swap (advanced — edges preserved)")
 
         r_inner = Algs.R[2:nh + 1]   # r
         r_wide = Algs.R[1:nh + 1]    # Rw

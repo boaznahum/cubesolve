@@ -445,7 +445,7 @@ class CageNxNSolver(BaseSolver):
         # CFOP should be usable here — fix tracked in #147.
         if self._cube.n_slices % 2 == 0:
             solver_name = "beginner"
-            self._logger.debug_lazy("Using beginner solver for even cube")
+            self._logger.debug("Using beginner solver for even cube")
         else:
             solver_name = self._cube.config.cage_3x3_solver
 
