@@ -160,9 +160,9 @@ class PLL(StepSolver):
         size = self.cube.size
 
         # On shadow 3x3, raise exception for cage solver to handle
-        # it is not clear why when tried alsws to raie it all FOP ussing
+        # it is not clear why when tried allows to raise it all CFOP when using
         ## orchestrator fail
-        if True or self.cube.is_even_cube_shadow:
+        if False or self.cube.is_even_cube_shadow:
             self.debug("PLL: Edge swap parity on shadow cube - raising exception")
             raise EvenCubeEdgeSwapParityException()
 
