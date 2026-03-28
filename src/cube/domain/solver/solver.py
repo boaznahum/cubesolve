@@ -86,6 +86,31 @@ class SolveStep(Enum):
         return self._description
 
 
+class ParityType(Enum):
+    """Types of parity that can occur in even-layered cubes."""
+    EvenEdge = ("Even Edge(OLL)", "Even Edge")
+    CornerSwap = ("Corner(PLL)", "Corner Swap")
+    PartialEdge = ("Partial Edge", "Partial Edge")
+
+    _display_name: str
+    _short_name: str
+
+    def __new__(cls, display_name: str, short_name: str) -> "ParityType":
+        obj = object.__new__(cls)
+        obj._value_ = display_name
+        obj._display_name = display_name
+        obj._short_name = short_name
+        return obj
+
+    @property
+    def display_name(self) -> str:
+        return self._display_name
+
+    @property
+    def short_name(self) -> str:
+        return self._short_name
+
+
 class SolverResults:
 
     def __init__(self) -> None:

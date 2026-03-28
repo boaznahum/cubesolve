@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING
 from cube.domain.exceptions import (
     EvenCubeCornerSwapException,
     EvenCubeEdgeParityException,
-    InternalSWError,
+    InternalSWError, EvenCubeEdgeSwapParityException,
 )
 from cube.domain.solver._3x3.beginner.BeginnerSolver3x3 import BeginnerSolver3x3
 from cube.domain.solver.common.AbstractSolver import AbstractSolver
@@ -236,6 +236,7 @@ class NxNSolverOrchestrator(AbstractSolver):
         - Iteration 3: After corner fix → should complete
         """
         even_edge_parity_fix: ParityFix | None = None
+        even_edge_swap_parity_fix: ParityFix | None = None  # CFOP
         corner_swap_fix: ParityFix | None = None
 
         is_even_cube = self._cube.n_slices % 2 == 0
@@ -268,6 +269,7 @@ class NxNSolverOrchestrator(AbstractSolver):
                     self._solver_3x3.solve_3x3(debug, what)
 
             except EvenCubeEdgeParityException:
+
                 self.debug(lambda: f"Catch even edge parity in iteration #{attempt}")
                 if even_edge_parity_fix is not None:
                     raise InternalSWError("Edge parity detected twice - fix_edge_parity failed")
@@ -277,9 +279,25 @@ class NxNSolverOrchestrator(AbstractSolver):
                 )
                 even_edge_parity_fix = even_edge_fix
 
+                # not need in case of advanced
                 self._reducer.reduce(debug)
                 continue
 
+            except EvenCubeEdgeSwapParityException:
+
+                self.debug(lambda: f"Catch even edge swap (CFOP) parity in iteration #{attempt}")
+                if even_edge_swap_parity_fix is not None:
+                    raise InternalSWError("Even Edge swap (CFOP) parity detected twice - fix_edge_parity failed")
+                even_edge_swap_fix = self._reducer.fix_edge_parity(
+                    advanced=self._advanced_edge_parity
+                )
+                even_edge_swap_parity_fix = even_edge_swap_fix
+
+                # not need in case of advanced
+                self._reducer.reduce(debug)
+                continue
+
+            # CFOP handle EvenEdge parity, but it might decide to throw
             except EvenCubeCornerSwapException:
                 self.debug(lambda: f"Catch corner swap in iteration #{attempt}")
                 if corner_swap_fix is not None:

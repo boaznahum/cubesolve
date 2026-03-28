@@ -12,6 +12,8 @@ in edge pairing that can create states unreachable on a standard 3x3.
 class EvenCubeEdgeSwapParityException(Exception):
     """Raised when PLL detects edge swap parity.
 
+    THE CFOP PLL raised it in case oh shadow cube but handles it if not.
+
     The solver orchestrator should catch this and apply the appropriate
     parity fix algorithm that swaps two edge slices on the real cube.
     """
