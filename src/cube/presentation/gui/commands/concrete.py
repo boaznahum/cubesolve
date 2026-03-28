@@ -15,6 +15,8 @@ from cube.domain.solver.SolverName import SolverName
 from ..ViewSetup import ViewSetup
 from .base import Command, CommandContext, CommandResult
 
+from cube.utils.logging import CubeLogger
+
 if TYPE_CHECKING:
     from cube.domain.algs.Alg import Alg
     from cube.domain.algs.SliceAbleAlg import SliceAbleAlg
@@ -324,7 +326,7 @@ class BrightnessUpCommand(Command):
     def execute(self, ctx: CommandContext) -> CommandResult:
         new_level = ctx.window.adjust_brightness(0.05)
         if new_level is not None:
-            ctx.vs.debug(False, f"Brightness: {new_level:.2f}")
+            ctx.vs.logger.log(CubeLogger.verbose_level(), f"Brightness: {new_level:.2f}")
         return CommandResult()
 
 
@@ -335,7 +337,7 @@ class BrightnessDownCommand(Command):
     def execute(self, ctx: CommandContext) -> CommandResult:
         new_level = ctx.window.adjust_brightness(-0.05)
         if new_level is not None:
-            ctx.vs.debug(False, f"Brightness: {new_level:.2f}")
+            ctx.vs.logger.log(CubeLogger.verbose_level(), f"Brightness: {new_level:.2f}")
         return CommandResult()
 
 
@@ -346,7 +348,7 @@ class BackgroundUpCommand(Command):
     def execute(self, ctx: CommandContext) -> CommandResult:
         new_level = ctx.window.adjust_background(0.05)
         if new_level is not None:
-            ctx.vs.debug(False, f"Background: {new_level:.2f}")
+            ctx.vs.logger.log(CubeLogger.verbose_level(), f"Background: {new_level:.2f}")
         return CommandResult()
 
 
@@ -357,7 +359,7 @@ class BackgroundDownCommand(Command):
     def execute(self, ctx: CommandContext) -> CommandResult:
         new_level = ctx.window.adjust_background(-0.05)
         if new_level is not None:
-            ctx.vs.debug(False, f"Background: {new_level:.2f}")
+            ctx.vs.logger.log(CubeLogger.verbose_level(), f"Background: {new_level:.2f}")
         return CommandResult()
 
 
@@ -368,7 +370,7 @@ class TextureSetNextCommand(Command):
     def execute(self, ctx: CommandContext) -> CommandResult:
         texture_set = ctx.window.next_texture_set()
         if texture_set is not None:
-            ctx.vs.debug(False, f"Texture: {texture_set}")
+            ctx.vs.logger.log(CubeLogger.verbose_level(), f"Texture: {texture_set}")
         return CommandResult()
 
 
@@ -379,7 +381,7 @@ class TextureSetPrevCommand(Command):
     def execute(self, ctx: CommandContext) -> CommandResult:
         texture_set = ctx.window.prev_texture_set()
         if texture_set is not None:
-            ctx.vs.debug(False, f"Texture: {texture_set}")
+            ctx.vs.logger.log(CubeLogger.verbose_level(), f"Texture: {texture_set}")
         return CommandResult()
 
 
@@ -389,7 +391,7 @@ class TextureToggleCommand(Command):
 
     def execute(self, ctx: CommandContext) -> CommandResult:
         enabled = ctx.window.toggle_texture()
-        ctx.vs.debug(False, f"Texture: {'ON' if enabled else 'OFF'}")
+        ctx.vs.logger.log(CubeLogger.verbose_level(), f"Texture: {'ON' if enabled else 'OFF'}")
         return CommandResult()
 
 
@@ -835,14 +837,14 @@ class ExecuteFileAlgCommand(Command):
             raw_content = load_file_content(self.slot)
 
             # Log raw file content before parsing
-            ctx.cube.sp.logger.debug(_debug,
-                                     lambda: f"--- BEGIN {file_name} ---\n{raw_content.strip()}\n--- END {file_name} ---")
+            ctx.cube.sp.logger.log_lazy(CubeLogger.verbose_level(_debug),
+                                       lambda: f"--- BEGIN {file_name} ---\n{raw_content.strip()}\n--- END {file_name} ---")
 
             alg = parse_file_content(raw_content, file_name)
             if self.inverse:
                 alg = alg.prime
 
-            ctx.cube.sp.logger.debug(_debug, lambda: f"Parsed: {alg}")
+            ctx.cube.sp.logger.log_lazy(CubeLogger.verbose_level(_debug), lambda: f"Parsed: {alg}")
 
             ctx.op.play(alg, animation=not self.instant)
         except FileNotFoundError as e:

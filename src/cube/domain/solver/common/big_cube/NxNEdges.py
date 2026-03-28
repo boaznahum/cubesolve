@@ -2,6 +2,7 @@ from collections import defaultdict
 from typing import Tuple
 
 from cube.domain.solver.ParityFix import ParityFix
+from cube.utils.logging import CubeLogger
 
 from cube.domain.algs import Alg, Algs
 from cube.domain.exceptions import InternalSWError
@@ -45,7 +46,7 @@ class NxNEdges(SolverHelper):
     def __init__(self, slv: SolverElementsProvider, advanced_edge_parity: bool,
                  preserve_other_edges: bool = False) -> None:
         super().__init__(slv, "NxNEdges")
-        self._logger.set_level(NxNEdges.D_LEVEL)
+        self._logger.set_cube_level(NxNEdges.D_LEVEL)
         self._advanced_edge_parity = advanced_edge_parity
         self._preserve_other_edges = preserve_other_edges
 
@@ -109,7 +110,7 @@ class NxNEdges(SolverHelper):
 
     def _report_done(self, s):
         n_to_fix = sum(not e.is3x3 for e in self.cube.edges)
-        self.debug(lambda: f"{s}, Still more to fix {n_to_fix}", level=2)
+        self._logger.log_lazy(CubeLogger.cube_level(2), lambda: f"{s}, Still more to fix {n_to_fix}")
 
     @property
     def _left_to_fix(self) -> int:
@@ -131,10 +132,10 @@ class NxNEdges(SolverHelper):
         """
 
         if edge.is3x3:
-            self.debug(lambda: f"Edge {edge} is already solved", level=3)
+            self._logger.log_lazy(CubeLogger.cube_level(3), lambda: f"Edge {edge} is already solved")
             return False
         else:
-            self.debug(lambda: f"Need to work on Edge {edge} ", level=3)
+            self._logger.log_lazy(CubeLogger.cube_level(3), lambda: f"Need to work on Edge {edge} ")
 
         # find needed color
         n_slices = self.cube.n_slices
@@ -144,7 +145,7 @@ class NxNEdges(SolverHelper):
 
         with self.ann.annotate(h2=lambda: f"Fixing {edge.name_n_faces}"):
 
-            self.debug(lambda: f"Brining {edge} to front-right", level=3)
+            self._logger.log_lazy(CubeLogger.cube_level(3), lambda: f"Brining {edge} to front-right")
             self.cmn.bring_edge_to_front_left_by_whole_rotate(edge)
             edge = self.cube.front.edge_left
 
@@ -189,7 +190,7 @@ class NxNEdges(SolverHelper):
         edge: Edge = face.edge_left
 
         # now start to work
-        self.debug(lambda: f"Working on edge {edge} color {ordered_color}", level=3)
+        self._logger.log_lazy(CubeLogger.cube_level(3), lambda: f"Working on edge {edge} color {ordered_color}")
 
         # first fix all that match color on this edge
         self._fix_all_slices_on_edge(face, edge, ordered_color, color_un_ordered)
@@ -261,7 +262,7 @@ class NxNEdges(SolverHelper):
 
         # Now fix
 
-        self.debug(lambda: f"On same edge, going to slice {ltrs}", level=3)
+        self._logger.log_lazy(CubeLogger.cube_level(3), lambda: f"On same edge, going to slice {ltrs}")
 
         with self.ann.annotate((slices, AnnWhat.Moved),
                                (lambda: (edge.get_slice(inv(i)) for i in slices_to_slice),
@@ -303,7 +304,7 @@ class NxNEdges(SolverHelper):
 
             assert source_slice
 
-            self.debug(lambda: f"Found source slice {source_slice}", level=3)
+            self._logger.log_lazy(CubeLogger.cube_level(3), lambda: f"Found source slice {source_slice}")
 
             self.cmn.bring_edge_to_front_right_preserve_front_left(source_slice.parent)
 
@@ -376,7 +377,7 @@ class NxNEdges(SolverHelper):
         if not target_slices:
             return False
 
-        self.debug(lambda: f"Going to slice, sources={source_slice_indices}, target={target_indices}", level=3)
+        self._logger.log_lazy(CubeLogger.cube_level(3), lambda: f"Going to slice, sources={source_slice_indices}, target={target_indices}")
 
         # now slice them all
         with self.ann.annotate((source_slices, AnnWhat.Moved), (target_slices, AnnWhat.FixedPosition)):

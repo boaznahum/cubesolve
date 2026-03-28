@@ -1,3 +1,4 @@
+import logging
 from contextlib import contextmanager
 from typing import Callable, Generator, Sequence
 
@@ -183,7 +184,7 @@ class CommonOp(SolverHelper):
         silent = self.cube.in_query_mode
 
         if not silent:
-            self.debug("Need to bring ", source, 'to', target.name)
+            self._logger.log_lazy(logging.DEBUG, "Need to bring ", source, 'to', target.name)
 
         with self.ann.annotate(h2=lambda: f"Bringing face {source.color_at_face_str} to {target.name.value}"):
             # Use CubeLayout's cached method to get the rotation algorithm
@@ -211,7 +212,7 @@ class CommonOp(SolverHelper):
         if source.name == target.name:
             return  # Already at target, nothing to do
 
-        self.debug("Need to bring ", source, 'to', target.name, 'preserving', preserve.name)
+        self._logger.log_lazy(logging.DEBUG, "Need to bring ", source, 'to', target.name, 'preserving', preserve.name)
 
         with self.ann.annotate(
             h2=f"Bringing {source.color_at_face_str} to {target.name.value}, "
@@ -478,7 +479,7 @@ class CommonOp(SolverHelper):
                            both UP and FRONT faces after.
         """
 
-        caller.debug(lambda: f"Bring edge (on top)  {edge} to FRONT")
+        caller._logger.log_lazy(logging.DEBUG, lambda: f"Bring edge (on top)  {edge} to FRONT")
         cube = self.cube
         up = cube.up
         assert edge.on_face(up), f"edge {edge} not on UP face"

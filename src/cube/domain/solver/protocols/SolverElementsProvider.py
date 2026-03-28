@@ -13,7 +13,7 @@ from abc import ABCMeta
 from typing import TYPE_CHECKING, Protocol
 
 from cube.utils.config_protocol import ConfigProtocol
-from cube.utils.logger_protocol import ILogger, LazyArg
+from cube.utils.logging import CubeLogger
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
@@ -52,21 +52,11 @@ class SolverElementsProvider(Protocol, metaclass=ABCMeta):
         """Common operations' helper."""
         ...
 
-    def debug(self, *args: LazyArg) -> None:
-        """Output debug information.
-
-        Args:
-            *args: Arguments to print. Can be regular values or Callable[[], Any]
-                   for lazy evaluation.
-        """
-        ...
-
     @property
-    def _logger(self) -> ILogger:
-        """The logger for this solver/reducer.
+    def _logger(self) -> CubeLogger:
+        """The CubeLogger for this solver/reducer.
 
-        Created via cube.sp.logger.with_prefix() with debug_flag callback.
-        Child elements can chain with: self._logger.with_prefix("ChildName")
+        Created via parent_logger.getChild(prefix).
         Supports tab() for indented debug sections.
         """
         ...

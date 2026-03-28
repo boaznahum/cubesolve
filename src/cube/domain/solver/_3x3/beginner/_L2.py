@@ -1,3 +1,4 @@
+import logging
 from typing import Sequence
 
 from cube.domain.algs import Alg, Algs
@@ -67,7 +68,7 @@ class L2(SolverHelper):
 
         if st.match:
             # because we have cross and L1, so if it matches then it is in position
-            self.debug(lambda: f"L2-C0. {st.position} matches")
+            self._logger.log_lazy(logging.DEBUG, lambda: f"L2-C0. {st.position} matches")
             return
 
 
@@ -87,7 +88,7 @@ class L2(SolverHelper):
         assert not st.actual.on_face(down)
 
         if not st.actual.on_face(up):
-            self.debug(lambda: f"L2-C1. source {st.actual} is not on top")
+            self._logger.log_lazy(logging.DEBUG, lambda: f"L2-C1. source {st.actual} is not on top")
 
             self._bring_edge_to_front_right(st.actual)
 
@@ -98,7 +99,7 @@ class L2(SolverHelper):
             assert st.actual.on_face(up)
 
         else:
-            self.debug(lambda: f"L2-C2. source {st.actual} is on top")
+            self._logger.log_lazy(logging.DEBUG, lambda: f"L2-C2. source {st.actual} is on top")
 
         # now source is no top
 

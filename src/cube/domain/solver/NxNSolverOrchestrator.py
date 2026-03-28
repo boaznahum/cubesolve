@@ -12,6 +12,7 @@ See PARITY_HANDLING_BEFORE_ORCHESTRATOR.md for the original analysis.
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 from cube.domain.exceptions import (
@@ -30,7 +31,7 @@ from cube.domain.solver.SolverName import SolverName
 from cube.utils.SSCode import SSCode
 
 if TYPE_CHECKING:
-    from cube.utils.logger_protocol import ILogger
+    from cube.utils.logging import CubeLogger
 
 
 class NxNSolverOrchestrator(AbstractSolver):
@@ -68,7 +69,7 @@ class NxNSolverOrchestrator(AbstractSolver):
     def __init__(
         self,
         op: OperatorProtocol,
-        parent_logger: "ILogger",
+        parent_logger: "CubeLogger",
         reducer: ReducerProtocol,
         solver_3x3: Solver3x3Protocol,
         solver_name: SolverName,
@@ -258,7 +259,7 @@ class NxNSolverOrchestrator(AbstractSolver):
             if self._cube.solved:
                 break
 
-            self.debug(lambda: f"@@@@ Iteration # {attempt}")
+            self._logger.log_lazy(logging.DEBUG, lambda: f"@@@@ Iteration # {attempt}")
 
             try:
                 if parity_detector is not None:
@@ -269,8 +270,13 @@ class NxNSolverOrchestrator(AbstractSolver):
                     self._solver_3x3.solve_3x3(debug, what)
 
             except EvenCubeEdgeParityException:
-
-                self.debug(lambda: f"Catch even edge parity in iteration #{attempt}")
+                # =============================================================
+                # EDGE PARITY HANDLING
+                # =============================================================
+                # Detected by L3Cross: 1 or 3 edges flipped (impossible on 3x3)
+                # L3Cross throws, orchestrator catches and fixes via reducer.
+                # After fix, edges are disturbed -> need to re-reduce
+                self._logger.log_lazy(logging.DEBUG, lambda: f"Catch even edge parity in iteration #{attempt}")
                 if even_edge_parity_fix is not None:
                     raise InternalSWError("Edge parity detected twice - fix_edge_parity failed")
                 self._op.enter_single_step_mode(SSCode.NxN_EDGE_PARITY_FIX)
@@ -284,8 +290,7 @@ class NxNSolverOrchestrator(AbstractSolver):
                 continue
 
             except EvenCubeEdgeSwapParityException:
-
-                self.debug(lambda: f"Catch even edge swap (CFOP) parity in iteration #{attempt}")
+                self._logger.debug_lazy(lambda: f"Catch even edge swap (CFOP) parity in iteration #{attempt}")
                 if even_edge_swap_parity_fix is not None:
                     raise InternalSWError("Even Edge swap (CFOP) parity detected twice - fix_edge_parity failed")
                 even_edge_swap_fix = self._reducer.fix_edge_parity(
@@ -299,7 +304,16 @@ class NxNSolverOrchestrator(AbstractSolver):
 
             # CFOP handle EvenEdge parity, but it might decide to throw
             except EvenCubeCornerSwapException:
-                self.debug(lambda: f"Catch corner swap in iteration #{attempt}")
+                # =============================================================
+                # CORNER PARITY HANDLING
+                # =============================================================
+                # Detected by L3Corners: exactly 2 corners in position (impossible)
+                # L3Corners throws, orchestrator catches and fixes via reducer.
+                # Same pattern as edge parity for consistency.
+                #
+                # The corner swap algorithm swaps diagonal corners on U face.
+                # Any diagonal swap fixes parity - only requirement is yellow up.
+                self._logger.log_lazy(logging.DEBUG, lambda: f"Catch corner swap in iteration #{attempt}")
                 if corner_swap_fix is not None:
                     raise InternalSWError("Corner parity detected twice - fix_corner_parity failed")
                 self._op.enter_single_step_mode(SSCode.NxN_CORNER_PARITY_FIX)

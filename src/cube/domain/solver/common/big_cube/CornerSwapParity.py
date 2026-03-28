@@ -19,6 +19,7 @@ Generalized for NxN by mapping:
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -101,7 +102,7 @@ class CornerSwapParity(SolverHelper):
         n_slices = self.cube.n_slices
         assert n_slices % 2 == 0, "Corner parity fix only applies to even cubes"
 
-        self.debug("Doing corner swap (basic — edges move)")
+        self._logger.log_lazy(logging.DEBUG, "Doing corner swap (basic — edges move)")
 
         nh = n_slices // 2
 
@@ -137,6 +138,7 @@ class CornerSwapParity(SolverHelper):
         n_slices = self.cube.n_slices
         assert n_slices % 2 == 0, "Corner parity fix only applies to even cubes"
 
+        self._logger.log_lazy(logging.DEBUG, "Doing corner swap (advanced — edges preserved)")
         # Use U face directly — bring_face_up ensures it's correct.
         # Don't use cmn.white_face which fails on even cubes in Cage solver
         # (face colors may not be standard BOY scheme).

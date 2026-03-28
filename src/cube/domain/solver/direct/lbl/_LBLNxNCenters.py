@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Iterator
 from contextlib import AbstractContextManager, contextmanager
 from typing import Generator, cast
@@ -207,7 +208,7 @@ class _LBLNxNCenters(SolverHelper):
 
             face_slice_solved = self._slice_on_target_face_solved(l1_tracker, target_face, face_row)
             if face_slice_solved:
-                self.debug(lambda: f"✅✅✅✅ All slices solved on face {target_face.face} row {face_row} ✅✅✅✅✅")
+                self._logger.log_lazy(logging.DEBUG, lambda: f"✅✅✅✅ All slices solved on face {target_face.face} row {face_row} ✅✅✅✅✅")
                 return  False
 
             max_iter = 10000
@@ -223,7 +224,7 @@ class _LBLNxNCenters(SolverHelper):
                 # position and tracking need to go inside
                 solved_count = self._solve_single_center_slice_all_sources_impl(l1_tracker, target_face,
                                                                                 face_row)
-                self.debug(lambda: f"‼✅✅{solved_count} piece(s) solved {face_row} ‼✅✅")
+                self._logger.log_lazy(logging.DEBUG, lambda: f"‼✅✅{solved_count} piece(s) solved {face_row} ‼✅✅")
 
                 if solved_count > 0:
                     work_was_done = True
@@ -236,10 +237,10 @@ class _LBLNxNCenters(SolverHelper):
 
 
                 if face_slice_solved:
-                    self.debug(lambda: f"✅✅✅✅ Face {target_face} slice solved {face_row} ✅✅✅✅✅")
+                    self._logger.log_lazy(logging.DEBUG, lambda: f"✅✅✅✅ Face {target_face} slice solved {face_row} ✅✅✅✅✅")
                     return work_was_done
                 else:
-                    self.debug(lambda: f"‼️‼️‼️‼️Face {target_face} slice NOT  solved, trying to remove from some face ‼️‼️‼️‼️")
+                    self._logger.log_lazy(logging.DEBUG, lambda: f"‼️‼️‼️‼️Face {target_face} slice NOT  solved, trying to remove from some face ‼️‼️‼️‼️")
 
                     removed_count = self._try_remove_all_pieces_from_target_face_and_other_faces(l1_tracker,
                                                                                                  target_face,
@@ -247,10 +248,10 @@ class _LBLNxNCenters(SolverHelper):
                                                                                                  False)
 
                     if removed_count == 0:
-                        self.debug(lambda: f"‼️‼️‼️‼️Nothing was removed_count, aborting face {target_face} slice {face_row} ‼️‼️‼️‼️")
+                        self._logger.log_lazy(logging.DEBUG, lambda: f"‼️‼️‼️‼️Nothing was removed_count, aborting face {target_face} slice {face_row} ‼️‼️‼️‼️")
                         return work_was_done
                     else:
-                        self.debug(lambda: f"‼️‼️‼️‼️{removed_count} piece(s) moved, trying again slice {face_row} ‼️‼️‼️‼️")
+                        self._logger.log_lazy(logging.DEBUG, lambda: f"‼️‼️‼️‼️{removed_count} piece(s) moved, trying again slice {face_row} ‼️‼️‼️‼️")
 
     def _solve_single_center_slice_all_sources_impl(self, l1_tracker: FaceTracker,
                                                     target_face: FaceTracker,
@@ -263,7 +264,7 @@ class _LBLNxNCenters(SolverHelper):
         """
         source_faces: list[FaceTracker] = [ * target_face.other_faces() ]
 
-        self.debug(lambda: f" ❓❓❓❓❓❓ {source_faces}")
+        self._logger.log_lazy(logging.DEBUG, lambda: f" ❓❓❓❓❓❓ {source_faces}")
 
         pieces_solved = 0
 
@@ -365,7 +366,7 @@ class _LBLNxNCenters(SolverHelper):
                         if candidate_piece.color == target_color and not _is_cent_piece_marked_solved(candidate_piece):
 
                             up_face = l1_tracker.opposite.face
-                            self.debug(lambda: f"Moving {candidate_piece} from {move_from_target_face.color_at_face_str} to {up_face}")
+                            self._logger.log_lazy(logging.DEBUG, lambda: f"Moving {candidate_piece} from {move_from_target_face.color_at_face_str} to {up_face}")
                             # Move piece from up to this face, pushing the target_color piece to up
 
                             with self._parent.with_sanity_check_previous_are_solved(l1_tracker, face_row, "removing piece from face"):
@@ -453,7 +454,7 @@ class _LBLNxNCenters(SolverHelper):
         color = target_face.color
 
         if self._count_color_on_face(source_face.face, color) == 0:
-            self.debug(lambda: f"Working on slice {face_row} @ {target_face.color_at_face_str} Found no piece {color} on {source_face.face.color_at_face_str}")
+            self._logger.log_lazy(logging.DEBUG, lambda: f"Working on slice {face_row} @ {target_face.color_at_face_str} Found no piece {color} on {source_face.face.color_at_face_str}")
             return False  # nothing can be done here
 
 
@@ -510,7 +511,7 @@ class _LBLNxNCenters(SolverHelper):
                 if _is_cent_piece_marked_solved(candidate_piece):
                     continue
 
-                self.debug(lambda: f"Working on slice {face_row} Found piece candidate {candidate_piece}")
+                self._logger.log_lazy(logging.DEBUG, lambda: f"Working on slice {face_row} Found piece candidate {candidate_piece}")
 
                 # Search for blocks starting at rc (size controlled by config)
                 blocks = self._search_blocks_starting_at(
@@ -531,7 +532,7 @@ class _LBLNxNCenters(SolverHelper):
                 if not solved_block and len(blocks) > 0:
                     # All blocks failed - this shouldn't happen for 1x1 blocks
                     # but may happen for larger blocks if source doesn't have colors
-                    self.debug(lambda: f"No block starting at {rc} could be solved")
+                    self._logger.log_lazy(logging.DEBUG, lambda: f"No block starting at {rc} could be solved")
 
         return work_done
 
@@ -725,7 +726,7 @@ class _LBLNxNCenters(SolverHelper):
         )
 
         if valid_blocks is None:
-            self.debug(lambda: f"Block {block} skipped - source doesn't have required colors or would destroy solved pieces")
+            self._logger.log_lazy(logging.DEBUG, lambda: f"Block {block} skipped - source doesn't have required colors or would destroy solved pieces")
             return False
 
         valid_source, valid_second, second_block_was_solved = valid_blocks
@@ -809,12 +810,12 @@ class _LBLNxNCenters(SolverHelper):
         for pt in block.cells:
             piece = target_face.center.get_center_slice(pt)
             if piece.color != required_color:
-                self.debug(lambda: f"Block {block} failed - piece at {pt} has wrong color")
+                self._logger.log_lazy(logging.DEBUG, lambda: f"Block {block} failed - piece at {pt} has wrong color")
                 return False
             solved = mark_slice_and_v_mark_if_solved(piece)
             assert solved
 
-        self.debug(lambda: f"✅ Block {block} solved ({block.size} pieces)")
+        self._logger.log_lazy(logging.DEBUG, lambda: f"✅ Block {block} solved ({block.size} pieces)")
         return True
 
     @staticmethod

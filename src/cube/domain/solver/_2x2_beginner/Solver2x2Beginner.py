@@ -28,7 +28,7 @@ from cube.domain.solver.SolverName import SolverName
 from ...model import Color, Face
 
 if TYPE_CHECKING:
-    from cube.utils.logger_protocol import ILogger
+    from cube.utils.logging import CubeLogger
 
 from ._L1 import L1
 from ._L3Orient import L3Orient
@@ -49,7 +49,7 @@ class Solver2x2Beginner(Solver2x2Base):
     def __init__(
         self,
         op: OperatorProtocol,
-        parent_logger: ILogger,
+        parent_logger: CubeLogger,
     ) -> None:
         super().__init__(op, parent_logger, logger_prefix="Beginner2x2")
 

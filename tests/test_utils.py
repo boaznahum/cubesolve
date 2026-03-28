@@ -5,11 +5,10 @@ Provides StubServiceProvider for tests that create Cube directly without full ap
 """
 
 from cube.application.config_impl import AppConfig
-from cube.application.Logger import Logger
+from cube.utils.logging import CubeLogger, setup_root_logger
 from cube.application.markers import IMarkerFactory, IMarkerManager, MarkerFactory, MarkerManager
 from cube.utils.config_protocol import ConfigProtocol
 from cube.utils.service_provider import IServiceProvider
-from cube.utils.logger_protocol import ILogger
 
 
 class StubServiceProvider(IServiceProvider):
@@ -22,7 +21,7 @@ class StubServiceProvider(IServiceProvider):
         self._config = AppConfig()
         self._marker_factory = MarkerFactory()
         self._marker_manager = MarkerManager()
-        self._logger = Logger()  # Uses env var override if set
+        self._logger = setup_root_logger()  # Uses env var override if set
 
     @property
     def config(self) -> ConfigProtocol:
@@ -37,7 +36,7 @@ class StubServiceProvider(IServiceProvider):
         return self._marker_manager
 
     @property
-    def logger(self) -> ILogger:
+    def logger(self) -> CubeLogger:
         return self._logger
 
 

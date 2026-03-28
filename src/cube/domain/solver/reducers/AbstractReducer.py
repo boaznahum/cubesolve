@@ -19,7 +19,7 @@ from cube.domain.solver.protocols.ReducerProtocol import (
     ReductionResults,
 )
 from cube.domain.solver.protocols.SolverElementsProvider import SolverElementsProvider
-from cube.utils.logger_protocol import ILogger, LazyArg
+from cube.utils.logging import CubeLogger
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
@@ -53,24 +53,13 @@ class AbstractReducer(ReducerProtocol, SolverElementsProvider, ABC):
     __slots__ = ["_op", "_cube", "_cmn", "_debug_override", "__logger"]
 
     def __init__(self, op: OperatorProtocol, logger_prefix: str | None = None) -> None:
-        """
-        Initialize the AbstractReducer.
-
-        Args:
-            op: Operator for cube manipulation
-            logger_prefix: Prefix for logger output (default: "Reducer")
-        """
         self._op = op
         self._cube = op.cube
         self._debug_override: bool | None = None
-        # Create logger with prefix (passed explicitly by subclass)
+        # Create logger as child of cube root logger.
         prefix = logger_prefix or "Reducer"
-        self.__logger: ILogger = self._cube.sp.logger.with_prefix(
-            prefix,
-            debug_flag=lambda: self._is_debug_enabled
-        )
+        self.__logger: CubeLogger = self._cube.sp.logger.getChild(prefix)  # type: ignore[assignment]
 
-        # Create CommonOp passing self (we implement SolverElementsProvider)
         from cube.domain.solver.common.CommonOp import CommonOp
         self._cmn: CommonOp = CommonOp(self)
 
@@ -78,38 +67,24 @@ class AbstractReducer(ReducerProtocol, SolverElementsProvider, ABC):
 
     @property
     def op(self) -> OperatorProtocol:
-        """The operator for cube manipulation."""
         return self._op
 
     @property
     def cube(self) -> "Cube":
-        """The cube being reduced."""
         return self._cube
 
     @property
     def cmn(self) -> "CommonOp":
-        """Common operations helper."""
         return self._cmn
 
-    def debug(self, *args: LazyArg) -> None:
-        """Output debug information.
-
-        Args:
-            *args: Arguments to print. Can be regular values or Callable[[], Any]
-                   for lazy evaluation.
-        """
-        self.__logger.debug(None, *args)
-
     @property
-    def _logger(self) -> ILogger:
-        """The logger for this reducer, with prefix and debug flag."""
+    def _logger(self) -> CubeLogger:
         return self.__logger
 
     # ---- Debug configuration ----
 
     @property
     def _is_debug_enabled(self) -> bool:
-        """Check if debug output is enabled."""
         if self._debug_override is None:
             return self._cube.config.solver_debug
         else:
@@ -118,37 +93,19 @@ class AbstractReducer(ReducerProtocol, SolverElementsProvider, ABC):
     # ---- Block statistics ----
 
     def get_block_statistics(self) -> SolverStatistics:
-        """Return block statistics. Override in subclasses that track statistics."""
         return SolverStatistics()
 
     def reset_block_statistics(self) -> None:
-        """Reset block statistics. Override in subclasses that track statistics."""
         pass
-
-    def display_statistics(self) -> None:
-        """Display block statistics collected from all sub-helpers.
-
-        Uses get_block_statistics() to aggregate stats from the entire helper tree.
-        """
-        stats: SolverStatistics = self.get_block_statistics()
-        if stats.is_empty():
-            return
-        my_prefix: str = self._logger.prefix + ":"
-        self.debug("[Solver Statistics]")
-        for topic_name, lines in stats.format_all(strip_prefix=my_prefix):
-            for line in lines:
-                self.debug(lambda: f"  [{topic_name}] {line}")
 
     # ---- ReducerProtocol interface (abstract) ----
 
     @abstractmethod
     def is_reduced(self) -> bool:
-        """Check if cube is already reduced to 3x3 state."""
         ...
 
     @abstractmethod
     def reduce(self, debug: bool = False) -> ReductionResults:
-        """Reduce NxN cube to 3x3 virtual state."""
         ...
 
     @abstractmethod
@@ -159,7 +116,7 @@ class AbstractReducer(ReducerProtocol, SolverElementsProvider, ABC):
             advanced: If True, request R/L-slice algorithm.
 
         Returns:
-            True if advanced algorithm was used, False if basic.
+            ParityFix indicating which algorithm was used.
         """
         ...
 
@@ -171,13 +128,12 @@ class AbstractReducer(ReducerProtocol, SolverElementsProvider, ABC):
             advanced: If True, use algorithm that preserves edge positions.
 
         Returns:
-            True if edges were preserved, False if edges were moved.
+            CornerFixResults with fix details.
         """
         ...
 
     @abstractmethod
     def solve_centers(self) -> None:
-        """Solve only centers (first part of reduction)."""
         ...
 
     @abstractmethod
@@ -187,16 +143,13 @@ class AbstractReducer(ReducerProtocol, SolverElementsProvider, ABC):
 
     @abstractmethod
     def centers_solved(self) -> bool:
-        """Check if centers are reduced."""
         ...
 
     @abstractmethod
     def edges_solved(self) -> bool:
-        """Check if edges are reduced."""
         ...
 
     @property
     @abstractmethod
     def status(self) -> str:
-        """Human-readable status of reduction state."""
         ...

@@ -1,3 +1,4 @@
+import logging
 from typing import Sequence
 
 from cube.domain.algs import Alg, Algs
@@ -127,7 +128,7 @@ class L1Cross(SolverHelper):
         target_edge: Edge = cube.find_edge_by_pos_colors(target_colors_id)
 
         if target_edge.match_faces:
-            self.debug("L1-X C1.0", target_edge, "is on place")
+            self._logger.log_lazy(logging.DEBUG, "L1-X C1.0", target_edge, "is on place")
             return
 
         assert wf.name == FaceName.U
@@ -140,17 +141,17 @@ class L1Cross(SolverHelper):
 
         source_edge: Edge = cube.find_edge_by_color(target_colors_id)
 
-        self.debug("L1-X", "Need to bring ", source_edge, "to", target_edge)
+        self._logger.log_lazy(logging.DEBUG, "L1-X", "Need to bring ", source_edge, "to", target_edge)
 
         # Is it on white face
         edge_on_face: PartEdge | None = source_edge.on_face(wf)
         if edge_on_face:
-            self.debug("L1-X. C1", source_edge, "is on required", wf, "@", edge_on_face)
+            self._logger.log_lazy(logging.DEBUG, "L1-X. C1", source_edge, "is on required", wf, "@", edge_on_face)
 
             if edge_on_face.face is wf:
-                self.debug("??L1-X. C1.1", source_edge, "is on required", wf, "@", edge_on_face, "color matches")
+                self._logger.log_lazy(logging.DEBUG, "??L1-X. C1.1", source_edge, "is on required", wf, "@", edge_on_face, "color matches")
             else:
-                self.debug("??L1-X. C1.2", source_edge, "is on required", wf, "@", edge_on_face, "color doesn't match")
+                self._logger.log_lazy(logging.DEBUG, "??L1-X. C1.2", source_edge, "is on required", wf, "@", edge_on_face, "color doesn't match")
 
             # Now bring it to adjusted face
             if wf.edge_right is source_edge:
@@ -174,7 +175,7 @@ class L1Cross(SolverHelper):
         for adjusted_face in wf.adjusted_faces():
 
             if adjusted_face.is_left_or_right(source_edge):
-                self.debug("L0X. C2", source_edge, "is left/right on adjusted ", adjusted_face)
+                self._logger.log_lazy(logging.DEBUG, "L0X. C2", source_edge, "is left/right on adjusted ", adjusted_face)
 
                 # target_edge is where we want to bring
                 target_face = target_edge.get_other_face(wf)
@@ -214,7 +215,7 @@ class L1Cross(SolverHelper):
                 return self._fix_edge(wf, target_colors_id)
 
         bottom: Face = wf.opposite
-        self.debug("L0X. C3", source_edge, "is on bottom", bottom)
+        self._logger.log_lazy(logging.DEBUG, "L0X. C3", source_edge, "is on bottom", bottom)
 
         # target_edge is where we want to bring
         target_face = target_edge.get_other_face(wf)
@@ -236,9 +237,9 @@ class L1Cross(SolverHelper):
         source_face_on_edge = source_edge.face_of_actual_color(white_color)
 
         if source_face_on_edge.is_down:
-            self.debug("L0X. C3.1", source_edge, "is on bottom", source_face_on_edge)
+            self._logger.log_lazy(logging.DEBUG, "L0X. C3.1", source_edge, "is on bottom", source_face_on_edge)
             return self.op.play(Algs.F * 2)
         else:
             assert source_face_on_edge.is_front
-            self.debug("L0X. C3.2", source_edge, "is on front", source_face_on_edge)
+            self._logger.log_lazy(logging.DEBUG, "L0X. C3.2", source_edge, "is on front", source_face_on_edge)
             return self.op.play(-Algs.F + - Algs.R + -Algs.D + Algs.R + Algs.F * 2)

@@ -38,6 +38,7 @@ from cube.presentation.gui.commands import Command, CommandContext
 from cube.presentation.gui.effects.CelebrationManager import CelebrationManager
 from cube.presentation.gui.factory import GUIBackend
 from cube.presentation.gui.key_bindings import lookup_command
+from cube.utils.logging import CubeLogger
 from cube.presentation.gui.protocols.AppWindow import AppWindow
 from cube.presentation.gui.protocols.AppWindowBase import AppWindowBase, TextLabel
 from cube.presentation.viewer.GViewerExt import GViewerExt
@@ -587,7 +588,7 @@ class PygletAppWindow(AppWindowBase, AnimationWindow, AppWindow):
         if self._popup.on_key_press(symbol, modifiers):
             return
 
-        self._vs.debug(self._keyboard_debug, f"on_key_press: symbol={symbol}, modifiers={modifiers}")
+        self._vs.logger.log(CubeLogger.verbose_level(self._keyboard_debug), f"on_key_press: symbol={symbol}, modifiers={modifiers}")
 
         # Close dropdown on Escape before key bindings process it
         if self._toolbar and symbol == pyglet_key.ESCAPE:

@@ -22,6 +22,7 @@ See docs/design/layer_by_layer_nxn.md for detailed design.
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, cast
 
 from typing_extensions import deprecated
@@ -49,7 +50,7 @@ from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.tracker._face_trackers import FaceTracker
 
 if TYPE_CHECKING:
-    from cube.utils.logger_protocol import ILogger
+    from cube.utils.logging import CubeLogger
 
 class DirectLayerByLayerNxNSolver(BaseSolver):
     """
@@ -73,7 +74,7 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
     __slots__ = ["_nxn_edges", "_edge_parity", "_corner_swap", "_shadow_helper", "_lbl_slices",
                  "_l3_edges", "_accumulated_temp_stats"]
 
-    def __init__(self, op: OperatorProtocol, parent_logger: "ILogger") -> None:
+    def __init__(self, op: OperatorProtocol, parent_logger: "CubeLogger") -> None:
         """
         Create a Layer-by-Layer solver.
 
@@ -263,14 +264,14 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
                 return self._solve_impl2(what)
 
             except SolverFaceColorsChangedNeedRestartException:
-                self.debug("Retrying after face colors changed")
+                self._logger.log_lazy(logging.DEBUG, "Retrying after face colors changed")
                 continue
 
             except EvenCubeEdgeParityException:
                 if even_edge_parity_detected:
                     raise InternalSWError("Edge parity detected twice")
                 even_edge_parity_detected = True
-                self.debug("Even cube edge parity detected, fixing...")
+                self._logger.log_lazy(logging.DEBUG, "Even cube edge parity detected, fixing...")
                 self._edge_parity.fix_edge_parity(False)
                 continue
 
@@ -278,7 +279,7 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
                 if corner_swap_detected:
                     raise InternalSWError("Corner swap parity detected twice")
                 corner_swap_detected = True
-                self.debug("Even cube corner swap parity detected, fixing...")
+                self._logger.log_lazy(logging.DEBUG, "Even cube corner swap parity detected, fixing...")
                 self._corner_swap.fix_corner_parity(False)
                 continue
 
@@ -486,7 +487,7 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
             return
 
         l1_tracker = self._get_layer1_tracker(th)
-        self.debug(lambda: f"Solving Layer 1 centers ({l1_tracker.color.name} face only)")
+        self._logger.log_lazy(logging.DEBUG, lambda: f"Solving Layer 1 centers ({l1_tracker.color.name} face only)")
 
         with self.op.annotation.annotate(h2=lambda: f"L1 centers ({l1_tracker.color.name})"):
             centers = NxNCenters(self, preserve_cage=False, tracker_holder=th)
@@ -499,7 +500,7 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
             return
 
         l1_tracker = self._get_layer1_tracker(th)
-        self.debug(lambda: f"Solving Layer 1 edges ({l1_tracker.color.name} face only)")
+        self._logger.log_lazy(logging.DEBUG, lambda: f"Solving Layer 1 edges ({l1_tracker.color.name} face only)")
 
         with self.op.annotation.annotate(h2=lambda: f"L1 edges ({l1_tracker.color.name})"):
             # Use solve_face_edges to solve only Layer 1 face edges
@@ -511,7 +512,7 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
             return
 
         l1_tracker = self._get_layer1_tracker(th)
-        self.debug(lambda: f"Solving Layer 1 cross ({l1_tracker.color.name} layer)")
+        self._logger.log_lazy(logging.DEBUG, lambda: f"Solving Layer 1 cross ({l1_tracker.color.name} layer)")
 
         with self.op.annotation.annotate(h2=lambda: f"L1 cross ({l1_tracker.color.name})"):
             # Solve using shadow cube approach with Solvers3x3
@@ -523,7 +524,7 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
             return
 
         l1_tracker = self._get_layer1_tracker(th)
-        self.debug(lambda: f"Solving Layer 1 corners ({l1_tracker.color.name} layer)")
+        self._logger.log_lazy(logging.DEBUG, lambda: f"Solving Layer 1 corners ({l1_tracker.color.name} layer)")
 
         with self.op.annotation.annotate(h2=lambda: f"L1 corners ({l1_tracker.color.name})"):
             # Solve using shadow cube approach with Solvers3x3
@@ -550,7 +551,7 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
         shadow_cube = self._shadow_helper.create_shadow_cube_from_faces_and_cube(th)
 
         if shadow_cube.solved:
-            self.debug("Shadow cube already solved")
+            self._logger.log_lazy(logging.DEBUG, "Shadow cube already solved")
             return
 
         # Early-exit optimization: Check if requested step is already done on shadow.
@@ -561,10 +562,10 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
         corners_solved = all(c.match_faces for c in shadow_l1_face.corners)
 
         if what == SolveStep.L1x and edges_solved:
-            self.debug("Shadow cube L1 cross already solved")
+            self._logger.log_lazy(logging.DEBUG, "Shadow cube L1 cross already solved")
             return
         if what == SolveStep.L1 and edges_solved and corners_solved:
-            self.debug("Shadow cube Layer 1 already solved")
+            self._logger.log_lazy(logging.DEBUG, "Shadow cube Layer 1 already solved")
             return
 
         # Create DualOperator: wraps shadow cube + real operator
@@ -750,7 +751,7 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
             return
 
         l3_tracker = self._get_layer1_tracker(th).opposite
-        self.debug(lambda: f"Solving Layer 3 centers ({l3_tracker.color.name} face only)")
+        self._logger.log_lazy(logging.DEBUG, lambda: f"Solving Layer 3 centers ({l3_tracker.color.name} face only)")
 
         with self.op.annotation.annotate(h2=lambda: f"L3 centers ({l3_tracker.color.name})"):
             centers = NxNCenters(self, preserve_cage=False, tracker_holder=th)
@@ -770,7 +771,7 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
             return
 
         l3_tracker = self._get_layer1_tracker(th).opposite
-        self.debug(lambda: f"Solving Layer 3 edges ({l3_tracker.color.name} face only)")
+        self._logger.log_lazy(logging.DEBUG, lambda: f"Solving Layer 3 edges ({l3_tracker.color.name} face only)")
 
         with self.op.annotation.annotate(h2=lambda: f"L3 edges ({l3_tracker.color.name})"):
             self._l3_edges.do_l3_edges(l3_tracker)
@@ -784,7 +785,7 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
             return
 
         l1_tracker = self._get_layer1_tracker(th).opposite
-        self.debug(lambda: f"Solving Layer 3 cross ({l1_tracker.color.name} layer)")
+        self._logger.log_lazy(logging.DEBUG, lambda: f"Solving Layer 3 cross ({l1_tracker.color.name} layer)")
 
         with self.op.annotation.annotate(h2=lambda: f"L3 cross ({l1_tracker.color.name})"):
             # Solve using shadow cube approach with Solvers3x3
@@ -796,7 +797,7 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
             return
 
         l3_tracker = self._get_layer1_tracker(th).opposite
-        self.debug(lambda: f"Solving Layer 3 corners ({l3_tracker.color.name} layer)")
+        self._logger.log_lazy(logging.DEBUG, lambda: f"Solving Layer 3 corners ({l3_tracker.color.name} layer)")
 
         with self.op.annotation.annotate(h2=lambda: f"L3 corners ({l3_tracker.color.name})"):
             # Solve using shadow cube approach with Solvers3x3

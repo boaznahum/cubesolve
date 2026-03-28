@@ -8,7 +8,7 @@ from .AbstractSolver import AbstractSolver
 
 if TYPE_CHECKING:
     from .CommonOp import CommonOp
-    from cube.utils.logger_protocol import ILogger
+    from cube.utils.logging import CubeLogger
 
 _Common: TypeAlias = "CommonOp"
 
@@ -19,7 +19,7 @@ class BaseSolver(AbstractSolver, ABC):
     def __init__(
         self,
         op,
-        parent_logger: "ILogger",
+        parent_logger: "CubeLogger",
         logger_prefix: str | None = None,
     ) -> None:
         super().__init__(op, parent_logger, logger_prefix=logger_prefix)

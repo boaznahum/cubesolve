@@ -1,3 +1,4 @@
+import logging
 from typing import Tuple
 
 from cube.domain.algs import Algs, FaceAlg
@@ -71,7 +72,7 @@ class PLL(StepSolver):
         if description_alg is not None:
             # Found a PLL alg - apply it
             search_alg, description, alg = description_alg
-            self.debug(lambda: f"Found PLL alg '{description}' {alg}")
+            self._logger.log_lazy(logging.DEBUG, lambda: f"Found PLL alg '{description}' {alg}")
             self.play((search_alg + alg).simplify())
             self._rotate_and_solve()  # because all our searching U
 
@@ -82,11 +83,11 @@ class PLL(StepSolver):
             # A parity state can coincidentally match a PLL pattern, but
             # the permutation is impossible on a true 3x3, so the alg
             # won't fully solve. Fall through to parity detection.
-            self.debug("PLL alg applied but cube not solved - checking parity")
+            self._logger.log_lazy(logging.DEBUG, "PLL alg applied but cube not solved - checking parity")
 
         # No PLL alg matched, or matched alg didn't solve — check parity
         if self._is_corner_parity():
-            self.debug("PLL: Corner parity detected (2 corners in position)")
+            self._logger.log_lazy(logging.DEBUG, "PLL: Corner parity detected (2 corners in position)")
             raise EvenCubeCornerSwapException()
 
         # Edge swap parity: fix internally and retry
@@ -100,7 +101,7 @@ class PLL(StepSolver):
 
         search_alg, description, alg = description_alg
 
-        self.debug(lambda: f"Found PLL alg '{description}' {alg}")
+        self._logger.log_lazy(logging.DEBUG, lambda: f"Found PLL alg '{description}' {alg}")
 
         self.play((search_alg + alg).simplify())
 
@@ -160,10 +161,8 @@ class PLL(StepSolver):
         size = self.cube.size
 
         # On shadow 3x3, raise exception for cage solver to handle
-        # it is not clear why when tried allows to raise it all CFOP when using
-        ## orchestrator fail
-        if False or self.cube.is_even_cube_shadow:
-            self.debug("PLL: Edge swap parity on shadow cube - raising exception")
+        if self.cube.is_even_cube_shadow:
+            self._logger.log_lazy(logging.DEBUG, "PLL: Edge swap parity on shadow cube - raising exception")
             raise EvenCubeEdgeSwapParityException()
 
         assert size % 2 == 0, "Edge swap parity fix only works on even cubes"
@@ -230,7 +229,7 @@ class PLL(StepSolver):
 
         alg = d_alg[1]
         description = d_alg[0]
-        self.debug(lambda: f"Found (raw) alg: {description} : {alg}")
+        self._logger.log_lazy(logging.DEBUG, lambda: f"Found (raw) alg: {description} : {alg}")
 
         if isinstance(alg, str):
             alg = Algs.parse(alg, compat_3x3=True)

@@ -1,3 +1,4 @@
+import logging
 from typing import Tuple
 
 from cube.domain.algs import Algs, Alg
@@ -36,7 +37,7 @@ class _LBLNxNEdges(SolverHelper):
 
     def __init__(self, slv: SolverElementsProvider) -> None:
         super().__init__(slv, "_LBLNxNEdges")
-        self._logger.set_level(_LBLNxNEdges.D_LEVEL)
+        self._logger.set_cube_level(_LBLNxNEdges.D_LEVEL)
         self._e2e_comm = E2ECommutator(slv)
 
     def solve_single_center_face_row(
@@ -83,7 +84,7 @@ class _LBLNxNEdges(SolverHelper):
             assert edge_info.edge_one is cube.front.edge_left
             assert edge_info.edge_two is cube.front.edge_right
 
-            self.debug(
+            self._logger.log_lazy(logging.DEBUG,
                 lambda: lambda: f"Working on edges {edge_info.wing_one.parent_name_index_position} {edge_info.wing_two.parent_name_index_position}")
 
             with self._logger.tab("🟰🟰🟰🟰🟰🟰🟰🟰🟰 PATCH !!!!!!!!!!!!!!!!!!!!!!!!"):
@@ -99,7 +100,7 @@ class _LBLNxNEdges(SolverHelper):
         target_edge_wing = edge_info.wing_one
 
         if mark_slice_and_v_mark_if_solved(target_edge_wing):
-            self.debug(lambda: f"EdgWing {target_edge_wing} already solved")
+            self._logger.log_lazy(logging.DEBUG, lambda: f"EdgWing {target_edge_wing} already solved")
         else:
 
             faces_colors = [ f.color for f in target_edge_wing.faces() ]
@@ -189,8 +190,6 @@ class _LBLNxNEdges(SolverHelper):
         :return:
         """
 
-        debug = self.debug
-
         required_color_ordered = self._get_slice_required_ordered_color(target_face, target_edge_wing)
 
         with self._logger.tab(
@@ -211,9 +210,9 @@ class _LBLNxNEdges(SolverHelper):
                     target_edge_wing
                 )
 
-                self.debug(lambda: f"❓❓❓Solving all source_slices: {source_wing_t.slice.parent_name_index_colors_position} status: {status}")
+                self._logger.log_lazy(logging.DEBUG, lambda: f"❓❓❓Solving all source_slices: {source_wing_t.slice.parent_name_index_colors_position} status: {status}")
                 if mark_slice_and_v_mark_if_solved(target_edge_wing):
-                    debug(lambda: f"✅✅✅✅ EdgWing {target_edge_wing.parent_name_index_colors} solved")
+                    self._logger.log_lazy(logging.DEBUG, lambda: f"✅✅✅✅ EdgWing {target_edge_wing.parent_name_index_colors} solved")
 
                 return status
 
@@ -257,7 +256,7 @@ class _LBLNxNEdges(SolverHelper):
                     with self._logger.tab(lambda: f"Row {i}"):
                         for edge in _common.get_edge_row_pieces(cube, l1_tracker, i):
                             if edge.match_faces:
-                                self.debug(lambda : edge.parent_name_index_colors)
+                                self._logger.log_lazy(logging.DEBUG, lambda : edge.parent_name_index_colors)
 
 
         st = source_slice_t
@@ -283,10 +282,10 @@ class _LBLNxNEdges(SolverHelper):
             untracked_source_edge: Edge = untracked_source_wing.parent
             target_face_color = target_face.color
 
-            self.debug(
+            self._logger.log_lazy(logging.DEBUG,
                 lambda: f"Found source EdgeWing for target {untracked_source_wing.parent_name_index_colors} : {untracked_source_wing} / {untracked_source_wing.index}")
 
-            self.debug(lambda: f"on faces {untracked_source_wing.faces()} {untracked_source_edge.name}")
+            self._logger.log_lazy(logging.DEBUG, lambda: f"on faces {untracked_source_wing.faces()} {untracked_source_edge.name}")
 
             # From here source may move !!!
             cube = self.cube
@@ -297,7 +296,7 @@ class _LBLNxNEdges(SolverHelper):
                     # boaz: sanity
                     assert target_face.color == target_face_color
 
-                    self.debug(lambda : f"Before _bring_source_wing_to_top {target_face.name}={target_face.color}")
+                    self._logger.log_lazy(logging.DEBUG, lambda : f"Before _bring_source_wing_to_top {target_face.name}={target_face.color}")
 
                     self._bring_source_wing_to_top(l1_tracker, target_face, source_edge_wing_t)
 
@@ -312,12 +311,12 @@ class _LBLNxNEdges(SolverHelper):
 
 
 
-            self.debug(lambda: f"💚💚 Source Wing is now on up {cube.up} {untracked_source_wing.parent_name_index_colors_position}")
+            self._logger.log_lazy(logging.DEBUG, lambda: f"💚💚 Source Wing is now on up {cube.up} {untracked_source_wing.parent_name_index_colors_position}")
 
             # Early check: if the color on UP IS our target color, this source won't work
             # Check before rotating U to bring to front - saves up to 3 U rotations
             if untracked_source_wing.get_face_edge(cube.up).color == target_face.color:
-                self.debug(
+                self._logger.log_lazy(logging.DEBUG,
                     lambda: f"❌❌❌ Wing {untracked_source_wing} color on UP is target color {target_face.color}, giving up early")
                 return SmallStepSolveState.NOT_SOLVED
 
@@ -338,7 +337,7 @@ class _LBLNxNEdges(SolverHelper):
                     assert untracked_source_wing.on_face(cube.front)
                     untracked_source_edge = untracked_source_wing.parent
 
-            self.debug(lambda: f"💚💚 Source Wing is now on front {cube.front} {untracked_source_wing.parent_name_index_colors_position}")
+            self._logger.log_lazy(logging.DEBUG, lambda: f"💚💚 Source Wing is now on front {cube.front} {untracked_source_wing.parent_name_index_colors_position}")
 
 
             # now check if we can use it ?
@@ -348,28 +347,28 @@ class _LBLNxNEdges(SolverHelper):
             if untracked_source_wing.get_face_edge(cube.up).color != target_face.color:
                 assert target_face.color == untracked_source_wing.get_other_face_edge(cube.up).color
 
-                self.debug(lambda: f"💚💚💚 Wing {untracked_source_wing}  match target color {target_face_color}")
+                self._logger.log_lazy(logging.DEBUG, lambda: f"💚💚💚 Wing {untracked_source_wing}  match target color {target_face_color}")
 
                 # this move target wing
                 moved = self._e2e_comm.try_right_or_left_edge_to_edge_commutator_by_wings(untracked_target_edge_wing,
                                                                                   source_edge_wing_t.slice)
 
                 if moved:
-                    self.debug(lambda: "💚💚💚💚 Source index and target match")
+                    self._logger.log_lazy(logging.DEBUG, lambda: "💚💚💚💚 Source index and target match")
 
                     assert untracked_target_edge_wing.match_faces
 
-                    self.debug(lambda: f"✅✅💚💚💚💚💚✅✅ Solved {untracked_target_edge_wing}")
+                    self._logger.log_lazy(logging.DEBUG, lambda: f"✅✅💚💚💚💚💚✅✅ Solved {untracked_target_edge_wing}")
 
                     return SmallStepSolveState.SOLVED
 
 
                 else:
-                    self.debug(lambda: "❌❌ Source index and target don't match")
+                    self._logger.log_lazy(logging.DEBUG, lambda: "❌❌ Source index and target don't match")
 
                 # from now, you cannot use untracked_source_wing
             else:
-                self.debug(
+                self._logger.log_lazy(logging.DEBUG,
                     lambda: f"❌❌❌ Wing {untracked_source_wing}  doesnt match target color {target_face_color}")
 
         return SmallStepSolveState.NOT_SOLVED

@@ -9,7 +9,7 @@ from cube.domain.solver.protocols.Solver3x3Protocol import Solver3x3Protocol
 
 if TYPE_CHECKING:
     from cube.domain.model.Color import Color
-    from cube.utils.logger_protocol import ILogger
+    from cube.utils.logging import CubeLogger
 
 
 class Solvers3x3:
@@ -29,7 +29,7 @@ class Solvers3x3:
     @staticmethod
     def beginner(
         op: OperatorProtocol,
-        parent_logger: "ILogger",
+        parent_logger: "CubeLogger",
         forced_start_color: "Color | None" = None,
     ) -> Solver3x3Protocol:
         """
@@ -48,7 +48,7 @@ class Solvers3x3:
         return BeginnerSolver3x3(op, parent_logger, forced_start_color=forced_start_color)
 
     @staticmethod
-    def cfop(op: OperatorProtocol, parent_logger: "ILogger") -> Solver3x3Protocol:
+    def cfop(op: OperatorProtocol, parent_logger: "CubeLogger") -> Solver3x3Protocol:
         """
         Get CFOP (Fridrich) 3x3 solver.
 
@@ -63,7 +63,7 @@ class Solvers3x3:
         return CFOP3x3(op, parent_logger)
 
     @staticmethod
-    def kociemba(op: OperatorProtocol, parent_logger: "ILogger") -> Solver3x3Protocol:
+    def kociemba(op: OperatorProtocol, parent_logger: "CubeLogger") -> Solver3x3Protocol:
         """
         Get Kociemba near-optimal 3x3 solver.
 
@@ -78,7 +78,7 @@ class Solvers3x3:
         return Kociemba3x3(op, parent_logger)
 
     @classmethod
-    def by_name(cls, name: str, op: OperatorProtocol, parent_logger: "ILogger") -> Solver3x3Protocol:
+    def by_name(cls, name: str, op: OperatorProtocol, parent_logger: "CubeLogger") -> Solver3x3Protocol:
         """
         Get a 3x3 solver by its name.
 
