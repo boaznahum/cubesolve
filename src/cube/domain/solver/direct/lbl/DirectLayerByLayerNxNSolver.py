@@ -12,7 +12,7 @@ assuming D face. This allows solving from any orientation.
 For Layer 1, we:
 1. Solve white-face centers using NxNCenters
 2. Solve white-face edges using NxNEdges (only edges on white face)
-3. Create a shadow 3x3 cube and solve Layer 1 (cross + corners) using Solvers3x3
+3. Solve Layer 1 (cross + corners) using Solvers3x3 with color providers
 
 Uses FacesTrackerHolder for even cube matching - see:
     solver/common/big_cube/FACE_TRACKER.md
@@ -39,7 +39,7 @@ from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
 from cube.domain.solver.common.big_cube.CornerSwapParity import CornerSwapParity
 from cube.domain.solver.common.big_cube.EdgeSliceParity import EdgeSliceParity
 from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
-from cube.domain.solver.common.big_cube.ShadowCubeHelper import ShadowCubeHelper
+from cube.domain.tracker.EdgesTrackerHolder import EdgesTrackerHolder
 from cube.domain.solver.direct.lbl import _common
 from cube.domain.solver.direct.lbl._LBLL3Edges import _LBLL3Edges
 from cube.domain.solver.direct.lbl._LBLSlices import _LBLSlices
@@ -61,7 +61,7 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
     Layer 1 (white face - determined by FIRST_FACE_COLOR config):
     - Solve centers: (n-2)² center pieces
     - Solve edges: 4 edges × (n-2) wings each
-    - Solve corners: 4 corners via shadow 3x3
+    - Solve corners: 4 corners via 3x3 solver with color providers
 
     Layer 2 to n-1 (middle slices):
     - Solve centers: 4×(n-2) center pieces (ring on side faces)
@@ -71,7 +71,7 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
     - Like Layer 1 but with restricted moves
     """
 
-    __slots__ = ["_nxn_edges", "_edge_parity", "_corner_swap", "_shadow_helper", "_lbl_slices",
+    __slots__ = ["_nxn_edges", "_edge_parity", "_corner_swap", "_lbl_slices",
                  "_l3_edges", "_accumulated_temp_stats"]
 
     def __init__(self, op: OperatorProtocol, parent_logger: "CubeLogger") -> None:
@@ -96,8 +96,6 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
 
         # Corner swap parity fix (basic and advanced algorithms)
         self._corner_swap = CornerSwapParity(self)
-
-        self._shadow_helper = ShadowCubeHelper(self)
 
         # LBL slices helper - wraps NxNCenters and NxNEdges for slice operations
         self._lbl_slices = _LBLSlices(self)
@@ -516,7 +514,7 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
 
         with self.op.annotation.annotate(h2=lambda: f"L1 cross ({l1_tracker.color.name})"):
             # Solve using shadow cube approach with Solvers3x3
-            self._solve_layer1_with_shadow(th, SolveStep.L1x)
+            self._solve_layer_with_color_provider(th, SolveStep.L1x)
 
     def _solve_layer1_corners(self, th: FacesTrackerHolder) -> None:
         """Solve Layer 1 corners using shadow 3x3 approach."""
@@ -528,71 +526,68 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
 
         with self.op.annotation.annotate(h2=lambda: f"L1 corners ({l1_tracker.color.name})"):
             # Solve using shadow cube approach with Solvers3x3
-            self._solve_layer1_with_shadow(th, SolveStep.L1)
+            self._solve_layer_with_color_provider(th, SolveStep.L1)
 
-    def _solve_layer1_with_shadow(self, th: FacesTrackerHolder, what: SolveStep) -> None:
-        """Create shadow 3x3 and solve Layer 1 using beginner method.
+    def _solve_layer_with_color_provider(self, th: FacesTrackerHolder, what: SolveStep) -> None:
+        """Solve Layer 1 or 3 using color provider approach (no shadow cube).
 
-        Uses the proper pattern from CageNxNSolver:
-        1. Create shadow 3x3 cube
-        2. Create DualOperator (wraps shadow + real operator)
-        3. Use Solvers3x3.beginner() - a real 3x3 solver
-        4. Solve with SolveStep.L1 to only do cross + corners
-        :param th:
+        Uses EdgesTrackerHolder to track assigned edge colors through moves,
+        and FacesTrackerHolder for center colors. The 3x3 beginner solver
+        operates directly on the real cube with overridden colors.
+
+        Replaces the old shadow cube + DualOperator approach.
+
+        Args:
+            th: Face tracker holder providing face→color mapping.
+            what: Which step to solve (L1x, L1, L3x, L3).
         """
-        from cube.application.commands.DualOperator import DualOperator
         from cube.domain.solver.Solvers3x3 import Solvers3x3
 
-        # Verify source cube is valid before creating shadow
-        assert self.cube.is_sanity(force_check=True), "Source NxN cube invalid before shadow creation"
+        # Verify source cube is valid
+        assert self.cube.is_sanity(force_check=True), "Source NxN cube invalid before solving"
 
-        # this is a copy of cage is doing, why not add an helper for shadow operations !!!
-        # Create shadow 3x3 cube (includes sanity check via set_3x3_colors)
-        shadow_cube = self._shadow_helper.create_shadow_cube_from_faces_and_cube(th)
+        # Compute valid 3x3 edge colors
+        colors_3x3 = self.cube.get_3x3_colors()
+        modified = colors_3x3.with_centers(th.get_face_colors())
 
-        if shadow_cube.solved:
-            self._logger.log_lazy(logging.DEBUG, "Shadow cube already solved")
-            return
+        # For even cubes, fix non-3x3 edges with valid template color-pairs
+        if self.cube.is_even:
+            modified = modified.with_fixed_non_3x3_edges(
+                cube=self.cube,
+                reference_scheme=self.cube.original_scheme
+            )
 
-        # Early-exit optimization: Check if requested step is already done on shadow.
-        # This avoids creating DualOperator and solver when not needed.
-        # Cost: O(4) to check edges, O(4) to check corners - trivial vs full solve.
-        shadow_l1_face = shadow_cube.color_2_face(self.cmn.white)
-        edges_solved = all(e.match_faces for e in shadow_l1_face.edges)
-        corners_solved = all(c.match_faces for c in shadow_l1_face.corners)
+        # Create edge tracker (lightweight shadow 3x3 that syncs moves)
+        with EdgesTrackerHolder(self.cube, modified) as edges_tracker:
+            # Wrap operator to sync moves to shadow cube
+            sync_op = edges_tracker.create_sync_operator(self._op)
 
-        if what == SolveStep.L1x and edges_solved:
-            self._logger.log_lazy(logging.DEBUG, "Shadow cube L1 cross already solved")
-            return
-        if what == SolveStep.L1 and edges_solved and corners_solved:
-            self._logger.log_lazy(logging.DEBUG, "Shadow cube Layer 1 already solved")
-            return
+            with self.cube.with_faces_color_provider(
+                    th, center_3x3_mode=True, edges_provider=edges_tracker):
 
-        # Create DualOperator: wraps shadow cube + real operator
-        dual_op = DualOperator(shadow_cube, self._op)
+                # Early-exit: check if requested step is already done on L1 face.
+                # Only for L1 steps — L3 steps check the opposite face internally.
+                if what in (SolveStep.L1x, SolveStep.L1):
+                    l1_face = self.cube.color_2_face(self.cmn.white)
+                    edges_solved = all(e.match_faces for e in l1_face.edges)
+                    corners_solved = all(c.match_faces for c in l1_face.corners)
 
-        # Use beginner method for L1 solving (same approach as CageNxNSolver)
-        # we cannot use kochima becuase it konw to solve only valid cube and only whole cube
-        # Force L1 color to match parent solver's white face.
-        # Without this, _select_best_start_color() may pick a different face on the
-        # shadow cube, solving the wrong cross. See issue #119, .claude/sessions/lbl-crash.md
-        shadow_solver = Solvers3x3.beginner(dual_op, self._logger,
-                                            forced_start_color=self.cmn.white)
+                    if what == SolveStep.L1x and edges_solved:
+                        self._logger.log_lazy(logging.DEBUG, "L1 cross already solved")
+                        return
+                    if what == SolveStep.L1 and edges_solved and corners_solved:
+                        self._logger.log_lazy(logging.DEBUG, "Layer 1 already solved")
+                        return
 
-        # Solve only L1 (cross + corners)
-        # Cast: BeginnerSolver3x3 is both Solver3x3Protocol AND Solver (via BaseSolver)
-        self._run_child_solver(cast(Solver, shadow_solver), what)
+                # Use beginner method (CFOP can't solve partial steps)
+                # Force start color to match parent solver's white face.
+                # Use sync_op so moves are applied to both real and shadow cubes.
+                solver_3x3 = Solvers3x3.beginner(
+                    sync_op, self._logger,
+                    forced_start_color=self.cmn.white)
 
-        # Verify shadow cube is still valid after solving
-        assert shadow_cube.is_sanity(force_check=True), "Shadow cube invalid after solving"
-
-        # Verify Layer 1 is actually solved on shadow cube
-        shadow_l1 = shadow_cube.color_2_face(self.cmn.white)
-        if what == SolveStep.L1x:
-            assert all(e.match_faces for e in shadow_l1.edges), "Shadow cube L1 cross not solved after solve_3x3"
-        elif what == SolveStep.L1:
-            assert all(e.match_faces for e in shadow_l1.edges), "Shadow cube L1 edges not solved after solve_3x3"
-            assert all(c.match_faces for c in shadow_l1.corners), "Shadow cube L1 corners not solved after solve_3x3"
+                # Solve only the requested step
+                self._run_child_solver(cast(Solver, solver_3x3), what)
 
     # =========================================================================
     # Layer 2 - State Inspection
@@ -789,7 +784,7 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
 
         with self.op.annotation.annotate(h2=lambda: f"L3 cross ({l1_tracker.color.name})"):
             # Solve using shadow cube approach with Solvers3x3
-            self._solve_layer1_with_shadow(th, SolveStep.L3x)
+            self._solve_layer_with_color_provider(th, SolveStep.L3x)
 
     def _solve_layer3_corners(self, th: FacesTrackerHolder) -> None:
         """Solve Layer 3 corners using shadow 3x3 approach."""
@@ -801,7 +796,7 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
 
         with self.op.annotation.annotate(h2=lambda: f"L3 corners ({l3_tracker.color.name})"):
             # Solve using shadow cube approach with Solvers3x3
-            self._solve_layer1_with_shadow(th, SolveStep.L3)
+            self._solve_layer_with_color_provider(th, SolveStep.L3)
 
     # =========================================================================
     # Statistics (override AbstractSolver/Solver)
@@ -813,7 +808,6 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
         self._l3_edges.reset_block_statistics()
         self._nxn_edges.reset_block_statistics()
         self._corner_swap.reset_block_statistics()
-        self._shadow_helper.reset_block_statistics()
         self._accumulated_temp_stats.reset()
 
     def get_block_statistics(self) -> SolverStatistics:
@@ -823,6 +817,5 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
         stats.accumulate(self._l3_edges.get_block_statistics())
         stats.accumulate(self._nxn_edges.get_block_statistics())
         stats.accumulate(self._corner_swap.get_block_statistics())
-        stats.accumulate(self._shadow_helper.get_block_statistics())
         stats.accumulate(self._accumulated_temp_stats)
         return stats

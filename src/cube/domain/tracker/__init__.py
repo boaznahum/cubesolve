@@ -26,12 +26,15 @@ Do NOT import these directly - they are implementation details:
 - NxNCentersFaceTrackers (factory)
 """
 
+from cube.domain.tracker.EdgesTrackerHolder import EdgesTrackerHolder
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.tracker.MarkedPartTracker import MarkedPartTracker, MultiPartTracker
 from cube.domain.tracker.PartSliceTracker import MultiSliceTracker, PartSliceTracker
 from cube.domain.tracker.Tracker import CornerTracker, EdgeTracker, PartTracker
 
 __all__ = [
+    # Edge tracking (for big cube 3x3 solving)
+    "EdgesTrackerHolder",
     # Face tracking (for even cubes)
     "FacesTrackerHolder",
     # Part tracking (marker-based, for big cubes)
