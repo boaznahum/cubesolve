@@ -39,13 +39,13 @@ class EdgesColorsProvider(Protocol):
         """
         ...
 
-    def get_edge_colors(self, edge: Edge) -> tuple[Color, Color]:
-        """Get the assigned color pair for an edge, ordered as (e1_color, e2_color).
+    def get_edge_colors(self, edge: Edge) -> frozenset[Color]:
+        """Get the assigned color pair for an edge (unordered).
 
         Args:
             edge: The edge to query.
 
         Returns:
-            Tuple of (e1 face color, e2 face color).
+            Frozenset of the two assigned colors.
         """
         ...

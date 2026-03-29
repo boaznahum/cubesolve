@@ -937,7 +937,8 @@ class Cube(CubeSupplier):
                 stack.enter_context(f.with_color_provider(provider, center_3x3_mode))
             if edges_provider is not None:
                 for edge in self.edges:
-                    stack.enter_context(edge.with_edges_color_provider(edges_provider))
+                    stack.enter_context(edge.with_edges_color_provider(edges_provider,
+                                                                      edge_3x3_mode=True))
             self.reset_after_faces_changes()
             yield
         self.reset_after_faces_changes()

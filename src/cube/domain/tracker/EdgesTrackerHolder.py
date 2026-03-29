@@ -111,10 +111,10 @@ class EdgesTrackerHolder:
         shadow_face = self._shadow.face(face.name)
         return shadow_edge.face_color(shadow_face)
 
-    def get_edge_colors(self, edge: Edge) -> tuple[Color, Color]:
-        """Get assigned color pair for an edge, ordered as (e1_color, e2_color)."""
+    def get_edge_colors(self, edge: Edge) -> frozenset[Color]:
+        """Get assigned color pair for an edge (unordered)."""
         shadow_edge = self._shadow.edge(edge.name)
-        return (shadow_edge.e1.color, shadow_edge.e2.color)
+        return frozenset((shadow_edge.e1.color, shadow_edge.e2.color))
 
     def __enter__(self) -> EdgesTrackerHolder:
         return self

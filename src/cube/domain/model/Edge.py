@@ -52,6 +52,7 @@ class Edge(Part):
         self._f2: Face = f2
         self.right_top_left_same_direction = right_top_left_same_direction
         self._edges_provider: EdgesColorsProvider | None = None
+        self._edge_3x3_mode: bool = False  # must be set only with color provider !!!
         if not slices:
             self._cube = f1.cube  # 2x2: provide cube for Part.__init__ fallback
         super().__init__()
@@ -106,7 +107,7 @@ class Edge(Part):
         """
         assert self._slices, f"is3x3 should not be called on 2x2 edge {self._name} with no slices"
 
-        if self._edges_provider is not None:
+        if self._edge_3x3_mode:
             return True
 
         slices = self.all_slices
@@ -460,7 +461,7 @@ class Edge(Part):
     def colors_id(self) -> PartColorsID:
         """Override Part.colors_id to use provider colors when active."""
         if self._edges_provider is not None:
-            return frozenset(self._edges_provider.get_edge_colors(self))
+            return self._edges_provider.get_edge_colors(self)
         return super().colors_id
 
     def face_color(self, f: Face) -> Color:
@@ -486,14 +487,20 @@ class Edge(Part):
         return super().match_faces
 
     @contextmanager
-    def with_edges_color_provider(self, provider: EdgesColorsProvider) -> Generator[None, None, None]:
+    def with_edges_color_provider(self, provider: EdgesColorsProvider,
+                                  edge_3x3_mode: bool = False) -> Generator[None, None, None]:
         """Context manager that sets an edge color provider and restores on exit."""
+        assert not edge_3x3_mode or provider is not None, \
+            "edge_3x3_mode requires a color provider"
         prev = self._edges_provider
+        prev_3x3 = self._edge_3x3_mode
         self._edges_provider = provider
+        self._edge_3x3_mode = edge_3x3_mode
         try:
             yield
         finally:
             self._edges_provider = prev
+            self._edge_3x3_mode = prev_3x3
 
     @property
     def required_position(self) -> "Edge":
