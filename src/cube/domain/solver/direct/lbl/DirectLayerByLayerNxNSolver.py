@@ -557,10 +557,8 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
                 reference_scheme=self.cube.original_scheme
             )
 
-        # Create edge tracker (lightweight shadow 3x3 that syncs moves)
+        # Create edge tracker (markers on PartEdges that travel with rotations)
         with EdgesTrackerHolder(self.cube, modified) as edges_tracker:
-            # Wrap operator to sync moves to shadow cube
-            sync_op = edges_tracker.create_sync_operator(self._op)
 
             with self.cube.with_faces_color_provider(
                     th, center_3x3_mode=True, edges_provider=edges_tracker):
@@ -581,9 +579,8 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
 
                 # Use beginner method (CFOP can't solve partial steps)
                 # Force start color to match parent solver's white face.
-                # Use sync_op so moves are applied to both real and shadow cubes.
                 solver_3x3 = Solvers3x3.beginner(
-                    sync_op, self._logger,
+                    self._op, self._logger,
                     forced_start_color=self.cmn.white)
 
                 # Solve only the requested step

@@ -1,14 +1,16 @@
-"""EdgesTrackerHolder - tracks edge colors through cube rotations via shadow 3x3.
+"""EdgesTrackerHolder - tracks edge colors through cube rotations via markers.
 
-On big cubes, face rotations (R, L, U, D, F, B) only move the outermost edge
-slices — the representative middle slice NEVER moves. So marker-based tracking
-on the middle slice doesn't work. Instead, we maintain a lightweight shadow 3x3
-cube that receives the same moves as the real cube, and read edge colors from it.
+Uses moveable_attributes on PartEdge objects to track assigned edge colors.
+Markers travel with the sticker data during rotate_4cycle(), so colors
+stay correct through face rotations and whole-cube rotations.
 
-The shadow cube is much simpler than the old DualOperator approach:
-- No DualAnnotation / piece mapping
-- No special cube property (solver reads from real cube via providers)
-- Just move sync + color reading
+One marker per edge, placed on one PartEdge. The marker value is a tuple
+(my_face_color, other_face_color) — so both colors are recoverable from
+finding a single PartEdge.
+
+After rotations, the marker may land on a different slice index (due to
+ltr coordinate inversion between edges), so the provider searches all
+slices to find it (starting from n//2 as optimization).
 
 Usage:
     colors_3x3 = cube.get_3x3_colors()
@@ -17,104 +19,132 @@ Usage:
         modified = modified.with_fixed_non_3x3_edges(cube, cube.original_scheme)
 
     with EdgesTrackerHolder(cube, modified) as edges_tracker:
-        sync_op = edges_tracker.create_sync_operator(real_op)
         with cube.with_faces_color_provider(th, center_3x3_mode=True,
                                             edges_provider=edges_tracker):
-            solver = Solvers3x3.beginner(sync_op, ...)
+            solver = Solvers3x3.beginner(self._op, ...)
             solver.solve_3x3()
 
 Limitations:
     - Only valid during face rotations (R, L, U, D, F, B) and whole-cube rotations.
-    - NOT valid during slice moves (M, E, S) that change 3x3 edge state.
+    - NOT valid during slice moves (M, E, S) that split edge slices.
 """
 
 from __future__ import annotations
 
 from types import TracebackType
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
+from cube.domain.exceptions import InternalSWError
 from cube.domain.model.Color import Color
+from cube.domain.model.PartEdge import PartEdge
 
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
     from cube.domain.model.Cube3x3Colors import Cube3x3Colors
     from cube.domain.model.Edge import Edge
     from cube.domain.model.Face import Face
-    from cube.domain.solver.protocols import OperatorProtocol
 
-
-class _ShadowSyncOp:
-    """Thin operator wrapper that syncs moves to a shadow 3x3 cube.
-
-    Delegates all methods to the real operator, but after each play()
-    also applies the same algorithm to the shadow cube.
-    """
-
-    def __init__(self, real_op: OperatorProtocol, shadow: Cube) -> None:
-        self._real_op = real_op
-        self._shadow = shadow
-
-    def play(self, alg: Any, inv: Any = False, animation: Any = True) -> None:
-        """Apply alg to both real cube (via operator) and shadow cube (directly)."""
-        self._real_op.play(alg, inv=inv, animation=animation)
-        # Apply same move to shadow (resolve inv, no animation)
-        resolved = alg.inv() if inv else alg
-        resolved.play(self._shadow, False)
-
-    def __getattr__(self, name: str) -> Any:
-        """Delegate all other methods/properties to the real operator."""
-        return getattr(self._real_op, name)
+_EDGES_TRACKER_PREFIX = "_edges_track:"
 
 
 class EdgesTrackerHolder:
-    """Tracks assigned edge colors through cube rotations via a shadow 3x3 cube.
+    """Tracks assigned edge colors through cube rotations via PartEdge markers.
 
-    Maintains a lightweight shadow 3x3 cube with valid edge colors.
-    The shadow receives the same moves as the real cube (via _ShadowSyncOp),
-    so its edge positions stay in sync. Edge color queries read from the shadow.
+    Places one marker per edge on a representative PartEdge. The marker value
+    is (my_face_color, other_face_color). Since moveable_attributes travel
+    with the sticker during rotations, the colors stay correct.
+
+    To read: search the edge's slices for the marker (it may have moved to
+    a different slice index due to ltr coordinate inversion between edges).
 
     Implements the EdgesColorsProvider protocol.
     """
 
-    __slots__ = ("_cube", "_shadow")
+    __slots__ = ("_cube", "_key", "_cache_modify_counter", "_cache")
 
     def __init__(self, cube: Cube, colors_3x3: Cube3x3Colors) -> None:
-        """Create tracker with a shadow 3x3 cube initialized from the color snapshot.
+        """Create tracker by marking one PartEdge per edge with assigned colors.
 
         Args:
-            cube: The real cube (for reference).
+            cube: The real cube.
             colors_3x3: Valid 3x3 color snapshot (all edges must have valid pairs).
                         Typically produced by Cube3x3Colors.with_fixed_non_3x3_edges().
         """
-        from cube.domain.model.Cube import Cube as CubeClass
-
         self._cube = cube
+        self._key = f"{_EDGES_TRACKER_PREFIX}{id(self):x}"
+        self._cache_modify_counter: int = -1
+        self._cache: dict[str, tuple[PartEdge, tuple[Color, Color]]] = {}
 
-        # Create shadow 3x3 cube with the same color scheme
-        self._shadow: Cube = CubeClass(size=3, sp=cube.sp, scheme=cube.original_scheme)
-        self._shadow.is_even_cube_shadow = cube.is_even
-        self._shadow.set_3x3_colors(colors_3x3)
+        # Mark one PartEdge per edge with (my_face_color, other_face_color)
+        for edge_name, edge_colors in colors_3x3.edges.items():
+            edge = cube.edge(edge_name)
+            # Pick e1 (first representative PartEdge)
+            pe = edge.e1
+            my_face_name = pe.face.name
+            other_face_name = next(fn for fn in edge_colors.colors if fn != my_face_name)
+            pe.moveable_attributes[self._key] = (
+                edge_colors.colors[my_face_name],
+                edge_colors.colors[other_face_name],
+            )
 
-    def create_sync_operator(self, real_op: OperatorProtocol) -> _ShadowSyncOp:
-        """Create an operator wrapper that syncs moves to the shadow cube.
+    def _find_marker(self, edge: Edge) -> tuple[PartEdge, tuple[Color, Color]]:
+        """Search edge slices for our marker.
 
-        Pass this wrapper to the 3x3 solver instead of the real operator.
+        Starts from n//2 as optimization (marker is often near the middle).
+
+        Returns:
+            (found_pe, (my_color, other_color)) where my_color is for found_pe.face
         """
-        return _ShadowSyncOp(real_op, self._shadow)
+        # Check cache
+        current_counter = self._cube._modify_counter
+        if self._cache_modify_counter == current_counter:
+            cached = self._cache.get(edge._name)
+            if cached is not None:
+                return cached
+
+        # Search all slices
+        n = edge.n_slices
+        start = n // 2
+        key = self._key
+        for offset in range(n):
+            idx = (start + offset) % n
+            sl = edge.get_slice(idx)
+            for pe in sl.edges:
+                if key in pe.moveable_attributes:
+                    result: tuple[PartEdge, tuple[Color, Color]] = (
+                        pe, pe.moveable_attributes[key]
+                    )
+                    # Update cache
+                    if self._cache_modify_counter != current_counter:
+                        self._cache.clear()
+                        self._cache_modify_counter = current_counter
+                    self._cache[edge._name] = result
+                    return result
+
+        raise InternalSWError(f"Edge marker {self._key} not found on {edge}")
 
     def get_edge_face_color(self, edge: Edge, face: Face) -> Color:
-        """Get the assigned color for an edge on a specific face.
-
-        Reads from the shadow 3x3 cube's corresponding edge.
-        """
-        shadow_edge = self._shadow.edge(edge.name)
-        shadow_face = self._shadow.face(face.name)
-        return shadow_edge.face_color(shadow_face)
+        """Get the assigned color for an edge on a specific face."""
+        pe, (my_color, other_color) = self._find_marker(edge)
+        if pe.face is face:
+            return my_color
+        else:
+            return other_color
 
     def get_edge_colors(self, edge: Edge) -> frozenset[Color]:
         """Get assigned color pair for an edge (unordered)."""
-        shadow_edge = self._shadow.edge(edge.name)
-        return frozenset((shadow_edge.e1.color, shadow_edge.e2.color))
+        _, (my_color, other_color) = self._find_marker(edge)
+        return frozenset((my_color, other_color))
+
+    def _cleanup(self) -> None:
+        """Remove markers from all edge PartEdges."""
+        key = self._key
+        for edge in self._cube.edges:
+            for sl in edge.all_slices:
+                for pe in sl.edges:
+                    if key in pe.moveable_attributes:
+                        del pe.moveable_attributes[key]
+                        break  # only one marker per edge
 
     def __enter__(self) -> EdgesTrackerHolder:
         return self
@@ -125,4 +155,4 @@ class EdgesTrackerHolder:
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:
-        pass  # No cleanup needed — shadow cube is just garbage collected
+        self._cleanup()
