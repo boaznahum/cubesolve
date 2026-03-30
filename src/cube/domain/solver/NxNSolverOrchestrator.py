@@ -25,6 +25,8 @@ from cube.domain.solver.common.SolverStatistics import SolverStatistics
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.protocols.ReducerProtocol import ReducerProtocol
 from cube.domain.solver.protocols.Solver3x3Protocol import Solver3x3Protocol
+from cube.domain.solver.Solver2x2Name import Solver2x2Name
+from cube.domain.solver.Solver3x3Name import Solver3x3Name
 from cube.domain.solver.solver import Solver, SolverResults, SolveStep
 from cube.domain.solver.SolverName import SolverName
 from cube.utils.SSCode import SSCode
@@ -62,15 +64,17 @@ class NxNSolverOrchestrator(AbstractSolver):
     See PARITY_HANDLING_ORCHESTRATOR.md for details.
     """
 
-    __slots__ = ["_op", "_reducer", "_solver_3x3", "_solver_name", "_debug_override"]
+    __slots__ = ["_op", "_reducer", "_solver_3x3", "_solver_name",
+                 "_solver_3x3_name", "_solver_2x2_name", "_debug_override"]
 
     def __init__(
         self,
         op: OperatorProtocol,
         parent_logger: "ILogger",
         reducer: ReducerProtocol,
-        solver_3x3: Solver3x3Protocol,
-        solver_name: SolverName
+        solver_name: SolverName,
+        solver_3x3_name: Solver3x3Name,
+        solver_2x2_name: Solver2x2Name,
     ) -> None:
         """
         Create an NxN solver orchestrator.
@@ -79,15 +83,23 @@ class NxNSolverOrchestrator(AbstractSolver):
             op: Operator for cube manipulation
             parent_logger: Parent logger (cube.sp.logger for root solver)
             reducer: Reducer for NxN -> 3x3 reduction
-            solver_3x3: Solver for 3x3 cube
             solver_name: Name identifier for this solver
+            solver_3x3_name: Which 3x3 solver to create
+            solver_2x2_name: Which 2x2 solver to use for delegation
         """
         super().__init__(op, parent_logger, logger_prefix=f"Solver:{solver_name.display_name}")
         self._op = op
         self._reducer = reducer
-        self._solver_3x3 = solver_3x3
         self._solver_name = solver_name
+        self._solver_3x3_name = solver_3x3_name
+        self._solver_2x2_name = solver_2x2_name
         self._debug_override: bool | None = None
+
+        # Create 3x3 solver from name
+        from cube.domain.solver.Solvers3x3 import Solvers3x3
+        self._solver_3x3: Solver3x3Protocol = Solvers3x3.by_name(
+            solver_3x3_name, op, self._logger
+        )
 
     @property
     def get_code(self) -> SolverName:
@@ -95,11 +107,9 @@ class NxNSolverOrchestrator(AbstractSolver):
         return self._solver_name
 
     def _create_2x2_delegate(self) -> Solver:
-        """Fast solvers (CFOP, Kociemba) use IDA* for 2x2; others use beginner."""
-        from cube.domain.solver.Solvers import Solvers
-        if self._solver_name in (SolverName.CFOP, SolverName.KOCIEMBA):
-            return Solvers.two_by_two_ida(self._op)
-        return Solvers.two_by_two_beginner(self._op)
+        """Create 2x2 delegate from configured solver_2x2_name."""
+        from cube.domain.solver.Solvers2x2 import Solvers2x2
+        return Solvers2x2.by_name(self._solver_2x2_name, self._op, self._logger)
 
     @property
     def _status_impl(self) -> str:

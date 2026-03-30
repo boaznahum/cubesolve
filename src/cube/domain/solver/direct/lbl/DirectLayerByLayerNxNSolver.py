@@ -111,6 +111,13 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
     def get_code(self) -> SolverName:
         return SolverName.LBL_BIG
 
+    def _create_2x2_delegate(self) -> "Solver":
+        """Use 2x2 solver from solvers_config.lbl_big."""
+        from cube.domain.solver.Solvers2x2 import Solvers2x2
+        return Solvers2x2.by_name(
+            self._cube.config.solvers_config.lbl_big.solver_2x2, self._op, self._logger
+        )
+
     @property
     def _status_impl(self) -> str:
         """Return current solving status."""
