@@ -33,7 +33,7 @@ class L3Permute(StepSolver):
     Works purely with corner sticker colors — no face colors.
     """
 
-    __slots__: list[str] = []
+    __slots__: list[str] = ["_swap_detected"]
 
     # U R U' L' U R' U' L — 3-corner cycle, fixes FRU, cycles FLU/BRU/BLU
     _CYCLE: Alg = Algs.alg(
@@ -44,6 +44,12 @@ class L3Permute(StepSolver):
 
     def __init__(self, slv: SolverElementsProvider) -> None:
         super().__init__(slv, "L3Permute")
+        self._swap_detected: bool = False
+
+    @property
+    def swap_detected(self) -> bool:
+        """Whether a FLU↔BLU corner swap was detected during the last solve."""
+        return self._swap_detected
 
     @property
     def is_solved(self) -> bool:
@@ -69,6 +75,7 @@ class L3Permute(StepSolver):
 
     def solve(self, white_color: Color | None = None) -> None:
         """Permute last-layer corners into correct positions."""
+        self._swap_detected = False
         wc: Color = white_color or self.cmn.white
         if self.is_solved_with(wc):
             self._align_u_layer(wc)
@@ -134,6 +141,7 @@ class L3Permute(StepSolver):
                 return  # done!
 
             # FLU↔BLU are swapped — break the swap with cycle, U2, cycle
+            self._swap_detected = True
             with self.ann.annotate(
                     (up.corner_bottom_left, AnnWhat.Moved),
                     (up.corner_top_left, AnnWhat.Moved),
