@@ -115,7 +115,7 @@ class L3Permute(StepSolver):
         C) If FLU↔BLU still swapped: 3-cycle, U2, 3-cycle → restart from A.
         """
 
-        for _attempt in range(3):
+        for attempt in range(3):
             # Step A: U-rotate until FRU is in position
             self._bring_fru_to_position(up, down, white_color, yellow_color)
 
@@ -138,10 +138,13 @@ class L3Permute(StepSolver):
 
             # Step C: Check if all in position
             if self._all_in_position(up, down, white_color, yellow_color):
+                self.debug(f"L3 permute: solved on iteration {attempt + 1}")
                 return  # done!
 
             # FLU↔BLU are swapped — break the swap with cycle, U2, cycle
             self._swap_detected = True
+            self.debug(f"L3 permute: FLU↔BLU corner swap detected on iteration {attempt + 1}, "
+                       f"fixing with 3-cycle U2 3-cycle")
             with self.ann.annotate(
                     (up.corner_bottom_left, AnnWhat.Moved),
                     (up.corner_top_left, AnnWhat.Moved),
@@ -150,7 +153,7 @@ class L3Permute(StepSolver):
                 self.op.play(self._CYCLE)
                 self.op.play((Algs.U * 2).simplify())
                 self.op.play(self._CYCLE)
-            # Restart from step A
+            self.debug(f"L3 permute: retrying from step A")
 
         raise AssertionError("L3 Permute failed after 3 attempts")
 
