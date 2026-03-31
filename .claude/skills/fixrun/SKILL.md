@@ -8,9 +8,46 @@ description: |
   "fix pycharm", "fix pycharm project", "pycharm broken", "run tests doesn't appear",
   "no interpreter", "can't run tests", or runs "/fixrun". Repairs .iml file
   (source/test roots), ensures correct interpreter, sets up git filter, and fixes run configs.
+  Use "/fixrun help" for quick reference on common issues (e.g., phantom git diffs).
 ---
 
 # Fix PyCharm Project, Interpreter & Run Configurations
+
+## Subcommand: `/fixrun help`
+
+If the user runs `/fixrun help`, do NOT run the full skill. Instead, display this quick reference:
+
+```
+/fixrun help — Quick Reference
+═══════════════════════════════
+
+PHANTOM GIT DIFFS on .idea/runConfigurations/*.xml
+  Cause: The committed blob was stored before the git clean filter existed,
+         or PyCharm changed SDK_NAME/trailing whitespace.
+  Fix:
+    git rm --cached .idea/runConfigurations/*.xml
+    git add .idea/runConfigurations/*.xml
+  This re-stages files through the clean filter. No commit needed — diff disappears.
+
+SDK_NAME MISMATCH (PyCharm shows wrong interpreter)
+  Fix: Run /fixrun (full skill)
+
+RUN CONFIGS BROKEN (can't run tests, wrong interpreter)
+  Fix: Run /fixrun (full skill)
+
+GIT FILTER NOT SET UP (no .git-filters/ directory)
+  Fix: Run /fixrun (full skill — Part 4 sets up the filter)
+
+AFTER SWITCHING BRANCHES
+  If you see SDK_NAME diffs after checkout, the smudge filter should
+  handle it automatically. If not:
+    git checkout -- .idea/runConfigurations/
+  This re-applies the smudge filter (injects local SDK name).
+```
+
+**STOP after displaying the help text.** Do not continue to the full skill.
+
+---
 
 Fix four common PyCharm breakages in this project:
 1. Project module (.iml file) — source/test roots
