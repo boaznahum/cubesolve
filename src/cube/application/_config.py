@@ -16,8 +16,8 @@ from dataclasses import dataclass, field
 from typing import Tuple
 
 from cube.config.face_tracer_config import FaceTrackerConfig, TrackerIndicatorConfig
+from cube.domain.solver.Solver2x2Name import Solver2x2Name as _Solver2x2Name
 from cube.domain.solver.Solver3x3Name import Solver3x3Name as _Solver3x3Name
-from cube.domain.solver.SolverName import SolverName as _SolverName
 from cube.utils.markers_config import MarkersConfig
 
 # Type alias for config change listener callback
@@ -110,7 +110,7 @@ class SessionConfig:
 class SolverConfig:
     """Per-solver configuration for 3x3 and 2x2 sub-solvers."""
     solver_3x3: _Solver3x3Name
-    solver_2x2: _SolverName
+    solver_2x2: _Solver2x2Name
 
 
 @dataclass
@@ -122,15 +122,15 @@ class SolversConfig:
     beginner solvers use beginner 2x2.
     """
     lbl: SolverConfig = field(default_factory=lambda: SolverConfig(
-        _Solver3x3Name.BEGINNER, _SolverName.TWO_BY_TWO_BEGINNER))
+        _Solver3x3Name.BEGINNER, _Solver2x2Name.BEGINNER))
     cfop: SolverConfig = field(default_factory=lambda: SolverConfig(
-        _Solver3x3Name.CFOP, _SolverName.TWO_BY_TWO_IDA))
+        _Solver3x3Name.CFOP, _Solver2x2Name.IDA))
     kociemba: SolverConfig = field(default_factory=lambda: SolverConfig(
-        _Solver3x3Name.KOCIEMBA, _SolverName.TWO_BY_TWO_IDA))
+        _Solver3x3Name.KOCIEMBA, _Solver2x2Name.IDA))
     cage: SolverConfig = field(default_factory=lambda: SolverConfig(
-        _Solver3x3Name.CFOP, _SolverName.TWO_BY_TWO_IDA))
+        _Solver3x3Name.CFOP, _Solver2x2Name.IDA))
     lbl_big: SolverConfig = field(default_factory=lambda: SolverConfig(
-        _Solver3x3Name.BEGINNER, _SolverName.TWO_BY_TWO_BEGINNER))
+        _Solver3x3Name.BEGINNER, _Solver2x2Name.BEGINNER))
 
 
 ########## Per-session configuration ##########

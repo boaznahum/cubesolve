@@ -12,8 +12,8 @@ from cube.config.face_tracer_config import FaceTrackerConfig, TrackerIndicatorCo
 
 if TYPE_CHECKING:
     from cube.domain.model.Color import Color
+    from cube.domain.solver.Solver2x2Name import Solver2x2Name
     from cube.domain.solver.Solver3x3Name import Solver3x3Name
-    from cube.domain.solver.SolverName import SolverName
     from cube.utils.SSCode import SSCode
     from cube.utils.markers_config import MarkersConfig
 
@@ -147,8 +147,8 @@ class SolverConfigProtocol(Protocol):
         ...
 
     @property
-    def solver_2x2(self) -> "SolverName":
-        """2x2 solver enum (SolverName.TWO_BY_TWO_BEGINNER, .TWO_BY_TWO_IDA)."""
+    def solver_2x2(self) -> "Solver2x2Name":
+        """2x2 solver enum (Solver2x2Name.BEGINNER, .IDA)."""
         ...
 
 

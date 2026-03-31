@@ -70,15 +70,13 @@ class Solvers:
         """
         from .NxNSolverOrchestrator import NxNSolverOrchestrator
         from .Reducers import Reducers
-        from .Solvers3x3 import Solvers3x3
 
         cfg = op.app_state.config.solvers_config.lbl
         parent_logger = op.cube.sp.logger
-        solver_3x3 = Solvers3x3.by_name(cfg.solver_3x3, op, parent_logger)
         reducer = Reducers.beginner(op, advanced_edge_parity=False)
         return NxNSolverOrchestrator(
-            op, parent_logger, reducer, solver_3x3, SolverName.LBL,
-            solver_2x2_name=cfg.solver_2x2,
+            op, parent_logger, reducer, SolverName.LBL,
+            cfg.solver_3x3, cfg.solver_2x2,
         )
 
     @staticmethod
@@ -94,15 +92,13 @@ class Solvers:
         """
         from .NxNSolverOrchestrator import NxNSolverOrchestrator
         from .Reducers import Reducers
-        from .Solvers3x3 import Solvers3x3
 
         cfg = op.app_state.config.solvers_config.cfop
         parent_logger = op.cube.sp.logger
-        solver_3x3 = Solvers3x3.by_name(cfg.solver_3x3, op, parent_logger)
         reducer = Reducers.beginner(op, advanced_edge_parity=True)
         return NxNSolverOrchestrator(
-            op, parent_logger, reducer, solver_3x3, SolverName.CFOP,
-            solver_2x2_name=cfg.solver_2x2,
+            op, parent_logger, reducer, SolverName.CFOP,
+            cfg.solver_3x3, cfg.solver_2x2,
         )
 
     @staticmethod
@@ -118,15 +114,13 @@ class Solvers:
         """
         from .NxNSolverOrchestrator import NxNSolverOrchestrator
         from .Reducers import Reducers
-        from .Solvers3x3 import Solvers3x3
 
         cfg = op.app_state.config.solvers_config.kociemba
         parent_logger = op.cube.sp.logger
-        solver_3x3 = Solvers3x3.by_name(cfg.solver_3x3, op, parent_logger)
         reducer = Reducers.beginner(op, advanced_edge_parity=True)
         return NxNSolverOrchestrator(
-            op, parent_logger, reducer, solver_3x3, SolverName.KOCIEMBA,
-            solver_2x2_name=cfg.solver_2x2,
+            op, parent_logger, reducer, SolverName.KOCIEMBA,
+            cfg.solver_3x3, cfg.solver_2x2,
         )
 
     @staticmethod
