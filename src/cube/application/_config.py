@@ -16,6 +16,8 @@ from dataclasses import dataclass, field
 from typing import Tuple
 
 from cube.config.face_tracer_config import FaceTrackerConfig, TrackerIndicatorConfig
+from cube.domain.solver.Solver3x3Name import Solver3x3Name as _Solver3x3Name
+from cube.domain.solver.SolverName import SolverName as _SolverName
 from cube.utils.markers_config import MarkersConfig
 
 # Type alias for config change listener callback
@@ -107,8 +109,8 @@ class SessionConfig:
 @dataclass
 class SolverConfig:
     """Per-solver configuration for 3x3 and 2x2 sub-solvers."""
-    solver_3x3: str  # e.g., "beginner", "cfop", "kociemba"
-    solver_2x2: str  # e.g., "2x2 Beginner", "2x2 IDA*"
+    solver_3x3: _Solver3x3Name
+    solver_2x2: _SolverName
 
 
 @dataclass
@@ -119,11 +121,16 @@ class SolversConfig:
     Default: advanced 3x3 solvers (CFOP, Kociemba) use advanced 2x2 (IDA*),
     beginner solvers use beginner 2x2.
     """
-    lbl: SolverConfig = field(default_factory=lambda: SolverConfig("beginner", "2x2 Beginner"))
-    cfop: SolverConfig = field(default_factory=lambda: SolverConfig("cfop", "2x2 IDA*"))
-    kociemba: SolverConfig = field(default_factory=lambda: SolverConfig("kociemba", "2x2 IDA*"))
-    cage: SolverConfig = field(default_factory=lambda: SolverConfig("cfop", "2x2 IDA*"))
-    lbl_big: SolverConfig = field(default_factory=lambda: SolverConfig("beginner", "2x2 Beginner"))
+    lbl: SolverConfig = field(default_factory=lambda: SolverConfig(
+        _Solver3x3Name.BEGINNER, _SolverName.TWO_BY_TWO_BEGINNER))
+    cfop: SolverConfig = field(default_factory=lambda: SolverConfig(
+        _Solver3x3Name.CFOP, _SolverName.TWO_BY_TWO_IDA))
+    kociemba: SolverConfig = field(default_factory=lambda: SolverConfig(
+        _Solver3x3Name.KOCIEMBA, _SolverName.TWO_BY_TWO_IDA))
+    cage: SolverConfig = field(default_factory=lambda: SolverConfig(
+        _Solver3x3Name.CFOP, _SolverName.TWO_BY_TWO_IDA))
+    lbl_big: SolverConfig = field(default_factory=lambda: SolverConfig(
+        _Solver3x3Name.BEGINNER, _SolverName.TWO_BY_TWO_BEGINNER))
 
 
 ########## Per-session configuration ##########

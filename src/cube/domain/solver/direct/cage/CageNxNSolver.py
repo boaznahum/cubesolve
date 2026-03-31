@@ -43,6 +43,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from cube.domain.solver.Solver3x3Name import Solver3x3Name
 from cube.domain.solver.SolverName import SolverName
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
@@ -120,10 +121,9 @@ class CageNxNSolver(BaseSolver):
     def _create_2x2_delegate(self) -> "Solver":
         """Use 2x2 solver from solvers_config.cage."""
         from cube.domain.solver.Solvers import Solvers
-        solver_2x2_name = SolverName.lookup(
-            self._cube.config.solvers_config.cage.solver_2x2
+        return Solvers.by_name(
+            self._cube.config.solvers_config.cage.solver_2x2, self._op
         )
-        return Solvers.by_name(solver_2x2_name, self._op)
 
     @property
     def _status_impl(self) -> str:
@@ -507,7 +507,7 @@ class CageNxNSolver(BaseSolver):
         # CFOP raises exceptions for OLL/PLL parity which causes oscillation when fixing.
         # Beginner solver handles these states without raising exceptions.
         if self._cube.n_slices % 2 == 0:
-            solver_name = "beginner"
+            solver_name = Solver3x3Name.BEGINNER
             self.debug("Using beginner solver for even cube shadow")
         else:
             solver_name = self._cube.config.solvers_config.cage.solver_3x3

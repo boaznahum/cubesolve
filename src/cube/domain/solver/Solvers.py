@@ -76,11 +76,9 @@ class Solvers:
         parent_logger = op.cube.sp.logger
         solver_3x3 = Solvers3x3.by_name(cfg.solver_3x3, op, parent_logger)
         reducer = Reducers.beginner(op, advanced_edge_parity=False)
-        solver_2x2_name = SolverName.lookup(cfg.solver_2x2)
-
         return NxNSolverOrchestrator(
             op, parent_logger, reducer, solver_3x3, SolverName.LBL,
-            solver_2x2_name=solver_2x2_name,
+            solver_2x2_name=cfg.solver_2x2,
         )
 
     @staticmethod
@@ -102,11 +100,9 @@ class Solvers:
         parent_logger = op.cube.sp.logger
         solver_3x3 = Solvers3x3.by_name(cfg.solver_3x3, op, parent_logger)
         reducer = Reducers.beginner(op, advanced_edge_parity=True)
-        solver_2x2_name = SolverName.lookup(cfg.solver_2x2)
-
         return NxNSolverOrchestrator(
             op, parent_logger, reducer, solver_3x3, SolverName.CFOP,
-            solver_2x2_name=solver_2x2_name,
+            solver_2x2_name=cfg.solver_2x2,
         )
 
     @staticmethod
@@ -128,11 +124,9 @@ class Solvers:
         parent_logger = op.cube.sp.logger
         solver_3x3 = Solvers3x3.by_name(cfg.solver_3x3, op, parent_logger)
         reducer = Reducers.beginner(op, advanced_edge_parity=True)
-        solver_2x2_name = SolverName.lookup(cfg.solver_2x2)
-
         return NxNSolverOrchestrator(
             op, parent_logger, reducer, solver_3x3, SolverName.KOCIEMBA,
-            solver_2x2_name=solver_2x2_name,
+            solver_2x2_name=cfg.solver_2x2,
         )
 
     @staticmethod

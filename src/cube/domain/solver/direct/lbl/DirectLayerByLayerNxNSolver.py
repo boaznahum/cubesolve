@@ -114,10 +114,9 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
     def _create_2x2_delegate(self) -> "Solver":
         """Use 2x2 solver from solvers_config.lbl_big."""
         from cube.domain.solver.Solvers import Solvers
-        solver_2x2_name = SolverName.lookup(
-            self._cube.config.solvers_config.lbl_big.solver_2x2
+        return Solvers.by_name(
+            self._cube.config.solvers_config.lbl_big.solver_2x2, self._op
         )
-        return Solvers.by_name(solver_2x2_name, self._op)
 
     @property
     def _status_impl(self) -> str:
