@@ -31,7 +31,7 @@ from cube.domain.algs import Algs
 from cube.domain.exceptions import InternalSWError
 from cube.domain.exceptions.EvenCubeCornerSwapException import EvenCubeCornerSwapException
 from cube.domain.exceptions.EvenCubeEdgeParityException import EvenCubeEdgeParityException
-from cube.domain.model import Corner, Part, Color
+from cube.domain.model import Corner, Part, Color, Cube3x3Colors
 from cube.domain.solver.SolverName import SolverName
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.solver.common.SolverStatistics import SolverStatistics
@@ -547,7 +547,7 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
         assert self.cube.is_sanity(force_check=True), "Source NxN cube invalid before solving"
 
         # Compute valid 3x3 edge colors
-        colors_3x3 = self.cube.get_3x3_colors()
+        colors_3x3: Cube3x3Colors = self.cube.get_3x3_colors()
         modified = colors_3x3.with_centers(th.get_face_colors())
 
         # For even cubes, fix non-3x3 edges with valid template color-pairs
