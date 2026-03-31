@@ -33,7 +33,7 @@ class L3Permute(StepSolver):
     Works purely with corner sticker colors — no face colors.
     """
 
-    __slots__: list[str] = ["_swap_detected"]
+    __slots__: list[str] = ["_swap_detected", "_advance_swap"]
 
     # U R U' L' U R' U' L — 3-corner cycle, fixes FRU, cycles FLU/BRU/BLU
     _CYCLE: Alg = Algs.alg(
@@ -42,8 +42,21 @@ class L3Permute(StepSolver):
         Algs.U, Algs.R.prime, Algs.U.prime, Algs.L,
     )
 
+    # R' F R' B2
+    # R F' R' B2
+    # R2 U' — adjacent corner swap
+    # https://cdn.prod.website-files.com/6595ca03bcd68f311fd41872/65afebcae0a3534d92a9b921_Rubiks_SolutionGuide_2x2-Mini.pdf
+    # and simpler in my drive
+    _ADVANCED_SWAP: Alg = Algs.parse("""
+                                        R' F R' B2 
+                                        R F' R' B2
+                                        R2 U'
+
+                                        """)
+
     def __init__(self, slv: SolverElementsProvider) -> None:
         super().__init__(slv, "L3Permute")
+        self._advance_swap = False
         self._swap_detected: bool = False
 
     @property
@@ -137,22 +150,54 @@ class L3Permute(StepSolver):
                 "BRU not in position after cycling"
 
             # Step C: Check if all in position
+
+            # Now all in positon, or FLU and BLU swapped
             if self._all_in_position(up, down, white_color, yellow_color):
                 self.debug(f"L3 permute: solved on iteration {attempt + 1}")
                 return  # done!
 
             # FLU↔BLU are swapped — break the swap with cycle, U2, cycle
             self._swap_detected = True
-            self.debug(f"L3 permute: FLU↔BLU corner swap detected on iteration {attempt + 1}, "
-                       f"fixing with 3-cycle U2 3-cycle")
-            with self.ann.annotate(
-                    (up.corner_bottom_left, AnnWhat.Moved),
-                    (up.corner_top_left, AnnWhat.Moved),
-                    h2="Breaking corner swap",
-            ):
-                self.op.play(self._CYCLE)
-                self.op.play((Algs.U * 2).simplify())
-                self.op.play(self._CYCLE)
+
+            # todo: replace with debug_lazy
+            self.debug(f"L3 permute: FLU↔BLU corner swap detected on iteration {attempt + 1}")
+
+            if self._advance_swap:
+
+
+                self.debug(f"L3 permute: FLU↔BLU corner swap detected on iteration {attempt + 1}, "
+                           f"fixing with advanced algorithm")
+
+                # Step 3: If FRU and BRU are swapped, do U' swap U to bring them to front
+                # the algorithm swap FRU<-->BRU
+                if not self._all_in_position(up, down, white_color, yellow_color):
+                    with self.ann.annotate(
+                            (up.corner_bottom_right, AnnWhat.Moved),
+                            (up.corner_top_right, AnnWhat.Moved),
+                            h2="Advanced swapping corners",
+                    ):
+                        self.op.play(Algs.U.prime)
+                        self.op.play(self._ADVANCED_SWAP)
+                        self.op.play(Algs.U)
+
+                # Step 4: U-align
+                assert self._try_u_alignment(up, down, white_color, yellow_color), (
+                    "L3 Permute failed"
+                )
+                # continue, probably dont needed
+            else:
+
+                self.debug(f"L3 permute: FLU↔BLU corner swap detected on iteration {attempt + 1}, "
+                           f"fixing with 3-cycle U2 3-cycle")
+                with self.ann.annotate(
+                        (up.corner_bottom_left, AnnWhat.Moved),
+                        (up.corner_top_left, AnnWhat.Moved),
+                        h2="Simple swapping corners",
+                ):
+                    self.op.play(self._CYCLE)
+                    self.op.play((Algs.U * 2).simplify())
+                    self.op.play(self._CYCLE)
+
             self.debug(f"L3 permute: retrying from step A")
 
         raise AssertionError("L3 Permute failed after 3 attempts")
