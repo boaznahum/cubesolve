@@ -101,6 +101,8 @@ class Solver2x2Beginner(Solver2x2Base):
                 assert l1_result
                 l1_face, l1_color = l1_result
                 self._solve_l3(l1_face, l1_color)
+                if self._l3_permute.swap_detected:
+                    sr.was_corner_swap = True
 
         return sr
 
