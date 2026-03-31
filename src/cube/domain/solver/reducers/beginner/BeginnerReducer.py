@@ -6,6 +6,8 @@ Uses FacesTrackerHolder for even cube matching - see:
 
 from __future__ import annotations
 
+from cube.domain.solver.ParityFix import ParityFix
+from cube.domain.solver.common.big_cube.CornerSwapParity import CornerFixResults
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.solver.common.SolverStatistics import SolverStatistics
 from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
@@ -26,10 +28,11 @@ class BeginnerReducer(AbstractReducer):
 
     Inherits from AbstractReducer which provides the SolverElementsProvider
     interface, allowing this reducer to use solver components (NxNCenters,
-    NxNEdges, NxNCorners) directly without needing a facade class.
+    NxNEdges, CornerSwapParity) directly without needing a facade class.
     """
 
-    __slots__ = ["_nxn_edges", "_nxn_corners", "_accumulated_temp_stats"]
+    __slots__ = ["_nxn_edges", "_edge_parity", "_corner_swap", "_advanced_edge_parity",
+                 "_accumulated_temp_stats"]
 
     def __init__(
         self,
@@ -47,12 +50,15 @@ class BeginnerReducer(AbstractReducer):
         super().__init__(op, logger_prefix="BeginnerReducer")
 
         # Import here to avoid circular imports
-        from cube.domain.solver.common.big_cube.NxNCorners import NxNCorners
+        from cube.domain.solver.common.big_cube.CornerSwapParity import CornerSwapParity
+        from cube.domain.solver.common.big_cube.EdgeSliceParity import EdgeSliceParity
         from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
 
         # Pass self (we implement SolverElementsProvider via AbstractReducer)
+        self._advanced_edge_parity = advanced_edge_parity
         self._nxn_edges = NxNEdges(self, advanced_edge_parity)
-        self._nxn_corners = NxNCorners(self)
+        self._edge_parity = EdgeSliceParity(self)
+        self._corner_swap = CornerSwapParity(self)
         self._accumulated_temp_stats = SolverStatistics()
 
     def is_reduced(self) -> bool:
@@ -87,8 +93,9 @@ class BeginnerReducer(AbstractReducer):
         self.solve_centers()
 
         # Solve edges (returns True if parity was detected/fixed)
-        if self.solve_edges():
-            results.partial_edge_parity_detected = True
+        parity_fix = self.solve_edges()
+        if parity_fix:
+            results.partial_edge_parity_fix = parity_fix
 
         return results
 
@@ -102,7 +109,7 @@ class BeginnerReducer(AbstractReducer):
                 centers.get_block_statistics(), topic_prefix="Centers"
             )
 
-    def solve_edges(self) -> bool:
+    def solve_edges(self) -> ParityFix | None:
         """Solve only edges (second part of reduction).
 
         Returns:
@@ -110,25 +117,33 @@ class BeginnerReducer(AbstractReducer):
         """
         return self._nxn_edges.solve()
 
-    def fix_edge_parity(self) -> None:
+    def fix_edge_parity(self, advanced: bool) -> ParityFix:
         """Fix even cube edge parity (OLL parity).
 
         Called by orchestrator when 3x3 solver detects edge parity
         during L3 solving.
-        """
-        self._nxn_edges.do_even_full_edge_parity_on_any_edge()
 
-    def fix_corner_parity(self) -> None:
+        Args:
+            advanced: If True, request R/L-slice algorithm.
+
+        Returns:
+            True if advanced algorithm was used, False if basic.
+        """
+        return self._edge_parity.fix_edge_parity(advanced)
+
+    def fix_corner_parity(self, advanced: bool) -> CornerFixResults:
         """Fix even cube corner swap parity (PLL parity).
 
         Called by orchestrator when 3x3 solver detects corner swap parity.
-        Uses inner slice moves to swap two diagonal corners.
 
-        Note:
-            After this fix, a re-reduction is typically needed because the
-            inner slice moves disturb the reduced edge pairing.
+        Args:
+            advanced: If True, request algorithm that preserves edge positions.
+
+        Returns:
+            True if edges were preserved (no re-reduce needed),
+            False if edges were moved to new positions.
         """
-        self._nxn_corners.fix_corner_parity()
+        return self._corner_swap.fix_corner_parity(advanced)
 
     # =========================================================================
     # Statistics (override AbstractReducer)
@@ -137,14 +152,14 @@ class BeginnerReducer(AbstractReducer):
     def reset_block_statistics(self) -> None:
         """Reset block statistics before reduction."""
         self._nxn_edges.reset_block_statistics()
-        self._nxn_corners.reset_block_statistics()
+        self._corner_swap.reset_block_statistics()
         self._accumulated_temp_stats.reset()
 
     def get_block_statistics(self) -> SolverStatistics:
         """Return block statistics from all children."""
         stats = SolverStatistics()
         stats.accumulate(self._nxn_edges.get_block_statistics())
-        stats.accumulate(self._nxn_corners.get_block_statistics())
+        stats.accumulate(self._corner_swap.get_block_statistics())
         stats.accumulate(self._accumulated_temp_stats)
         return stats
 

@@ -1,3 +1,5 @@
+import logging
+
 from cube.domain.algs import Alg, Algs
 from cube.domain.exceptions import EvenCubeCornerSwapException, InternalSWError
 from cube.domain.model import Corner, FaceName, Part
@@ -98,7 +100,7 @@ class L3Corners(SolverHelper):
                     # Corner swap parity detected on even cube
                     # Raise exception - orchestrator will call reducer.fix_corner_parity()
                     # This matches the edge parity pattern: detect -> throw -> catch -> fix
-                    self.debug("L3 corners: PLL parity detected (2 corners in position)")
+                    self._logger.log_lazy(logging.DEBUG, "L3 corners: PLL parity detected (2 corners in position)")
                     raise EvenCubeCornerSwapException()
 
                 raise InternalSWError("Cube not all corners in position, don't know why")
@@ -132,7 +134,7 @@ class L3Corners(SolverHelper):
 
     @property
     def _ur(self) -> Alg:
-        return Algs.alg(None, Algs.U, Algs.R, Algs.U.prime, Algs.L.prime, Algs.U, Algs.R.prime, Algs.U.prime, Algs.L)
+        return self.cmn.top_3_corner_cycle
 
     def bring_corner_to_front_right(self, c: Corner):
         """

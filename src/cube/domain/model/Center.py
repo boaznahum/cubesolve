@@ -1,5 +1,8 @@
-from collections.abc import Iterable, Iterator, Sequence
-from typing import TYPE_CHECKING, Self, TypeAlias
+from __future__ import annotations
+
+from collections.abc import Generator, Iterable, Iterator, Sequence
+from contextlib import contextmanager
+from typing import TYPE_CHECKING, Self
 
 from cube.domain.model._elements import CenterSliceIndex, SliceIndex
 from cube.domain.model.Color import Color
@@ -12,17 +15,19 @@ from ..geometric.geometry_types import Point
 
 if TYPE_CHECKING:
     from .Face import Face
+    from .FacesColorsProvider import FacesColorsProvider
 
-_Face: TypeAlias = "Face"
 
 
 class Center(Part, Colorable):
-    __slots__ = ("_slices", "_face_ref")
+    __slots__ = ("_slices", "_face_ref", "_color_provider", "_center_3x3_mode")
 
-    def __init__(self, center_slices: Sequence[Sequence[CenterSlice]], face: "_Face | None" = None) -> None:
+    def __init__(self, center_slices: Sequence[Sequence[CenterSlice]], face: "Face | None" = None) -> None:
         # assign before call to init because _edges is called from ctor
         self._slices: Sequence[Sequence[CenterSlice]] = center_slices
-        self._face_ref: "_Face | None" = face
+        self._face_ref: "Face | None" = face
+        self._color_provider: FacesColorsProvider | None = None
+        self._center_3x3_mode: bool = False  # must be set only with color provider !!!
         if not center_slices or not center_slices[0]:
             # 2x2: no center slices, provide cube for Part.__init__ fallback
             if face is not None:
@@ -30,7 +35,7 @@ class Center(Part, Colorable):
         super().__init__()
 
     @property
-    def face(self) -> _Face:
+    def face(self) -> Face:
         if self._face_ref is not None and not self._slices:
             return self._face_ref
         return self._slices[0][0].edges[0].face
@@ -45,6 +50,9 @@ class Center(Part, Colorable):
     @property
     def is3x3(self) -> bool:
         assert self._slices, "is3x3 should not be called on 2x2 center with no slices"
+
+        if self._center_3x3_mode:
+            return True
 
         slices: Iterator[CenterSlice] = self.all_slices
 
@@ -119,13 +127,29 @@ class Center(Part, Colorable):
     @property
     def color(self) -> Color:
         """
+        If a color provider is set, returns the provider-assigned color.
         For 3x3+: returns the center sticker color.
         For 2x2: returns UNCOLORED — no physical centers exist.
-        :return:
         """
+        if self._color_provider is not None:
+            return self._color_provider.get_face_color(self.name)
         if not self._slices:
             return Color.UNCOLORED
         return self.edg().color
+
+    @contextmanager
+    def with_color_provider(self, provider: "FacesColorsProvider | None",
+                            center_3x3_mode: bool = False) -> Generator[None, None, None]:
+        """Context manager that sets a color provider and restores the previous one on exit."""
+        prev_provider = self._color_provider
+        prev_center_3x3 = self._center_3x3_mode
+        self._color_provider = provider
+        self._center_3x3_mode = center_3x3_mode
+        try:
+            yield
+        finally:
+            self._color_provider = prev_provider
+            self._center_3x3_mode = prev_center_3x3
 
     def clone(self) -> "Center":
         n = self.n_slices

@@ -6,7 +6,9 @@ from pathlib import Path
 from typing import Any, Literal, Tuple
 
 from cube.application.animation.AnimationText import AnimationText
-from cube.application.Logger import Logger
+import logging
+
+from cube.utils.logging import CubeLogger, setup_root_logger
 
 # noinspection PyMethodMayBeStatic
 from cube.domain import algs
@@ -68,8 +70,14 @@ class ApplicationAndViewState:
         # Store config reference for access throughout the class
         self._config = config
 
-        # Logger handles debug/quiet flags with env var override
-        self._logger = Logger(debug_all=debug_all, quiet_all=quiet_all)
+        # Root cube logger — all solver loggers are children of this.
+        self._logger: CubeLogger = setup_root_logger(debug_all=debug_all, quiet_all=quiet_all)
+
+        # Sync root logger level when config.solver_debug changes (Ctrl+O).
+        if config.solver_debug:
+            self._logger.setLevel(logging.DEBUG)
+        config.add_config_listener(self._on_config_change)
+
         self._speed: float = config.animation_speed_config.default_index
 
         # self._alpha_x_0: float = 0.3
@@ -362,15 +370,20 @@ class ApplicationAndViewState:
 
         return self._last_scramble_key_size
 
+    def _on_config_change(self, field_name: str, value: object) -> None:
+        """React to config changes — sync root logger level with solver_debug."""
+        if field_name == "solver_debug":
+            self._logger.setLevel(logging.DEBUG if value else logging.INFO)
+
     @property
-    def logger(self) -> Logger:
-        """Return the logger instance."""
+    def logger(self) -> CubeLogger:
+        """Return the root cube logger."""
         return self._logger
 
     @property
     def is_debug_all(self) -> bool:
         """Return True if debug_all mode is enabled."""
-        return self._logger.is_debug_all
+        return self._logger.debug_all
 
     @property
     def quiet_all(self) -> bool:
@@ -381,18 +394,6 @@ class ApplicationAndViewState:
     def quiet_all(self, value: bool) -> None:
         """Set quiet_all mode."""
         self._logger.quiet_all = value
-
-    def is_debug(self, debug_on: bool = False) -> bool:
-        """Check if debug output should happen."""
-        return self._logger.is_debug(debug_on)
-
-    def debug_prefix(self) -> str:
-        """Return the standard debug prefix."""
-        return self._logger.debug_prefix()
-
-    def debug(self, debug_on: bool, *args: Any) -> None:
-        """Print debug information if allowed by flags."""
-        self._logger.debug(debug_on, *args)
 
     def debug_dump(
         self,

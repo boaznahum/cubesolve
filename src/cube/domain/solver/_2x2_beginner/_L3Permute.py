@@ -8,14 +8,12 @@ IMPORTANT — No face colors:
     Never accesses Face.color, self.white_face, match_faces, in_position,
     or any API that reads face colors from centers.
 
-Strategy (3-cycle + adjacent swap):
-1. U-rotate until FLU corner is in position (always possible on 2x2).
-2. Apply 3-cycle (U R U' L' U R' U' L) until BLU is in position.
-   The 3-cycle leaves FLU fixed, cycles FRU/BRU/BLU. Max 2 applications.
-3. If FRU and BRU are still swapped: U' swap U to fix them.
-4. U-align to match top and bottom layers.
-
-The swap algorithm is: R' F R' B2 R F' R' B2 R2 U'
+Strategy (only uses the 3-cycle + U moves):
+A) U-rotate until FRU is in position (always exactly one such rotation).
+B) Apply 3-cycle (fixes FRU, cycles FLU/BRU/BLU) until BRU is in position.
+   At most 2 applications.
+C) Now either all 4 are in position (done) or FLU↔BLU are swapped.
+   To break the swap: 3-cycle, U2, 3-cycle — then restart from A.
 """
 
 from __future__ import annotations
@@ -35,25 +33,30 @@ class L3Permute(StepSolver):
     Works purely with corner sticker colors — no face colors.
     """
 
-    __slots__: list[str] = []
+    __slots__: list[str] = ["_swap_detected", "_advance_swap"]
 
-    # U' L' U R U' L U R' — 3-corner cycle, leaves FLU fixed
-    _CYCLE: Alg = Algs.alg(
-        None,
-        Algs.U.prime, Algs.L.prime, Algs.U, Algs.R,
-        Algs.U.prime, Algs.L, Algs.U, Algs.R.prime,
-    )
 
-    # R' F R' B2 R F' R' B2 R2 U' — adjacent corner swap
-    _SWAP: Alg = Algs.alg(
-        None,
-        Algs.R.prime, Algs.F, Algs.R.prime, Algs.B * 2,
-        Algs.R, Algs.F.prime, Algs.R.prime, Algs.B * 2,
-        Algs.R * 2, Algs.U.prime,
-    )
+    # R' F R' B2
+    # R F' R' B2
+    # R2 U' — adjacent corner swap
+    # https://cdn.prod.website-files.com/6595ca03bcd68f311fd41872/65afebcae0a3534d92a9b921_Rubiks_SolutionGuide_2x2-Mini.pdf
+    # and simpler in my drive
+    _ADVANCED_SWAP: Alg = Algs.parse("""
+                                        R' F R' B2
+                                        R F' R' B2
+                                        R2 U'
+
+                                        """)
 
     def __init__(self, slv: SolverElementsProvider) -> None:
         super().__init__(slv, "L3Permute")
+        self._advance_swap = False
+        self._swap_detected: bool = False
+
+    @property
+    def swap_detected(self) -> bool:
+        """Whether a FLU↔BLU corner swap was detected during the last solve."""
+        return self._swap_detected
 
     @property
     def is_solved(self) -> bool:
@@ -79,6 +82,7 @@ class L3Permute(StepSolver):
 
     def solve(self, white_color: Color | None = None) -> None:
         """Permute last-layer corners into correct positions."""
+        self._swap_detected = False
         wc: Color = white_color or self.cmn.white
         if self.is_solved_with(wc):
             self._align_u_layer(wc)
@@ -105,56 +109,103 @@ class L3Permute(StepSolver):
 
         up: Face = self.cube.up
         down: Face = self.cube.down
+
         self._do_permute(up, down, white_color, yellow_color)
 
-    def _do_permute(self, up: Face, down: Face, white_color: Color, yellow_color: Color) -> None:
-        """Place corners using 3-cycle + swap."""
+    def _do_permute(self, up: Face, down: Face, white_color: Color,
+                    yellow_color: Color) -> None:
+        """Place all 4 top-layer corners using the 3-cycle + U moves.
 
-        # Step 1: U-rotate until FLU is in position (always possible on 2x2)
-        self._bring_correct_to_flu(up, down, white_color, yellow_color)
+        Algorithm:
+        A) U-rotate until FRU is in position.
+        B) Apply 3-cycle until BRU is in position (max 2).
+        C) If FLU↔BLU still swapped: 3-cycle, U2, 3-cycle → restart from A.
+        """
 
-        # Step 2: Apply 3-cycle until BLU is in position (max 2)
-        with self.ann.annotate(
-                (up.corner_top_right, AnnWhat.Moved),
-                (up.corner_top_left, AnnWhat.Moved),
-                (up.corner_bottom_right, AnnWhat.Moved),
-                h2="Cycling corners",
-        ):
-            for _ in range(2):
-                if self._corner_in_position(up.corner_top_left, down.corner_bottom_left,
-                                            white_color, yellow_color):
-                    break
-                self.op.play(self._CYCLE)
+        #U R U' L' U R' U' L — 3-corner cycle, fixes FRU, cycles FLU/BRU/BLU
+        c3c = self.cmn.top_3_corner_cycle
 
-        assert self._corner_in_position(up.corner_top_left, down.corner_bottom_left,
-                                        white_color, yellow_color), "BLU not in position after cycling"
+        for attempt in range(3):
+            # Step A: U-rotate until FRU is in position
+            self._bring_fru_to_position(up, down, white_color, yellow_color)
 
-        # Step 3: If FRU and BRU are swapped, do U swap U' to bring them to front
-        if not self._all_in_position(up, down, white_color, yellow_color):
+            # Step B: Cycle until BRU is in position (max 2 applications)
             with self.ann.annotate(
-                    (up.corner_bottom_right, AnnWhat.Moved),
                     (up.corner_top_right, AnnWhat.Moved),
-                    h2="Swapping corners",
+                    (up.corner_top_left, AnnWhat.Moved),
+                    (up.corner_bottom_left, AnnWhat.Moved),
+                    h2="Cycling corners",
             ):
-                self.op.play(Algs.U)
-                self.op.play(self._SWAP)
-                self.op.play(Algs.U.prime)
+                for _ in range(2):
+                    if self._corner_in_position(up.corner_top_right, down.corner_bottom_right,
+                                                white_color, yellow_color):
+                        break
+                    self.op.play(c3c)
 
-        # Step 4: U-align
-        assert self._try_u_alignment(up, down, white_color, yellow_color), (
-            "L3 Permute failed"
-        )
+            assert self._corner_in_position(up.corner_top_right, down.corner_bottom_right,
+                                            white_color, yellow_color), \
+                "BRU not in position after cycling"
 
-    def _bring_correct_to_flu(self, up: Face, down: Face,
-                              white_color: Color, yellow_color: Color) -> None:
-        """U-rotate until FLU corner is in its correct position."""
+            # Step C: Check if all in position
+
+            # Now all in position, or FLU and BLU swapped
+            if self._all_in_position(up, down, white_color, yellow_color):
+                self._logger.debug_lazy(lambda: f"solved on iteration {attempt + 1}")
+                return  # done!
+
+            # FLU↔BLU are swapped — break the swap with cycle, U2, cycle
+            self._swap_detected = True
+
+            self._logger.debug_lazy(lambda: f"FLU↔BLU corner swap detected on iteration {attempt + 1}")
+
+            if self._advance_swap:
+
+                self._logger.debug_lazy(lambda: f"FLU↔BLU swap on iteration {attempt + 1}, "
+                           f"fixing with advanced algorithm")
+
+                # Step 3: If FRU and BRU are swapped, do U' swap U to bring them to front
+                # the algorithm swap FRU<-->BRU
+                if not self._all_in_position(up, down, white_color, yellow_color):
+                    with self.ann.annotate(
+                            (up.corner_bottom_right, AnnWhat.Moved),
+                            (up.corner_top_right, AnnWhat.Moved),
+                            h2="Advanced swapping corners",
+                    ):
+                        self.op.play(Algs.U.prime)
+                        self.op.play(self._ADVANCED_SWAP)
+                        self.op.play(Algs.U)
+
+                # Step 4: U-align
+                assert self._try_u_alignment(up, down, white_color, yellow_color), (
+                    "L3 Permute failed"
+                )
+            else:
+
+                self._logger.debug_lazy(lambda: f"FLU↔BLU swap on iteration {attempt + 1}, "
+                           f"fixing with 3-cycle U2 3-cycle")
+                with self.ann.annotate(
+                        (up.corner_bottom_left, AnnWhat.Moved),
+                        (up.corner_top_left, AnnWhat.Moved),
+                        h2="Simple swapping corners",
+                ):
+                    self.op.play(c3c)
+                    self.op.play((Algs.U * 2).simplify())
+                    self.op.play(c3c)
+
+            self._logger.debug("retrying from step A")
+
+        raise AssertionError("L3 Permute failed after 3 attempts")
+
+    def _bring_fru_to_position(self, up: Face, down: Face,
+                               white_color: Color, yellow_color: Color) -> None:
+        """U-rotate until FRU corner matches the bottom corner below it."""
         for _ in range(4):
-            if self._corner_in_position(up.corner_bottom_left, down.corner_top_left,
+            if self._corner_in_position(up.corner_bottom_right, down.corner_top_right,
                                         white_color, yellow_color):
                 return
             self.op.play(Algs.U)
 
-        raise AssertionError("No corner found in position after 4 U rotations")
+        raise AssertionError("No U rotation puts FRU in position")
 
     def _is_u_aligned(self, up: Face, down: Face,
                       white_color: Color, yellow_color: Color) -> int:
@@ -176,19 +227,6 @@ class L3Permute(StepSolver):
     def _try_u_alignment(self, up: Face, down: Face,
                          white_color: Color, yellow_color: Color) -> bool:
         """Apply U rotations to align top layer with bottom. Returns True if aligned."""
-
-        def _try() -> int:
-
-            n = 0
-            with self.op.with_query_restore_state():
-                for _ in range(4):
-                    if self._all_in_position(up, down, white_color, yellow_color):
-                        return n
-                    self.op.play(Algs.U)
-                    n += 1
-
-                return -1
-
 
         # After 4 U rotations we're back to the original state
         n = self._is_u_aligned(up, down, white_color, yellow_color)

@@ -11,7 +11,7 @@ from cube.application.markers import (
     NoopMarkerManager,
 )
 from cube.application.state import ApplicationAndViewState
-from cube.utils.logger_protocol import ILogger
+from cube.utils.logging import CubeLogger
 from cube.domain.algs import Alg
 from cube.domain.model.Cube import Cube
 from cube.domain.solver import Solver, Solvers
@@ -90,7 +90,7 @@ class _App(AbstractApp, IServiceProvider):
         return self._marker_manager
 
     @property
-    def logger(self) -> ILogger:
+    def logger(self) -> CubeLogger:
         """Get the logger for debug output control."""
         return self._logger
 

@@ -33,29 +33,32 @@ This is simpler than the reduction method because:
 
 4. For EVEN cubes (4x4, 6x6):
    - "Partial" edge parity (detectable during pairing) is handled
-   - "Full" edge parity may appear as OLL/PLL parity on shadow cube
-   - Solution: Use beginner solver for even cube shadows (not CFOP)
+   - "Full" edge parity may appear as OLL/PLL parity during 3x3 solve
+   - Solution: Use beginner solver for even cubes (not CFOP)
    - Beginner solver doesn't detect/raise parity exceptions
    - CFOP would cause oscillation: fix parity -> re-pair -> new parity
 """
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
+from cube.domain.solver.ParityFix import ParityFix
+from cube.domain.solver.Solver3x3Name import Solver3x3Name
 from cube.domain.solver.SolverName import SolverName
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
-from cube.domain.solver.common.big_cube.NxNCorners import NxNCorners
+from cube.domain.solver.common.big_cube.CornerSwapParity import CornerSwapParity, CornerFixResults
+from cube.domain.solver.common.big_cube.EdgeSliceParity import EdgeSliceParity
 from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
-from cube.domain.solver.common.big_cube.ShadowCubeHelper import ShadowCubeHelper
 from cube.domain.solver.protocols import OperatorProtocol
-from cube.domain.solver.solver import SolverResults, SolveStep
+from cube.domain.solver.solver import Solver, SolverResults, SolveStep
 from cube.utils.SSCode import SSCode
 
 if TYPE_CHECKING:
-    from cube.utils.logger_protocol import ILogger
+    from cube.utils.logging import CubeLogger
 
 
 class CageNxNSolver(BaseSolver):
@@ -81,9 +84,9 @@ class CageNxNSolver(BaseSolver):
     - For even cubes, additional "full" edge parity may exist (TODO)
     """
 
-    __slots__ = ["_nxn_edges", "_nxn_corners"]
+    __slots__ = ["_nxn_edges", "_edge_parity", "_corner_swap"]
 
-    def __init__(self, op: OperatorProtocol, parent_logger: "ILogger") -> None:
+    def __init__(self, op: OperatorProtocol, parent_logger: "CubeLogger") -> None:
         """
         Create a Cage method solver.
 
@@ -93,10 +96,8 @@ class CageNxNSolver(BaseSolver):
         """
         super().__init__(op, parent_logger, logger_prefix="Cage")
 
-        # NxNCorners provides corner swap parity fix algorithm
-        self._nxn_corners = NxNCorners(self)
-
-        self._shadow_helper = ShadowCubeHelper(self)
+        # Corner swap parity fix (basic and advanced algorithms)
+        self._corner_swap = CornerSwapParity(self)
 
         # =====================================================================
         # EDGE SOLVER SETUP
@@ -112,10 +113,18 @@ class CageNxNSolver(BaseSolver):
         #
         # =====================================================================
         self._nxn_edges = NxNEdges(self, advanced_edge_parity=True)
+        self._edge_parity = EdgeSliceParity(self)
 
     @property
     def get_code(self) -> SolverName:
         return SolverName.CAGE
+
+    def _create_2x2_delegate(self) -> "Solver":
+        """Use 2x2 solver from solvers_config.cage."""
+        from cube.domain.solver.Solvers2x2 import Solvers2x2
+        return Solvers2x2.by_name(
+            self._cube.config.solvers_config.cage.solver_2x2, self._op, self._logger
+        )
 
     @property
     def _status_impl(self) -> str:
@@ -238,18 +247,19 @@ class CageNxNSolver(BaseSolver):
         # For even: trackers mark center slices (cleanup on exit)
         # Use context manager for automatic cleanup on exit
         with FacesTrackerHolder(self) as tracker_holder:
-            self.debug(lambda: f"Created trackers: {list(tracker_holder)}")
+            self._logger.log_lazy(logging.DEBUG, lambda: f"Created trackers: {list(tracker_holder)}")
 
             # Main solve loop with parity retry
             # Even cubes may need multiple retries due to OLL and PLL parity interaction
+            # Even cube can have biti even and partial edge , 
             for attempt in range(5):
-                self.debug(lambda: f"=== Solve attempt {attempt} ===")
+                self._logger.log_lazy(logging.DEBUG, lambda: f"=== Solve attempt {attempt} ===")
 
                 # PHASE 1a: EDGE SOLVING (pair all edges)
                 if not self._are_edges_solved():
-                    had_parity = self._solve_edges()
+                    had_parity: ParityFix | None = self._solve_edges()
                     if had_parity:
-                        sr.was_partial_edge_parity = True
+                        sr.was_partial_edge_parity = had_parity
 
                 # PHASE 1b: CORNER SOLVING
                 try:
@@ -258,47 +268,33 @@ class CageNxNSolver(BaseSolver):
                     break  # Success - exit retry loop
 
                 except EvenCubeEdgeParityException:
-                    self.debug(f"Caught EvenCubeEdgeParityException on attempt {attempt}")
-                    sr.was_even_edge_parity = True
+                    self._logger.log_lazy(logging.DEBUG, f"Caught EvenCubeEdgeParityException on attempt {attempt}")
                     if attempt >= 4:
                         raise  # Give up after 5 attempts
 
-                    self.debug("Edge parity detected during corner solve, fixing...")
-
-                    # Fix parity by always applying to FR edge for consistency
-                    # This avoids oscillation between different parity states
-                    self._nxn_edges.do_even_full_edge_parity_on_any_edge()
-
-                    # Parity fix broke edge pairing - loop will re-pair them
+                    self._logger.log_lazy(logging.DEBUG, "Edge parity detected during corner solve, fixing...")
+                    edge_parity_fix: ParityFix = self._edge_parity.fix_edge_parity(self._cube.config.cage_advanced_parity)
+                    sr.was_even_edge_parity = edge_parity_fix
 
                 except EvenCubeCornerSwapException:
-                    sr.was_corner_swap = True
                     if attempt >= 4:
                         raise  # Give up after 5 attempts
 
-                    self.debug("Corner swap parity detected during corner solve, fixing...")
+                    self._logger.log_lazy(logging.DEBUG, "Corner swap parity detected during corner solve, fixing...")
+                    # Color provider needed for advanced path on even cubes —
+                    # see CornerSwapParity.fix_corner_parity docstring.
+                    with self._cube.with_faces_color_provider(tracker_holder):
+                        corner_parity_fix: CornerFixResults = self._corner_swap.fix_corner_parity(self._cube.config.cage_advanced_parity)
+                        sr.was_corner_swap = ParityFix.of(not corner_parity_fix.need_resolve_3x3)
 
-                    # Fix corner parity using NxNCorners
-                    self._nxn_corners.fix_corner_parity()
-
-                    # Corner swap uses inner slice moves - breaks edge pairing
-                    # Loop will re-pair them
-
+                # get rid of this excpetion, it is the smae issue
                 except EvenCubeEdgeSwapParityException:
-                    sr.was_even_edge_parity = True
                     if attempt >= 4:
                         raise  # Give up after 5 attempts
 
-                    self.debug("Edge swap parity (PLL) detected during corner solve, fixing...")
-
-                    # For PLL edge swap parity, use the same edge flip fix as OLL parity.
-                    # Both types of parity are caused by the same underlying issue:
-                    # edge slices were paired in a way that creates an impossible 3x3 state.
-                    # Flipping an edge slice changes both orientation and permutation parity.
-                    self._nxn_edges.do_even_full_edge_parity_on_any_edge()
-
-                    # Parity fix uses M-slice moves - breaks edge pairing
-                    # Loop will re-pair them
+                    self._logger.log_lazy(logging.DEBUG, "Edge swap parity (PLL) detected during corner solve, fixing...")
+                    edge_swap_parity_fix: ParityFix = self._edge_parity.fix_edge_parity(self._cube.config.cage_advanced_parity)
+                    sr.was_even_edge_parity = edge_swap_parity_fix
 
             # PHASE 2: CENTER SOLVING
             if not self._are_centers_solved():
@@ -314,9 +310,9 @@ class CageNxNSolver(BaseSolver):
         if self._are_edges_solved():
             return sr
 
-        had_parity = self._solve_edges()
+        had_parity: ParityFix | None = self._solve_edges()
         if had_parity:
-            sr.was_partial_edge_parity = True
+            sr.was_partial_edge_parity = had_parity
         return sr
 
     def _solve_cage_only(self, sr: SolverResults) -> SolverResults:
@@ -337,16 +333,16 @@ class CageNxNSolver(BaseSolver):
             return sr
 
         with FacesTrackerHolder(self) as tracker_holder:
-            self.debug(lambda: f"Created trackers: {list(tracker_holder)}")
+            self._logger.log_lazy(logging.DEBUG, lambda: f"Created trackers: {list(tracker_holder)}")
 
             for attempt in range(5):
-                self.debug(lambda: f"=== Cage solve attempt {attempt} ===")
+                self._logger.log_lazy(logging.DEBUG, lambda: f"=== Cage solve attempt {attempt} ===")
 
                 # PHASE 1a: EDGE SOLVING
                 if not self._are_edges_solved():
-                    had_parity = self._solve_edges()
+                    had_parity: ParityFix | None = self._solve_edges()
                     if had_parity:
-                        sr.was_partial_edge_parity = True
+                        sr.was_partial_edge_parity = had_parity
 
                 # PHASE 1b: CORNER SOLVING
                 try:
@@ -355,29 +351,30 @@ class CageNxNSolver(BaseSolver):
                     break  # Success - exit retry loop
 
                 except EvenCubeEdgeParityException:
-                    self.debug(f"Caught EvenCubeEdgeParityException on attempt {attempt}")
-                    sr.was_even_edge_parity = True
+                    self._logger.log_lazy(logging.DEBUG, f"Caught EvenCubeEdgeParityException on attempt {attempt}")
                     if attempt >= 4:
                         raise
 
-                    self.debug("Edge parity detected during corner solve, fixing...")
-                    self._nxn_edges.do_even_full_edge_parity_on_any_edge()
+                    self._logger.log_lazy(logging.DEBUG, "Edge parity detected during corner solve, fixing...")
+                    edge_parity_fix: ParityFix = self._edge_parity.fix_edge_parity(self._cube.config.cage_advanced_parity)
+                    sr.was_even_edge_parity = edge_parity_fix
 
                 except EvenCubeCornerSwapException:
-                    sr.was_corner_swap = True
                     if attempt >= 4:
                         raise
 
-                    self.debug("Corner swap parity detected during corner solve, fixing...")
-                    self._nxn_corners.fix_corner_parity()
+                    self._logger.log_lazy(logging.DEBUG, "Corner swap parity detected during corner solve, fixing...")
+                    with self._cube.with_faces_color_provider(tracker_holder):
+                        corner_fix = self._corner_swap.fix_corner_parity(self._cube.config.cage_advanced_parity)
+                    sr.was_corner_swap = ParityFix.of(not corner_fix.need_resolve_3x3)
 
                 except EvenCubeEdgeSwapParityException:
-                    sr.was_even_edge_parity = True
                     if attempt >= 4:
                         raise
 
-                    self.debug("Edge swap parity (PLL) detected during corner solve, fixing...")
-                    self._nxn_edges.do_even_full_edge_parity_on_any_edge()
+                    self._logger.log_lazy(logging.DEBUG, "Edge swap parity (PLL) detected during corner solve, fixing...")
+                    edge_swap_parity_fix: ParityFix = self._edge_parity.fix_edge_parity(self._cube.config.cage_advanced_parity)
+                    sr.was_even_edge_parity = edge_swap_parity_fix
 
         return sr
 
@@ -398,7 +395,7 @@ class CageNxNSolver(BaseSolver):
     # Phase 1a: Edge solving (reuses NxNEdges)
     # =========================================================================
 
-    def _solve_edges(self) -> bool:
+    def _solve_edges(self) -> ParityFix | None:
         """
         Solve all edges - pair wings and place correctly.
 
@@ -423,9 +420,9 @@ class CageNxNSolver(BaseSolver):
            - Re-solves remaining edges
 
         Returns:
-            True if edge parity was detected and fixed
+            True if partial edge parity was detected and fixed, full even cannot be detected
         """
-        self.debug("Starting edge solving (using NxNEdges)")
+        self._logger.log_lazy(logging.DEBUG, "Starting edge solving (using NxNEdges)")
         # NxNEdges.solve() returns True if parity was detected/fixed
         return self._nxn_edges.solve()
 
@@ -434,83 +431,38 @@ class CageNxNSolver(BaseSolver):
     # =========================================================================
 
     def _solve_corners(self, tracker_holder: FacesTrackerHolder) -> None:
-        """Solve corners using shadow cube approach with DualOperator.
+        """Solve corners by running a 3x3 solver directly on the NxN cube.
+
+        Uses with_faces_color_provider to give the 3x3 solver correct face
+        colors (critical for even cubes where center colors are unreliable).
+
+        The 3x3 solver only uses outer face moves (R, L, U, D, F, B) and
+        whole cube rotations, which keep the face color provider valid.
 
         Works identically for odd and even cubes:
-        - Build shadow 3x3 with face colors from trackers
-        - Solve shadow cube using DualOperator
-        - DualOperator automatically plays moves on both shadow AND real cube
-        - Annotations from 3x3 solver appear on real cube!
-
-        For odd cubes: trackers return fixed center colors
-        For even cubes: trackers return majority/tracked colors
+        - For odd cubes: trackers return fixed center colors
+        - For even cubes: trackers return majority/tracked colors
 
         May raise EvenCubeEdgeParityException or EvenCubeCornerSwapException
         which _solve_impl catches to fix parity and retry.
-
-        See docs/design/dual_operator_annotations.md for design details.
         """
-        self.debug("Starting corner solving (using DualOperator)")
-
-        # Get face colors from tracker holder
-        face_colors = tracker_holder.get_face_colors()
-        self.debug(lambda: f"Face colors: {face_colors}")
-
-        # Debug: show current edge state
-        self.debug("Current edges:")
-        for edge in self._cube.edges:
-            self.debug(lambda: f"  {edge._name}: {edge.e1.color}-{edge.e2.color}, is3x3={edge.is3x3}")
-
-        # Solve using DualOperator - moves are applied to real cube automatically
-        self._solve_with_dual_operator(tracker_holder)
-
-    def _solve_with_dual_operator(self, th: FacesTrackerHolder) -> None:
-        """Create shadow 3x3 and solve using DualOperator.
-
-        DualOperator wraps both the shadow cube and real operator:
-        - Solver logic operates on shadow cube (op.cube returns shadow)
-        - Moves are played on BOTH cubes (shadow direct, real via operator)
-        - Annotations are mapped from shadow pieces to real pieces
-        - User sees full animation with h1/h2/h3 text and visual markers!
-
-        This replaces the old approach of collecting history and playing at once.
-        """
-        from cube.application.commands.DualOperator import DualOperator
         from cube.domain.solver.Solvers3x3 import Solvers3x3
 
-        # Create shadow 3x3 cube
-        shadow_cube = self._shadow_helper.create_shadow_cube_from_faces_and_cube(th)
-
-        # Debug: print all edges on shadow cube
-        self.debug("Shadow cube edges:")
-        for edge in shadow_cube.edges:
-            self.debug(lambda: f"  {edge._name}: {edge.e1.color}-{edge.e2.color}")
-
-        if shadow_cube.solved:
-            self.debug("Shadow cube is already solved")
-            return
-
-        # Create DualOperator: wraps shadow cube + real operator
-        # When solver calls op.play(), moves go to BOTH cubes
-        # Annotations are mapped from shadow pieces → real pieces
-        dual_op = DualOperator(shadow_cube, self._op)
-
-        # For even cubes, use beginner solver to avoid CFOP parity detection issues.
-        # CFOP raises exceptions for OLL/PLL parity which causes oscillation when fixing.
-        # Beginner solver handles these states without raising exceptions.
+        # WORKAROUND (#147): Even cubes forced to beginner solver because CFOP
+        # raises parity exceptions that cause oscillation in the orchestrator.
+        # CFOP should be usable here — fix tracked in #147.
         if self._cube.n_slices % 2 == 0:
-            solver_name = "beginner"
-            self.debug("Using beginner solver for even cube shadow")
+            solver_name = Solver3x3Name.BEGINNER
+            self._logger.debug("Using beginner solver for even cube")
         else:
-            solver_name = self._cube.config.cage_3x3_solver
+            solver_name = self._cube.config.solvers_config.cage.solver_3x3
 
-        # Create solver with DualOperator
-        # Solver sees shadow cube via dual_op.cube
-        # But moves and annotations go to real cube too!
-        shadow_solver = Solvers3x3.by_name(solver_name, dual_op, self._logger)
-        shadow_solver.solve_3x3()
-
-        # No need to apply history - DualOperator already played on real cube!
+        # Solve directly on the NxN cube with correct face colors.
+        # The color provider overrides Face.color so the 3x3 solver sees
+        # correct colors even on even cubes with moveable centers.
+        with self._cube.with_faces_color_provider(tracker_holder, True):
+            solver_3x3 = Solvers3x3.by_name(solver_name, self._op, self._logger)
+            solver_3x3.solve_3x3()
 
 
     # =========================================================================
@@ -527,13 +479,13 @@ class CageNxNSolver(BaseSolver):
         Args:
             tracker_holder: Holder containing trackers for face colors.
         """
-        self.debug("Starting center solving (using NxNCenters with preserve_cage=True)")
+        self._logger.log_lazy(logging.DEBUG, "Starting center solving (using NxNCenters with preserve_cage=True)")
 
         # SS breakpoint BEFORE - inspect cage state
         self._op.enter_single_step_mode(SSCode.CAGE_CENTERS_START)
 
         # Log cage state before
-        self.debug(lambda: f"Before centers: edges={self._are_edges_solved()}, "
+        self._logger.log_lazy(logging.DEBUG, lambda: f"Before centers: edges={self._are_edges_solved()}, "
                    f"corners={self._are_corners_solved()}")
 
         # Use NxNCenters with preserve_cage=True to preserve paired edges
@@ -542,7 +494,7 @@ class CageNxNSolver(BaseSolver):
         cage_centers.solve(tracker_holder)
 
         # Log cage state after
-        self.debug(lambda: f"After centers: edges={self._are_edges_solved()}, "
+        self._logger.log_lazy(logging.DEBUG, lambda: f"After centers: edges={self._are_edges_solved()}, "
                    f"corners={self._are_corners_solved()}, "
                    f"centers={self._are_centers_solved()}")
 
@@ -552,7 +504,7 @@ class CageNxNSolver(BaseSolver):
     def _supported_steps_impl(self) -> list[SolveStep]:
         """Return list of solve steps this solver supports.
 
-        Cage method solves edges first, then corners (via shadow 3x3),
+        Cage method solves edges first, then corners (via 3x3 solver),
         then centers. Steps are:
         - NxNEdges: Pair all wing edges
         - Cage: Edges + Corners (no centers)

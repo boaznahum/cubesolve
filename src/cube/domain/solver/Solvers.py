@@ -66,17 +66,17 @@ class Solvers:
         For NxN: Uses BeginnerReducer + BeginnerSolver3x3
 
         Uses basic (M-slice) edge parity algorithm.
+        3x3 and 2x2 sub-solvers are configurable via solvers_config.lbl.
         """
         from .NxNSolverOrchestrator import NxNSolverOrchestrator
         from .Reducers import Reducers
-        from .Solvers3x3 import Solvers3x3
 
+        cfg = op.app_state.config.solvers_config.lbl
         parent_logger = op.cube.sp.logger
-        solver_3x3 = Solvers3x3.beginner(op, parent_logger)
         reducer = Reducers.beginner(op, advanced_edge_parity=False)
-
         return NxNSolverOrchestrator(
-            op, parent_logger, reducer, solver_3x3, SolverName.LBL
+            op, parent_logger, reducer, SolverName.LBL,
+            cfg.solver_3x3, cfg.solver_2x2,
         )
 
     @staticmethod
@@ -88,17 +88,19 @@ class Solvers:
         For NxN: Uses BeginnerReducer + CFOP3x3
 
         Uses advanced (R/L-slice) edge parity algorithm.
+        3x3 and 2x2 sub-solvers are configurable via solvers_config.cfop.
         """
         from .NxNSolverOrchestrator import NxNSolverOrchestrator
         from .Reducers import Reducers
-        from .Solvers3x3 import Solvers3x3
 
+        cfg = op.app_state.config.solvers_config.cfop
         parent_logger = op.cube.sp.logger
-        solver_3x3 = Solvers3x3.cfop(op, parent_logger)
         reducer = Reducers.beginner(op, advanced_edge_parity=True)
-
         return NxNSolverOrchestrator(
-            op, parent_logger, reducer, solver_3x3, SolverName.CFOP
+            op, parent_logger, reducer, SolverName.CFOP,
+            cfg.solver_3x3, cfg.solver_2x2,
+            advanced_edge_parity=True,
+            advanced_corner_parity=True,
         )
 
     @staticmethod
@@ -110,17 +112,19 @@ class Solvers:
         For NxN: Uses BeginnerReducer + Kociemba3x3
 
         Uses advanced (R/L-slice) edge parity algorithm.
+        3x3 and 2x2 sub-solvers are configurable via solvers_config.kociemba.
         """
         from .NxNSolverOrchestrator import NxNSolverOrchestrator
         from .Reducers import Reducers
-        from .Solvers3x3 import Solvers3x3
 
+        cfg = op.app_state.config.solvers_config.kociemba
         parent_logger = op.cube.sp.logger
-        solver_3x3 = Solvers3x3.kociemba(op, parent_logger)
         reducer = Reducers.beginner(op, advanced_edge_parity=True)
-
         return NxNSolverOrchestrator(
-            op, parent_logger, reducer, solver_3x3, SolverName.KOCIEMBA
+            op, parent_logger, reducer, SolverName.KOCIEMBA,
+            cfg.solver_3x3, cfg.solver_2x2,
+            advanced_edge_parity=True,
+            advanced_corner_parity=True,
         )
 
     @staticmethod

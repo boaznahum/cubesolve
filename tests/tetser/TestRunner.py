@@ -4,6 +4,7 @@ from collections.abc import Collection
 from typing import Any
 
 from cube.domain.algs.Scramble import scramble as generate_scramble
+from cube.utils.logging import CubeLogger
 from cube.application.config_impl import AppConfig
 from cube.application.state import ApplicationAndViewState
 from cube.domain.model.Cube import Cube
@@ -114,9 +115,8 @@ def scramble(op: Operator,
 
     alg = generate_scramble(op.cube.size, scramble_key, scramble_size)
 
-    if op.app_state.is_debug(verbose):
-        print(
-            f"Running scramble, cube size={op.cube.size} key={scramble_key}, {type(scramble_key)=}, n={scramble_size}, alg={alg}")
+    op.app_state.logger.log_lazy(CubeLogger.verbose_level(verbose),
+        lambda: f"Running scramble, cube size={op.cube.size} key={scramble_key}, {type(scramble_key)=}, n={scramble_size}, alg={alg}")
 
     op.play(alg, False, animation=animation)
 

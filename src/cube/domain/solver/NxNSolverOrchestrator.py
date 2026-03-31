@@ -12,12 +12,13 @@ See PARITY_HANDLING_BEFORE_ORCHESTRATOR.md for the original analysis.
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 from cube.domain.exceptions import (
     EvenCubeCornerSwapException,
     EvenCubeEdgeParityException,
-    InternalSWError,
+    InternalSWError, EvenCubeEdgeSwapParityException,
 )
 from cube.domain.solver._3x3.beginner.BeginnerSolver3x3 import BeginnerSolver3x3
 from cube.domain.solver.common.AbstractSolver import AbstractSolver
@@ -25,12 +26,14 @@ from cube.domain.solver.common.SolverStatistics import SolverStatistics
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.protocols.ReducerProtocol import ReducerProtocol
 from cube.domain.solver.protocols.Solver3x3Protocol import Solver3x3Protocol
-from cube.domain.solver.solver import Solver, SolverResults, SolveStep
+from cube.domain.solver.Solver2x2Name import Solver2x2Name
+from cube.domain.solver.Solver3x3Name import Solver3x3Name
+from cube.domain.solver.solver import ParityFix, Solver, SolverResults, SolveStep
 from cube.domain.solver.SolverName import SolverName
 from cube.utils.SSCode import SSCode
 
 if TYPE_CHECKING:
-    from cube.utils.logger_protocol import ILogger
+    from cube.utils.logging import CubeLogger
 
 
 class NxNSolverOrchestrator(AbstractSolver):
@@ -62,15 +65,20 @@ class NxNSolverOrchestrator(AbstractSolver):
     See PARITY_HANDLING_ORCHESTRATOR.md for details.
     """
 
-    __slots__ = ["_op", "_reducer", "_solver_3x3", "_solver_name", "_debug_override"]
+    __slots__ = ["_op", "_reducer", "_solver_3x3", "_solver_name",
+                 "_solver_3x3_name", "_solver_2x2_name", "_debug_override",
+                 "_advanced_edge_parity", "_advanced_corner_parity"]
 
     def __init__(
         self,
         op: OperatorProtocol,
-        parent_logger: "ILogger",
+        parent_logger: "CubeLogger",
         reducer: ReducerProtocol,
-        solver_3x3: Solver3x3Protocol,
-        solver_name: SolverName
+        solver_name: SolverName,
+        solver_3x3_name: Solver3x3Name,
+        solver_2x2_name: Solver2x2Name,
+        advanced_edge_parity: bool = False,
+        advanced_corner_parity: bool = False,
     ) -> None:
         """
         Create an NxN solver orchestrator.
@@ -79,15 +87,31 @@ class NxNSolverOrchestrator(AbstractSolver):
             op: Operator for cube manipulation
             parent_logger: Parent logger (cube.sp.logger for root solver)
             reducer: Reducer for NxN -> 3x3 reduction
-            solver_3x3: Solver for 3x3 cube
             solver_name: Name identifier for this solver
+            solver_3x3_name: Which 3x3 solver to create
+            solver_2x2_name: Which 2x2 solver to use for delegation
+            advanced_edge_parity: If True, use R/L-slice algorithm that preserves
+                                    edge pairing (no re-reduce needed after fix).
+                                    If False, use M-slice algorithm that disrupts
+                                    edge pairing (re-reduce needed after fix).
+            advanced_corner_parity: If True, request corner parity fix that
+                                    preserves edge positions.
         """
         super().__init__(op, parent_logger, logger_prefix=f"Solver:{solver_name.display_name}")
         self._op = op
         self._reducer = reducer
-        self._solver_3x3 = solver_3x3
         self._solver_name = solver_name
+        self._solver_3x3_name = solver_3x3_name
+        self._solver_2x2_name = solver_2x2_name
         self._debug_override: bool | None = None
+        self._advanced_edge_parity = advanced_edge_parity
+        self._advanced_corner_parity = advanced_corner_parity
+
+        # Create 3x3 solver from name
+        from cube.domain.solver.Solvers3x3 import Solvers3x3
+        self._solver_3x3: Solver3x3Protocol = Solvers3x3.by_name(
+            solver_3x3_name, op, self._logger
+        )
 
     @property
     def get_code(self) -> SolverName:
@@ -95,11 +119,9 @@ class NxNSolverOrchestrator(AbstractSolver):
         return self._solver_name
 
     def _create_2x2_delegate(self) -> Solver:
-        """Fast solvers (CFOP, Kociemba) use IDA* for 2x2; others use beginner."""
-        from cube.domain.solver.Solvers import Solvers
-        if self._solver_name in (SolverName.CFOP, SolverName.KOCIEMBA):
-            return Solvers.two_by_two_ida(self._op)
-        return Solvers.two_by_two_beginner(self._op)
+        """Create 2x2 delegate from configured solver_2x2_name."""
+        from cube.domain.solver.Solvers2x2 import Solvers2x2
+        return Solvers2x2.by_name(self._solver_2x2_name, self._op, self._logger)
 
     @property
     def _status_impl(self) -> str:
@@ -153,12 +175,6 @@ class NxNSolverOrchestrator(AbstractSolver):
         if self._cube.solved:
             return sr
 
-        # Parity tracking flags (same as original BeginnerSolver)
-        # These track what parity was detected during the solve
-        even_edge_parity_detected = False
-        corner_swap_detected = False
-        partial_edge_detected = False
-
         # Handle reduction-only steps (equivalent to original _centers() and _edges())
         if what == SolveStep.NxNCenters:
             self._reducer.solve_centers()
@@ -166,7 +182,7 @@ class NxNSolverOrchestrator(AbstractSolver):
 
         if what == SolveStep.NxNEdges:
             results = self._reducer.reduce(self._is_debug_enabled)
-            sr.was_partial_edge_parity = results.partial_edge_parity_detected
+            sr.was_partial_edge_parity = results.partial_edge_parity_fix
             return sr
 
         # Debug state is now handled by AbstractSolver.solve() template method
@@ -194,70 +210,73 @@ class NxNSolverOrchestrator(AbstractSolver):
         # - Handled by the retry loop below via EvenCubeEdgeParityException
         #
         reduction_results = self._reducer.reduce(debug)
-        if reduction_results.partial_edge_parity_detected:
-            partial_edge_detected = True
+        partial_edge_fix: ParityFix | None = reduction_results.partial_edge_parity_fix
 
         # =================================================================
         # STEP 2: SOLVE AS 3x3 WITH PARITY HANDLING
         # =================================================================
-        #
-        # WHY PARITY ONLY AFFECTS EVEN CUBES (from original design):
-        # - Odd cubes (3x3, 5x5, 7x7) have a fixed center on each face.
-        #   The center slice provides a reference during edge pairing.
-        #   When reduced, the virtual 3x3 is always solvable.
-        #
-        # - Even cubes (4x4, 6x6, 8x8) have no fixed centers.
-        #   All edge slices are "wings" with no reference point.
-        #   Reduction can create "parity" states that look valid but are
-        #   impossible to solve as a normal 3x3:
-        #   * Edge parity (OLL): ALL slices of an edge flipped together
-        #     - Undetectable during pairing (no reference)
-        #     - Detected in L3Cross: 1 or 3 edges flipped (impossible on 3x3)
-        #   * Corner parity (PLL): Corner permutation has wrong parity
-        #     - Detected in L3Corners: exactly 2 corners in position
-        #
+        # On a reduced cube, even cubes have known face colors as long as no
+        # inner slice operation is done without undo before/after querying state.
+        # TODO: replace with cube.with_3x3_mode() to prevent inner slice operations
+        self._solve_3x3_with_parity(sr, debug, what)
+
+        if partial_edge_fix is not None:
+            sr.was_partial_edge_parity = partial_edge_fix
+
+        return sr
+
+    def _solve_3x3_with_parity(
+        self,
+        sr: SolverResults,
+        debug: bool,
+        what: SolveStep,
+    ) -> None:
+        """Solve the reduced cube as a 3x3 with parity detection and retry.
+
+        Called inside with_faces_color_provider context so that
+        colors_id/position_id are reliable on even cubes.
+
+        WHY PARITY ONLY AFFECTS EVEN CUBES:
+        - Odd cubes have fixed centers → parity resolved during reduction.
+        - Even cubes have no fixed centers → parity states look valid but
+          are impossible on a 3x3. Detected during L3 solving.
+
+        Retry loop: max 3 iterations.
+        - Iteration 1: Normal solve OR edge parity detected
+        - Iteration 2: After edge fix → normal solve OR corner parity
+        - Iteration 3: After corner fix → should complete
+        """
+        even_edge_parity_fix: ParityFix | None = None
+        even_edge_swap_parity_fix: ParityFix | None = None  # CFOP
+        corner_swap_fix: ParityFix | None = None
+
         is_even_cube = self._cube.n_slices % 2 == 0
-        use_parity_detector = is_even_cube and not self._solver_3x3.can_detect_parity
+        _3x3_can_detect_parity = self._solver_3x3.can_detect_parity
+        use_parity_detector = is_even_cube and not _3x3_can_detect_parity
 
         # For solvers that can't detect parity (Kociemba), use BeginnerSolver3x3
         # as a "parity detector" - it will throw exceptions that we catch
         if use_parity_detector:
-            # Pass parent_logger so parity detector inherits our debug settings
             parity_detector: Solver3x3Protocol | None = BeginnerSolver3x3(
                 self._op, parent_logger=self._logger
             )
         else:
             parity_detector = None
 
-        # =================================================================
-        # RETRY LOOP (from original BeginnerSolver)
-        # =================================================================
-        # WHY 3 ITERATIONS?
-        # - Iteration 1: Normal solve OR edge parity detected
-        # - Iteration 2: After edge fix: normal solve OR corner parity detected
-        # - Iteration 3: After corner fix: should complete
-        #
-        # Each parity type can only occur once. Detecting same parity twice = bug.
-        MAX_RETRIES = 3
-        for attempt in range(1, MAX_RETRIES + 1):
+        max_retries = 3
+        for attempt in range(1, max_retries + 1):
 
             if self._cube.solved:
                 break
 
-            self.debug(lambda: f"@@@@ Iteration # {attempt}")
+            self._logger.log_lazy(logging.DEBUG, lambda: f"@@@@ Iteration # {attempt}")
 
             try:
                 if parity_detector is not None:
-                    # Use parity detector in QUERY MODE:
-                    # - with_query_restore_state(): All moves are rolled back after
-                    # - Parity detector raises exceptions, orchestrator catches and fixes
                     with self._op.with_query_restore_state():
                         parity_detector.solve_3x3(debug, what)
-                    # No exception = no parity, state restored
-                    # Now let actual solver solve
                     self._solver_3x3.solve_3x3(debug, what)
                 else:
-                    # Solver can detect parity itself (BeginnerSolver3x3, CFOP)
                     self._solver_3x3.solve_3x3(debug, what)
 
             except EvenCubeEdgeParityException:
@@ -267,15 +286,33 @@ class NxNSolverOrchestrator(AbstractSolver):
                 # Detected by L3Cross: 1 or 3 edges flipped (impossible on 3x3)
                 # L3Cross throws, orchestrator catches and fixes via reducer.
                 # After fix, edges are disturbed -> need to re-reduce
-                self.debug(lambda: f"Catch even edge parity in iteration #{attempt}")
-                if even_edge_parity_detected:
+                self._logger.log_lazy(logging.DEBUG, lambda: f"Catch even edge parity in iteration #{attempt}")
+                if even_edge_parity_fix is not None:
                     raise InternalSWError("Edge parity detected twice - fix_edge_parity failed")
-                even_edge_parity_detected = True
                 self._op.enter_single_step_mode(SSCode.NxN_EDGE_PARITY_FIX)
-                self._reducer.fix_edge_parity()  # Flip all inner slices of any edge
-                self._reducer.reduce(debug)       # Re-reduce (fix disturbs pairing)
-                continue  # retry
+                even_edge_fix = self._reducer.fix_edge_parity(
+                    advanced=self._advanced_edge_parity
+                )
+                even_edge_parity_fix = even_edge_fix
 
+                # not need in case of advanced
+                self._reducer.reduce(debug)
+                continue
+
+            except EvenCubeEdgeSwapParityException:
+                self._logger.debug_lazy(lambda: f"Catch even edge swap (CFOP) parity in iteration #{attempt}")
+                if even_edge_swap_parity_fix is not None:
+                    raise InternalSWError("Even Edge swap (CFOP) parity detected twice - fix_edge_parity failed")
+                even_edge_swap_fix = self._reducer.fix_edge_parity(
+                    advanced=self._advanced_edge_parity
+                )
+                even_edge_swap_parity_fix = even_edge_swap_fix
+
+                # not need in case of advanced
+                self._reducer.reduce(debug)
+                continue
+
+            # CFOP handle EvenEdge parity, but it might decide to throw
             except EvenCubeCornerSwapException:
                 # =============================================================
                 # CORNER PARITY HANDLING
@@ -286,30 +323,32 @@ class NxNSolverOrchestrator(AbstractSolver):
                 #
                 # The corner swap algorithm swaps diagonal corners on U face.
                 # Any diagonal swap fixes parity - only requirement is yellow up.
-                self.debug(lambda: f"Catch corner swap in iteration #{attempt}")
-                if corner_swap_detected:
+                self._logger.log_lazy(logging.DEBUG, lambda: f"Catch corner swap in iteration #{attempt}")
+                if corner_swap_fix is not None:
                     raise InternalSWError("Corner parity detected twice - fix_corner_parity failed")
-                corner_swap_detected = True
                 self._op.enter_single_step_mode(SSCode.NxN_CORNER_PARITY_FIX)
-                self._reducer.fix_corner_parity()  # Swap diagonal corners
-                self._reducer.reduce(debug)         # Re-reduce (fix disturbs edges)
-                continue  # retry
+                # If parity was detected by the parity_detector (not the 3x3 solver
+                # itself), the cube is not L1/L2 solved — any two-corner swap suffices
+                # and the non-advanced fixer handles it. Only use advanced when the
+                # 3x3 solver detected parity itself (cube is L1+L2+L3cross solved).
+                corner_fix = self._reducer.fix_corner_parity(
+                    advanced=self._advanced_corner_parity and _3x3_can_detect_parity
+                )
+                corner_swap_fix = ParityFix.of(not corner_fix.need_resolve_3x3)
+                if corner_fix.cube_unreduced:
+                    self._reducer.reduce(debug)
+                continue
 
-            # Verify solved after ALL step (same check as original)
             if what == SolveStep.ALL and not self.is_solved:
                 raise InternalSWError(
                     f"Not solved after iteration {attempt}, but no parity detected"
                 )
 
-        # Record results (same as original BeginnerSolver)
-        if even_edge_parity_detected:
-            sr.was_even_edge_parity = True
-        if corner_swap_detected:
-            sr.was_corner_swap = True
-        if partial_edge_detected:
-            sr.was_partial_edge_parity = True
-
-        return sr
+        # Record parity results
+        if even_edge_parity_fix is not None:
+            sr.was_even_edge_parity = even_edge_parity_fix
+        if corner_swap_fix is not None:
+            sr.was_corner_swap = corner_swap_fix
 
     # =========================================================================
     # Statistics (override AbstractSolver)

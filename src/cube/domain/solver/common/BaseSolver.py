@@ -8,7 +8,7 @@ from .AbstractSolver import AbstractSolver
 
 if TYPE_CHECKING:
     from .CommonOp import CommonOp
-    from cube.utils.logger_protocol import ILogger
+    from cube.utils.logging import CubeLogger
 
 _Common: TypeAlias = "CommonOp"
 
@@ -19,7 +19,7 @@ class BaseSolver(AbstractSolver, ABC):
     def __init__(
         self,
         op,
-        parent_logger: "ILogger",
+        parent_logger: "CubeLogger",
         logger_prefix: str | None = None,
     ) -> None:
         super().__init__(op, parent_logger, logger_prefix=logger_prefix)
@@ -34,7 +34,7 @@ class BaseSolver(AbstractSolver, ABC):
         with self._op.with_animation(animation=False):
 
             with self._op.save_history():  # not really needed
-                self.solve(debug=False, animation=False)
+                self.solve(debug=None, animation=False)
                 while n < len(self.op.history()):
                     step = self.op.undo(animation=False)
                     # s=str(step)

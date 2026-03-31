@@ -18,6 +18,7 @@ rotations during pre-orientation may have displaced them.
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 from cube.domain.algs import Alg, Algs
@@ -32,7 +33,7 @@ from cube.domain.solver.SolverName import SolverName
 if TYPE_CHECKING:
     from cube.domain.model.Corner import Corner
     from cube.domain.model.Cube import Cube
-    from cube.utils.logger_protocol import ILogger
+    from cube.utils.logging import CubeLogger
 
 # Move index → Alg mapping.
 # Indices 0–8: U, U2, U', R, R2, R', F, F2, F'
@@ -139,7 +140,7 @@ class Solver2x2IDA(Solver2x2Base):
     def __init__(
         self,
         op: OperatorProtocol,
-        parent_logger: ILogger,
+        parent_logger: CubeLogger,
     ) -> None:
         super().__init__(op, parent_logger, logger_prefix="Solver2x2IDA")
 
@@ -179,7 +180,7 @@ class Solver2x2IDA(Solver2x2Base):
         if slot == 7 and co == 0:
             return  # Already in place with correct orientation
 
-        self.debug(lambda: f"DBL piece at slot {slot} co={co}, rotating to fix")
+        self._logger.log_lazy(logging.DEBUG, lambda: f"DBL piece at slot {slot} co={co}, rotating to fix")
         for alg in _ORIENT_TABLE[(slot, co)]:
             self.op.play(alg)
 
@@ -197,7 +198,7 @@ class Solver2x2IDA(Solver2x2Base):
         # IDA* search returns a list of move indices
         solution: list[int] = ida_solve(perm, twist, tables)
 
-        self.debug(lambda: f"IDA* solution: {len(solution)} moves")
+        self._logger.log_lazy(logging.DEBUG, lambda: f"IDA* solution: {len(solution)} moves")
         assert len(solution) <= 11, f"IDA* returned {len(solution)} moves (max is 11)"
 
         # Play each move on the physical cube

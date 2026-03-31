@@ -22,7 +22,6 @@ from cube.domain.model._elements import (
     PartFixedID,
     SliceIndex,
     _Cube,
-    _Face,
 )
 from cube.domain.model.PartSlice import PartSlice
 from cube.domain.model.Color import Color
@@ -154,7 +153,7 @@ class Part(ABC, CubeElement):
         assert self._fixed_id is not None
         return self._fixed_id
 
-    def is_face_edge(self, face: _Face) -> PartEdge | None:
+    def is_face_edge(self, face: Face) -> PartEdge | None:
         """
         return the edge belong to face, raise error if not found
         :param face:
@@ -169,7 +168,7 @@ class Part(ABC, CubeElement):
 
         return None
 
-    def get_face_edge(self, face: _Face) -> PartEdge:
+    def get_face_edge(self, face: Face) -> PartEdge:
         """
         return the edge belong to face, raise error if not found
         :param face:
@@ -233,7 +232,7 @@ class Part(ABC, CubeElement):
         return self.__str__()
 
     @deprecated("Use face_color")
-    def f_color(self, f: _Face):
+    def f_color(self, f: Face):
         """
         The color of part on given face
         :param f:
@@ -241,7 +240,7 @@ class Part(ABC, CubeElement):
         """
         return self.get_face_edge(f).color
 
-    def face_color(self, f: _Face) -> Color:
+    def face_color(self, f: Face) -> Color:
         """
         The color of part on given face
         :param f:
@@ -249,7 +248,7 @@ class Part(ABC, CubeElement):
         """
         return self.get_face_edge(f).color
 
-    def is_face_color(self, f: _Face):
+    def is_face_color(self, f: Face):
         """
         If this part has edge on face then return it color otherwise None
         The color of part on given face
@@ -262,7 +261,7 @@ class Part(ABC, CubeElement):
         else:
             return None
 
-    def match_face(self, face: _Face):
+    def match_face(self, face: Face):
         """
         Part edge on given face match its color
         :return:
@@ -358,7 +357,7 @@ class Part(ABC, CubeElement):
 
         by_pos: PartColorsID | None = self._colors_id_by_pos
 
-        if not by_pos or (self.config.dont_optimized_part_id):
+        if not by_pos or self.config.dont_optimized_part_id:
             rep_edges = self._3x3_representative_edges
             assert rep_edges, f"position_id should not be called on 2x2 part {self} with no slices"
             by_pos = frozenset(e.face.color for e in rep_edges)
@@ -423,7 +422,7 @@ class Part(ABC, CubeElement):
     def reset_colors_id(self):
         self._colors_id_by_colors = None
 
-    def on_face(self, f: _Face) -> PartEdge | None:
+    def on_face(self, f: Face) -> PartEdge | None:
         """
         :param f:
         :return: true if any edge is on f

@@ -3,7 +3,7 @@
 This package contains shared utilities for NxN cube solving:
 - Center solving components (NxNCenters)
 - Edge pairing components (NxNEdges)
-- Corner parity fix (NxNCorners)
+- Corner swap parity fix (CornerSwapParity)
 - Face tracking for even cubes (FacesTrackerHolder) - re-exported from tracker/
 
 These are used by:
@@ -18,13 +18,13 @@ Cannot import: solver implementations (Layer 3)
 # Re-export FacesTrackerHolder from tracker package for backward compatibility
 from cube.domain.tracker import FacesTrackerHolder
 
+from cube.domain.solver.common.big_cube.CornerSwapParity import CornerSwapParity
 from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
-from cube.domain.solver.common.big_cube.NxNCorners import NxNCorners
 from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
 
 __all__ = [
+    "CornerSwapParity",
     "FacesTrackerHolder",
     "NxNCenters",
-    "NxNCorners",
     "NxNEdges",
 ]

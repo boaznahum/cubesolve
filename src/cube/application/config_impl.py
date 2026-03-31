@@ -15,7 +15,7 @@ from cube.domain.model.Color import Color
 from cube.utils.config_protocol import (
     AnimationSpeedConfigProtocol, AnimationTextDef, ArrowConfigProtocol,
     AssistConfigProtocol, ConfigProtocol, MarkerDef, SessionConfigProtocol,
-    SoundConfigProtocol,
+    SolversConfigProtocol, SoundConfigProtocol,
 )
 from cube.utils.markers_config import MarkersConfig
 from cube.utils.SSCode import SSCode
@@ -160,8 +160,26 @@ class AppConfig(ConfigProtocol):
 
     @property
     def cage_3x3_solver(self) -> str:
-        """3x3 solver used by cage method for corner solving (Phase 1b)."""
+        """3x3 solver used by cage method for corner solving (Phase 1b).
+
+        DEPRECATED: Use solvers_config.cage.solver_3x3 instead.
+        """
         return self._data.cage_3x3_solver
+
+    @property
+    def cage_advanced_parity(self) -> bool:
+        """Use advanced parity algorithms in cage solver."""
+        return self._data.cage_advanced_parity
+
+    @cage_advanced_parity.setter
+    def cage_advanced_parity(self, value: bool) -> None:
+        """Set cage advanced parity flag."""
+        self._data.cage_advanced_parity = value
+
+    @property
+    def solvers_config(self) -> SolversConfigProtocol:
+        """Per-solver configuration for 3x3 and 2x2 sub-solvers."""
+        return self._data.solvers_config
 
     @property
     def first_face_color(self) -> Color:

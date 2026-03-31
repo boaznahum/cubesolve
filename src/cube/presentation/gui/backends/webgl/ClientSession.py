@@ -28,7 +28,7 @@ from cube.presentation.gui.backends.webgl.CubeStateSerializer import apply_cube_
 from cube.presentation.gui.backends.webgl.FlowStateMachine import FlowEvent, FlowState, FlowStateMachine
 from cube.presentation.gui.backends.webgl.SessionState import SessionStateSnapshot
 from cube.presentation.gui.commands import Command, CommandContext
-from cube.utils.log_stream_buffer import LogStreamBuffer
+from cube.utils.logging import ColonPrefixFormatter, LogStreamBuffer, WebSocketLogHandler
 from cube.version import get_version
 
 if TYPE_CHECKING:
@@ -151,8 +151,8 @@ class ClientSession:
         self._log_buffer: LogStreamBuffer = LogStreamBuffer(max_lines=500)
         self._app.vs.logger.add_stream(self._log_buffer.append)
 
-        # Live console forwarding callback (added/removed on subscribe/unsubscribe)
-        self._console_live_cb: Callable[[str], None] | None = None
+        # Live console handler (added/removed on subscribe/unsubscribe)
+        self._console_ws_handler: WebSocketLogHandler | None = None
 
         # Client count — set externally by SessionManager
         self._client_count: int = 0
@@ -358,6 +358,7 @@ class ClientSession:
             operator_buffer_mode=cfg.operator_buffer_mode,
             queue_heading_h1=cfg.queue_heading_h1,
             queue_heading_h2=cfg.queue_heading_h2,
+            cage_advanced_parity=cfg.cage_advanced_parity,
             default_scramble="*" if self._default_scramble is None else str(self._default_scramble),
             # Text
             animation_text=anim_lines,
@@ -760,6 +761,7 @@ class ClientSession:
         "queue_heading_h1",
         "queue_heading_h2",
         "assist_enabled",
+        "cage_advanced_parity",
     )
 
     def _handle_set_config(self, settings: dict[str, object]) -> None:
@@ -776,24 +778,23 @@ class ClientSession:
     # -- Console stream handlers --
 
     def _handle_console_subscribe(self) -> None:
-        """Client opened the console — send snapshot and add live stream."""
+        """Client opened the console — send snapshot and add live handler."""
         lines = self._log_buffer.snapshot()
         self._send(json.dumps({"type": "console_snapshot", "lines": lines}))
 
-        # Remove previous live callback if any, then add a fresh one
+        # Remove previous handler if any, then add a fresh one
         self._handle_console_unsubscribe()
 
-        def _on_line(line: str) -> None:
-            self._send(json.dumps({"type": "console_lines", "lines": [line]}))
-
-        self._console_live_cb = _on_line
-        self._app.vs.logger.add_stream(_on_line)
+        handler = WebSocketLogHandler(self._send)
+        handler.setFormatter(ColonPrefixFormatter())
+        self._console_ws_handler = handler
+        self._app.vs.logger.addHandler(handler)
 
     def _handle_console_unsubscribe(self) -> None:
-        """Client closed the console — remove live stream."""
-        if self._console_live_cb is not None:
-            self._app.vs.logger.remove_stream(self._console_live_cb)
-            self._console_live_cb = None
+        """Client closed the console — remove live handler."""
+        if self._console_ws_handler is not None:
+            self._app.vs.logger.removeHandler(self._console_ws_handler)
+            self._console_ws_handler = None
 
     def _handle_command(self, command_name: str) -> None:
         from cube.presentation.gui.commands import Commands
@@ -1202,8 +1203,9 @@ class ClientSession:
 
         if isinstance(alg, alg_types.FaceAlgBase):
             # R, L, U, D, F, B face moves (including SlicedFaceAlg)
+            # n_max=cube.size so index cube.size maps to opposite face
             indices = list(alg.normalize_slice_index(
-                n_max=1 + cube.n_slices,
+                n_max=cube.size,
                 _default=[1]
             ))
             return self._face_indices_to_layers(indices, face_name, size)
@@ -1306,9 +1308,13 @@ class ClientSession:
         finally:
             am.set_blocking_mode(False)
         # Yield to event loop so any queued call_soon_threadsafe callbacks
-        # from the solver thread (e.g., annotate __exit__ removing markers)
-        # are processed before we send the final state.
-        await asyncio.sleep(0)
+        # from the solver thread (e.g., annotate __exit__ removing markers,
+        # statistics lines sent to console) are processed before we send
+        # the final state. Multiple yields needed because each
+        # call_soon_threadsafe schedules a create_task, and each task
+        # needs a turn to run.
+        for _ in range(5):
+            await asyncio.sleep(0)
         # One-phase solve: moves are in history, not redo queue.
         # Clear auto_play since the solve IS the play.
         self._fsm._auto_play = False

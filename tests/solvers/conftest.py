@@ -149,6 +149,14 @@ def get_solver_names() -> list[SolverName]:
     return SolverName.user_visible()
 
 
-def get_cube_sizes() -> list[int]:
-    """Get all cube sizes for parametrization."""
-    return CUBE_SIZES
+def get_cube_sizes() -> list[pytest.param]:
+    """Get all cube sizes for parametrization.
+
+    Marks each size with 'even' or 'odd' so tests can be filtered:
+        -k "even and Cage"   — even cube sizes only with Cage solver
+        -k "odd"             — odd cube sizes only
+    """
+    return [
+        pytest.param(s, id=f"size_{s}", marks=pytest.mark.even if s % 2 == 0 else pytest.mark.odd)
+        for s in CUBE_SIZES
+    ]

@@ -4,8 +4,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Protocol
 
+from cube.domain.solver.ParityFix import ParityFix
+
 if TYPE_CHECKING:
     from cube.domain.solver.common.SolverStatistics import SolverStatistics
+    from cube.domain.solver.common.big_cube.CornerSwapParity import CornerFixResults
     from cube.domain.solver.protocols.OperatorProtocol import OperatorProtocol
 
 
@@ -15,19 +18,24 @@ class ReductionResults:
     Contains flags indicating what was detected during reduction.
     """
 
-    __slots__ = ["_partial_edge_parity_detected"]
+    __slots__ = ["_partial_edge_parity_fix"]
 
     def __init__(self) -> None:
-        self._partial_edge_parity_detected: bool = False
+        self._partial_edge_parity_fix: ParityFix | None = None
+
+    # @property
+    # def partial_edge_parity_detected(self) -> bool:
+    #     """Whether partial edge parity was detected during reduction."""
+    #     return self._partial_edge_parity_fix is not None
 
     @property
-    def partial_edge_parity_detected(self) -> bool:
-        """Whether partial edge parity was detected during reduction."""
-        return self._partial_edge_parity_detected
+    def partial_edge_parity_fix(self) -> ParityFix | None:
+        """How partial edge parity was fixed (None if not detected)."""
+        return self._partial_edge_parity_fix
 
-    @partial_edge_parity_detected.setter
-    def partial_edge_parity_detected(self, value: bool) -> None:
-        self._partial_edge_parity_detected = value
+    @partial_edge_parity_fix.setter
+    def partial_edge_parity_fix(self, value: ParityFix) -> None:
+        self._partial_edge_parity_fix = value
 
 
 class ReducerProtocol(Protocol):
@@ -72,18 +80,32 @@ class ReducerProtocol(Protocol):
         """
         ...
 
-    def fix_edge_parity(self) -> None:
+    def fix_edge_parity(self, advanced: bool) -> ParityFix:
         """Fix even cube edge parity (OLL parity).
 
         Called by orchestrator when 3x3 solver detects edge parity.
+
+        Args:
+            advanced: If True, request R/L-slice algorithm.
+
+        Returns:
+            True if advanced algorithm was used, False if basic.
         """
         ...
 
-    def fix_corner_parity(self) -> None:
+    def fix_corner_parity(self, advanced: bool) -> CornerFixResults:
         """Fix even cube corner swap parity (PLL parity).
 
         Called by orchestrator when 3x3 solver detects corner swap parity.
-        Uses inner slice moves to swap two diagonal corners.
+
+        Args:
+            advanced: If True, use algorithm that preserves edge positions
+                      (edges move during execution but return to original positions).
+                      If False, use basic algorithm that moves edges to new positions.
+
+        Returns:
+            True if edges were preserved (no re-reduce needed),
+            False if edges were moved (re-reduce may be needed).
         """
         ...
 
@@ -91,7 +113,7 @@ class ReducerProtocol(Protocol):
         """Solve only centers (first part of reduction)."""
         ...
 
-    def solve_edges(self) -> bool:
+    def solve_edges(self) -> ParityFix | None:
         """Solve only edges (second part of reduction).
 
         Returns:

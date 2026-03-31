@@ -44,6 +44,10 @@ class FaceAlg(FaceAlgBase, SliceAbleAlg):
         object.__setattr__(instance, "_frozen", True)
         return instance
 
+    def __rmul__(self, n: int) -> "SlicedFaceAlg":
+        """3 * Algs.R → 3R (3rd inner slice from R)."""
+        return self[n]
+
     def __getitem__(self, items: int | slice | Sequence[int]) -> "SlicedFaceAlg":
         """
         Slice this face algorithm, returning a SlicedFaceAlg.

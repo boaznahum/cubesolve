@@ -18,6 +18,7 @@ This skill provides an iterative workflow for cleaning up git branches by analyz
 1. **NEVER just delete branches.** Always offer ARCHIVE as the first/recommended option for merged branches.
 2. **Follow the FULL workflow** including archive steps — do not shortcut to deletion.
 3. **Run the analysis script** — do not do ad-hoc analysis with a separate agent.
+4. **PROTECTED BRANCHES — NEVER archive or delete:** `main`, `dev`, `webgl-dev`. Always skip these in analysis and actions regardless of merge status.
 
 ## Step 0: Determine Target Branch
 

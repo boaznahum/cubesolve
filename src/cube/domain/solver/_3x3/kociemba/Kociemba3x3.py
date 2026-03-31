@@ -123,6 +123,7 @@ our internal model represents the cube state.
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 import kociemba  # type: ignore[import-not-found]
@@ -140,7 +141,7 @@ from cube.domain.solver.SolverName import SolverName
 if TYPE_CHECKING:
     from cube.domain.model.Cube import Cube
     from cube.domain.model.Face import Face
-    from cube.utils.logger_protocol import ILogger
+    from cube.utils.logging import CubeLogger
 
 
 # Face order for Kociemba's 54-char string: U R F D L B
@@ -175,7 +176,7 @@ class Kociemba3x3(AbstractSolver, Solver3x3Protocol):
     def __init__(
         self,
         op: OperatorProtocol,
-        parent_logger: "ILogger",
+        parent_logger: "CubeLogger",
     ) -> None:
         super().__init__(op, parent_logger, logger_prefix="Kociemba3x3")
         self._op = op
@@ -237,7 +238,7 @@ class Kociemba3x3(AbstractSolver, Solver3x3Protocol):
             cube_string = self._cube_to_kociemba_string(self._cube)
 
             if debug:
-                self.debug("Cube state:", cube_string)
+                self._logger.log_lazy(logging.DEBUG, "Cube state:", cube_string)
 
             # Get solution from Kociemba
             try:
@@ -246,16 +247,16 @@ class Kociemba3x3(AbstractSolver, Solver3x3Protocol):
                 # Invalid cube string usually means edge parity on even cubes
                 # The orchestrator will catch this, fix parity, and retry
                 if debug:
-                    self.debug("Invalid cube state (likely parity):", str(e))
+                    self._logger.log_lazy(logging.DEBUG, "Invalid cube state (likely parity):", str(e))
                     #it is a bug we must not reach here orchstrator must handle it
                 raise InternalSWError(
                     "Kociemba: Invalid cube state - orchstrator must handle it"
                 ) from e
 
             if self.is_debug_enabled:
-                self.debug("Solution:", solution)
+                self._logger.log_lazy(logging.DEBUG, "Solution:", solution)
                 move_count = len(solution.split())
-                self.debug("Move count:", move_count)
+                self._logger.log_lazy(logging.DEBUG, "Move count:", move_count)
 
             # Parse and execute the solution
             if solution:

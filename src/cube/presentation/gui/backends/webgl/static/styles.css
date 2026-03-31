@@ -1203,6 +1203,7 @@ a.info-item-name:hover {
 
 .settings-dialog {
     max-width: 400px;
+    max-height: 80vh;
 }
 
 .settings-content {
@@ -1732,12 +1733,13 @@ body.console-open #app-layout {
 
     .hp-action-btn {
         flex: 0 0 calc(50% - 2px);
-        padding: 5px 0;
-        font-size: 9px;
+        padding: 10px 0;
+        font-size: 12px;
+        min-height: 40px;
     }
 
     .hp-action-btn .icon {
-        font-size: 11px;
+        font-size: 18px;
     }
 
     #history-list {

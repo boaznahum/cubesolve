@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
@@ -15,7 +16,7 @@ from cube.domain.solver.solver import SolverResults, SolveStep
 from cube.domain.solver.SolverName import SolverName
 
 if TYPE_CHECKING:
-    from cube.utils.logger_protocol import ILogger
+    from cube.utils.logging import CubeLogger
 
 from ._L1Corners import L1Corners
 from ._L2 import L2
@@ -144,7 +145,7 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
     def __init__(
         self,
         op: OperatorProtocol,
-        parent_logger: "ILogger",
+        parent_logger: "CubeLogger",
         forced_start_color: "Color | None" = None,
     ) -> None:
         """
@@ -307,7 +308,7 @@ class BeginnerSolver3x3(BaseSolver, Solver3x3Protocol):
         best_face, grade = _find_best_l1_face(self._cube.faces, white)
 
         if best_face is not None and best_face.color != white:
-            self._logger.debug(None, lambda: f"L1 grade {grade} on {best_face.color}, using as start color")
+            self._logger.log_lazy(logging.DEBUG, lambda: f"L1 grade {grade} on {best_face.color}, using as start color")
             self.cmn._start_color = best_face.color
         else:
             self.cmn._start_color = white

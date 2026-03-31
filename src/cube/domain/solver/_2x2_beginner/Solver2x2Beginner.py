@@ -23,12 +23,13 @@ from typing import TYPE_CHECKING
 
 from cube.domain.solver.common.Solver2x2Base import Solver2x2Base
 from cube.domain.solver.protocols import OperatorProtocol
+from cube.domain.solver.ParityFix import ParityFix
 from cube.domain.solver.solver import SolverResults, SolveStep
 from cube.domain.solver.SolverName import SolverName
 from ...model import Color, Face
 
 if TYPE_CHECKING:
-    from cube.utils.logger_protocol import ILogger
+    from cube.utils.logging import CubeLogger
 
 from ._L1 import L1
 from ._L3Orient import L3Orient
@@ -49,7 +50,7 @@ class Solver2x2Beginner(Solver2x2Base):
     def __init__(
         self,
         op: OperatorProtocol,
-        parent_logger: ILogger,
+        parent_logger: CubeLogger,
     ) -> None:
         super().__init__(op, parent_logger, logger_prefix="Beginner2x2")
 
@@ -101,6 +102,8 @@ class Solver2x2Beginner(Solver2x2Base):
                 assert l1_result
                 l1_face, l1_color = l1_result
                 self._solve_l3(l1_face, l1_color)
+                if self._l3_permute.swap_detected:
+                    sr.was_corner_swap = ParityFix.NonAdvanced
 
         return sr
 

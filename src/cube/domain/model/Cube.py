@@ -134,7 +134,7 @@ The model uses the BOY (Blue-Orange-Yellow) color scheme by default:
 """
 
 from collections.abc import Generator, Iterable, Iterator, MutableSequence
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from typing import TYPE_CHECKING, Collection, Protocol, Tuple
 
 from cube.domain.exceptions import InternalSWError
@@ -903,33 +903,29 @@ class Cube(CubeSupplier):
         self.modified()
 
     @contextmanager
-    def with_faces_color_provider(self, provider: "FacesColorsProvider") -> Generator[None, None, None]:
+    def with_faces_color_provider(self, provider: "FacesColorsProvider", center_3x3_mode:bool = False) -> Generator[None, None, None]:
         """Set a FacesColorsProvider on all faces for the duration of the block.
 
         On even cubes, Face.color reads from a center piece that moves during
         solving. This context manager overrides Face.color to return
         tracker-assigned colors instead.
 
-        Stack-safe: nested contexts save and restore the previous provider,
-        so inner contexts don't destroy the outer provider.
+        Stack-safe: uses ExitStack to combine per-face context managers,
+        so nested contexts restore correctly.
 
         Args:
             provider: A FacesColorsProvider (e.g., FacesTrackerHolder).
+            center_3x3_mode: if true face assume center is solved with the provide color
 
         Yields:
             None -- all faces use provider colors within the block.
         """
-        # Save previous providers (for stack safety with nested contexts)
-        prev_providers = {f: f._color_provider for f in self.faces}
-        try:
+        with ExitStack() as stack:
             for f in self.faces:
-                f.set_color_provider(provider)
+                stack.enter_context(f.with_color_provider(provider, center_3x3_mode))
             self.reset_after_faces_changes()
             yield
-        finally:
-            for f in self.faces:
-                f.set_color_provider(prev_providers[f])
-            self.reset_after_faces_changes()
+        self.reset_after_faces_changes()
 
     def clear_moveable_attributes(self) -> None:
         """
@@ -1315,7 +1311,7 @@ class Cube(CubeSupplier):
         size = self.size
 
         for i in _slices:
-            assert 0 <= i <= size - 2
+            assert 0 <= i <= size - 1, f"Slice index {i} out of range [0, {size - 1}]"
 
         neg_slice_index: bool
         slice_name: SliceName
@@ -1426,60 +1422,63 @@ class Cube(CubeSupplier):
         actual_slices, neg_slice_index, slice_name = self.get_face_and_rotation_info(face_name, _slices)
 
         slice_rotate_n = n
-
         if neg_slice_index:
             slice_rotate_n = -slice_rotate_n
 
-        for i in actual_slices:
-
-            if i == 0:
-                self.face(face_name).rotate(n)
-
-            else:
-                # it is inner slice index
-
-                # slice index is cube index -1
-                si = i - 1
-                if neg_slice_index:
-                    si = self.inv(si)
-                # can be optimized, by passing sequence
-                self.rotate_slice(slice_name, slice_rotate_n, [si])
+        for layer_type, layer_face, layer_si in self._classify_layers(
+                face_name, actual_slices, neg_slice_index, slice_name):
+            if layer_type == "face":
+                assert layer_face is not None
+                layer_face.rotate(n)
+            elif layer_type == "opposite":
+                assert layer_face is not None
+                layer_face.rotate(-n)
+            else:  # "inner"
+                assert layer_si is not None
+                self.rotate_slice(slice_name, slice_rotate_n, [layer_si])
 
     def get_rotate_face_and_slice_involved_parts(self, face_name: FaceName, slices: Iterable[int] | None = None) -> \
             Collection[PartSlice]:
-
-        """
-
-        :param face_name:
-        :param slices: [0, n-2] not including last face
-        :return:
-        """
-
-        actual_slices: Iterable[int]
-        neg_slice_index: bool
-        slice_name: SliceName
+        """Get all parts involved in a face+slice rotation for animation."""
 
         actual_slices, neg_slice_index, slice_name = self.get_face_and_rotation_info(face_name, slices)
 
         parts: MutableSequence[PartSlice] = []
 
+        for layer_type, layer_face, layer_si in self._classify_layers(
+                face_name, actual_slices, neg_slice_index, slice_name):
+            if layer_type in ("face", "opposite"):
+                assert layer_face is not None
+                parts.extend(layer_face.slices)
+            else:  # "inner"
+                assert layer_si is not None
+                a_slice: Slice = self.get_slice(slice_name)
+                parts.extend(a_slice.get_rotate_involved_parts(layer_si))
+
+        return parts
+
+    def _classify_layers(self, face_name: FaceName, actual_slices: Iterable[int],
+                         neg_slice_index: bool, slice_name: SliceName
+                         ) -> Iterable[Tuple[str, Face | None, int | None]]:
+        """Classify each layer index as face, opposite, or inner slice.
+
+        Yields (layer_type, face, slice_index) tuples:
+        - ("face", face_obj, None) — the primary face
+        - ("opposite", opposite_face_obj, None) — the opposite face
+        - ("inner", None, concrete_slice_index) — an inner slice
+        """
+        opposite_index = self.size - 1
+
         for i in actual_slices:
             if i == 0:
-                face = self.face(face_name)
-                parts.extend(face.slices)
-
+                yield ("face", self.face(face_name), None)
+            elif i == opposite_index:
+                yield ("opposite", self.face(face_name).opposite, None)
             else:
-
-                # slice index is cube index -1
-                a_slice: Slice = self.get_slice(slice_name)
                 si = i - 1
                 if neg_slice_index:
                     si = self.inv(si)
-
-                _slice_parts = a_slice.get_rotate_involved_parts(si)
-                parts.extend(_slice_parts)
-
-        return parts
+                yield ("inner", None, si)
 
     def modified(self) -> None:
         self._modify_counter += 1

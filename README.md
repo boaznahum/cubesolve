@@ -462,11 +462,6 @@ This design allows:
 - Declarative key bindings in one place
 - Lazy handler creation for fast startup
 
-## Known Issues
-
-Solver , need to rearrange hierarchy and make it abstract, so it can be replaced
-
-## TODO
     
     
       

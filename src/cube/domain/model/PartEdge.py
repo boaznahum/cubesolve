@@ -1,17 +1,15 @@
+from __future__ import annotations
+
 from collections.abc import Hashable
-from typing import TYPE_CHECKING, Any, TypeAlias
+from typing import TYPE_CHECKING, Any
 
 from cube.domain.model.Color import Color
 from cube.domain.model.Colorable import Colorable
 
 if TYPE_CHECKING:
     from .PartSlice import PartSlice
-    from .Cube import Cube
     from .Face import Face
 
-_Face: TypeAlias = "Face"
-_Cube: TypeAlias = "Cube"  # type: ignore
-_PartSlice: TypeAlias = "PartSlice"  # type: ignore
 
 
 class PartEdge(Colorable):
@@ -50,11 +48,11 @@ class PartEdge(Colorable):
                  "_annotated_fixed_location", "_texture_direction",
                  "fixed_attributes", "moveable_attributes"]
 
-    _face: _Face
+    _face: Face
     _color: Color
     _texture_direction: int  # 0=0°, 1=90°CW, 2=180°, 3=270°CW - see design2/face-slice-rotation.md
 
-    def __init__(self, face: _Face, color: Color) -> None:
+    def __init__(self, face: Face, color: Color) -> None:
         """
         Create a PartEdge on a specific face with an initial color.
 
@@ -82,14 +80,14 @@ class PartEdge(Colorable):
         # Used by FaceTracker, moveable markers (e.g., C1 from MarkerFactory)
         self.moveable_attributes: dict[Hashable, Any] = {}
 
-        self._parent: _PartSlice
+        self._parent: PartSlice
 
     @property
-    def face(self) -> _Face:
+    def face(self) -> Face:
         return self._face
 
     @property
-    def parent(self) -> _PartSlice:
+    def parent(self) -> PartSlice:
         return self._parent
 
     @property

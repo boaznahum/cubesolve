@@ -1,6 +1,9 @@
 from collections import defaultdict
 from typing import Tuple
 
+from cube.domain.solver.ParityFix import ParityFix
+from cube.utils.logging import CubeLogger
+
 from cube.domain.algs import Alg, Algs
 from cube.domain.exceptions import InternalSWError
 from cube.domain.model import Color, Edge, EdgeWing, PartColorsID
@@ -8,7 +11,7 @@ from cube.domain.model.Face import Face
 from cube.domain.model.ModelHelper import ModelHelper
 from cube.domain.tracker._face_trackers import FaceTracker
 from cube.domain.solver.AnnWhat import AnnWhat
-from cube.domain.solver.common.CommonOp import EdgeSliceTracker
+
 from cube.domain.solver.common.SolverHelper import SolverHelper
 from cube.domain.solver.protocols import SolverElementsProvider
 from cube.utils.OrderedSet import OrderedSet
@@ -43,10 +46,12 @@ class NxNEdges(SolverHelper):
     def __init__(self, slv: SolverElementsProvider, advanced_edge_parity: bool,
                  preserve_other_edges: bool = False) -> None:
         super().__init__(slv, "NxNEdges")
-        self._logger.set_level(NxNEdges.D_LEVEL)
+        self._logger.set_cube_level(NxNEdges.D_LEVEL)
         self._advanced_edge_parity = advanced_edge_parity
         self._preserve_other_edges = preserve_other_edges
 
+        from cube.domain.solver.common.big_cube.EdgeSliceParity import EdgeSliceParity
+        self._edge_parity = EdgeSliceParity(self)
 
     def _is_solved(self):
         return all((e.is3x3 for e in self.cube.edges))
@@ -55,7 +60,7 @@ class NxNEdges(SolverHelper):
         """Check if all 12 edges are paired (reduced to 3x3 state)."""
         return self._is_solved()
 
-    def solve(self) -> bool:
+    def solve(self) -> ParityFix | None :
         """Pair ALL 12 edges at once (reduction solver entry point).
 
         Solves 11 edges normally, then handles the last edge with a parity
@@ -67,24 +72,25 @@ class NxNEdges(SolverHelper):
         """
 
         if self._is_solved():
-            return False
+            return None
 
         with self.ann.annotate(h1="Big cube edges"):
             self._do_first_11()
 
             if self._is_solved():
-                return False
+                return None
 
             assert self._left_to_fix == 1
 
-            # even cube can have edge parity too
-            self._do_last_edge_parity()
+            # if after solving 11 edges are not solved so the last is parity
+            # even cube can have edge parity too but it connot detected in thos stage
+            parity_fix = self._do_last_edge_parity()
 
             self._do_first_11()
 
             assert self._is_solved()
 
-            return True
+            return parity_fix
 
     def _do_first_11(self):
         """Solve up to 11 edges, stopping when only 1 remains (parity case).
@@ -104,7 +110,7 @@ class NxNEdges(SolverHelper):
 
     def _report_done(self, s):
         n_to_fix = sum(not e.is3x3 for e in self.cube.edges)
-        self.debug(lambda: f"{s}, Still more to fix {n_to_fix}", level=2)
+        self._logger.log_lazy(CubeLogger.cube_level(2), lambda: f"{s}, Still more to fix {n_to_fix}")
 
     @property
     def _left_to_fix(self) -> int:
@@ -126,10 +132,10 @@ class NxNEdges(SolverHelper):
         """
 
         if edge.is3x3:
-            self.debug(lambda: f"Edge {edge} is already solved", level=3)
+            self._logger.log_lazy(CubeLogger.cube_level(3), lambda: f"Edge {edge} is already solved")
             return False
         else:
-            self.debug(lambda: f"Need to work on Edge {edge} ", level=3)
+            self._logger.log_lazy(CubeLogger.cube_level(3), lambda: f"Need to work on Edge {edge} ")
 
         # find needed color
         n_slices = self.cube.n_slices
@@ -139,7 +145,7 @@ class NxNEdges(SolverHelper):
 
         with self.ann.annotate(h2=lambda: f"Fixing {edge.name_n_faces}"):
 
-            self.debug(lambda: f"Brining {edge} to front-right", level=3)
+            self._logger.log_lazy(CubeLogger.cube_level(3), lambda: f"Brining {edge} to front-right")
             self.cmn.bring_edge_to_front_left_by_whole_rotate(edge)
             edge = self.cube.front.edge_left
 
@@ -184,7 +190,7 @@ class NxNEdges(SolverHelper):
         edge: Edge = face.edge_left
 
         # now start to work
-        self.debug(lambda: f"Working on edge {edge} color {ordered_color}", level=3)
+        self._logger.log_lazy(CubeLogger.cube_level(3), lambda: f"Working on edge {edge} color {ordered_color}")
 
         # first fix all that match color on this edge
         self._fix_all_slices_on_edge(face, edge, ordered_color, color_un_ordered)
@@ -256,7 +262,7 @@ class NxNEdges(SolverHelper):
 
         # Now fix
 
-        self.debug(lambda: f"On same edge, going to slice {ltrs}", level=3)
+        self._logger.log_lazy(CubeLogger.cube_level(3), lambda: f"On same edge, going to slice {ltrs}")
 
         with self.ann.annotate((slices, AnnWhat.Moved),
                                (lambda: (edge.get_slice(inv(i)) for i in slices_to_slice),
@@ -298,7 +304,7 @@ class NxNEdges(SolverHelper):
 
             assert source_slice
 
-            self.debug(lambda: f"Found source slice {source_slice}", level=3)
+            self._logger.log_lazy(CubeLogger.cube_level(3), lambda: f"Found source slice {source_slice}")
 
             self.cmn.bring_edge_to_front_right_preserve_front_left(source_slice.parent)
 
@@ -371,7 +377,7 @@ class NxNEdges(SolverHelper):
         if not target_slices:
             return False
 
-        self.debug(lambda: f"Going to slice, sources={source_slice_indices}, target={target_indices}", level=3)
+        self._logger.log_lazy(CubeLogger.cube_level(3), lambda: f"Going to slice, sources={source_slice_indices}, target={target_indices}")
 
         # now slice them all
         with self.ann.annotate((source_slices, AnnWhat.Moved), (target_slices, AnnWhat.FixedPosition)):
@@ -390,11 +396,13 @@ class NxNEdges(SolverHelper):
 
         return True
 
-    def _do_last_edge_parity(self):
+    def _do_last_edge_parity(self) -> ParityFix:
         """Handle the last unpaired edge — always a parity case.
 
         A single remaining unpaired edge cannot be solved with normal slice moves.
         This finds it and applies an OLL parity algorithm.
+
+        return ture if advance
         """
         assert self._left_to_fix == 1
 
@@ -403,96 +411,14 @@ class NxNEdges(SolverHelper):
         edge = self.cqr.find_edge(cube.edges, lambda e: not e.is3x3)
         assert edge
 
-        self._do_edge_parity_on_edge(edge)
+        return self._do_edge_parity_on_edge(edge)
 
-    def _do_edge_parity_on_edge(self, edge) -> None:
+    def _do_edge_parity_on_edge(self, edge) -> ParityFix:
         """Apply OLL parity algorithm to a single edge.
 
-        Brings edge to front-top position, determines which slices need fixing,
-        then applies either M-based (simple) or R/L-based (advanced) parity alg.
+        Delegates to EdgeSliceParity which owns both basic and advanced algorithms.
         """
-        with self._logger.tab(lambda: f"Doing odd edge parity on edge: {edge}"):
-
-            cube = self.cube
-            n_slices = cube.n_slices
-
-            face = cube.front
-
-            tracer: EdgeSliceTracker
-            with self.cmn.track_e_slice(edge.get_slice(0)) as tracer:
-                self.debug(lambda: f"Doing parity on {edge}", level=1)
-                edge = self.cmn.bring_edge_to_front_left_by_whole_rotate(edge)
-                assert edge is face.edge_left
-                assert edge is cube.fl
-                self.op.play(Algs.F)
-
-                edge = tracer.the_slice_nl.parent
-                assert edge is face.edge_top
-                edge = cube.front.edge_top
-
-            if n_slices % 2:
-                required_color = self.get_slice_ordered_color(face, edge.get_slice(n_slices // 2))
-            else:
-                # In even, we can have partial and complete parity in cas eof complete, we reach here from solver after
-                # finding edge in 3x3 with partial we reach here from this solver so in first case we need to reverse all
-                # slices in second case we have no idea which, so we pick the first one (that can later cause and OLL
-                # parity when solving as 3x3)
-                required_color = self.get_slice_ordered_color(face, edge.get_slice(0))
-                required_color = required_color[::-1]
-
-            slices_to_fix: list[EdgeWing] = []
-            slices_indices_to_fix: list[int] = []
-            _all = True
-            for i in range(n_slices // 2):
-
-                s = edge.get_slice(i)
-                color = self.get_slice_ordered_color(face, s)
-                if color != required_color:
-                    slices_indices_to_fix.append(i)
-                    slices_to_fix.append(s)
-                else:
-                    _all = False
-
-            ann = "Fixing edge(OLL) Parity"
-            if n_slices % 2 == 0 and _all:
-                ann += "(Full even)"
-
-            with self.ann.annotate((slices_to_fix, AnnWhat.Moved), h1=ann):
-                # slices are from [1 nn], so we need to add 1
-                # actually, simple alg doesn't care if we fix i or inv(i), because on
-                # Advance alg - I don't know, so I'm keeping the index matches R - for the advanced
-                # last edge they come in pairs i<->inv(i)
-                #
-                plus_one = [ i + 1 for i in slices_indices_to_fix]
-
-                if not self._advanced_edge_parity:
-                    self.debug(lambda: f"*** Doing parity on M {plus_one}", level=2)
-                    for _ in range(4):
-                        self.op.play(Algs.MM[plus_one].prime)
-                        self.op.play(Algs.U * 2)
-                    self.op.play(Algs.MM[plus_one].prime)
-                else:
-                    # in case of R/L we need to add 1, because 1 is R, and slices begin with 2
-                    plus_one = [i + 1 for i in plus_one]
-
-                    self.debug(lambda: f"*** Doing parity on R {plus_one}", level=2)
-                    #  https://speedcubedb.com/a/6x6/6x6L2E
-                    # 3R' U2 3L F2 3L' F2 3R2 U2 3R U2 3R' U2 F2 3R2 F2
-
-                    # noinspection PyPep8Naming
-                    Rs = Algs.R[plus_one]
-                    # noinspection PyPep8Naming
-                    Ls = Algs.L[plus_one]
-
-                    # noinspection PyPep8Naming
-                    U = Algs.U
-                    # noinspection PyPep8Naming
-                    F = Algs.F
-
-                    alg = Rs.prime + U * 2 + Ls + F * 2 + Ls.prime + F * 2 + Rs * 2 + U * 2 + Rs + U * 2 + Rs.p + U * 2 + F * 2
-                    alg += Rs * 2 + F * 2
-
-                    self.op.play(alg)
+        return self._edge_parity.do_edge_parity_on_edge(edge, self._advanced_edge_parity)
 
     @staticmethod
     def get_slice_ordered_color(f: Face, s: EdgeWing) -> Tuple[Color, Color]:
@@ -518,15 +444,6 @@ class NxNEdges(SolverHelper):
     def rf(self) -> Alg:
         """The rf algorithm (R F' U R' F) used to cycle slices between front-left and front-right edges."""
         return Algs.R + Algs.F.prime + Algs.U + Algs.R.prime + Algs.F
-
-    def do_even_full_edge_parity_on_any_edge(self) -> None:
-        """Apply edge parity algorithm on the front-left edge (even cubes only).
-
-        Called by 3x3 solvers when they detect OLL parity after reduction.
-        """
-        assert self.cube.n_slices % 2 == 0
-
-        self._do_edge_parity_on_edge(self.cube.front.edge_left)
 
     def _find_max_of_color(self, face: Face, edge: Edge) -> Tuple[Color, Color]:
         """Auto-detect the most common color pair on an even-cube edge.

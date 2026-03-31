@@ -1,3 +1,4 @@
+import logging
 from contextlib import contextmanager
 from typing import Callable, Generator, Sequence
 
@@ -68,6 +69,20 @@ class CommonOp(SolverHelper):
         # self.debug(w, " is on ", f)
 
         return f
+
+    # =========================================================
+    #  Common Algs
+
+
+    @property
+    def top_3_corner_cycle(self) -> Alg:
+        """
+        TOP Face 3 corners cycle LFU -> BRU -> BLU -> LFU
+        """
+        return Algs.alg(None, Algs.U, Algs.R, Algs.U.prime, Algs.L.prime, Algs.U, Algs.R.prime, Algs.U.prime, Algs.L)
+
+    # =========================================================
+
 
     def l2_edges(self) -> Sequence[Edge]:
 
@@ -169,7 +184,7 @@ class CommonOp(SolverHelper):
         silent = self.cube.in_query_mode
 
         if not silent:
-            self.debug("Need to bring ", source, 'to', target.name)
+            self._logger.log_lazy(logging.DEBUG, "Need to bring ", source, 'to', target.name)
 
         with self.ann.annotate(h2=lambda: f"Bringing face {source.color_at_face_str} to {target.name.value}"):
             # Use CubeLayout's cached method to get the rotation algorithm
@@ -197,7 +212,7 @@ class CommonOp(SolverHelper):
         if source.name == target.name:
             return  # Already at target, nothing to do
 
-        self.debug("Need to bring ", source, 'to', target.name, 'preserving', preserve.name)
+        self._logger.log_lazy(logging.DEBUG, "Need to bring ", source, 'to', target.name, 'preserving', preserve.name)
 
         with self.ann.annotate(
             h2=f"Bringing {source.color_at_face_str} to {target.name.value}, "
@@ -464,7 +479,7 @@ class CommonOp(SolverHelper):
                            both UP and FRONT faces after.
         """
 
-        caller.debug(lambda: f"Bring edge (on top)  {edge} to FRONT")
+        caller._logger.log_lazy(logging.DEBUG, lambda: f"Bring edge (on top)  {edge} to FRONT")
         cube = self.cube
         up = cube.up
         assert edge.on_face(up), f"edge {edge} not on UP face"

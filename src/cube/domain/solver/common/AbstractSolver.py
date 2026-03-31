@@ -1,3 +1,4 @@
+import logging
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, final
 
@@ -16,7 +17,7 @@ from cube.domain.solver.common.SolverStatistics import (
 from cube.domain.solver.common.CommonOp import CommonOp
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.solver import SolverResults, SolveStep
-from cube.utils.logger_protocol import ILogger, LazyArg
+from cube.utils.logging import CubeLogger
 
 if TYPE_CHECKING:
     pass
@@ -29,37 +30,29 @@ class AbstractSolver(Solver, ABC):
     """Abstract base class for all solvers.
 
     Logger Architecture:
-        Every solver receives a parent_logger and creates its own logger via:
-            parent_logger.with_prefix(prefix, debug_flag=lambda: self._is_debug_enabled)
-
-        - Root solver: receives cube.sp.logger as parent_logger
-        - Child solver: receives parent._logger as parent_logger
-
-        Each solver controls its own debug output via its own _is_debug_enabled.
-        Prefix chaining provides context: "LBL:Beginner3x3:L1Cross: message"
+        Every solver gets a ``CubeLogger`` child of the root ``cube`` logger.
+        Debug is controlled by the logger's level:
+        - ``solve(debug=True)`` → temporarily sets logger to DEBUG
+        - ``solve(debug=False)`` → temporarily sets logger to INFO
+        - ``solve(debug=None)`` → inherits from root (config.solver_debug)
     """
-    __slots__: list[str] = ["_common", "_op", "_cube", "_debug_override", "__logger",
-                             "_2x2_delegate_cache"]
+    __slots__: list[str] = ["_common", "_op", "_cube", "_debug_override", "__logger"]
 
     def __init__(
         self,
         op: OperatorProtocol,
-        parent_logger: ILogger,
+        parent_logger: CubeLogger,
         logger_prefix: str | None = None,
     ) -> None:
         super().__init__()
-        # Set _op and _cube BEFORE CommonOp - CommonOp needs self.op
         self._op = op
         self._cube = op.cube
         self._debug_override: bool | None = None
         self._2x2_delegate_cache: Solver | None = None
 
-        # Create logger from parent with this solver's own debug_flag
+        # Create child logger under the parent's namespace.
         prefix = logger_prefix or "Solver"
-        self.__logger: ILogger = parent_logger.with_prefix(
-            prefix,
-            debug_flag=lambda: self._is_debug_enabled
-        )
+        self.__logger: CubeLogger = parent_logger.getChild(prefix)  # type: ignore[assignment]
         self.common: CommonOp = CommonOp(self)
 
     # =========================================================================
@@ -76,28 +69,22 @@ class AbstractSolver(Solver, ABC):
         """Public entry point for solving - handles animation and OpAborted.
 
         DO NOT OVERRIDE. Implement _solve_impl() instead.
-
-        This template method ensures:
-        1. Animation flag is properly applied via with_animation()
-        2. OpAborted is caught and handled cleanly (no red traceback)
-        3. Debug flag is managed
-        4. Statistics are reset before and displayed after solving
-
-        Args:
-            debug: Override debug mode (None = use config)
-            animation: Override animation (None = use config, True/False = force)
-            what: Which step to solve (ALL, L1x, etc.)
-
-        Returns:
-            SolverResults with parity information
         """
         if debug is not None:
             self._debug_override = debug
 
+        # Set logger level based on effective debug state.
+        saved_level = self.__logger.level
+        if self._is_debug_enabled:
+            self.__logger.setLevel(logging.DEBUG)
+        elif self._debug_override is not None:
+            # Explicitly disabled: set to INFO to override root's level.
+            self.__logger.setLevel(logging.INFO)
+        # else: debug_override is None → inherit from root (NOTSET)
+
         try:
             with self._op.with_animation(animation=animation):
                 try:
-                    # Delegate to 2x2 solver if this is a non-2x2 solver on a 2x2 cube
                     if self._cube.size == 2 and not self._is_2x2_solver:
                         return self._delegate_to_2x2(what)
 
@@ -110,7 +97,6 @@ class AbstractSolver(Solver, ABC):
                     history_slice = self._op.history()[history_before:]
                     optimized_count = SeqAlg(None, *history_slice).simplify().count() if history_slice else 0
 
-                    # Populate statistics topics
                     stats = self.get_block_statistics()
                     stats.get_topic(MOVE_COUNT_KEY).set_counts(raw_count, optimized_count)
                     stats.get_topic(PARITY_KEY).set_from_results(result)
@@ -118,22 +104,17 @@ class AbstractSolver(Solver, ABC):
                     self._display_statistics(stats)
                     return result
                 except OpAborted:
-                    # User aborted - this is normal, not an error
                     return SolverResults()
         finally:
+            self.__logger.setLevel(saved_level)
             self._debug_override = None
 
     @property
     def _is_2x2_solver(self) -> bool:
-        """Whether this solver is a dedicated 2x2 solver.
-
-        Overridden by Solver2x2Base to return True.
-        """
         return False
 
     @property
     def status(self) -> str:
-        """Solver status — delegates to 2x2 solver for 2x2 cubes."""
         if self._cube.size == 2 and not self._is_2x2_solver:
             return self._get_2x2_delegate().status
         return self._status_impl
@@ -141,119 +122,66 @@ class AbstractSolver(Solver, ABC):
     @property
     @abstractmethod
     def _status_impl(self) -> str:
-        """Solver-specific status. Override in subclasses."""
         ...
 
     def supported_steps(self) -> list[SolveStep]:
-        """Supported solve steps — delegates to 2x2 solver for 2x2 cubes."""
         if self._cube.size == 2 and not self._is_2x2_solver:
             return self._get_2x2_delegate().supported_steps()
         return self._supported_steps_impl()
 
     @abstractmethod
     def _supported_steps_impl(self) -> list[SolveStep]:
-        """Solver-specific supported steps. Override in subclasses."""
         ...
 
     def diagnostic(self) -> None:
-        """Diagnostics — delegates to 2x2 solver for 2x2 cubes."""
         if self._cube.size == 2 and not self._is_2x2_solver:
             self._get_2x2_delegate().diagnostic()
             return
         self._diagnostic_impl()
 
     def _diagnostic_impl(self) -> None:
-        """Solver-specific diagnostics. Override in subclasses."""
         print(f"No diagnostics available for {self.name}")
 
     def _get_2x2_delegate(self) -> Solver:
-        """Get or create the cached 2x2 solver delegate."""
         if self._2x2_delegate_cache is None:
             self._2x2_delegate_cache = self._create_2x2_delegate()
         return self._2x2_delegate_cache
 
     def _create_2x2_delegate(self) -> Solver:
-        """Create the 2x2 solver to delegate to.
-
-        Override in subclasses to pick a specific 2x2 solver.
-        Default: uses the configured default 2x2 solver from config.
-        """
         from cube.domain.solver.Solvers import Solvers
         return Solvers.default_2x2(self._op)
 
     def _delegate_to_2x2(self, what: SolveStep) -> SolverResults:
-        """Delegate solving to the configured 2x2 solver.
-
-        Called by solve() when a non-2x2 solver is asked to solve a 2x2 cube.
-        """
         solver_2x2 = self._get_2x2_delegate()
-        self.debug("Delegating to 2x2 solver")
+        self._logger.log_lazy(logging.DEBUG, "Delegating to 2x2 solver")
         return solver_2x2.solve(
             debug=self._debug_override,
-            animation=None,  # Inherit from parent's animation context
+            animation=None,
             what=what,
         )
 
     @abstractmethod
     def _solve_impl(self, what: SolveStep) -> SolverResults:
-        """Implement solver logic here. Called by solve().
-
-        Animation and OpAborted are handled by the template method solve().
-        Just implement the solving logic.
-
-        Args:
-            what: Which step to solve
-
-        Returns:
-            SolverResults with parity information
-        """
         pass
 
     def reset_block_statistics(self) -> None:
-        """Reset block statistics before solving.
-
-        Override in subclasses to reset any statistics counters.
-        Called automatically by solve() before _solve_impl().
-
-        Default implementation does nothing.
-        """
         pass
 
     def display_statistics(self) -> None:
-        """Display block statistics collected from all sub-helpers.
-
-        Uses get_block_statistics() from the Solver protocol to aggregate
-        stats from the entire helper tree. Only the root solver's
-        display_statistics() runs (via solve() template method), so
-        child solvers don't duplicate output.
-        """
         self._display_statistics(self.get_block_statistics())
 
     def _display_statistics(self, stats: SolverStatistics) -> None:
-        """Display the given statistics."""
         if stats.is_empty():
             return
-        my_prefix: str = self._logger.prefix + ":"
-        self.debug("[Solver Statistics]")
+        my_prefix: str = self._logger.name.split(".")[-1] + ":"
+        self._logger.log_lazy(logging.DEBUG, "[Solver Statistics]")
         for topic_name, lines in stats.format_all(strip_prefix=my_prefix):
             for line in lines:
-                self.debug(lambda: f"  [{topic_name}] {line}")
+                self._logger.log_lazy(logging.DEBUG, lambda: f"  [{topic_name}] {line}")
+        self._logger.log_lazy(logging.DEBUG, "==== End of Solver Statistics ===========")
+
 
     def _run_child_solver(self, child: Solver, what: SolveStep) -> SolverResults:
-        """Run a child solver, propagating debug override if set.
-
-        Use this when calling another solver as a helper (e.g., shadow cube solving).
-        Propagates the parent's debug override to the child, but only if explicitly set.
-        If parent's debug is None (use config), child also uses its own config.
-        Animation is set to None to inherit from parent's current animation state.
-
-        Args:
-            child: The child solver to run
-            what: Which step to solve
-
-        Returns:
-            SolverResults from child solver
-        """
         if self._debug_override is not None:
             return child.solve(debug=self._debug_override, animation=None, what=what)
         else:
@@ -270,7 +198,6 @@ class AbstractSolver(Solver, ABC):
     def is_debug_config_mode(self) -> bool:
         return self._cube.config.solver_debug
 
-
     @property
     def _is_debug_enabled(self) -> bool:
         if self._debug_override is None:
@@ -280,21 +207,12 @@ class AbstractSolver(Solver, ABC):
 
     @property
     def is_debug_enabled(self):
-        return self.op.app_state.is_debug(self._is_debug_enabled)
+        return self.__logger.isEnabledFor(logging.DEBUG)
 
     @property
-    def _logger(self) -> ILogger:
-        """The logger for this solver, with prefix and debug flag."""
+    def _logger(self) -> CubeLogger:
+        """The logger for this solver."""
         return self.__logger
-
-    def debug(self, *args: LazyArg) -> None:
-        """Output debug information.
-
-        Args:
-            *args: Arguments to print. Can be regular values or Callable[[], Any]
-                   for lazy evaluation.
-        """
-        self.__logger.debug(None, *args)
 
     @property
     @final
@@ -315,11 +233,10 @@ class AbstractSolver(Solver, ABC):
 
         with self._op.with_animation(animation=False):
 
-            with self._op.save_history():  # not really needed
-                self.solve(debug=False, animation=False)
+            with self._op.save_history():
+                self.solve(debug=None, animation=False)
                 while n < len(self.op.history()):
                     step = self.op.undo(animation=False)
-                    # s=str(step)
                     if step:
                         solution_algs.insert(0, step)
 

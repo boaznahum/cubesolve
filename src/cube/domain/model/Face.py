@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import contextlib
 from collections.abc import Hashable, Iterable, Sequence
+from itertools import chain
 from typing import TYPE_CHECKING, Tuple, TypeAlias
 
 from cube.domain.exceptions import InternalSWError
@@ -23,7 +25,6 @@ from .PartEdge import PartEdge
 from .SuperElement import SuperElement
 from ._part import EdgeName
 
-_Face: TypeAlias = "Face"
 _Cube: TypeAlias = "cube.Cube"  # type: ignore  # noqa: F821
 
 
@@ -44,7 +45,6 @@ class Face(SuperElement, Hashable, Colorable):
                  "_edges_of_corner",  # Lookup table: Corner -> (Edge, Edge) for O(1) access
                  "_opposite",
                  "_cache_manager",  # CacheManager for rotation cycle caching
-                 "_color_provider",  # FacesColorsProvider | None - overrides color property on even cubes
                  "_init_finished",  # True after finish_init() — guards set_edge/set_corner
                  ]
 
@@ -68,7 +68,7 @@ class Face(SuperElement, Hashable, Colorable):
 
     _edge_to_position: dict[EdgeName, EdgePosition]
 
-    _opposite: _Face
+    _opposite: Face
 
     def __init__(self, cube: _Cube, name: FaceName, color: Color) -> None:
         super().__init__(cube)
@@ -78,7 +78,6 @@ class Face(SuperElement, Hashable, Colorable):
         self._center = self._create_center(color)
         self._direction = Direction.D0
         self._parts: Tuple[Part]
-        self._color_provider: FacesColorsProvider | None = None
         self._init_finished: bool = False
 
         # Cache manager for rotation cycles (respects config.enable_cube_cache)
@@ -375,18 +374,13 @@ class Face(SuperElement, Hashable, Colorable):
     @property
     def color(self) -> Color:
         """
-        The DYNAMIC color of the face's center.
+        The DYNAMIC color of the face — delegates to center.
 
-        When a FacesColorsProvider is set (via Cube.with_faces_color_provider),
-        returns the tracker-assigned color -- reliable on even cubes during solving.
+        Center handles color provider logic: returns tracker-assigned color
+        if a provider is set, else reads from center piece sticker.
 
-        Otherwise reads from center piece at (n//2, n//2), which is unreliable
-        on even cubes when commutators move center pieces.
-
-        :return: Tracker-assigned color if provider set, else center piece color
+        :return: Face color (from center)
         """
-        if self._color_provider is not None:
-            return self._color_provider.get_face_color(self._name)
         return self.center.color
 
     @property
@@ -423,16 +417,10 @@ class Face(SuperElement, Hashable, Colorable):
         """
         return self._original_color
 
-    def set_color_provider(self, provider: FacesColorsProvider | None) -> None:
-        """Set or clear the face color provider.
-
-        When set, Face.color returns tracker-assigned colors instead of
-        reading from the center piece. Used on even cubes during solving.
-
-        Args:
-            provider: Provider to set, or None to clear.
-        """
-        self._color_provider = provider
+    def with_color_provider(self, provider: FacesColorsProvider | None,
+                            center_3x3_mode: bool = False) -> contextlib.AbstractContextManager[None]:
+        """Context manager — delegates to center's with_color_provider."""
+        return self.center.with_color_provider(provider, center_3x3_mode)
 
     def __str__(self) -> str:
         c = self.color
@@ -448,7 +436,7 @@ class Face(SuperElement, Hashable, Colorable):
         e: PartEdge = PartEdge(self, self._original_color)
         return e
 
-    def _get_other_face(self, e: Edge) -> _Face:
+    def _get_other_face(self, e: Edge) -> Face:
         return e.get_other_face(self)
 
     def _get_rotation_cycles(self) -> tuple[
@@ -679,21 +667,14 @@ class Face(SuperElement, Hashable, Colorable):
 
         c = self.color
 
-        return (c ==
-                self._edge_top.face_color(self) ==
-                self._edge_right.face_color(self) ==
-                self._edge_bottom.face_color(self) ==
-                self._edge_left.face_color(self) ==
-                self._corner_top_left.face_color(self) ==
-                self._corner_top_right.face_color(self) ==
-                self._corner_bottom_left.face_color(self) ==
-                self._corner_bottom_right.face_color(self)
-                )
+        return all(part.face_color(self) == c
+                   for part in chain(self._corners, self._edges))
 
     @property
     def is3x3(self):
         if self.cube.n_slices == 0:
             return True  # 2x2: no edges/centers, trivially reduced
+
         return all(p.is3x3 for p in self.edges) and self.center.is3x3
 
     def reset_after_faces_changes(self):
@@ -754,12 +735,12 @@ class Face(SuperElement, Hashable, Colorable):
                 return p
         return None
 
-    def adjusted_faces(self) -> Iterable[_Face]:
+    def adjusted_faces(self) -> Iterable[Face]:
         for e in self.edges:
             yield e.get_other_face(self)
 
     @property
-    def others_faces(self) -> Iterable[_Face]:
+    def others_faces(self) -> Iterable[Face]:
         """
         All other faces adjusted and opposite
         :return:
@@ -769,10 +750,10 @@ class Face(SuperElement, Hashable, Colorable):
         yield self.opposite
 
     @property
-    def opposite(self) -> _Face:
+    def opposite(self) -> Face:
         return self._opposite
 
-    def find_shared_edge(self, face2: _Face) -> Edge | None:
+    def find_shared_edge(self, face2: Face) -> Edge | None:
         """
         Find the edge shared by two faces, or None if they're opposite.
 
@@ -785,7 +766,7 @@ class Face(SuperElement, Hashable, Colorable):
                 return edge
         return None
 
-    def get_shared_edge(self, face2: _Face) -> Edge:
+    def get_shared_edge(self, face2: Face) -> Edge:
         """
         get the edge shared by two faces, or None if they're opposite.
 
@@ -809,7 +790,7 @@ class Face(SuperElement, Hashable, Colorable):
         return edge in self._edges
 
 
-    def set_opposite(self, o: _Face):
+    def set_opposite(self, o: Face):
         """
         By cube constructor only
         :return:

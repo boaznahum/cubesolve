@@ -1,5 +1,29 @@
-# 4x4 Cube make the white face with four diffrent colors
-$s=Z (X' U [1:1]M F' [2:2]M F [1:1]M' F' [2:2]M' F U' R' [1:1]E' F' [2:2]E' F [1:1]E F' [2:2]E F R D [2:2]M' F' [1:1]M' F [2:2]M F' [1:1]M F D' Y [2:2]M' F [1:1]M' F' [2:2]M F [1:1]M F' X' B [1:1]E2 F' [2:2]E2 F [1:1]E2 F' [2:2]E2 F B')’
+#The parser-format algorithms for your investigation:
 
-$s
+#  Diagonal (4x4): FRU <--> BLU
+# Rw2 2F2 U2 Fw2 U' Rw2 U2 Fw2 U Fw2 R2 U2 F2 Rw2 U
 
+#Diagonal (6x6): FRU <--> BLU
+# 3Rw2 2-3F2 U2 3Fw2 U' 3Rw2 U2 3Fw2 U 3Fw2 R2 U2 F2 3Rw2 U
+
+#Diagonal (8x8): FRU <--> BLU
+#4Rw2 2-4F2 U2 4Fw2 U' 4Rw2 U2 4Fw2 U 4Fw2 R2 U2 F2 4Rw2 U
+
+#Adjacent (4x4): FRU <--> FLU
+# Z 2R2 U2 R' U2 R' U2 R X U2 Rw2 U2 B2 L U2 L' U2 Rw2 U2 Z' Y'
+
+#Adjacent (6x6): FRU <--> FLU
+# Z 2-3R2 U2 R' U2 R' U2 R X U2 3Rw2 U2 B2 L U2 L' U2 3Rw2 U2 Z' Y'
+
+#Adjacent (8x8): FRU <--> FLU
+ Z 2-4R2 U2 R' U2 R' U2 R X U2 4Rw2 U2 B2 L U2 L' U2 4Rw2 U2 Z' Y'
+
+# UR cycle:
+#U R U' L' U R' U' L
+
+# 2x2 swap
+#R' F R' B2 R F' R' B2 R2 U'
+
+R' F R' B2
+R F' R' B2
+R2 U'

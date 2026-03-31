@@ -1,6 +1,7 @@
 """Manager for celebration effect lifecycle."""
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -82,7 +83,7 @@ class CelebrationManager:
         self._event_loop.schedule_interval(self._update, 1 / 60)
         self._update_scheduled = True
 
-        self._vs.debug(True, lambda: f"Celebration started: {effect.name}")
+        self._vs.logger.log_lazy(logging.DEBUG,lambda: f"Celebration started: {effect.name}")
 
     def _update(self, dt: float) -> None:
         """Update callback for event loop.
@@ -112,7 +113,7 @@ class CelebrationManager:
         if self._current_effect:
             effect = self._current_effect
             effect.cleanup()
-            self._vs.debug(True, lambda: f"Celebration stopped: {effect.name}")
+            self._vs.logger.log_lazy(logging.DEBUG,lambda: f"Celebration stopped: {effect.name}")
             self._current_effect = None
 
     @property

@@ -46,7 +46,9 @@ from __future__ import annotations
 import math
 import time
 from collections.abc import Collection, Iterable, Set
-from typing import TYPE_CHECKING, Tuple
+from typing import TYPE_CHECKING, Any, Tuple
+
+from cube.utils.logging import CubeLogger
 
 import numpy as np
 from numpy import ndarray
@@ -206,13 +208,13 @@ class ModernGLCubeViewer(AnimatableViewer, CubeListener):
                 return CELL_TEXTURE_KEY not in edge.moveable_attributes
         return False
 
-    def _debug_texture(self, *args) -> None:
+    def _debug_texture(self, *args: Any) -> None:
         """Debug print for texture operations, controlled by debug_texture config."""
-        self._vs.debug(self._cube.config.debug_texture, *args)
+        self._vs.logger.log_lazy(CubeLogger.verbose_level(self._cube.config.debug_texture), *args)
 
-    def _debug_texture_lazy(self, func) -> None:
+    def _debug_texture_lazy(self, func: Any) -> None:
         """Debug print with lazy evaluation for expensive texture debug info."""
-        self._vs.debug(self._cube.config.debug_texture, func)
+        self._vs.logger.log_lazy(CubeLogger.verbose_level(self._cube.config.debug_texture), func)
 
     @property
     def renderer(self) -> "ModernGLRenderer":

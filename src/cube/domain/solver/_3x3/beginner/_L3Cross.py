@@ -1,3 +1,5 @@
+import logging
+
 from cube.domain.algs import Algs
 from cube.domain.exceptions import EvenCubeEdgeParityException
 from cube.domain.model import Edge, FaceName, Part
@@ -84,11 +86,11 @@ class L3Cross(SolverHelper):
         bottom = int(yf.edge_bottom.match_face(yf))
         n: int = left + right + top + bottom
 
-        self.debug(lambda: f"L3 cross-color: {n} match {yf}")
+        self._logger.log_lazy(logging.DEBUG, lambda: f"L3 cross-color: {n} match {yf}")
 
         if n not in [0, 2, 4]:
             if self.cube.n_slices % 2 == 0 or self.cube.is_even_cube_shadow:
-                self.debug("L3 cross-color: Found OLL(Edge Parity), raising EvenCubeEdgeParityException")
+                self._logger.log_lazy(logging.DEBUG, "L3 cross-color: Found OLL(Edge Parity), raising EvenCubeEdgeParityException")
                 raise EvenCubeEdgeParityException()
 
         assert n in [0, 2, 4]
@@ -139,9 +141,9 @@ class L3Cross(SolverHelper):
 
         right = EdgeTracker.of_position(yf.edge_right)
 
-        self.debug(lambda: f"L3-Cross-Pos, right before moving:{right}")
+        self._logger.log_lazy(logging.DEBUG, lambda: f"L3-Cross-Pos, right before moving:{right}")
         self._bring_edge_to_right_up(right.actual)
-        self.debug(lambda: f"L3-Cross-Pos, right after moving:{right}")
+        self._logger.log_lazy(logging.DEBUG, lambda: f"L3-Cross-Pos, right after moving:{right}")
 
         assert right.match
 

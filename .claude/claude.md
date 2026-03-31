@@ -79,7 +79,7 @@ All pyglet imports now only exist in:
 
 ### How to Run
 - GUI: `python -m cube.main_pyglet`
-- Tests (non-GUI): `python -m pytest tests/ -v -m "not gui and not slow"`
+- Tests (non-GUI, non-slow): `python -m pytest tests/ -v -m "not gui and not slow"`
 - Tests (GUI): `python -m pytest tests/gui -v --speed-up 5`
 
 ### Environment Setup (Headless / Claude Code on Web)
@@ -89,7 +89,7 @@ All pyglet imports now only exist in:
   python3.13 -m pip install kociemba --use-pep517
   python3.13 -m pip install -e ".[dev]" --use-pep517
   ```
-- **Non-GUI tests:** Use `-m "not gui"` to exclude GUI/WebGL/backend tests (auto-marked via `tests/conftest.py`):
+- **Non-GUI, non-slow tests:** Use `-m "not gui and not slow"` to exclude GUI/WebGL/backend tests and slow tests:
   ```bash
   python3.13 -m pytest tests/ -m "not gui and not slow" --tb=short -q
   ```
@@ -108,7 +108,7 @@ python -m mypy -p cube
 # 3. Pyright type checker
 python -m pyright src/cube
 
-# 4. Non-GUI tests (ALWAYS use CUBE_QUIET_ALL=1 to suppress debug output)
+# 4. Non-GUI, non-slow tests (ALWAYS use CUBE_QUIET_ALL=1 to suppress debug output)
 # Bash/Linux:
 CUBE_QUIET_ALL=1 python -m pytest tests/ -v -m "not gui and not slow"
 # PowerShell/Windows:

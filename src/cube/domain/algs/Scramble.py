@@ -119,10 +119,11 @@ def __scramble(cube_size: int, rnd: Random, n: int, nest) -> list[Alg]:
 
             if isinstance(a, SliceAbleAlg) and prob(_PROB_SLICE_AN_ALG):
 
-                if isinstance(a, FaceAlg):
-                    max_slice = cube_size - 1  # see :class:`FaceAlg`
+                from cube.domain.algs.WideLayerAlg import WideLayerAlg
+                if isinstance(a, (FaceAlg, WideLayerAlg)):
+                    max_slice = cube_size - 1  # face layers: 1..size (includes opposite)
                 else:  # SliceAlg
-                    max_slice = cube_size - 2  # see :class:`SliceAlg`
+                    max_slice = cube_size - 2  # inner slices only
 
                 if max_slice >= 1:
                     # Try discontinued (non-contiguous) slices when enough range
