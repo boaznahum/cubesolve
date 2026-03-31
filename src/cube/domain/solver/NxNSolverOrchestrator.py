@@ -62,7 +62,8 @@ class NxNSolverOrchestrator(AbstractSolver):
     See PARITY_HANDLING_ORCHESTRATOR.md for details.
     """
 
-    __slots__ = ["_op", "_reducer", "_solver_3x3", "_solver_name", "_debug_override"]
+    __slots__ = ["_op", "_reducer", "_solver_3x3", "_solver_name", "_solver_2x2_name",
+                 "_debug_override"]
 
     def __init__(
         self,
@@ -70,7 +71,8 @@ class NxNSolverOrchestrator(AbstractSolver):
         parent_logger: "ILogger",
         reducer: ReducerProtocol,
         solver_3x3: Solver3x3Protocol,
-        solver_name: SolverName
+        solver_name: SolverName,
+        solver_2x2_name: SolverName | None = None,
     ) -> None:
         """
         Create an NxN solver orchestrator.
@@ -81,12 +83,15 @@ class NxNSolverOrchestrator(AbstractSolver):
             reducer: Reducer for NxN -> 3x3 reduction
             solver_3x3: Solver for 3x3 cube
             solver_name: Name identifier for this solver
+            solver_2x2_name: Which 2x2 solver to use for delegation.
+                If None, uses the default from config.
         """
         super().__init__(op, parent_logger, logger_prefix=f"Solver:{solver_name.display_name}")
         self._op = op
         self._reducer = reducer
         self._solver_3x3 = solver_3x3
         self._solver_name = solver_name
+        self._solver_2x2_name = solver_2x2_name
         self._debug_override: bool | None = None
 
     @property
@@ -95,11 +100,11 @@ class NxNSolverOrchestrator(AbstractSolver):
         return self._solver_name
 
     def _create_2x2_delegate(self) -> Solver:
-        """Fast solvers (CFOP, Kociemba) use IDA* for 2x2; others use beginner."""
+        """Create 2x2 delegate using the configured solver_2x2_name."""
         from cube.domain.solver.Solvers import Solvers
-        if self._solver_name in (SolverName.CFOP, SolverName.KOCIEMBA):
-            return Solvers.two_by_two_ida(self._op)
-        return Solvers.two_by_two_beginner(self._op)
+        if self._solver_2x2_name is not None:
+            return Solvers.by_name(self._solver_2x2_name, self._op)
+        return Solvers.default_2x2(self._op)
 
     @property
     def _status_impl(self) -> str:

@@ -117,6 +117,14 @@ class CageNxNSolver(BaseSolver):
     def get_code(self) -> SolverName:
         return SolverName.CAGE
 
+    def _create_2x2_delegate(self) -> "Solver":
+        """Use 2x2 solver from solvers_config.cage."""
+        from cube.domain.solver.Solvers import Solvers
+        solver_2x2_name = SolverName.lookup(
+            self._cube.config.solvers_config.cage.solver_2x2
+        )
+        return Solvers.by_name(solver_2x2_name, self._op)
+
     @property
     def _status_impl(self) -> str:
         """Return current solving status.
@@ -502,7 +510,7 @@ class CageNxNSolver(BaseSolver):
             solver_name = "beginner"
             self.debug("Using beginner solver for even cube shadow")
         else:
-            solver_name = self._cube.config.cage_3x3_solver
+            solver_name = self._cube.config.solvers_config.cage.solver_3x3
 
         # Create solver with DualOperator
         # Solver sees shadow cube via dual_op.cube

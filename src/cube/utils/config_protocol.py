@@ -136,6 +136,41 @@ AnimationTextDef = Tuple[int, int, int, Tuple[int, int, int, int], bool]
 
 
 @runtime_checkable
+class SolverConfigProtocol(Protocol):
+    """Per-solver configuration for 3x3 and 2x2 sub-solvers."""
+
+    @property
+    def solver_3x3(self) -> str:
+        """3x3 solver name (e.g., 'beginner', 'cfop', 'kociemba')."""
+        ...
+
+    @property
+    def solver_2x2(self) -> str:
+        """2x2 solver name (e.g., '2x2 Beginner', '2x2 IDA*')."""
+        ...
+
+
+@runtime_checkable
+class SolversConfigProtocol(Protocol):
+    """Per-solver configuration for all user-visible solvers."""
+
+    @property
+    def lbl(self) -> SolverConfigProtocol: ...
+
+    @property
+    def cfop(self) -> SolverConfigProtocol: ...
+
+    @property
+    def kociemba(self) -> SolverConfigProtocol: ...
+
+    @property
+    def cage(self) -> SolverConfigProtocol: ...
+
+    @property
+    def lbl_big(self) -> SolverConfigProtocol: ...
+
+
+@runtime_checkable
 class ConfigProtocol(Protocol):
     """Configuration protocol - all code accesses config through this interface.
 
@@ -239,6 +274,17 @@ class ConfigProtocol(Protocol):
 
         Options: "beginner", "cfop", "kociemba"
         Default: "beginner"
+
+        DEPRECATED: Use solvers_config.cage.solver_3x3 instead.
+        """
+        ...
+
+    @property
+    def solvers_config(self) -> SolversConfigProtocol:
+        """Per-solver configuration for 3x3 and 2x2 sub-solvers.
+
+        Each user-visible solver (LBL, CFOP, Kociemba, Cage, Big LBL)
+        has its own SolverConfig specifying which 3x3 and 2x2 solver to use.
         """
         ...
 

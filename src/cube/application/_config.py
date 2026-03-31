@@ -104,6 +104,28 @@ class SessionConfig:
     keepalive_timeout: int = 30 * 60  # 30 minutes
 
 
+@dataclass
+class SolverConfig:
+    """Per-solver configuration for 3x3 and 2x2 sub-solvers."""
+    solver_3x3: str  # e.g., "beginner", "cfop", "kociemba"
+    solver_2x2: str  # e.g., "2x2 Beginner", "2x2 IDA*"
+
+
+@dataclass
+class SolversConfig:
+    """Per-solver configuration for all user-visible solvers.
+
+    Each solver can be configured with which 3x3 and 2x2 sub-solver to use.
+    Default: advanced 3x3 solvers (CFOP, Kociemba) use advanced 2x2 (IDA*),
+    beginner solvers use beginner 2x2.
+    """
+    lbl: SolverConfig = field(default_factory=lambda: SolverConfig("beginner", "2x2 Beginner"))
+    cfop: SolverConfig = field(default_factory=lambda: SolverConfig("cfop", "2x2 IDA*"))
+    kociemba: SolverConfig = field(default_factory=lambda: SolverConfig("kociemba", "2x2 IDA*"))
+    cage: SolverConfig = field(default_factory=lambda: SolverConfig("cfop", "2x2 IDA*"))
+    lbl_big: SolverConfig = field(default_factory=lambda: SolverConfig("beginner", "2x2 Beginner"))
+
+
 ########## Per-session configuration ##########
 # ConfigData holds ALL configuration fields. Each client session gets its own
 # copy (via copy()), so changes don't leak across sessions.
@@ -183,7 +205,8 @@ class ConfigData:
     default_solver: str = "Beginner Reducer"
     solver_for_tests: str = "Beginner Reducer"
     default_2x2_solver: str = "2x2 Beginner"
-    cage_3x3_solver: str = "cfop"
+    cage_3x3_solver: str = "cfop"  # DEPRECATED: use solvers_config.cage.solver_3x3
+    solvers_config: SolversConfig = field(default_factory=SolversConfig)
     solver_debug: bool = True
     solver_pll_rotate_while_search: bool = False
     solver_sanity_check_is_a_boy: bool = False
