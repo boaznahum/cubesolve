@@ -20,3 +20,10 @@
 
 # UR cycle:
 #U R U' L' U R' U' L
+
+# 2x2 swap
+#R' F R' B2 R F' R' B2 R2 U'
+
+R' F R' B2
+R F' R' B2
+R2 U'

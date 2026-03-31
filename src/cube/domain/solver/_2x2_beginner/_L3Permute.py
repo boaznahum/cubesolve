@@ -33,17 +33,24 @@ class L3Permute(StepSolver):
     Works purely with corner sticker colors — no face colors.
     """
 
-    __slots__: list[str] = ["_swap_detected"]
+    __slots__: list[str] = ["_swap_detected", "_advance_swap"]
 
-    # U R U' L' U R' U' L — 3-corner cycle, fixes FRU, cycles FLU/BRU/BLU
-    _CYCLE: Alg = Algs.alg(
-        None,
-        Algs.U, Algs.R, Algs.U.prime, Algs.L.prime,
-        Algs.U, Algs.R.prime, Algs.U.prime, Algs.L,
-    )
+
+    # R' F R' B2
+    # R F' R' B2
+    # R2 U' — adjacent corner swap
+    # https://cdn.prod.website-files.com/6595ca03bcd68f311fd41872/65afebcae0a3534d92a9b921_Rubiks_SolutionGuide_2x2-Mini.pdf
+    # and simpler in my drive
+    _ADVANCED_SWAP: Alg = Algs.parse("""
+                                        R' F R' B2
+                                        R F' R' B2
+                                        R2 U'
+
+                                        """)
 
     def __init__(self, slv: SolverElementsProvider) -> None:
         super().__init__(slv, "L3Permute")
+        self._advance_swap = False
         self._swap_detected: bool = False
 
     @property
@@ -115,7 +122,10 @@ class L3Permute(StepSolver):
         C) If FLU↔BLU still swapped: 3-cycle, U2, 3-cycle → restart from A.
         """
 
-        for _attempt in range(3):
+        #U R U' L' U R' U' L — 3-corner cycle, fixes FRU, cycles FLU/BRU/BLU
+        c3c = self.cmn.top_3_corner_cycle
+
+        for attempt in range(3):
             # Step A: U-rotate until FRU is in position
             self._bring_fru_to_position(up, down, white_color, yellow_color)
 
@@ -130,27 +140,59 @@ class L3Permute(StepSolver):
                     if self._corner_in_position(up.corner_top_right, down.corner_bottom_right,
                                                 white_color, yellow_color):
                         break
-                    self.op.play(self._CYCLE)
+                    self.op.play(c3c)
 
             assert self._corner_in_position(up.corner_top_right, down.corner_bottom_right,
                                             white_color, yellow_color), \
                 "BRU not in position after cycling"
 
             # Step C: Check if all in position
+
+            # Now all in position, or FLU and BLU swapped
             if self._all_in_position(up, down, white_color, yellow_color):
+                self._logger.debug_lazy(lambda: f"solved on iteration {attempt + 1}")
                 return  # done!
 
             # FLU↔BLU are swapped — break the swap with cycle, U2, cycle
             self._swap_detected = True
-            with self.ann.annotate(
-                    (up.corner_bottom_left, AnnWhat.Moved),
-                    (up.corner_top_left, AnnWhat.Moved),
-                    h2="Breaking corner swap",
-            ):
-                self.op.play(self._CYCLE)
-                self.op.play((Algs.U * 2).simplify())
-                self.op.play(self._CYCLE)
-            # Restart from step A
+
+            self._logger.debug_lazy(lambda: f"FLU↔BLU corner swap detected on iteration {attempt + 1}")
+
+            if self._advance_swap:
+
+                self._logger.debug_lazy(lambda: f"FLU↔BLU swap on iteration {attempt + 1}, "
+                           f"fixing with advanced algorithm")
+
+                # Step 3: If FRU and BRU are swapped, do U' swap U to bring them to front
+                # the algorithm swap FRU<-->BRU
+                if not self._all_in_position(up, down, white_color, yellow_color):
+                    with self.ann.annotate(
+                            (up.corner_bottom_right, AnnWhat.Moved),
+                            (up.corner_top_right, AnnWhat.Moved),
+                            h2="Advanced swapping corners",
+                    ):
+                        self.op.play(Algs.U.prime)
+                        self.op.play(self._ADVANCED_SWAP)
+                        self.op.play(Algs.U)
+
+                # Step 4: U-align
+                assert self._try_u_alignment(up, down, white_color, yellow_color), (
+                    "L3 Permute failed"
+                )
+            else:
+
+                self._logger.debug_lazy(lambda: f"FLU↔BLU swap on iteration {attempt + 1}, "
+                           f"fixing with 3-cycle U2 3-cycle")
+                with self.ann.annotate(
+                        (up.corner_bottom_left, AnnWhat.Moved),
+                        (up.corner_top_left, AnnWhat.Moved),
+                        h2="Simple swapping corners",
+                ):
+                    self.op.play(c3c)
+                    self.op.play((Algs.U * 2).simplify())
+                    self.op.play(c3c)
+
+            self._logger.debug("retrying from step A")
 
         raise AssertionError("L3 Permute failed after 3 attempts")
 

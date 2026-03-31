@@ -16,6 +16,8 @@ from dataclasses import dataclass, field
 from typing import Tuple
 
 from cube.config.face_tracer_config import FaceTrackerConfig, TrackerIndicatorConfig
+from cube.domain.solver.Solver2x2Name import Solver2x2Name as _Solver2x2Name
+from cube.domain.solver.Solver3x3Name import Solver3x3Name as _Solver3x3Name
 from cube.utils.markers_config import MarkersConfig
 
 # Type alias for config change listener callback
@@ -104,6 +106,33 @@ class SessionConfig:
     keepalive_timeout: int = 30 * 60  # 30 minutes
 
 
+@dataclass
+class SolverConfig:
+    """Per-solver configuration for 3x3 and 2x2 sub-solvers."""
+    solver_3x3: _Solver3x3Name
+    solver_2x2: _Solver2x2Name
+
+
+@dataclass
+class SolversConfig:
+    """Per-solver configuration for all user-visible solvers.
+
+    Each solver can be configured with which 3x3 and 2x2 sub-solver to use.
+    Default: advanced 3x3 solvers (CFOP, Kociemba) use advanced 2x2 (IDA*),
+    beginner solvers use beginner 2x2.
+    """
+    lbl: SolverConfig = field(default_factory=lambda: SolverConfig(
+        _Solver3x3Name.BEGINNER, _Solver2x2Name.BEGINNER))
+    cfop: SolverConfig = field(default_factory=lambda: SolverConfig(
+        _Solver3x3Name.CFOP, _Solver2x2Name.IDA))
+    kociemba: SolverConfig = field(default_factory=lambda: SolverConfig(
+        _Solver3x3Name.KOCIEMBA, _Solver2x2Name.IDA))
+    cage: SolverConfig = field(default_factory=lambda: SolverConfig(
+        _Solver3x3Name.CFOP, _Solver2x2Name.IDA))
+    lbl_big: SolverConfig = field(default_factory=lambda: SolverConfig(
+        _Solver3x3Name.BEGINNER, _Solver2x2Name.BEGINNER))
+
+
 ########## Per-session configuration ##########
 # ConfigData holds ALL configuration fields. Each client session gets its own
 # copy (via copy()), so changes don't leak across sessions.
@@ -183,8 +212,9 @@ class ConfigData:
     default_solver: str = "Beginner Reducer"
     solver_for_tests: str = "Beginner Reducer"
     default_2x2_solver: str = "2x2 Beginner"
-    cage_3x3_solver: str = "cfop"
+    cage_3x3_solver: str = "cfop"  # DEPRECATED: use solvers_config.cage.solver_3x3
     cage_advanced_parity: bool = True
+    solvers_config: SolversConfig = field(default_factory=SolversConfig)
     solver_debug: bool = True
     solver_pll_rotate_while_search: bool = False
     solver_sanity_check_is_a_boy: bool = False

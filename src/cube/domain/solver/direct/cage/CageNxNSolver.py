@@ -45,6 +45,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from cube.domain.solver.ParityFix import ParityFix
+from cube.domain.solver.Solver3x3Name import Solver3x3Name
 from cube.domain.solver.SolverName import SolverName
 from cube.domain.solver.common.BaseSolver import BaseSolver
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
@@ -53,7 +54,7 @@ from cube.domain.solver.common.big_cube.CornerSwapParity import CornerSwapParity
 from cube.domain.solver.common.big_cube.EdgeSliceParity import EdgeSliceParity
 from cube.domain.solver.common.big_cube.NxNEdges import NxNEdges
 from cube.domain.solver.protocols import OperatorProtocol
-from cube.domain.solver.solver import SolverResults, SolveStep
+from cube.domain.solver.solver import Solver, SolverResults, SolveStep
 from cube.utils.SSCode import SSCode
 
 if TYPE_CHECKING:
@@ -117,6 +118,13 @@ class CageNxNSolver(BaseSolver):
     @property
     def get_code(self) -> SolverName:
         return SolverName.CAGE
+
+    def _create_2x2_delegate(self) -> "Solver":
+        """Use 2x2 solver from solvers_config.cage."""
+        from cube.domain.solver.Solvers2x2 import Solvers2x2
+        return Solvers2x2.by_name(
+            self._cube.config.solvers_config.cage.solver_2x2, self._op, self._logger
+        )
 
     @property
     def _status_impl(self) -> str:
@@ -444,10 +452,10 @@ class CageNxNSolver(BaseSolver):
         # raises parity exceptions that cause oscillation in the orchestrator.
         # CFOP should be usable here — fix tracked in #147.
         if self._cube.n_slices % 2 == 0:
-            solver_name = "beginner"
+            solver_name = Solver3x3Name.BEGINNER
             self._logger.debug("Using beginner solver for even cube")
         else:
-            solver_name = self._cube.config.cage_3x3_solver
+            solver_name = self._cube.config.solvers_config.cage.solver_3x3
 
         # Solve directly on the NxN cube with correct face colors.
         # The color provider overrides Face.color so the 3x3 solver sees

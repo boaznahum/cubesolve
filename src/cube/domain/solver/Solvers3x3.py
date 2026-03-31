@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from cube.domain.solver.protocols import OperatorProtocol
 from cube.domain.solver.protocols.Solver3x3Protocol import Solver3x3Protocol
+from cube.domain.solver.Solver3x3Name import Solver3x3Name
 
 if TYPE_CHECKING:
     from cube.domain.model.Color import Color
@@ -78,28 +79,24 @@ class Solvers3x3:
         return Kociemba3x3(op, parent_logger)
 
     @classmethod
-    def by_name(cls, name: str, op: OperatorProtocol, parent_logger: "CubeLogger") -> Solver3x3Protocol:
+    def by_name(cls, name: Solver3x3Name, op: OperatorProtocol, parent_logger: "CubeLogger") -> Solver3x3Protocol:
         """
         Get a 3x3 solver by its name.
 
         Args:
-            name: Solver name - "beginner", "cfop", or "kociemba"
+            name: Solver3x3Name enum value
             op: Operator for cube manipulation
             parent_logger: Parent logger (cube.sp.logger for root, parent._logger for child)
 
         Returns:
             Solver3x3Protocol instance
-
-        Raises:
-            ValueError: If name is not recognized
         """
         match name:
-            case "beginner":
+            case Solver3x3Name.BEGINNER:
                 return cls.beginner(op, parent_logger)
-            case "cfop":
+            case Solver3x3Name.CFOP:
                 return cls.cfop(op, parent_logger)
-            case "kociemba":
+            case Solver3x3Name.KOCIEMBA:
                 return cls.kociemba(op, parent_logger)
             case _:
-                raise ValueError(f"Unknown 3x3 solver: {name}. "
-                                 f"Options: beginner, cfop, kociemba")
+                raise ValueError(f"Unknown 3x3 solver: {name}")
