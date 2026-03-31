@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator
+from collections.abc import Generator, Iterable, Iterator
+from contextlib import contextmanager
 from typing import TYPE_CHECKING, Sequence
 
 from cube.domain.exceptions import InternalSWError
@@ -8,6 +9,8 @@ from cube.domain.model._elements import EdgePosition, SliceIndex
 from cube.domain.model.PartSlice import EdgeWing, PartSlice
 from cube.domain.model.Part import Part
 from cube.domain.model.PartEdge import PartEdge
+from cube.domain.model.Color import Color
+from cube.domain.model import PartColorsID
 from cube.domain.geometric import geometry_utils as geometry
 
 from ._elements import EdgeSliceIndex
@@ -15,6 +18,7 @@ from .part_names import EdgeName, faces_to_edge_name
 
 if TYPE_CHECKING:
     from .Face import Face
+    from cube.domain.model.EdgesColorsProvider import EdgesColorsProvider
 
 
 
@@ -47,6 +51,8 @@ class Edge(Part):
         self._f1: Face = f1
         self._f2: Face = f2
         self.right_top_left_same_direction = right_top_left_same_direction
+        self._edges_provider: EdgesColorsProvider | None = None
+        self._edge_3x3_mode: bool = False  # must be set only with color provider !!!
         if not slices:
             self._cube = f1.cube  # 2x2: provide cube for Part.__init__ fallback
         super().__init__()
@@ -100,6 +106,9 @@ class Edge(Part):
         See: design2/model-id-system.md section "Evolution: Big Cube → 3x3 Reduction"
         """
         assert self._slices, f"is3x3 should not be called on 2x2 edge {self._name} with no slices"
+
+        if self._edge_3x3_mode:
+            return True
 
         slices = self.all_slices
 
@@ -447,6 +456,51 @@ class Edge(Part):
             # 2x2: use stored face references instead of slices
             return faces_to_edge_name((self._f1.name, self._f2.name))
         return faces_to_edge_name((self.e1.face.name, self.e2.face.name))
+
+    @property
+    def colors_id(self) -> PartColorsID:
+        """Override Part.colors_id to use provider colors when active."""
+        if self._edges_provider is not None:
+            return self._edges_provider.get_edge_colors(self)
+        return super().colors_id
+
+    def face_color(self, f: Face) -> Color:
+        """Override Part.face_color to use provider colors when active."""
+        if self._edges_provider is not None:
+            return self._edges_provider.get_edge_face_color(self, f)
+        return super().face_color(f)
+
+    def match_face(self, face: Face) -> bool:
+        """Override Part.match_face to use provider colors when active."""
+        if self._edges_provider is not None:
+            return self.face_color(face) == face.color
+        return super().match_face(face)
+
+    @property
+    def match_faces(self) -> bool:
+        """Override Part.match_faces to use provider colors when active."""
+        if self._edges_provider is not None:
+            for e in self._3x3_representative_edges:
+                if self.face_color(e.face) != e.face.color:
+                    return False
+            return True
+        return super().match_faces
+
+    @contextmanager
+    def with_edges_color_provider(self, provider: EdgesColorsProvider,
+                                  edge_3x3_mode: bool = False) -> Generator[None, None, None]:
+        """Context manager that sets an edge color provider and restores on exit."""
+        assert not edge_3x3_mode or provider is not None, \
+            "edge_3x3_mode requires a color provider"
+        prev = self._edges_provider
+        prev_3x3 = self._edge_3x3_mode
+        self._edges_provider = provider
+        self._edge_3x3_mode = edge_3x3_mode
+        try:
+            yield
+        finally:
+            self._edges_provider = prev
+            self._edge_3x3_mode = prev_3x3
 
     @property
     def required_position(self) -> "Edge":

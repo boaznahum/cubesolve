@@ -168,6 +168,7 @@ if TYPE_CHECKING:
     from .Cube3x3Colors import Cube3x3Colors
     from .CubeListener import CubeListener
     from .CubeQueries2 import CubeQueries2
+    from .EdgesColorsProvider import EdgesColorsProvider
     from .FacesColorsProvider import FacesColorsProvider
 
 
@@ -903,12 +904,21 @@ class Cube(CubeSupplier):
         self.modified()
 
     @contextmanager
-    def with_faces_color_provider(self, provider: "FacesColorsProvider", center_3x3_mode:bool = False) -> Generator[None, None, None]:
+    def with_faces_color_provider(
+        self,
+        provider: "FacesColorsProvider",
+        center_3x3_mode: bool = False,
+        edges_provider: "EdgesColorsProvider | None" = None,
+    ) -> Generator[None, None, None]:
         """Set a FacesColorsProvider on all faces for the duration of the block.
 
         On even cubes, Face.color reads from a center piece that moves during
         solving. This context manager overrides Face.color to return
         tracker-assigned colors instead.
+
+        Optionally also sets an EdgesColorsProvider on all edges, which
+        overrides Edge.colors_id, Edge.face_color, and Edge.is3x3 to return
+        tracker-assigned colors instead of actual sticker colors.
 
         Stack-safe: uses ExitStack to combine per-face context managers,
         so nested contexts restore correctly.
@@ -916,13 +926,19 @@ class Cube(CubeSupplier):
         Args:
             provider: A FacesColorsProvider (e.g., FacesTrackerHolder).
             center_3x3_mode: if true face assume center is solved with the provide color
+            edges_provider: Optional EdgesColorsProvider (e.g., EdgesTrackerHolder).
+                If provided, all edges use provider colors within the block.
 
         Yields:
-            None -- all faces use provider colors within the block.
+            None -- all faces (and optionally edges) use provider colors within the block.
         """
         with ExitStack() as stack:
             for f in self.faces:
                 stack.enter_context(f.with_color_provider(provider, center_3x3_mode))
+            if edges_provider is not None:
+                for edge in self.edges:
+                    stack.enter_context(edge.with_edges_color_provider(edges_provider,
+                                                                      edge_3x3_mode=True))
             self.reset_after_faces_changes()
             yield
         self.reset_after_faces_changes()
