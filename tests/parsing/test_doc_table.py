@@ -52,8 +52,8 @@ DOC_ROWS: list[DocRow] = [
            equivalent=Algs.parse("3R 4R"), equiv_sizes=(5,)),
     DocRow("[3:4]Rw: slices 3–4 via Rw",        Algs.Rw[3:4],                    "[3:4]Rw",  "[3:4]R", sizes=(4, 5)),
     DocRow("[3:4]r: slices 3–4 via r",           Algs.r[3:4],                     "[3:4]r",   "[3:4]R", sizes=(4, 5)),
-    DocRow("[3:]R: all from 3rd to last",         Algs.R[3:],                      "[3:]R",    "[3:]R", sizes=(5,),
-           equivalent=Algs.parse("3R 4R") + Algs.L.prime, equiv_sizes=(5,)),
+    DocRow("[3:]R: all from 3rd to last (≡ X Rw')", Algs.R[3:],                     "[3:]R",    "[3:]R", sizes=(5,),
+           equivalent=Algs.X + Algs.Rw.prime, equiv_sizes=(3, 4, 5)),
     DocRow("[3:]r: all from 3rd to last via r",  Algs.r[3:],                      "[3:]r",    "[3:]R", sizes=(5,)),
     DocRow("[:]R: all R layers (≡ X)",             Algs.R[:],                       "[:]R",     "[:]R",
            equivalent=Algs.X, equiv_sizes=(3, 4, 5)),
@@ -195,7 +195,22 @@ class TestSpecialCases:
         """On 5x5, Rw (2 layers) != [:-1]Rw (4 layers)."""
         assert_algs_equivalent(Algs.Rw, Algs.RRw, 5, expect_equal=False)
 
-    # --- Known unsupported: bracket on wide moves ---
+    # --- R[3:] Twizzle workaround equivalences ---
+
+    @pytest.mark.parametrize("cube_size", [3, 4, 5])
+    def test_R_3_to_end_equals_X_Rw_prime(self, cube_size: int) -> None:
+        """R[3:] == X Rw' (whole cube R, undo 2 outermost layers)."""
+        assert_algs_equivalent(Algs.R[3:], Algs.X + Algs.Rw.prime, cube_size)
+
+    @pytest.mark.parametrize("cube_size", [3, 4, 5])
+    def test_R_3_to_end_equals_X_2Rw_prime(self, cube_size: int) -> None:
+        """R[3:] == X 2Rw' (explicit 2-layer wide)."""
+        assert_algs_equivalent(Algs.R[3:], Algs.X + Algs.parse("2Rw'"), cube_size)
+
+    @pytest.mark.parametrize("cube_size", [3, 4, 5])
+    def test_R_3_to_end_equals_X_1_2R_prime(self, cube_size: int) -> None:
+        """R[3:] == X 1-2R' (SiGN range)."""
+        assert_algs_equivalent(Algs.R[3:], Algs.X + Algs.parse("1-2R'"), cube_size)
 
     # --- Opposite face via inner slice indexing ---
 

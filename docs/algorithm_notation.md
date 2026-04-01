@@ -578,8 +578,8 @@ At play time, `_effective_layers(cube)` computes the actual count:
 <tr>
   <td>8</td>
   <td>Turn all slices from nth to last</td>
-  <td>?</td>
-  <td>?</td>
+  <td><span style="color:green;font-size:1.3em">≈</span> <code>x 1-2r'</code></td>
+  <td>—</td>
   <td>—</td>
   <td><code>Algs.R[3:]</code><br><code>Algs.r[3:]</code></td>
   <td><code>[3:]R</code></td>
