@@ -2,8 +2,10 @@
   "mcpServers": {
     "puppeteer": {
       "type": "stdio",
-      "command": "npx",
+      "command": "cmd",
       "args": [
+        "/c",
+        "npx",
         "-y",
         "@modelcontextprotocol/server-puppeteer"
       ],

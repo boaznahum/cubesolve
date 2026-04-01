@@ -79,8 +79,8 @@ class SliceAlg(SliceAlgBase, SliceAbleAlg):
         return SlicedSliceAlg(self._slice_name, self._n, a_slice)
 
     def _add_to_str(self, s: str) -> str:
-        """Unsliced slice represents all middle slices, displayed as [:]M/E/S."""
-        return "[:]" + s
+        """Unsliced slice represents all middle slices, displayed as m/e/s (lowercase)."""
+        return s.lower()
 
     def get_base_alg(self) -> "SliceAlgBase":
         """Return whole slice alg that is not yet sliced."""

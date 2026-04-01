@@ -68,6 +68,9 @@ class SliceAlgBase(AnimationAbleAlg, ABC):
         if slices is None:
             return s
 
+        # Sliced slice algs use lowercase: [1:2]m, not [1:2]M
+        s = s.lower()
+
         if isinstance(slices, slice):
             start = slices.start
             stop = slices.stop

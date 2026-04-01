@@ -169,11 +169,11 @@ class TestParseMultilineIntegration:
         assert cube.cqr.compare_state(state_before)
 
     def test_integer_slice_on_big_cube(self) -> None:
-        """Test [$I:$I+1]M on a 5x5 cube."""
+        """Test [$I:$I+1]m on a 5x5 cube."""
         cube = Cube(5, sp=_test_sp)
         state_before = cube.cqr.get_sate()
 
-        alg = parse_multiline("$I = 1\n[$I:$I+1]M2 [$I:$I+1]M2")
+        alg = parse_multiline("$I = 1\n[$I:$I+1]m2 [$I:$I+1]m2")
         alg.play(cube)
         # M2 M2 = identity
         assert cube.cqr.compare_state(state_before)

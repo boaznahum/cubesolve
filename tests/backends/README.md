@@ -243,9 +243,9 @@ Default key-to-algorithm mapping:
 | D | Algs.D | Shift+D | Algs.D' |
 | F | Algs.F | Shift+F | Algs.F' |
 | B | Algs.B | Shift+B | Algs.B' |
-| M | Algs.MM | | |
-| E | Algs.EE | | |
-| S | Algs.SS | | |
+| M | Algs.m | | |
+| E | Algs.e | | |
+| S | Algs.s | | |
 | X | Algs.X | | |
 | Y | Algs.Y | | |
 | Z | Algs.Z | | |

@@ -270,7 +270,7 @@ class NxNEdges(SolverHelper):
                                h2="Flip on same edge"
                                ):
 
-            slice_alg = Algs.EE[[ltr + 1 for ltr in ltrs]]
+            slice_alg = Algs.e[[ltr + 1 for ltr in ltrs]]
 
             self.op.play(slice_alg)  # move me to opposite E begin from D, slice begin with 1
             self.op.play(self.rf)
@@ -382,7 +382,7 @@ class NxNEdges(SolverHelper):
         # now slice them all
         with self.ann.annotate((source_slices, AnnWhat.Moved), (target_slices, AnnWhat.FixedPosition)):
 
-            slice_alg = Algs.EE[[i + 1 for i in target_indices]]
+            slice_alg = Algs.e[[i + 1 for i in target_indices]]
 
             self.op.play(slice_alg)  # slice begin with 1
             self.op.play(self.rf)

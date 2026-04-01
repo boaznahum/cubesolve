@@ -132,12 +132,12 @@ class Commands:
     # =========================================================================
     # SLICE MOVES
     # =========================================================================
-    SLICE_M = RotateCommand(Algs.MM, False)
-    SLICE_M_PRIME = RotateCommand(Algs.MM, True)
-    SLICE_E = RotateCommand(Algs.EE, False)
-    SLICE_E_PRIME = RotateCommand(Algs.EE, True)
-    SLICE_S = RotateCommand(Algs.SS, False)
-    SLICE_S_PRIME = RotateCommand(Algs.SS, True)
+    SLICE_M = RotateCommand(Algs.m, False)
+    SLICE_M_PRIME = RotateCommand(Algs.m, True)
+    SLICE_E = RotateCommand(Algs.e, False)
+    SLICE_E_PRIME = RotateCommand(Algs.e, True)
+    SLICE_S = RotateCommand(Algs.s, False)
+    SLICE_S_PRIME = RotateCommand(Algs.s, True)
 
     # =========================================================================
     # CUBE ROTATIONS

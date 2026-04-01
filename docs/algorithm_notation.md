@@ -12,7 +12,7 @@ PRIME:    R' L' U' ...         (counter-clockwise)
 DOUBLE:   R2 L2 U2 ...         (180 turn)
 INNER:    2F 2R 3R ...         (inner slice, SiGN standard)
 SLICE:    M E S                (single middle slice)
-ALL:      [:]M [:]E [:]S       (all middle slices)
+ALL:      m e s                (all middle slices, lowercase)
 WIDE:     Rw r (2 layers)      (WCA standard)
 N-WIDE:   3Rw 3r (3 layers)    (WCA standard, n layers)
 ADAPTIVE: [:-1]Rw [:-1]r       (all-but-last, adapts to cube size)
@@ -214,16 +214,16 @@ The outer faces DON'T move - only the inner slices rotate.
 
 ### Single vs All-Slices
 
-On any cube, `M` means the single center slice. For big cubes with multiple inner slices, use `[:]M` for all of them:
+On any cube, `M` (uppercase) means the single center slice. Lowercase `m` means all inner slices (standard Twizzle notation):
 
 | Notation | Code | Meaning | Sliceable |
 |----------|------|---------|-----------|
 | `M` | `Algs.M` | Single center slice (MiddleSliceAlg) | No |
-| `[:]M` | `Algs.MM` | All inner slices (SliceAlg) | Yes |
+| `m` | `Algs.m` | All inner slices (SliceAlg) | Yes |
 | `E` | `Algs.E` | Single center slice | No |
-| `[:]E` | `Algs.EE` | All inner slices | Yes |
+| `e` | `Algs.e` | All inner slices | Yes |
 | `S` | `Algs.S` | Single center slice | No |
-| `[:]S` | `Algs.SS` | All inner slices | Yes |
+| `s` | `Algs.s` | All inner slices | Yes |
 
 ---
 
@@ -296,10 +296,10 @@ Move multiple slices at once:
 
 | Format | Meaning | Example |
 |--------|---------|---------|
-| `[start:stop]CODE` | Slices from `start` to `stop` inclusive | `[1:2]M` |
-| `[start:]CODE` | Slices from `start` to max | `[1:]M` |
-| `[:]CODE` | All slices | `[:]M` |
-| `[i1,i2,...]CODE` | Specific slice indices | `[1,3]M` |
+| `[start:stop]CODE` | Slices from `start` to `stop` inclusive | `[1:2]m` |
+| `[start:]CODE` | Slices from `start` to max | `[1:]m` |
+| `m` / `e` / `s` | All slices (lowercase) | `m` |
+| `[i1,i2,...]CODE` | Specific slice indices | `[1,3]m` |
 
 ---
 
@@ -645,7 +645,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td><code>Algs.M</code></td>
   <td><code>M</code></td>
   <td><code>"M"</code></td>
-  <td>⚠ ≡ <code>Algs.MM</code><sup>②</sup></td>
+  <td>⚠ ≡ <code>Algs.m</code><sup>②</sup></td>
 </tr>
 <tr>
   <td>15</td>
@@ -654,9 +654,9 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td><code>m</code> (lowercase)</td>
   <td><code>M</code><sup>①</sup></td>
   <td>—</td>
-  <td><code>Algs.MM</code></td>
-  <td><code>[:]M</code></td>
-  <td><code>"[:]M"</code></td>
+  <td><code>Algs.m</code></td>
+  <td><code>m</code></td>
+  <td>✅ <code>"m"</code></td>
   <td>same</td>
 </tr>
 <!-- ═══════════════════ 5. Slice Range & Indexing ═══════════════════ -->
@@ -690,7 +690,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>—</td>
   <td>—</td>
   <td>—</td>
-  <td><code>Algs.MM[1]</code></td>
+  <td><code>Algs.m[1]</code></td>
   <td><code>[1:1]M</code></td>
   <td><code>"[1]M"</code></td>
   <td>same</td>
@@ -702,7 +702,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>—</td>
   <td>—</td>
   <td>—</td>
-  <td><code>Algs.MM[1:2]</code></td>
+  <td><code>Algs.m[1:2]</code></td>
   <td><code>[1:2]M</code></td>
   <td><code>"[1:2]M"</code></td>
   <td>same</td>
@@ -710,11 +710,11 @@ At play time, `_effective_layers(cube)` computes the actual count:
 <tr>
   <td>20</td>
   <td>Turn all M slices from 1st to last<br>
-      <em>= [:]M, all inner slices</em></td>
+      <em>= m, all inner slices</em></td>
   <td>—</td>
   <td>—</td>
   <td>—</td>
-  <td><code>Algs.MM[1:]</code></td>
+  <td><code>Algs.m[1:]</code></td>
   <td><code>[1:]M</code></td>
   <td><code>"[1:]M"</code></td>
   <td>same</td>
@@ -759,7 +759,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
 **Notes:**
 
 <sup>①</sup> MZRG defines `M` as ALL inner slices (portable across sizes), not single center.<br>
-<sup>②</sup> In `compat_3x3` mode, `parse("M")` → all-slices (`[:]M`), so 3×3 algs work on bigger cubes.<br>
+<sup>②</sup> In `compat_3x3` mode, `parse("M")` → all-slices (`m`), so 3×3 algs work on bigger cubes.<br>
 <sup>③</sup> MZRG (SiGN) uses only lowercase for wide moves — no `Rw` form.<br>
 <sup>④</sup> In `compat_3x3` mode, `parse("Rw")`/`parse("r")`/`parse("3Rw")` → adaptive (`[:-1]Rw`/`[:-1]r`).<br>
 <sup>⑤</sup> Standards use lowercase `x`/`y`/`z`. Our parser accepts uppercase `X`/`Y`/`Z`.<br>
@@ -777,7 +777,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
 |------|---------|
 | `src/cube/domain/algs/WideLayerAlg.py` | Wide moves: Rw, r, nRw, nr, [:-1]Rw, [:-1]r |
 | `src/cube/domain/algs/MiddleSliceAlg.py` | Single middle slice (M, E, S) |
-| `src/cube/domain/algs/SliceAlg.py` | All middle slices ([:]M, [:]E, [:]S) — sliceable |
+| `src/cube/domain/algs/SliceAlg.py` | All middle slices (m, e, s) — sliceable |
 | `src/cube/domain/algs/FaceAlg.py` | Face moves (R, L, U, D, F, B) — sliceable |
 | `src/cube/domain/algs/_parser.py` | `parse_alg(s, compat_3x3=False)` — string to Alg |
 | `src/cube/domain/algs/Algs.py` | `Algs.parse(s)`, move constants, Simple list |

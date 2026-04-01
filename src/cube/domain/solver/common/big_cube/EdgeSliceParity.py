@@ -150,9 +150,9 @@ le
         """
         self._logger.log_lazy(CubeLogger.cube_level(2), lambda: f"*** Doing parity on M {plus_one}")
         for _ in range(4):
-            self.op.play(Algs.MM[plus_one].prime)
+            self.op.play(Algs.m[plus_one].prime)
             self.op.play(Algs.U * 2)
-        self.op.play(Algs.MM[plus_one].prime)
+        self.op.play(Algs.m[plus_one].prime)
 
     def _do_advanced(self, plus_one: list[int]) -> None:
         """Advanced R/L-slice parity fix — preserves edge pairing.

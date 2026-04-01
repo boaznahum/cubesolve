@@ -53,9 +53,9 @@ The axis faces (and their opposites) stay in place but don't rotate.
 └──────────┴───────────┴─────────────────┴───────────────────────────────────┘
 
 API Reference:
-  - Algs.MM.get_face_name() → L  (M rotates like L)
-  - Algs.EE.get_face_name() → D  (E rotates like D)
-  - Algs.SS.get_face_name() → F  (S rotates like F)
+  - Algs.m.get_face_name() → L  (M rotates like L)
+  - Algs.e.get_face_name() → D  (E rotates like D)
+  - Algs.s.get_face_name() → F  (S rotates like F)
 
 ================================================================================
 SLICE TRAVERSAL (used in _get_slices_by_index)

@@ -26,7 +26,7 @@ def parse_alg(s: str, *, compat_3x3: bool = False) -> _Alg:
 
     Args:
         s: The algorithm string to parse.
-        compat_3x3: When True, bare "M" is treated as all middle slices ([:]M),
+        compat_3x3: When True, bare "M" is treated as all middle slices (m),
             matching standard 3x3 notation where M = all middle slices.
             When False (default), bare "M" returns MiddleSliceAlg (single middle slice).
     """
@@ -334,11 +334,12 @@ def _token_to_alg(t: str, *, compat_3x3: bool = False) -> _Alg:
                 raise InternalSWError(f"[:-1] notation only supported for wide moves (Rw/r), got {base_alg}")
 
         if slice_spec is not None:
-            # If base_alg is a MiddleSliceAlg (e.g., M), swap to the sliceable MM
-            # so that [:]M, [1]M etc. work on the all-slices alg
+            # M/E/S (MiddleSliceAlg) is NOT sliceable — use lowercase m/e/s
             from cube.domain.algs.MiddleSliceAlg import MiddleSliceAlg
             if isinstance(base_alg, MiddleSliceAlg):
-                base_alg = base_alg.get_base_alg()
+                raise InternalSWError(
+                    f"'{base_alg._code}' is not sliceable — use lowercase '{base_alg._code.lower()}'"
+                )
 
             from cube.domain.algs.SliceAbleAlg import SliceAbleAlg
             if not isinstance(base_alg, SliceAbleAlg):
@@ -346,9 +347,8 @@ def _token_to_alg(t: str, *, compat_3x3: bool = False) -> _Alg:
             # [:]X means "all slices/layers"
             if isinstance(slice_spec, slice) and slice_spec.start is None and slice_spec.stop is None:
                 from cube.domain.algs.SliceAlg import SliceAlg
-                from cube.domain.algs.WideLayerAlg import WideLayerAlg
                 if isinstance(base_alg, SliceAlg):
-                    pass  # keep as-is: [:]M stays SliceAlg (already all slices)
+                    pass  # [:]m is redundant but harmless — already all slices
                 else:
                     base_alg = base_alg[:]  # FaceAlg: [:]R, WideLayerAlg: [:]Rw = all layers
             elif isinstance(slice_spec, slice):
@@ -356,20 +356,13 @@ def _token_to_alg(t: str, *, compat_3x3: bool = False) -> _Alg:
             else:
                 base_alg = base_alg[slice_spec]
 
-    # For bare SliceAlg tokens without explicit slice prefix (e.g., "M" not "[:]M"):
-    # - compat_3x3=True: keep as _M/_E/_S (all middle slices) — for 3x3 solver algs on big cubes
-    # - compat_3x3=False: M/E/S → MiddleSliceAlg (single middle slice)
-    if not had_slice_prefix:
-        from cube.domain.algs.SliceAlg import SliceAlg
-        if isinstance(base_alg, SliceAlg) and not compat_3x3:
+    # For bare uppercase M/E/S with compat_3x3: remap to all-slices (SliceAlg)
+    # because on 3x3, M = m (single slice = all slices)
+    if not had_slice_prefix and compat_3x3:
+        from cube.domain.algs.MiddleSliceAlg import MiddleSliceAlg
+        if isinstance(base_alg, MiddleSliceAlg):
             from cube.domain.algs.Algs import Algs
-            match base_alg.slice_name:
-                case SliceName.M:
-                    base_alg = Algs.M
-                case SliceName.E:
-                    base_alg = Algs.E
-                case SliceName.S:
-                    base_alg = Algs.S
+            base_alg = Algs.of_slice(base_alg._slice_name)
 
     # For bare WideLayerAlg tokens with default layers (e.g., "Rw", "r", "2Rw", "2r"):
     # - compat_3x3=True: swap to all-but-last (RRw/rr) for CFOP solver algs on big cubes
@@ -410,7 +403,12 @@ def _token_to_alg_no_slice(t: str) -> _Alg:
             if s.code.lower() == t:
                 return s
 
-    # Third pass: check if lowercase face letter should map to wide (r -> Rw)
+    # Third pass: lowercase slice names (m, e, s) → all-slices SliceAlg
+    _slice_map: dict[str, SliceName] = {"m": SliceName.M, "e": SliceName.E, "s": SliceName.S}
+    if t in _slice_map:
+        return Algs.of_slice(_slice_map[t])
+
+    # Fourth pass: check if lowercase face letter should map to wide (r -> Rw)
     # This is for backward compatibility, but only if not already matched
     # as WideLayerAlg in the first pass
     for s in simple:
