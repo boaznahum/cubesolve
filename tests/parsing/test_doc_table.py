@@ -91,7 +91,7 @@ DOC_ROWS: list[DocRow] = [
     # §4 Slice Moves
     DocRow("M: single center slice, like L",     Algs.M,                          "M",        "M",
            compat_3x3_parser_str="M", compat_3x3_expected_str="m"),
-    DocRow("m: ALL inner slices, like L",         Algs.MM,                         "m",        "m",
+    DocRow("m: ALL inner slices, like L",         Algs.m,                         "m",        "m",
            equivalent=Algs.parse("[1:1]m [2:2]m [3:3]m"), equiv_sizes=(5,)),
 
     # §5 Slice Range & Indexing
@@ -99,10 +99,10 @@ DOC_ROWS: list[DocRow] = [
            equivalent=Algs.parse("R 2R"), equiv_sizes=(3, 4, 5)),
     DocRow("[2:3]R: R layers 2–3 (no outer)",     Algs.R[2:3],                     "[2:3]R",   "[2:3]R", sizes=(5,),
            equivalent=Algs.parse("2R 3R"), equiv_sizes=(5,)),
-    DocRow("[1:1]m: 1st m slice only",            Algs.MM[1],                      "[1]m",     "[1:1]m"),
-    DocRow("[1:2]m: m slices 1–2",                Algs.MM[1:2],                    "[1:2]m",   "[1:2]m", sizes=(4, 5),
+    DocRow("[1:1]m: 1st m slice only",            Algs.m[1],                      "[1]m",     "[1:1]m"),
+    DocRow("[1:2]m: m slices 1–2",                Algs.m[1:2],                    "[1:2]m",   "[1:2]m", sizes=(4, 5),
            equivalent=Algs.parse("[1:1]m [2:2]m"), equiv_sizes=(4, 5)),
-    DocRow("[1:]m: all m slices from 1st",        Algs.MM[1:],                     "[1:]m",    "[1:]m"),
+    DocRow("[1:]m: all m slices from 1st",        Algs.m[1:],                     "[1:]m",    "[1:]m"),
 
     # §6 Whole Cube Rotations
     DocRow("X: rotate whole cube like R",         Algs.X,                          "X",        "X"),
@@ -183,11 +183,11 @@ class TestSpecialCases:
 
     def test_3x3_M_equals_MM(self) -> None:
         """On 3x3, single center M == all slices MM (only 1 inner slice)."""
-        assert_algs_equivalent(Algs.M, Algs.MM, 3)
+        assert_algs_equivalent(Algs.M, Algs.m, 3)
 
     def test_5x5_M_not_equals_MM(self) -> None:
         """On 5x5, single center M != all slices MM (3 inner slices)."""
-        assert_algs_equivalent(Algs.M, Algs.MM, 5, expect_equal=False)
+        assert_algs_equivalent(Algs.M, Algs.m, 5, expect_equal=False)
 
     # --- Size-dependent: clamping ---
 

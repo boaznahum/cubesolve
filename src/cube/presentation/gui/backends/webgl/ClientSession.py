@@ -1102,31 +1102,31 @@ class ClientSession:
 
         if face_name in (FaceName.F, FaceName.B):
             if face.is_bottom_or_top(part):
-                slice_alg_base = Algs.MM
+                slice_alg_base = Algs.m
                 neg_slice_index = face_name == FaceName.B
                 inv = face_name == FaceName.F
             else:
-                slice_alg_base = Algs.EE
+                slice_alg_base = Algs.e
                 neg_slice_index = False
         elif face_name in (FaceName.R, FaceName.L):
             if face.is_bottom_or_top(part):
-                slice_alg_base = Algs.SS
+                slice_alg_base = Algs.s
                 neg_slice_index = face_name == FaceName.L
                 inv = face_name == FaceName.R
             else:
-                slice_alg_base = Algs.EE
+                slice_alg_base = Algs.e
                 neg_slice_index = False
         elif face_name in (FaceName.U, FaceName.D):
             if face.is_bottom_or_top(part):
-                slice_alg_base = Algs.MM
+                slice_alg_base = Algs.m
                 neg_slice_index = False
                 inv = True
             else:
-                slice_alg_base = Algs.SS
+                slice_alg_base = Algs.s
                 neg_slice_index = face_name == FaceName.D
                 inv = face_name == FaceName.D
         else:
-            return Algs.MM
+            return Algs.m
 
         if not on_center:
             index = part.get_face_ltr_index_from_edge_slice_index(face, index)

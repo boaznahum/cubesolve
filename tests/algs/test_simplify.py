@@ -113,7 +113,7 @@ class TestFlatten:
     def test_flatten_slice_move(self):
         """Test flattening of slice moves."""
         cube_size = 5
-        alg = Algs.MM[2:2].prime * 2
+        alg = Algs.m[2:2].prime * 2
         _test_flatten(alg, cube_size)
 
     def test_flatten_complex_sequence(self):
@@ -126,8 +126,8 @@ class TestFlatten:
         c = 2
         cc = 4
 
-        rotate_on_cell = Algs.MM[inv(c) + 1:inv(c) + 1]
-        rotate_on_second = Algs.MM[inv(cc) + 1:inv(cc) + 1]
+        rotate_on_cell = Algs.m[inv(c) + 1:inv(c) + 1]
+        rotate_on_second = Algs.m[inv(cc) + 1:inv(cc) + 1]
 
         on_front_rotate = Algs.F.prime
 
@@ -171,7 +171,7 @@ class TestSimplifyFlatten:
         """Test simplify/flatten on complex sequences."""
         cube = Cube(6, sp=_test_sp)
 
-        alg = Algs.R[3:3] + Algs.D[3:4] + Algs.SS + Algs.L[2:2]
+        alg = Algs.R[3:3] + Algs.D[3:4] + Algs.s + Algs.L[2:2]
         _test_simplify_flatten(alg, cube.size)
 
         alg = Algs.B[5:5]
@@ -256,7 +256,7 @@ class TestDisjointSliceMerge:
     def test_disjoint_slice_alg_merge(self):
         """M[1]*1 + M[2]*1 -> M[1,2]*1 for slice algs."""
         cube_size = 7
-        alg = Algs.MM[1:1] + Algs.MM[2:2]
+        alg = Algs.m[1:1] + Algs.m[2:2]
         s = _test_simplify(alg, cube_size)
         assert s.count() == 1, f"Expected 1 move, got {s.count()}: {s}"
 
@@ -321,7 +321,7 @@ class TestDisjointSliceMerge:
         assert flat[0].n % 4 == 2, f"Expected n=2, got n={flat[0].n}"
 
         # Sliced slice alg: E[2:2]*2 should flatten to a single E[2:2]2
-        e_sliced_2 = Algs.EE[2:2] * 2
+        e_sliced_2 = Algs.e[2:2] * 2
         flat = list(e_sliced_2.flatten())
         assert len(flat) == 1, f"E[2:2]*2 flattened to {len(flat)} moves, expected 1"
         assert flat[0].n % 4 == 2, f"Expected n=2, got n={flat[0].n}"
@@ -354,7 +354,7 @@ class TestDisjointSliceMerge:
         _test_flatten(Algs.B * 2, cube_size)
 
         # Sliced: E[2:2]*2
-        _test_flatten(Algs.EE[2:2] * 2, cube_size)
+        _test_flatten(Algs.e[2:2] * 2, cube_size)
 
         # Sliced face: R[1:2]*2
         _test_flatten(Algs.R[1:2] * 2, cube_size)
@@ -367,11 +367,11 @@ class TestDisjointSliceMerge:
 
         # Complex sequence with _Mul inside
         alg = algs.SeqAlg(None,
-                          Algs.EE[2:2] * 2,
+                          Algs.e[2:2] * 2,
                           Algs.F,
-                          Algs.EE[3:3].prime * 2,
+                          Algs.e[3:3].prime * 2,
                           Algs.F.prime,
-                          Algs.EE[2:2].prime * 2,
+                          Algs.e[2:2].prime * 2,
                           Algs.F,
                           Algs.B.prime * 2,
                           Algs.B * 2)

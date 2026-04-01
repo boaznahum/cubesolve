@@ -38,7 +38,7 @@ class Algs:
     │  S   │  F ↔ B     │  U, R, D, L    │ Like F (clockwise when viewing F)     │
     └──────┴────────────┴────────────────┴───────────────────────────────────────┘
 
-    API: Algs.MM.get_face_name() → L, Algs.EE.get_face_name() → D, Algs.SS.get_face_name() → F
+    API: Algs.m.get_face_name() → L, Algs.e.get_face_name() → D, Algs.s.get_face_name() → F
 
     Slice Traversal (content movement during rotation):
         M: F → U → B → D → F  (vertical cycle, like L rotation)
@@ -131,17 +131,14 @@ class Algs:
     # =========================================================================
     # SLICE_ROTATION_FACE defines which slices exist (M, E, S).
     # SliceBaseAlgs is the canonical collection, built from that axiom.
-    # MM/EE/SS are convenience aliases into the same objects.
+    # m/e/s = all inner slices (lowercase, standard Twizzle notation)
+    # M/E/S = single center slice (uppercase, MiddleSliceAlg)
     # =========================================================================
     SliceBaseAlgs: Sequence[SliceAlg] = [SliceAlg(sn) for sn in SLICE_ROTATION_FACE]
     _slice_by_name: dict[SliceName, SliceAlg] = {a._slice_name: a for a in SliceBaseAlgs}
-    MM: SliceAlg = _slice_by_name[SliceName.M]
-    EE: SliceAlg = _slice_by_name[SliceName.E]
-    SS: SliceAlg = _slice_by_name[SliceName.S]
-    # Lowercase aliases — standard notation for all inner slices (str() = "m"/"e"/"s")
-    m: SliceAlg = MM
-    e: SliceAlg = EE
-    s: SliceAlg = SS
+    m: SliceAlg = _slice_by_name[SliceName.M]
+    e: SliceAlg = _slice_by_name[SliceName.E]
+    s: SliceAlg = _slice_by_name[SliceName.S]
     M = MiddleSliceAlg(SliceName.M)
     E = MiddleSliceAlg(SliceName.E)
     S = MiddleSliceAlg(SliceName.S)

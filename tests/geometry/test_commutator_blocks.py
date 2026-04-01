@@ -346,7 +346,7 @@ class TestBlockSearching:
         cube = app.cube
 
         # Do a simple move that affects centers
-        app.op.play(Algs.MM)
+        app.op.play(Algs.m)
 
         comm_helper = get_new_comm_helper(app)
 

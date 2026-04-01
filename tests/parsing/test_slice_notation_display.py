@@ -16,13 +16,13 @@ class TestSliceNotationDisplay:
 
     def test_slice_alg_shows_single_slice(self):
         """M[1] must NOT display as 'M' since M ≠ M[1]."""
-        assert str(Algs.MM[1]) != str(Algs.MM)
-        assert "1" in str(Algs.MM[1])
+        assert str(Algs.m[1]) != str(Algs.m)
+        assert "1" in str(Algs.m[1])
 
     def test_all_slice_algs_show_single_slice(self):
         """E[1] and S[1] should also show the slice index."""
-        assert str(Algs.EE[1]) != str(Algs.EE)
-        assert str(Algs.SS[1]) != str(Algs.SS)
+        assert str(Algs.e[1]) != str(Algs.e)
+        assert str(Algs.s[1]) != str(Algs.s)
 
 
 class TestSliceNotationParsing:
@@ -36,11 +36,11 @@ class TestSliceNotationParsing:
 
     def test_parse_slice_alg_round_trip(self):
         """parse(str(MM[1])) should give back MM[1], not MM."""
-        m1 = Algs.MM[1]
+        m1 = Algs.m[1]
         m1_str = str(m1)
         parsed = Algs.parse(m1_str)
         assert str(parsed) == m1_str
-        assert str(parsed) != str(Algs.MM)
+        assert str(parsed) != str(Algs.m)
 
 
 # =============================================================================
@@ -52,25 +52,25 @@ class TestDiscontinuedSliceDisplay:
 
     def test_sequence_compressed_to_ranges(self):
         """[1,2,4,5,6] should display as [1:2,4:6]M."""
-        alg = Algs.MM[[1, 2, 4, 5, 6]]
+        alg = Algs.m[[1, 2, 4, 5, 6]]
         s = str(alg)
         assert "[1:2,4:6]" in s
 
     def test_non_consecutive_stays_individual(self):
         """[1,3,5] should display as [1,3,5]M."""
-        alg = Algs.MM[[1, 3, 5]]
+        alg = Algs.m[[1, 3, 5]]
         s = str(alg)
         assert "[1,3,5]" in s
 
     def test_full_consecutive_becomes_range(self):
         """[1,2,3] should display as [1:3]M."""
-        alg = Algs.MM[[1, 2, 3]]
+        alg = Algs.m[[1, 2, 3]]
         s = str(alg)
         assert "[1:3]" in s
 
     def test_mixed_singles_and_ranges(self):
         """[1,3,4,5,7] should display as [1,3:5,7]M."""
-        alg = Algs.MM[[1, 3, 4, 5, 7]]
+        alg = Algs.m[[1, 3, 4, 5, 7]]
         s = str(alg)
         assert "[1,3:5,7]" in s
 
@@ -82,7 +82,7 @@ class TestDiscontinuedSliceDisplay:
 
 
 # All sliceable algs to test
-_SLICE_ALGS = [Algs.MM, Algs.EE, Algs.SS]
+_SLICE_ALGS = [Algs.m, Algs.e, Algs.s]
 _FACE_ALGS = [Algs.R, Algs.L, Algs.U, Algs.D, Algs.F, Algs.B]
 # All modifier forms: identity, prime, double
 _FORMS = ["", "'", "2"]

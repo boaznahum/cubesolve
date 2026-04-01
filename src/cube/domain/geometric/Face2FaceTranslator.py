@@ -45,7 +45,7 @@ SLICE DEFINITIONS:
     │  S   │  F ↔ B     │  U, R, D, L    │ Like F (clockwise when viewing F)     │
     └──────┴────────────┴────────────────┴───────────────────────────────────────┘
 
-    API: Algs.MM.get_face_name() → L, Algs.EE.get_face_name() → D, Algs.SS.get_face_name() → F
+    API: Algs.m.get_face_name() → L, Algs.e.get_face_name() → D, Algs.s.get_face_name() → F
 
 SLICE TRAVERSAL (content movement during rotation):
     M: F → U → B → D → F  (vertical cycle, like L rotation)
