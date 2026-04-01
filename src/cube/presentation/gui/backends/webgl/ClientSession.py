@@ -977,7 +977,7 @@ class ClientSession:
 
     def _handle_mouse_face_turn(
         self, face_name: str, row: int, col: int,
-        si: int, sx: int, sy: int,
+        si: int, _sx: int, _sy: int,
         on_left_to_right: float, on_left_to_top: float,
     ) -> None:
         """Handle mouse face turn with consistent row/column rotation rules.
