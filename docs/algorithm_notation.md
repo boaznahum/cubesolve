@@ -508,7 +508,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <th colspan="4">Ours</th>
 </tr>
 <tr>
-  <th><a href="https://alpha.twizzle.net/edit/">Twizzle</a></th>
+  <th style="min-width:120px"><a href="https://alpha.twizzle.net/edit/">Twizzle</a></th>
   <th><a href="https://mzrg.com/rubik/nota.shtml">MZRG</a></th>
   <th><a href="https://www.speedsolving.com/wiki/index.php?title=NxNxN_Notation">SS Wiki</a></th>
   <th>Code</th>
