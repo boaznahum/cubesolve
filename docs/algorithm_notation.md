@@ -659,67 +659,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>✅ <code>"m"</code></td>
   <td>same</td>
 </tr>
-<!-- ═══════════════════ 5. Slice Range & Indexing ═══════════════════ -->
-<tr style="border-top:2px solid #888;"><td></td><td style="font-weight:bold;">Slice Range &amp; Indexing (ours only)</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr>
-  <td>16</td>
-  <td>Turn R face + 1st inner slice (= Rw)</td>
-  <td>—</td>
-  <td>—</td>
-  <td>—</td>
-  <td><code>Algs.R[1:2]</code></td>
-  <td><code>[1:2]R</code></td>
-  <td><code>"[1:2]R"</code></td>
-  <td>same</td>
-</tr>
-<tr>
-  <td>17</td>
-  <td>Turn R layers 2–3 (no outer face)<br>
-      <em>5×5+: 2 inner slices</em></td>
-  <td>—</td>
-  <td>—</td>
-  <td>—</td>
-  <td><code>Algs.R[2:3]</code></td>
-  <td><code>[2:3]R</code></td>
-  <td><code>"[2:3]R"</code></td>
-  <td>same</td>
-</tr>
-<tr>
-  <td>18</td>
-  <td>Turn 1st m slice only (closest to L)</td>
-  <td>—</td>
-  <td>—</td>
-  <td>—</td>
-  <td><code>Algs.m[1]</code></td>
-  <td><code>[1:1]m</code></td>
-  <td><code>"[1]m"</code></td>
-  <td>same</td>
-</tr>
-<tr>
-  <td>19</td>
-  <td>Turn m slices 1–2<br>
-      <em>4×4+: 2 slices</em></td>
-  <td>—</td>
-  <td>—</td>
-  <td>—</td>
-  <td><code>Algs.m[1:2]</code></td>
-  <td><code>[1:2]m</code></td>
-  <td><code>"[1:2]m"</code></td>
-  <td>same</td>
-</tr>
-<tr>
-  <td>20</td>
-  <td>Turn all m slices from 1st to last<br>
-      <em>= m, all inner slices</em></td>
-  <td>—</td>
-  <td>—</td>
-  <td>—</td>
-  <td><code>Algs.m[1:]</code></td>
-  <td><code>[1:]m</code></td>
-  <td><code>"[1:]m"</code></td>
-  <td>same</td>
-</tr>
-<!-- ═══════════════════ 6. Whole Cube Rotations ═══════════════════ -->
+<!-- ═══════════════════ 5. Whole Cube Rotations ═══════════════════ -->
 <tr style="border-top:2px solid #888;"><td></td><td style="font-weight:bold;">Whole Cube Rotations<sup>⑤</sup></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
 <tr>
   <td>21</td>
