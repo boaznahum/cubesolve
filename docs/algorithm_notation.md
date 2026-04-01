@@ -686,37 +686,37 @@ At play time, `_effective_layers(cube)` computes the actual count:
 </tr>
 <tr>
   <td>18</td>
-  <td>Turn 1st M slice only (closest to L)</td>
+  <td>Turn 1st m slice only (closest to L)</td>
   <td>—</td>
   <td>—</td>
   <td>—</td>
   <td><code>Algs.m[1]</code></td>
-  <td><code>[1:1]M</code></td>
-  <td><code>"[1]M"</code></td>
+  <td><code>[1:1]m</code></td>
+  <td><code>"[1]m"</code></td>
   <td>same</td>
 </tr>
 <tr>
   <td>19</td>
-  <td>Turn M slices 1–2<br>
+  <td>Turn m slices 1–2<br>
       <em>4×4+: 2 slices</em></td>
   <td>—</td>
   <td>—</td>
   <td>—</td>
   <td><code>Algs.m[1:2]</code></td>
-  <td><code>[1:2]M</code></td>
-  <td><code>"[1:2]M"</code></td>
+  <td><code>[1:2]m</code></td>
+  <td><code>"[1:2]m"</code></td>
   <td>same</td>
 </tr>
 <tr>
   <td>20</td>
-  <td>Turn all M slices from 1st to last<br>
+  <td>Turn all m slices from 1st to last<br>
       <em>= m, all inner slices</em></td>
   <td>—</td>
   <td>—</td>
   <td>—</td>
   <td><code>Algs.m[1:]</code></td>
-  <td><code>[1:]M</code></td>
-  <td><code>"[1:]M"</code></td>
+  <td><code>[1:]m</code></td>
+  <td><code>"[1:]m"</code></td>
   <td>same</td>
 </tr>
 <!-- ═══════════════════ 6. Whole Cube Rotations ═══════════════════ -->
