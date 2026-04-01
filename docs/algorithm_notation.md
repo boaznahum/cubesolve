@@ -614,12 +614,12 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>Turn n outermost R-side layers<br>
       <em>n=2 default, ≡ <code>R[:n]</code></em></td>
   <td>✅ <code>Rw</code>, <code>r</code><br>✅ <code>3Rw</code>, <code>3r</code></td>
-  <td><code>r</code>, <code>3r</code><sup>③</sup></td>
+  <td><code>r</code>, <code>3r</code><b>[3]</b></td>
   <td><code>Rw</code>/<code>r</code><br><code>3Rw</code>/<code>3r</code></td>
   <td><code>Algs.Rw</code>, <code>Algs.r</code><br><code>3 * Algs.Rw</code>, <code>3 * Algs.r</code><br><code>Algs.R[:2]</code>, <code>Algs.R[:3]</code><br><code>Algs.r[:2]</code>, <code>Algs.r[:3]</code></td>
   <td><code>Rw</code>, <code>r</code><br><code>3Rw</code>, <code>3r</code><br><code>[1:2]R</code>, <code>[1:3]R</code></td>
   <td>✅ <code>"Rw"</code>, <code>"r"</code><br>✅ <code>"3Rw"</code>, <code>"3r"</code><br>✅ <code>"[:2]R"</code>, <code>"[:3]R"</code><br>✅ <code>"[:2]r"</code> → <code>[1:2]R</code><br>✅ <code>"[:3]r"</code> → <code>[1:3]R</code><br>✅ <code>"1-3R"</code></td>
-  <td>⚠ <code>Rw</code>/<code>r</code>:<br>see RRw in next row<sup>④</sup></td>
+  <td>⚠ <code>Rw</code>/<code>r</code>:<br>see RRw in next row<b>[4]</b></td>
 </tr>
 <tr>
   <td>13</td>
@@ -640,19 +640,19 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>Turn single center slice between L&amp;R, like L<br>
       <em>3×3: 1 slice · 4×4: N/A · 5×5: 1 slice</em></td>
   <td>✅ <code>M</code><br><em>odd only</em></td>
-  <td>—<sup>①</sup></td>
+  <td>—<b>[1]</b></td>
   <td><code>M</code></td>
   <td><code>Algs.M</code></td>
   <td><code>M</code></td>
   <td><code>"M"</code></td>
-  <td>⚠ ≡ <code>Algs.m</code><sup>②</sup></td>
+  <td>⚠ ≡ <code>Algs.m</code><b>[2]</b></td>
 </tr>
 <tr>
   <td>15</td>
   <td>Turn ALL inner slices between L&amp;R, like L<br>
       <em>3×3: 1 · 4×4: 2 · 5×5: 3 slices</em></td>
   <td>✅ <code>m</code><br><em>odd only</em></td>
-  <td><code>M</code><sup>①</sup></td>
+  <td><code>M</code><b>[1]</b></td>
   <td>—</td>
   <td><code>Algs.m</code></td>
   <td><code>m</code></td>
@@ -698,10 +698,10 @@ At play time, `_effective_layers(cube)` computes the actual count:
 
 **Notes:**
 
-<sup>①</sup> MZRG defines `M` as ALL inner slices (portable across sizes), not single center.<br>
-<sup>②</sup> In `compat_3x3` mode, `parse("M")` → all-slices (`m`), so 3×3 algs work on bigger cubes.<br>
-<sup>③</sup> MZRG (SiGN) uses only lowercase for wide moves — no `Rw` form.<br>
-<sup>④</sup> In `compat_3x3` mode, `parse("Rw")`/`parse("r")`/`parse("3Rw")` → adaptive (`[:-1]Rw`/`[:-1]r`).
+<b>[1]</b> MZRG defines `M` as ALL inner slices (portable across sizes), not single center.<br>
+<b>[2]</b> In `compat_3x3` mode, `parse("M")` → all-slices (`m`), so 3×3 algs work on bigger cubes.<br>
+<b>[3]</b> MZRG (SiGN) uses only lowercase for wide moves — no `Rw` form.<br>
+<b>[4]</b> In `compat_3x3` mode, `parse("Rw")`/`parse("r")`/`parse("3Rw")` → adaptive (`[:-1]Rw`/`[:-1]r`).
 
 ---
 
