@@ -219,11 +219,11 @@ On any cube, `M` (uppercase) means the single center slice. Lowercase `m` means 
 | Notation | Code | Meaning | Sliceable |
 |----------|------|---------|-----------|
 | `M` | `Algs.M` | Single center slice (MiddleSliceAlg) | No |
-| `m` | `Algs.MM` / `Algs.m` | All inner slices (SliceAlg) | Yes |
+| `m` | `Algs.m` | All inner slices (SliceAlg) | Yes |
 | `E` | `Algs.E` | Single center slice | No |
-| `e` | `Algs.EE` / `Algs.e` | All inner slices | Yes |
+| `e` | `Algs.e` | All inner slices | Yes |
 | `S` | `Algs.S` | Single center slice | No |
-| `s` | `Algs.SS` / `Algs.s` | All inner slices | Yes |
+| `s` | `Algs.s` | All inner slices | Yes |
 
 ---
 
@@ -654,7 +654,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td><code>m</code> (lowercase)</td>
   <td><code>M</code><sup>①</sup></td>
   <td>—</td>
-  <td><code>Algs.MM</code> / <code>Algs.m</code></td>
+  <td><code>Algs.m</code></td>
   <td><code>m</code></td>
   <td>✅ <code>"m"</code></td>
   <td>same</td>
@@ -690,7 +690,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>—</td>
   <td>—</td>
   <td>—</td>
-  <td><code>Algs.MM[1]</code></td>
+  <td><code>Algs.m[1]</code></td>
   <td><code>[1:1]M</code></td>
   <td><code>"[1]M"</code></td>
   <td>same</td>
@@ -702,7 +702,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>—</td>
   <td>—</td>
   <td>—</td>
-  <td><code>Algs.MM[1:2]</code></td>
+  <td><code>Algs.m[1:2]</code></td>
   <td><code>[1:2]M</code></td>
   <td><code>"[1:2]M"</code></td>
   <td>same</td>
@@ -714,7 +714,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>—</td>
   <td>—</td>
   <td>—</td>
-  <td><code>Algs.MM[1:]</code></td>
+  <td><code>Algs.m[1:]</code></td>
   <td><code>[1:]M</code></td>
   <td><code>"[1:]M"</code></td>
   <td>same</td>
