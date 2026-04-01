@@ -578,7 +578,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
 <tr>
   <td>8</td>
   <td>Turn all slices from nth to last</td>
-  <td><span style="color:green;font-size:1.3em">≈</span> <code>x 1-2r'</code><br><code>x 1-2R'</code><br><code>x 2Rw'</code></td>
+  <td><span style="color:#00aa00;font-size:1.4em;font-weight:bold">≈</span> <code>x 1-2r'</code><br><code>x 1-2R'</code><br><code>x 2Rw'</code></td>
   <td>—</td>
   <td>—</td>
   <td><code>Algs.R[3:]</code><br><code>Algs.r[3:]</code></td>
@@ -589,7 +589,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
 <tr>
   <td>9</td>
   <td>Turn ALL R layers (≡ X, whole cube like R)</td>
-  <td><span style="color:green;font-size:1.3em">≈</span> <code>x</code></td>
+  <td><span style="color:#00aa00;font-size:1.4em;font-weight:bold">≈</span> <code>x</code></td>
   <td><code>x</code></td>
   <td><code>x</code></td>
   <td>✅ <code>Algs.X</code><br>
@@ -625,7 +625,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>13</td>
   <td>Turn all layers except opposite face (adaptive)<br>
       <em>3×3: 2 · 4×4: 3 · 5×5: 4 · NxN: N−1</em></td>
-  <td><span style="color:green;font-size:1.3em">≈</span> <code>x L</code></td>
+  <td><span style="color:#00aa00;font-size:1.4em;font-weight:bold">≈</span> <code>x L</code></td>
   <td>—</td>
   <td>—</td>
   <td><code>Algs.RRw</code> / <code>Algs.rr</code></td>
