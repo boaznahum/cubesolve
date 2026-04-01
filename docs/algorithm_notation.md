@@ -639,7 +639,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>14</td>
   <td>Turn single center slice between L&amp;R, like L<br>
       <em>3×3: 1 slice · 4×4: N/A · 5×5: 1 slice</em></td>
-  <td>✅ <code>M</code></td>
+  <td>✅ <code>M</code><br><em>odd only</em></td>
   <td>—<sup>①</sup></td>
   <td><code>M</code></td>
   <td><code>Algs.M</code></td>
@@ -651,7 +651,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>15</td>
   <td>Turn ALL inner slices between L&amp;R, like L<br>
       <em>3×3: 1 · 4×4: 2 · 5×5: 3 slices</em></td>
-  <td>✅ <code>m</code></td>
+  <td>✅ <code>m</code><br><em>odd only</em></td>
   <td><code>M</code><sup>①</sup></td>
   <td>—</td>
   <td><code>Algs.m</code></td>
