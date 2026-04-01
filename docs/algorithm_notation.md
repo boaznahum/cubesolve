@@ -645,7 +645,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td><code>Algs.M</code></td>
   <td><code>M</code></td>
   <td><code>"M"</code></td>
-  <td>⚠ ≡ <code>Algs.MM</code><sup>②</sup></td>
+  <td>⚠ ≡ <code>Algs.m</code><sup>②</sup></td>
 </tr>
 <tr>
   <td>15</td>
