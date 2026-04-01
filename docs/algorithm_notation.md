@@ -660,7 +660,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>same</td>
 </tr>
 <!-- ═══════════════════ 5. Whole Cube Rotations ═══════════════════ -->
-<tr style="border-top:2px solid #888;"><td></td><td style="font-weight:bold;">Whole Cube Rotations<sup>⑤</sup></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr style="border-top:2px solid #888;"><td></td><td style="font-weight:bold;">Whole Cube Rotations</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
 <tr>
   <td>21</td>
   <td>Rotate whole cube like R</td>
@@ -701,13 +701,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
 <sup>①</sup> MZRG defines `M` as ALL inner slices (portable across sizes), not single center.<br>
 <sup>②</sup> In `compat_3x3` mode, `parse("M")` → all-slices (`m`), so 3×3 algs work on bigger cubes.<br>
 <sup>③</sup> MZRG (SiGN) uses only lowercase for wide moves — no `Rw` form.<br>
-<sup>④</sup> In `compat_3x3` mode, `parse("Rw")`/`parse("r")`/`parse("3Rw")` → adaptive (`[:-1]Rw`/`[:-1]r`).<br>
-<sup>⑤</sup> Standards use lowercase `x`/`y`/`z`. Our parser accepts uppercase `X`/`Y`/`Z`.<br>
-❌<sup>⑥</sup> In standard notation, `3Rw` on a 3×3 is an error (only 2 non-opposite layers exist). Our implementation clamps to `min(3, size-1)` = 2 layers, equivalent to `Rw`.<br>
-✅<sup>⑦</sup> Parser now supports SiGN range syntax (`3-4R`, `3-4Rw`, `3-4r`) — equivalent to bracket `[3:4]R`.<br>
-✅<sup>⑧</sup> Bracket slicing on wide moves (`[3:4]Rw`, `[3:4]r`) now works — produces same result as `[3:4]R` (wide distinction irrelevant with explicit layers).<br>
-✅<sup>⑨</sup> `[3:4]R` on 4×4 now works — spans to opposite face (layer 4 = L face rotated in R direction = L').<br>
-✅<sup>⑩</sup> `nR` where n = cube size now rotates the opposite face (e.g. `4R` on 4×4 ≡ `L'`). Tested for all 6 faces on 3×3, 4×4, 5×5.
+<sup>④</sup> In `compat_3x3` mode, `parse("Rw")`/`parse("r")`/`parse("3Rw")` → adaptive (`[:-1]Rw`/`[:-1]r`).
 
 ---
 
