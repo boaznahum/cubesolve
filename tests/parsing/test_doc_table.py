@@ -83,9 +83,9 @@ DOC_ROWS: list[DocRow] = [
     DocRow("3r: 3 outermost R-side layers",       3 * Algs.r, "3r", "3r",
            compat_3x3_parser_str="3r", compat_3x3_expected_str="3r",
            equivalent=Algs.parse("R 2R 3R"), equiv_sizes=(5,)),
-    DocRow("[:-1]Rw: all-but-last (adaptive)",    Algs.RRw,                        "[:-1]Rw",  "[:-1]Rw",
+    DocRow("[:-1]Rw: all-but-last (adaptive)",     Algs.Rw[:-1],  "[:-1]Rw",  "[:-1]Rw",
            equivalent=Algs.parse("R 2R 3R 4R"), equiv_sizes=(5,)),
-    DocRow("[:-1]r: all-but-last (adaptive)",     Algs.rr,                         "[:-1]r",   "[:-1]r",
+    DocRow("[:-1]r: all-but-last (adaptive)",     Algs.r[:-1],   "[:-1]r",   "[:-1]r",
            equivalent=Algs.parse("R 2R 3R 4R"), equiv_sizes=(5,)),
 
     # §4 Slice Moves
@@ -188,12 +188,12 @@ class TestSpecialCases:
     # --- Size-dependent: Rw vs adaptive ---
 
     def test_3x3_Rw_equals_adaptive(self) -> None:
-        """On 3x3, Rw (2 layers) == [:-1]Rw (also 2 layers)."""
-        assert_algs_equivalent(Algs.Rw, Algs.RRw, 3)
+        """On 3x3, Rw (2 layers) == Rw[:-1] (also 2 layers)."""
+        assert_algs_equivalent(Algs.Rw, Algs.Rw[:-1], 3)
 
     def test_5x5_Rw_not_equals_adaptive(self) -> None:
-        """On 5x5, Rw (2 layers) != [:-1]Rw (4 layers)."""
-        assert_algs_equivalent(Algs.Rw, Algs.RRw, 5, expect_equal=False)
+        """On 5x5, Rw (2 layers) != Rw[:-1] (4 layers)."""
+        assert_algs_equivalent(Algs.Rw, Algs.Rw[:-1], 5, expect_equal=False)
 
     # --- R[3:] Twizzle workaround equivalences ---
 
@@ -215,9 +215,19 @@ class TestSpecialCases:
     # --- [:-1]Rw Twizzle workaround equivalence ---
 
     @pytest.mark.parametrize("cube_size", [3, 4, 5])
-    def test_adaptive_Rw_equals_X_L(self, cube_size: int) -> None:
-        """[:-1]Rw == X L (whole cube R, then L puts opposite face back)."""
-        assert_algs_equivalent(Algs.RRw, Algs.X + Algs.L, cube_size)
+    def test_R_adaptive_equals_X_L(self, cube_size: int) -> None:
+        """R[:-1] == X L (all R layers except opposite face)."""
+        assert_algs_equivalent(Algs.R[:-1], Algs.X + Algs.L, cube_size)
+
+    @pytest.mark.parametrize("cube_size", [3, 4, 5])
+    def test_Rw_adaptive_equals_X_L(self, cube_size: int) -> None:
+        """Rw[:-1] == X L (same as R[:-1])."""
+        assert_algs_equivalent(Algs.Rw[:-1], Algs.X + Algs.L, cube_size)
+
+    @pytest.mark.parametrize("cube_size", [3, 4, 5])
+    def test_D_adaptive_equals_Y_prime_U(self, cube_size: int) -> None:
+        """D[:-1] == Y' U (all D layers except opposite face)."""
+        assert_algs_equivalent(Algs.D[:-1], Algs.Y.prime + Algs.U, cube_size)
 
     # --- Opposite face via inner slice indexing ---
 

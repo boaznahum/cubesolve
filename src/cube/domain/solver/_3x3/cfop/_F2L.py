@@ -2,7 +2,6 @@ import logging
 from enum import Enum
 
 from cube.domain.algs import Alg, Algs
-from cube.domain.algs.WideLayerAlg import ALL_BUT_LAST, WideLayerAlg
 from cube.domain.exceptions import InternalSWError
 from cube.domain.model import Color, Corner, Edge, Part
 from cube.domain.model.CubeQueries2 import Pred0
@@ -37,10 +36,13 @@ class F2L(SolverHelper):
 
     @staticmethod
     def _contains_wide_move(alg: Alg) -> bool:
-        """Check if the algorithm contains any all-but-last WideLayerAlg ([:-1]Rw, [:-1]r)."""
+        """Check if the algorithm contains any adaptive slice (e.g. R[:-1])."""
         from cube.domain.algs.SeqAlg import SeqAlg
-        if isinstance(alg, WideLayerAlg) and alg.layers == ALL_BUT_LAST:
-            return True
+        from cube.domain.algs.SlicedFaceAlg import SlicedFaceAlg
+        if isinstance(alg, SlicedFaceAlg):
+            s = alg.slices
+            if isinstance(s, slice) and s.stop is not None and s.stop < 0:
+                return True
         if isinstance(alg, SeqAlg):
             return any(F2L._contains_wide_move(a) for a in alg.algs)
         return False
@@ -383,11 +385,9 @@ class F2L(SolverHelper):
         R = Algs.R
         U = Algs.U
         U2 = U * 2
-        # Use adaptive wide move 'd' (lowercase) - moves D + all inner layers.
-        # This adapts to cube size at play time, so algorithms from shadow 3x3
-        # work correctly when applied to NxN cubes without breaking edge pairing.
-        # See WideLayerAlg.py for detailed explanation.
-        d = Algs.dd
+        # Adaptive wide D: [:-1]d — moves D + all inner layers.
+        # On 3x3 = Dw (2 layers), on NxN = N-1 layers.
+        dd = Algs.Dw[:-1]
 
         ################################################################
         # 1st: Easy cases: edge at top
@@ -467,7 +467,7 @@ class F2L(SolverHelper):
 
         elif e is u_right:
             if c_up_matches_right and e_up_matches_right:
-                alg = (R + U.p + R.p + U) + (d + R.p + U.p + R)
+                alg = (R + U.p + R.p + U) + (dd + R.p + U.p + R)
                 case4 = "1"
             elif c_up_matches_right and e_up_matches_front:
                 alg = (U.p + R + U.p + R.p + U) + (R + U + R.p)
@@ -482,7 +482,7 @@ class F2L(SolverHelper):
 
         elif e is u_bottom:
             if c_up_matches_front and e_up_matches_front:
-                alg = (F.p + U + F + U.p) + (d.p + F + U + F.p)
+                alg = (F.p + U + F + U.p) + (dd.p + F + U + F.p)
                 case4 = "2"
             elif c_up_matches_front and e_up_matches_right:
                 alg = (U + F.p + U + F + U.p) + (F.p + U.p + F)
@@ -623,8 +623,8 @@ class F2L(SolverHelper):
         R = Algs.R
         U = Algs.U
         U2 = U * 2
-        # Adaptive wide move - see comment in _4th_case_corner_edge_up
-        d = Algs.dd
+        # Adaptive wide D: [:-1]d — see comment in _4th_case_corner_edge_up
+        dd = Algs.Dw[:-1]
 
         e_front_c = e.get_face_edge(front).color
 
@@ -633,18 +633,18 @@ class F2L(SolverHelper):
             if e_front_c == f_color:
                 alg = (R + U + R.p + U.p) + (R + U + R.p + U.p) + (R + U + R.p)
             else:
-                alg = (R + U.p + R.p) + (d + R.p + U + R)
+                alg = (R + U.p + R.p) + (dd + R.p + U + R)
 
         elif c_front_color == f_color and c_up_color == r_color:  # white right
             if e_front_c == f_color:
                 alg = (U + F.p + U + F) + (U + F.p + U2 + F)
             else:
-                alg = (U + F.p + U.p + F) + (d.p + F + U + F.p)
+                alg = (U + F.p + U.p + F) + (dd.p + F + U + F.p)
         elif c_up_color == f_color and c_right_color == r_color:  # white front
             if e_front_c == f_color:
                 alg = (U.p + R + U.p + R.p) + (U.p + R + U2 + R.p)
             else:
-                alg = (U.p + R + U + R.p) + (d + R.p + U.p + R)
+                alg = (U.p + R + U + R.p) + (dd + R.p + U.p + R)
         else:
             raise NotImplementedError(
                 f"Unknown 3rd case: Corner in top, edge in middle {c.name} {e.name}")
@@ -775,8 +775,8 @@ class F2L(SolverHelper):
         R = Algs.R
         U = Algs.U
         U2 = U * 2
-        # Adaptive wide move - see comment in _4th_case_corner_edge_up
-        d = Algs.dd
+        # Adaptive wide D: [:-1]d — see comment in _4th_case_corner_edge_up
+        dd = Algs.Dw[:-1]
 
         c_front_color = c.get_face_edge(front).color
         c_right_color = c.get_face_edge(right).color
@@ -797,7 +797,7 @@ class F2L(SolverHelper):
         alg: Alg
         if c_front_matches_front and e_front_matches_right:
             case6 = "1"
-            alg = (R + U.p + R.p + d + R.p + U2 + R) + (U + R.p + U2 + R)
+            alg = (R + U.p + R.p + dd + R.p + U2 + R) + (U + R.p + U2 + R)
         elif c_front_matches_right and e_front_matches_front:
             case6 = "2"
             alg = (R + U.p + R.p + U + R + U2 + R.p) + (U + R + U.p + R.p)
@@ -806,10 +806,10 @@ class F2L(SolverHelper):
             alg = (R + U.p + R.p + U.p + R + U + R.p) + (U.p + R + U2 + R.p)
         elif c_front_matches_right and e_front_matches_right:
             case6 = "4"
-            alg = (R + U + R.p + U.p + R + U.p + R.p) + (U + d + R.p + U.p + R)
+            alg = (R + U + R.p + U.p + R + U.p + R.p) + (U + dd + R.p + U.p + R)
         elif c_right_matches_front and e_front_matches_right:
             case6 = "5"
-            alg = (R + U.p + R.p + d + R.p + U.p + R) + (U.p + R.p + U.p + R)
+            alg = (R + U.p + R.p + dd + R.p + U.p + R) + (U.p + R.p + U.p + R)
 
         else:
             raise InternalSWError(f"6th case: Unknown case, Corner in bottom, edge in middle, {c}, {e}")

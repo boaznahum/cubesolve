@@ -399,22 +399,7 @@ On bigger cubes, you need to move ALL inner layers together to preserve edge pai
 The `[:-1]` notation computes the layer count at play time, so the same algorithm
 works on any cube size.
 
-**Code:**
-
-| Notation | Code | Sugar | Notes |
-|----------|------|-------|-------|
-| `[:-1]Rw` | `Algs.RRw` | uppercase+w form | Used in commands/registry |
-| `[:-1]r` | `Algs.rr` | lowercase form | Used in CFOP solver (`Algs.dd`, etc.) |
-| `[:-1]Lw` | `Algs.LLw` | | |
-| `[:-1]l` | `Algs.ll` | | |
-| `[:-1]Uw` | `Algs.UUw` | | |
-| `[:-1]u` | `Algs.uu` | | |
-| `[:-1]Dw` | `Algs.DDw` | | |
-| `[:-1]d` | `Algs.dd` | | |
-| `[:-1]Fw` | `Algs.FFw` | | |
-| `[:-1]f` | `Algs.ff` | | |
-| `[:-1]Bw` | `Algs.BBw` | | |
-| `[:-1]b` | `Algs.bb` | | |
+**Code:** `Algs.Rw[:-1]`, `Algs.r[:-1]`, `Algs.Dw[:-1]`, etc. — works on any face via Python slicing.
 
 ### Parser: compat_3x3 Mode
 
@@ -628,7 +613,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td><span style="color:#00aa00;font-size:1.4em;font-weight:bold">≈</span> <code>x L</code></td>
   <td>—</td>
   <td>—</td>
-  <td><code>Algs.RRw</code> / <code>Algs.rr</code></td>
+  <td><code>Algs.Rw[:-1]</code> / <code>Algs.r[:-1]</code></td>
   <td><code>[:-1]Rw</code> / <code>[:-1]r</code></td>
   <td><code>"[:-1]Rw"</code> / <code>"[:-1]r"</code></td>
   <td>same</td>
