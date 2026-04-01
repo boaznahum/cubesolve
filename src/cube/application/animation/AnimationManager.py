@@ -181,7 +181,7 @@ def _op_and_play_animation(
         alg = _alg
 
     if not isinstance(alg, algs.AnimationAbleAlg):
-        vs.logger.debug(f"{alg} is not animation-able")
+        vs.logger.debug_lazy(lambda: f"{alg} is not animation-able")
         operator(alg, False)
         return
 
@@ -208,7 +208,7 @@ def _op_and_play_animation(
 
     # Skip animation for zero rotation
     if alg.n % 4 == 0:
-        vs.logger.debug(f"{alg} is zero rotating, can't animate")
+        vs.logger.debug_lazy(lambda: f"{alg} is zero rotating, can't animate")
         operator(alg, False)
         return
 
