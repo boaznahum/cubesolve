@@ -138,6 +138,10 @@ class Algs:
     MM: SliceAlg = _slice_by_name[SliceName.M]
     EE: SliceAlg = _slice_by_name[SliceName.E]
     SS: SliceAlg = _slice_by_name[SliceName.S]
+    # Lowercase aliases — standard notation for all inner slices (str() = "m"/"e"/"s")
+    m: SliceAlg = MM
+    e: SliceAlg = EE
+    s: SliceAlg = SS
     M = MiddleSliceAlg(SliceName.M)
     E = MiddleSliceAlg(SliceName.E)
     S = MiddleSliceAlg(SliceName.S)
@@ -196,15 +200,16 @@ class Algs:
         return SeqAlg(None, *algs)
 
     Simple: Sequence[NSimpleAlg] = [L, Lw,
-                                    R, Rw, X, *SliceBaseAlgs,
+                                    R, Rw, X,
                                     U, Uw, Y,
                                     F, Fw, Z,
                                     B, Bw,
                                     D, Dw,
                                     # Standard wide moves (lowercase form)
                                     f, u, r, l, d, b,
-                                    # WCA single middle slices
+                                    # Slice moves: M/E/S = single center, m/e/s = all inner
                                     M, E, S,
+                                    m, e, s,
                                     ]
 
     RU = SeqAlg("RU(top)", R, U, -R, U, R, U * 2, -R, U)

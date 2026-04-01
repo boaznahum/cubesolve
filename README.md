@@ -71,7 +71,7 @@ https://user-images.githubusercontent.com/3913990/172692615-eb9aacf8-bc06-4a95-9
     R, L, F, B, U, D - As usual - rotate faces
     X, Y, Z - Entire cube over R, U and F axes
     M, E, S - Single middle slice over L, D and F
-    [:]M, [:]E, [:]S - All middle slices (MM, EE, SS in code)
+    m, e, s - All middle slices (lowercase, MM/EE/SS in code)
     2F, 2R, 3R ... - Inner slice (SiGN standard: nth layer from face)
 
 According to: [Ruwix](https://ruwix.com/the-rubiks-cube/notation/advanced) and [cubing](https://alg.cubing.net/?alg=mx)

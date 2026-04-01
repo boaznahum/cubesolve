@@ -90,19 +90,19 @@ DOC_ROWS: list[DocRow] = [
 
     # §4 Slice Moves
     DocRow("M: single center slice, like L",     Algs.M,                          "M",        "M",
-           compat_3x3_parser_str="M", compat_3x3_expected_str="[:]M"),
-    DocRow("[:]M: ALL inner slices, like L",      Algs.MM,                         "[:]M",     "[:]M",
-           equivalent=Algs.parse("[1:1]M [2:2]M [3:3]M"), equiv_sizes=(5,)),
+           compat_3x3_parser_str="M", compat_3x3_expected_str="m"),
+    DocRow("m: ALL inner slices, like L",         Algs.MM,                         "m",        "m",
+           equivalent=Algs.parse("[1:1]m [2:2]m [3:3]m"), equiv_sizes=(5,)),
 
     # §5 Slice Range & Indexing
     DocRow("[1:2]R: R face + 1st inner (= Rw)",  Algs.R[1:2],                     "[1:2]R",   "[1:2]R",
            equivalent=Algs.parse("R 2R"), equiv_sizes=(3, 4, 5)),
     DocRow("[2:3]R: R layers 2–3 (no outer)",     Algs.R[2:3],                     "[2:3]R",   "[2:3]R", sizes=(5,),
            equivalent=Algs.parse("2R 3R"), equiv_sizes=(5,)),
-    DocRow("[1:1]M: 1st M slice only",            Algs.MM[1],                      "[1]M",     "[1:1]M"),
-    DocRow("[1:2]M: M slices 1–2",                Algs.MM[1:2],                    "[1:2]M",   "[1:2]M", sizes=(4, 5),
-           equivalent=Algs.parse("[1:1]M [2:2]M"), equiv_sizes=(4, 5)),
-    DocRow("[1:]M: all M slices from 1st",        Algs.MM[1:],                     "[1:]M",    "[1:]M"),
+    DocRow("[1:1]m: 1st m slice only",            Algs.MM[1],                      "[1]m",     "[1:1]m"),
+    DocRow("[1:2]m: m slices 1–2",                Algs.MM[1:2],                    "[1:2]m",   "[1:2]m", sizes=(4, 5),
+           equivalent=Algs.parse("[1:1]m [2:2]m"), equiv_sizes=(4, 5)),
+    DocRow("[1:]m: all m slices from 1st",        Algs.MM[1:],                     "[1:]m",    "[1:]m"),
 
     # §6 Whole Cube Rotations
     DocRow("X: rotate whole cube like R",         Algs.X,                          "X",        "X"),

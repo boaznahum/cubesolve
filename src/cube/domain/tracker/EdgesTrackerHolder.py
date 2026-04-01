@@ -34,6 +34,8 @@ from __future__ import annotations
 from types import TracebackType
 from typing import TYPE_CHECKING
 
+from cube.domain.model.EdgesColorsProvider import EdgesColorsProvider
+
 from cube.domain.exceptions import InternalSWError
 from cube.domain.model.Color import Color
 from cube.domain.model.PartEdge import PartEdge
@@ -47,7 +49,7 @@ if TYPE_CHECKING:
 _EDGES_TRACKER_PREFIX = "_edges_track:"
 
 
-class EdgesTrackerHolder:
+class EdgesTrackerHolder(EdgesColorsProvider):
     """Tracks assigned edge colors through cube rotations via PartEdge markers.
 
     Places one marker per edge on a representative PartEdge. The marker value
@@ -96,6 +98,7 @@ class EdgesTrackerHolder:
             (found_pe, (my_color, other_color)) where my_color is for found_pe.face
         """
         # Check cache
+        #claude you dont need it, cube.domain.model.Cube.Cube.mutation_cache does the work
         current_counter = self._cube._modify_counter
         if self._cache_modify_counter == current_counter:
             cached = self._cache.get(edge._name)
