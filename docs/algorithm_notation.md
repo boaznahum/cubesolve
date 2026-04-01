@@ -521,7 +521,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
 <tr>
   <td>1</td>
   <td>Turn outermost R layer CW</td>
-  <td><code>R</code></td>
+  <td>✅ <code>R</code></td>
   <td><code>R</code></td>
   <td><code>R</code></td>
   <td><code>Algs.R</code></td>
@@ -532,7 +532,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
 <tr>
   <td>2</td>
   <td>Turn outermost R layer CCW</td>
-  <td><code>R'</code></td>
+  <td>✅ <code>R'</code></td>
   <td><code>R'</code></td>
   <td><code>R'</code></td>
   <td><code>Algs.R.prime</code></td>
@@ -543,7 +543,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
 <tr>
   <td>3</td>
   <td>Turn outermost R layer 180°</td>
-  <td><code>R2</code></td>
+  <td>✅ <code>R2</code></td>
   <td><code>R2</code></td>
   <td><code>R2</code></td>
   <td><code>Algs.R * 2</code></td>
@@ -556,7 +556,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
 <tr>
   <td>4</td>
   <td>Turn only the nth inner slice from R<br>(can span)</td>
-  <td><code>2R</code>, <code>3R</code></td>
+  <td>✅ <code>2R</code>, <code>3R</code></td>
   <td><code>2R</code>, <code>3R</code></td>
   <td>—</td>
   <td><code>2 * Algs.R</code>, <code>3 * Algs.R</code><br><code>Algs.R[2]</code>, <code>Algs.R[3]</code><br><code>Algs.R[2:2]</code>, <code>Algs.R[3:3]</code></td>
@@ -589,7 +589,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
 <tr>
   <td>9</td>
   <td>Turn ALL R layers (≡ X, whole cube like R)</td>
-  <td><code>x</code></td>
+  <td><span style="color:green;font-size:1.3em">≈</span> <code>x</code></td>
   <td><code>x</code></td>
   <td><code>x</code></td>
   <td>✅ <code>Algs.X</code><br>
@@ -664,7 +664,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
 <tr>
   <td>21</td>
   <td>Rotate whole cube like R</td>
-  <td><code>x</code></td>
+  <td>✅ <code>x</code></td>
   <td><code>x</code></td>
   <td><code>x</code></td>
   <td><code>Algs.X</code></td>
@@ -675,7 +675,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
 <tr>
   <td>22</td>
   <td>Rotate whole cube like U</td>
-  <td><code>y</code></td>
+  <td>✅ <code>y</code></td>
   <td><code>y</code></td>
   <td><code>y</code></td>
   <td><code>Algs.Y</code></td>
@@ -686,7 +686,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
 <tr>
   <td>23</td>
   <td>Rotate whole cube like F</td>
-  <td><code>z</code></td>
+  <td>✅ <code>z</code></td>
   <td><code>z</code></td>
   <td><code>z</code></td>
   <td><code>Algs.Z</code></td>
