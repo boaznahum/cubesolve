@@ -1153,6 +1153,8 @@ class ClientSession:
         face_map: dict[str, str] = {
             "R": "R", "L": "L", "U": "U", "D": "D", "F": "F", "B": "B",
             "M": "M", "E": "E", "S": "S",
+            # All-inner-slices (lowercase m/e/s) map to same axis as uppercase
+            "m": "M", "e": "E", "s": "S",
             "x": "x", "y": "y", "z": "z",
             "X": "x", "Y": "y", "Z": "z",
             # Wide face moves use lowercase face letters
