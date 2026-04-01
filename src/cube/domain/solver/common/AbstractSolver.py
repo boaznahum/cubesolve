@@ -153,7 +153,7 @@ class AbstractSolver(Solver, ABC):
 
     def _delegate_to_2x2(self, what: SolveStep) -> SolverResults:
         solver_2x2 = self._get_2x2_delegate()
-        self._logger.log_lazy(logging.DEBUG, "Delegating to 2x2 solver")
+        self._logger.log(logging.DEBUG, "Delegating to 2x2 solver")
         return solver_2x2.solve(
             debug=self._debug_override,
             animation=None,
@@ -174,11 +174,11 @@ class AbstractSolver(Solver, ABC):
         if stats.is_empty():
             return
         my_prefix: str = self._logger.name.split(".")[-1] + ":"
-        self._logger.log_lazy(logging.DEBUG, "[Solver Statistics]")
+        self._logger.log(logging.DEBUG, "[Solver Statistics]")
         for topic_name, lines in stats.format_all(strip_prefix=my_prefix):
             for line in lines:
                 self._logger.log_lazy(logging.DEBUG, lambda: f"  [{topic_name}] {line}")
-        self._logger.log_lazy(logging.DEBUG, "==== End of Solver Statistics ===========")
+        self._logger.log(logging.DEBUG, "==== End of Solver Statistics ===========")
 
 
     def _run_child_solver(self, child: Solver, what: SolveStep) -> SolverResults:

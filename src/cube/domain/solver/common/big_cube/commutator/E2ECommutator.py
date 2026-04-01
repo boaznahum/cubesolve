@@ -68,7 +68,7 @@ class E2ECommutator(SolverHelper):
             self._logger.log_lazy(logging.DEBUG, lambda: f"face_column_on_source_edge: {face_column_on_source_edge}")
 
             if required_source_wing_face_column_index != face_column_on_source_edge:
-                self._logger.log_lazy(logging.DEBUG, lambda: "❌❌ Source index and target don't match")
+                self._logger.log(logging.DEBUG, "❌❌ Source index and target don't match")
                 assert source_wing is not None, "We calculate it it must be equal"
                 return False  # can't perform
 
