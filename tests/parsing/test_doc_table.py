@@ -212,6 +212,13 @@ class TestSpecialCases:
         """R[3:] == X 1-2R' (SiGN range)."""
         assert_algs_equivalent(Algs.R[3:], Algs.X + Algs.parse("1-2R'"), cube_size)
 
+    # --- [:-1]Rw Twizzle workaround equivalence ---
+
+    @pytest.mark.parametrize("cube_size", [3, 4, 5])
+    def test_adaptive_Rw_equals_X_L(self, cube_size: int) -> None:
+        """[:-1]Rw == X L (whole cube R, then L puts opposite face back)."""
+        assert_algs_equivalent(Algs.RRw, Algs.X + Algs.L, cube_size)
+
     # --- Opposite face via inner slice indexing ---
 
     # --- Opposite face via inner slice indexing (all faces) ---

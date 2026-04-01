@@ -625,7 +625,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>13</td>
   <td>Turn all layers except opposite face (adaptive)<br>
       <em>3×3: 2 · 4×4: 3 · 5×5: 4 · NxN: N−1</em></td>
-  <td>—</td>
+  <td><span style="color:green;font-size:1.3em">≈</span> <code>x L</code></td>
   <td>—</td>
   <td>—</td>
   <td><code>Algs.RRw</code> / <code>Algs.rr</code></td>
