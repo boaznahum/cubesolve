@@ -78,6 +78,11 @@ class FaceAlgBase(AnimationAbleAlg, ABC):
             if start is None and stop is None:
                 return "[:]" + s
 
+            # Negative stop: [:-1], [:-2], [2:-1], etc.
+            if stop is not None and stop < 0:
+                start_str = str(start) if start is not None else ""
+                return "[" + start_str + ":" + str(stop) + "]" + s
+
             # Hide [1:1] for FaceAlg (R = R[1]), but show for SliceAlg (M ≠ M[1])
             if self._hide_single_slice and 1 == start and 1 == stop:
                 return s
@@ -149,6 +154,14 @@ class FaceAlgBase(AnimationAbleAlg, ABC):
             # Resolve None to boundaries: None start → 1, None stop → n_max
             _start = start if start is not None else 1
             _stop = stop if stop is not None else n_max
+
+            # Resolve negative indices like Python: -1 → last, -2 → second-to-last.
+            # In our 1-based inclusive system: [:-1] means "up to but not including last".
+            # So -1 → n_max - 1 (exclude last), -2 → n_max - 2, etc.
+            if _start < 0:
+                _start = n_max + _start + 1
+            if _stop < 0:
+                _stop = n_max + _stop
 
             assert _start >= 1, f"Slice start must be >= 1, got {_start}"
             assert _stop >= _start, f"Slice stop {_stop} < start {_start}"

@@ -116,18 +116,18 @@ class Commands:
     # =========================================================================
     # WIDE ROTATIONS
     # =========================================================================
-    ROTATE_RW = RotateWideCommand(Algs.RRw, False)
-    ROTATE_RW_PRIME = RotateWideCommand(Algs.RRw, True)
-    ROTATE_LW = RotateWideCommand(Algs.LLw, False)
-    ROTATE_LW_PRIME = RotateWideCommand(Algs.LLw, True)
-    ROTATE_UW = RotateWideCommand(Algs.UUw, False)
-    ROTATE_UW_PRIME = RotateWideCommand(Algs.UUw, True)
-    ROTATE_DW = RotateWideCommand(Algs.DDw, False)
-    ROTATE_DW_PRIME = RotateWideCommand(Algs.DDw, True)
-    ROTATE_FW = RotateWideCommand(Algs.FFw, False)
-    ROTATE_FW_PRIME = RotateWideCommand(Algs.FFw, True)
-    ROTATE_BW = RotateWideCommand(Algs.BBw, False)
-    ROTATE_BW_PRIME = RotateWideCommand(Algs.BBw, True)
+    ROTATE_RW = RotateWideCommand(Algs.Rw[:-1], False)
+    ROTATE_RW_PRIME = RotateWideCommand(Algs.Rw[:-1], True)
+    ROTATE_LW = RotateWideCommand(Algs.Lw[:-1], False)
+    ROTATE_LW_PRIME = RotateWideCommand(Algs.Lw[:-1], True)
+    ROTATE_UW = RotateWideCommand(Algs.Uw[:-1], False)
+    ROTATE_UW_PRIME = RotateWideCommand(Algs.Uw[:-1], True)
+    ROTATE_DW = RotateWideCommand(Algs.Dw[:-1], False)
+    ROTATE_DW_PRIME = RotateWideCommand(Algs.Dw[:-1], True)
+    ROTATE_FW = RotateWideCommand(Algs.Fw[:-1], False)
+    ROTATE_FW_PRIME = RotateWideCommand(Algs.Fw[:-1], True)
+    ROTATE_BW = RotateWideCommand(Algs.Bw[:-1], False)
+    ROTATE_BW_PRIME = RotateWideCommand(Algs.Bw[:-1], True)
 
     # =========================================================================
     # SLICE MOVES
