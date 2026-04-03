@@ -45,7 +45,7 @@ from cube.domain.solver.direct.lbl._LBLL3Edges import _LBLL3Edges
 from cube.domain.solver.direct.lbl._LBLSlices import _LBLSlices
 from cube.domain.solver.exceptions import SolverFaceColorsChangedNeedRestartException
 from cube.domain.solver.protocols import OperatorProtocol
-from cube.domain.solver.solver import Solver, SolverResults, SolveStep
+from cube.domain.solver.solver import ParityFix, Solver, SolverResults, SolveStep
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.tracker._face_trackers import FaceTracker
 
@@ -257,16 +257,19 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
     def _solve_impl(self, what: SolveStep) -> SolverResults:
 
         max_iterations = 6
+        sr = SolverResults()
         even_edge_parity_detected = False
         corner_swap_detected = False
 
         for iteration in range(1, max_iterations + 1):
 
             if self.cube.solved:
-                return SolverResults()
+                return sr
 
             try:
-                return self._solve_impl2(what)
+                child_sr = self._solve_impl2(what)
+                sr.merge(child_sr)
+                return sr
 
             except SolverFaceColorsChangedNeedRestartException:
                 self._logger.log_lazy(logging.DEBUG, "Retrying after face colors changed")
@@ -277,7 +280,7 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
                     raise InternalSWError("Edge parity detected twice")
                 even_edge_parity_detected = True
                 self._logger.log_lazy(logging.DEBUG, "Even cube edge parity detected, fixing...")
-                self._edge_parity.fix_edge_parity(False)
+                sr.merge(self._edge_parity.fix_edge_parity(False))
                 continue
 
             except EvenCubeCornerSwapException:
@@ -285,7 +288,8 @@ class DirectLayerByLayerNxNSolver(BaseSolver):
                     raise InternalSWError("Corner swap parity detected twice")
                 corner_swap_detected = True
                 self._logger.log_lazy(logging.DEBUG, "Even cube corner swap parity detected, fixing...")
-                self._corner_swap.fix_corner_parity(False)
+                corner_fix = self._corner_swap.fix_corner_parity(False)
+                sr.add_corner_swap(ParityFix.of(not corner_fix.need_resolve_3x3))
                 continue
 
         raise InternalSWError(f"Too many iterations ({max_iterations}) for solver")

@@ -6,14 +6,13 @@ Uses FacesTrackerHolder for even cube matching - see:
 
 from __future__ import annotations
 
-from cube.domain.solver.ParityFix import ParityFix
 from cube.domain.solver.common.big_cube.CornerSwapParity import CornerFixResults
 from cube.domain.tracker.FacesTrackerHolder import FacesTrackerHolder
 from cube.domain.solver.common.SolverStatistics import SolverStatistics
 from cube.domain.solver.common.big_cube.NxNCenters import NxNCenters
 from cube.domain.solver.protocols import OperatorProtocol
-from cube.domain.solver.protocols.ReducerProtocol import ReductionResults
 from cube.domain.solver.reducers.AbstractReducer import AbstractReducer
+from cube.domain.solver.solver import SolverResults
 
 
 class BeginnerReducer(AbstractReducer):
@@ -72,7 +71,7 @@ class BeginnerReducer(AbstractReducer):
             return True
         return self.centers_solved() and self.edges_solved()
 
-    def reduce(self, debug: bool = False) -> ReductionResults:
+    def reduce(self, debug: bool = False) -> SolverResults:
         """
         Reduce NxN cube to 3x3 virtual state.
 
@@ -82,22 +81,16 @@ class BeginnerReducer(AbstractReducer):
             debug: Enable debug output
 
         Returns:
-            ReductionResults with flags about what was detected
+            SolverResults with PartialEdge parity recorded if detected.
         """
-        results = ReductionResults()
-
         if self.is_reduced():
-            return results
+            return SolverResults()
 
         # Solve centers
         self.solve_centers()
 
-        # Solve edges (returns True if parity was detected/fixed)
-        parity_fix = self.solve_edges()
-        if parity_fix:
-            results.partial_edge_parity_fix = parity_fix
-
-        return results
+        # Solve edges — returns SolverResults with any partial edge parity
+        return self.solve_edges()
 
     def solve_centers(self) -> None:
         """Solve only centers (first part of reduction)."""
@@ -109,15 +102,15 @@ class BeginnerReducer(AbstractReducer):
                 centers.get_block_statistics(), topic_prefix="Centers"
             )
 
-    def solve_edges(self) -> ParityFix | None:
+    def solve_edges(self) -> SolverResults:
         """Solve only edges (second part of reduction).
 
         Returns:
-            True if edge parity was detected/fixed during reduction.
+            SolverResults with PartialEdge parity recorded if detected.
         """
         return self._nxn_edges.solve()
 
-    def fix_edge_parity(self, advanced: bool) -> ParityFix:
+    def fix_edge_parity(self, advanced: bool) -> SolverResults:
         """Fix even cube edge parity (OLL parity).
 
         Called by orchestrator when 3x3 solver detects edge parity
@@ -127,7 +120,7 @@ class BeginnerReducer(AbstractReducer):
             advanced: If True, request R/L-slice algorithm.
 
         Returns:
-            True if advanced algorithm was used, False if basic.
+            SolverResults with EvenEdge parity recorded.
         """
         return self._edge_parity.fix_edge_parity(advanced)
 

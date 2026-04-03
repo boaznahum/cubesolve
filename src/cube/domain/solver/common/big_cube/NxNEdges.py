@@ -2,6 +2,7 @@ from collections import defaultdict
 from typing import Tuple
 
 from cube.domain.solver.ParityFix import ParityFix
+from cube.domain.solver.solver import SolverResults
 from cube.utils.logging import CubeLogger
 
 from cube.domain.algs import Alg, Algs
@@ -60,7 +61,7 @@ class NxNEdges(SolverHelper):
         """Check if all 12 edges are paired (reduced to 3x3 state)."""
         return self._is_solved()
 
-    def solve(self) -> ParityFix | None :
+    def solve(self) -> SolverResults:
         """Pair ALL 12 edges at once (reduction solver entry point).
 
         Solves 11 edges normally, then handles the last edge with a parity
@@ -68,29 +69,31 @@ class NxNEdges(SolverHelper):
         a single unpaired edge is always a parity case.
 
         Returns:
-            True if edge parity was performed, False if no parity needed.
+            SolverResults with PartialEdge parity recorded if parity was detected.
         """
+        sr = SolverResults()
 
         if self._is_solved():
-            return None
+            return sr
 
         with self.ann.annotate(h1="Big cube edges"):
             self._do_first_11()
 
             if self._is_solved():
-                return None
+                return sr
 
             assert self._left_to_fix == 1
 
             # if after solving 11 edges are not solved so the last is parity
             # even cube can have edge parity too but it connot detected in thos stage
             parity_fix = self._do_last_edge_parity()
+            sr.add_partial_edge_parity(parity_fix)
 
             self._do_first_11()
 
             assert self._is_solved()
 
-            return parity_fix
+            return sr
 
     def _do_first_11(self):
         """Solve up to 11 edges, stopping when only 1 remains (parity case).

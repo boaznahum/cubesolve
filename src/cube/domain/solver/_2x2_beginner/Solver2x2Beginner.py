@@ -23,7 +23,6 @@ from typing import TYPE_CHECKING
 
 from cube.domain.solver.common.Solver2x2Base import Solver2x2Base
 from cube.domain.solver.protocols import OperatorProtocol
-from cube.domain.solver.ParityFix import ParityFix
 from cube.domain.solver.solver import SolverResults, SolveStep
 from cube.domain.solver.SolverName import SolverName
 from ...model import Color, Face
@@ -101,18 +100,17 @@ class Solver2x2Beginner(Solver2x2Base):
                 l1_result = self._l1.solved_face_and_color()
                 assert l1_result
                 l1_face, l1_color = l1_result
-                self._solve_l3(l1_face, l1_color)
-                if self._l3_permute.swap_detected:
-                    sr.was_corner_swap = ParityFix.NonAdvanced
+                sr.merge(self._solve_l3(l1_face, l1_color))
 
         return sr
 
-    def _solve_l3(self, l1_face: Face, l1_color: Color) -> None:
+    def _solve_l3(self, l1_face: Face, l1_color: Color) -> SolverResults:
         """Solve L3: permute then orient."""
         with self._logger.tab("Solve L3"):
             self.cmn.bring_face_down(l1_face)
-            self._l3_permute.solve(l1_color)
+            l3_sr = self._l3_permute.solve(l1_color)
             self._l3_orient.solve(l1_color)
+            return l3_sr
 
     def _supported_steps_impl(self) -> list[SolveStep]:
         return [SolveStep.L1, SolveStep.L3]

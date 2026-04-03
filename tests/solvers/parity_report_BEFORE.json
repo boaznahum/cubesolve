@@ -1,0 +1,2838 @@
+{
+  "meta": {
+    "branch": "parity-reorting",
+    "commit": "d4a64a93",
+    "timestamp": "2026-04-03T17:36:32",
+    "cube_sizes": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "scramble_seeds": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "solvers": [
+      "Beginner Reducer",
+      "CFOP",
+      "Kociemba",
+      "Cage",
+      "Big LBL"
+    ]
+  },
+  "results": {
+    "Beginner Reducer|2|0": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Beginner Reducer|2|1": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Beginner Reducer|2|2": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Corner(PLL) [non-Advanced]"
+    },
+    "Beginner Reducer|2|3": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Corner(PLL) [non-Advanced]"
+    },
+    "Beginner Reducer|2|4": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Corner(PLL) [non-Advanced]"
+    },
+    "Beginner Reducer|2|5": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Beginner Reducer|2|6": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Beginner Reducer|2|7": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Beginner Reducer|2|8": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Corner(PLL) [non-Advanced]"
+    },
+    "Beginner Reducer|2|9": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Corner(PLL) [non-Advanced]"
+    },
+    "Beginner Reducer|3|0": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Beginner Reducer|3|1": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Beginner Reducer|3|2": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Beginner Reducer|3|3": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Beginner Reducer|3|4": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Beginner Reducer|3|5": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Beginner Reducer|3|6": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Beginner Reducer|3|7": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Beginner Reducer|3|8": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Beginner Reducer|3|9": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Beginner Reducer|4|0": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [non-Advanced]"
+    },
+    "Beginner Reducer|4|1": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [non-Advanced]"
+    },
+    "Beginner Reducer|4|2": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Corner(PLL) [non-Advanced]"
+    },
+    "Beginner Reducer|4|3": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Even Edge(OLL) [non-Advanced]"
+    },
+    "Beginner Reducer|4|4": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Beginner Reducer|4|5": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [non-Advanced]"
+    },
+    "Beginner Reducer|4|6": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Beginner Reducer|4|7": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Corner(PLL) [non-Advanced]"
+    },
+    "Beginner Reducer|4|8": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [non-Advanced]"
+    },
+    "Beginner Reducer|4|9": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Even Edge(OLL) [non-Advanced]"
+    },
+    "Beginner Reducer|5|0": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Beginner Reducer|5|1": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Beginner Reducer|5|2": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Beginner Reducer|5|3": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Beginner Reducer|5|4": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Beginner Reducer|5|5": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Beginner Reducer|5|6": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Beginner Reducer|5|7": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Beginner Reducer|5|8": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Beginner Reducer|5|9": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Beginner Reducer|6|0": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Beginner Reducer|6|1": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [non-Advanced]"
+    },
+    "Beginner Reducer|6|2": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [non-Advanced], Partial Edge [non-Advanced]"
+    },
+    "Beginner Reducer|6|3": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Corner(PLL) [non-Advanced], Partial Edge [non-Advanced]"
+    },
+    "Beginner Reducer|6|4": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Corner(PLL) [non-Advanced]"
+    },
+    "Beginner Reducer|6|5": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Beginner Reducer|6|6": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Beginner Reducer|6|7": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [non-Advanced], Partial Edge [non-Advanced]"
+    },
+    "Beginner Reducer|6|8": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Corner(PLL) [non-Advanced], Partial Edge [non-Advanced]"
+    },
+    "Beginner Reducer|6|9": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Beginner Reducer|7|0": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Beginner Reducer|7|1": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Beginner Reducer|7|2": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Beginner Reducer|7|3": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Beginner Reducer|7|4": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Beginner Reducer|7|5": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Beginner Reducer|7|6": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Beginner Reducer|7|7": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Beginner Reducer|7|8": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Beginner Reducer|7|9": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Beginner Reducer|8|0": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Beginner Reducer|8|1": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Beginner Reducer|8|2": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [non-Advanced], Partial Edge [non-Advanced]"
+    },
+    "Beginner Reducer|8|3": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Partial Edge [non-Advanced]"
+    },
+    "Beginner Reducer|8|4": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Corner(PLL) [non-Advanced], Partial Edge [non-Advanced]"
+    },
+    "Beginner Reducer|8|5": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Beginner Reducer|8|6": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Beginner Reducer|8|7": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [non-Advanced], Partial Edge [non-Advanced]"
+    },
+    "Beginner Reducer|8|8": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Beginner Reducer|8|9": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [non-Advanced], Partial Edge [non-Advanced]"
+    },
+    "Beginner Reducer|9|0": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Beginner Reducer|9|1": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Beginner Reducer|9|2": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Beginner Reducer|9|3": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Beginner Reducer|9|4": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Beginner Reducer|9|5": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Beginner Reducer|9|6": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Beginner Reducer|9|7": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Beginner Reducer|9|8": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Beginner Reducer|9|9": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|2|0": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|2|1": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|2|2": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|2|3": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|2|4": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|2|5": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|2|6": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|2|7": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|2|8": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|2|9": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|3|0": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|3|1": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|3|2": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|3|3": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|3|4": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|3|5": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|3|6": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|3|7": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|3|8": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|3|9": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|4|0": {
+      "has_parity": true,
+      "was_corner_swap": "Advanced",
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [Advanced]"
+    },
+    "CFOP|4|1": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Even Edge(OLL) [non-Advanced]"
+    },
+    "CFOP|4|2": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|4|3": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Even Edge(OLL) [non-Advanced]"
+    },
+    "CFOP|4|4": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|4|5": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Even Edge(OLL) [non-Advanced]"
+    },
+    "CFOP|4|6": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|4|7": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|4|8": {
+      "has_parity": true,
+      "was_corner_swap": "Advanced",
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [Advanced]"
+    },
+    "CFOP|4|9": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Even Edge(OLL) [non-Advanced]"
+    },
+    "CFOP|5|0": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|5|1": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "CFOP|5|2": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|5|3": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|5|4": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|5|5": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|5|6": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "CFOP|5|7": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "CFOP|5|8": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|5|9": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|6|0": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|6|1": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Even Edge(OLL) [non-Advanced]"
+    },
+    "CFOP|6|2": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Partial Edge [non-Advanced]"
+    },
+    "CFOP|6|3": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "CFOP|6|4": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|6|5": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "CFOP|6|6": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "CFOP|6|7": {
+      "has_parity": true,
+      "was_corner_swap": "Advanced",
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [Advanced], Partial Edge [non-Advanced]"
+    },
+    "CFOP|6|8": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "CFOP|6|9": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|7|0": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "CFOP|7|1": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "CFOP|7|2": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|7|3": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "CFOP|7|4": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|7|5": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|7|6": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|7|7": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|7|8": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "CFOP|7|9": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "CFOP|8|0": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "CFOP|8|1": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|8|2": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Partial Edge [non-Advanced]"
+    },
+    "CFOP|8|3": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Partial Edge [non-Advanced]"
+    },
+    "CFOP|8|4": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "CFOP|8|5": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "CFOP|8|6": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "CFOP|8|7": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Partial Edge [non-Advanced]"
+    },
+    "CFOP|8|8": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "CFOP|8|9": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Partial Edge [non-Advanced]"
+    },
+    "CFOP|9|0": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "CFOP|9|1": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|9|2": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "CFOP|9|3": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|9|4": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "CFOP|9|5": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "CFOP|9|6": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "CFOP|9|7": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "CFOP|9|8": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "CFOP|9|9": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|2|0": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|2|1": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|2|2": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|2|3": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|2|4": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|2|5": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|2|6": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|2|7": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|2|8": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|2|9": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|3|0": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|3|1": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|3|2": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|3|3": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|3|4": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|3|5": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|3|6": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|3|7": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|3|8": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|3|9": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|4|0": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [non-Advanced]"
+    },
+    "Kociemba|4|1": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [non-Advanced]"
+    },
+    "Kociemba|4|2": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Corner(PLL) [non-Advanced]"
+    },
+    "Kociemba|4|3": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Even Edge(OLL) [non-Advanced]"
+    },
+    "Kociemba|4|4": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|4|5": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [non-Advanced]"
+    },
+    "Kociemba|4|6": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|4|7": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Corner(PLL) [non-Advanced]"
+    },
+    "Kociemba|4|8": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [non-Advanced]"
+    },
+    "Kociemba|4|9": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Even Edge(OLL) [non-Advanced]"
+    },
+    "Kociemba|5|0": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|5|1": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Kociemba|5|2": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|5|3": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|5|4": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|5|5": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|5|6": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Kociemba|5|7": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Kociemba|5|8": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|5|9": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|6|0": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|6|1": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [non-Advanced]"
+    },
+    "Kociemba|6|2": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [non-Advanced], Partial Edge [non-Advanced]"
+    },
+    "Kociemba|6|3": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Corner(PLL) [non-Advanced], Partial Edge [non-Advanced]"
+    },
+    "Kociemba|6|4": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Corner(PLL) [non-Advanced]"
+    },
+    "Kociemba|6|5": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Kociemba|6|6": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Kociemba|6|7": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [non-Advanced], Partial Edge [non-Advanced]"
+    },
+    "Kociemba|6|8": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Corner(PLL) [non-Advanced], Partial Edge [non-Advanced]"
+    },
+    "Kociemba|6|9": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|7|0": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Kociemba|7|1": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Kociemba|7|2": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|7|3": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Kociemba|7|4": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|7|5": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|7|6": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|7|7": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|7|8": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Kociemba|7|9": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Kociemba|8|0": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Kociemba|8|1": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|8|2": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [non-Advanced], Partial Edge [non-Advanced]"
+    },
+    "Kociemba|8|3": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Partial Edge [non-Advanced]"
+    },
+    "Kociemba|8|4": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Corner(PLL) [non-Advanced], Partial Edge [non-Advanced]"
+    },
+    "Kociemba|8|5": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Kociemba|8|6": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Kociemba|8|7": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [non-Advanced], Partial Edge [non-Advanced]"
+    },
+    "Kociemba|8|8": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Kociemba|8|9": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [non-Advanced], Partial Edge [non-Advanced]"
+    },
+    "Kociemba|9|0": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Kociemba|9|1": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|9|2": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Kociemba|9|3": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|9|4": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Kociemba|9|5": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Kociemba|9|6": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Kociemba|9|7": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Kociemba|9|8": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Kociemba|9|9": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|2|0": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|2|1": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|2|2": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|2|3": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|2|4": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|2|5": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|2|6": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|2|7": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|2|8": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|2|9": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|3|0": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|3|1": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|3|2": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|3|3": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|3|4": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|3|5": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|3|6": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|3|7": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|3|8": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|3|9": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|4|0": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Even Edge(OLL) [non-Advanced]"
+    },
+    "Cage|4|1": {
+      "has_parity": true,
+      "was_corner_swap": "Advanced",
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [Advanced]"
+    },
+    "Cage|4|2": {
+      "has_parity": true,
+      "was_corner_swap": "Advanced",
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Corner(PLL) [Advanced]"
+    },
+    "Cage|4|3": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Even Edge(OLL) [non-Advanced]"
+    },
+    "Cage|4|4": {
+      "has_parity": true,
+      "was_corner_swap": "Advanced",
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Corner(PLL) [Advanced]"
+    },
+    "Cage|4|5": {
+      "has_parity": true,
+      "was_corner_swap": "Advanced",
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [Advanced]"
+    },
+    "Cage|4|6": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|4|7": {
+      "has_parity": true,
+      "was_corner_swap": "Advanced",
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Corner(PLL) [Advanced]"
+    },
+    "Cage|4|8": {
+      "has_parity": true,
+      "was_corner_swap": "Advanced",
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [Advanced]"
+    },
+    "Cage|4|9": {
+      "has_parity": true,
+      "was_corner_swap": "Advanced",
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [Advanced]"
+    },
+    "Cage|5|0": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|5|1": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Cage|5|2": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|5|3": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|5|4": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|5|5": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|5|6": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Cage|5|7": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Cage|5|8": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|5|9": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|6|0": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|6|1": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Even Edge(OLL) [non-Advanced]"
+    },
+    "Cage|6|2": {
+      "has_parity": true,
+      "was_corner_swap": "Advanced",
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [Advanced], Partial Edge [non-Advanced]"
+    },
+    "Cage|6|3": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Cage|6|4": {
+      "has_parity": true,
+      "was_corner_swap": "Advanced",
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Corner(PLL) [Advanced]"
+    },
+    "Cage|6|5": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Cage|6|6": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Cage|6|7": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Partial Edge [non-Advanced]"
+    },
+    "Cage|6|8": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Cage|6|9": {
+      "has_parity": true,
+      "was_corner_swap": "Advanced",
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Corner(PLL) [Advanced]"
+    },
+    "Cage|7|0": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Cage|7|1": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Cage|7|2": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|7|3": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Cage|7|4": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|7|5": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|7|6": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|7|7": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|7|8": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Cage|7|9": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Cage|8|0": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Cage|8|1": {
+      "has_parity": true,
+      "was_corner_swap": "Advanced",
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Corner(PLL) [Advanced]"
+    },
+    "Cage|8|2": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Partial Edge [non-Advanced]"
+    },
+    "Cage|8|3": {
+      "has_parity": true,
+      "was_corner_swap": "Advanced",
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [Advanced], Partial Edge [non-Advanced]"
+    },
+    "Cage|8|4": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Cage|8|5": {
+      "has_parity": true,
+      "was_corner_swap": "Advanced",
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Corner(PLL) [Advanced], Partial Edge [non-Advanced]"
+    },
+    "Cage|8|6": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Cage|8|7": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Partial Edge [non-Advanced]"
+    },
+    "Cage|8|8": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Cage|8|9": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": "NonAdvanced",
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Partial Edge [non-Advanced]"
+    },
+    "Cage|9|0": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Cage|9|1": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|9|2": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Cage|9|3": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|9|4": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Cage|9|5": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Cage|9|6": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Cage|9|7": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Cage|9|8": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "Cage|9|9": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|2|0": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|2|1": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|2|2": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Corner(PLL) [non-Advanced]"
+    },
+    "Big LBL|2|3": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Corner(PLL) [non-Advanced]"
+    },
+    "Big LBL|2|4": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Corner(PLL) [non-Advanced]"
+    },
+    "Big LBL|2|5": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|2|6": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|2|7": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|2|8": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Corner(PLL) [non-Advanced]"
+    },
+    "Big LBL|2|9": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: Corner(PLL) [non-Advanced]"
+    },
+    "Big LBL|3|0": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|3|1": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|3|2": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|3|3": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|3|4": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|3|5": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|3|6": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|3|7": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|3|8": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|3|9": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|4|0": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|4|1": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|4|2": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|4|3": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|4|4": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|4|5": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|4|6": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|4|7": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|4|8": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|4|9": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|5|0": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|5|1": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|5|2": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|5|3": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|5|4": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|5|5": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|5|6": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|5|7": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|5|8": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|5|9": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|6|0": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|6|1": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|6|2": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|6|3": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|6|4": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|6|5": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|6|6": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|6|7": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|6|8": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|6|9": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|7|0": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|7|1": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|7|2": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|7|3": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|7|4": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|7|5": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|7|6": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|7|7": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|7|8": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|7|9": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|8|0": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|8|1": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|8|2": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|8|3": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|8|4": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|8|5": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|8|6": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|8|7": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|8|8": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|8|9": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|9|0": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|9|1": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|9|2": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|9|3": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|9|4": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|9|5": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|9|6": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|9|7": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|9|8": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    },
+    "Big LBL|9|9": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "summary": "Parity: None"
+    }
+  }
+}

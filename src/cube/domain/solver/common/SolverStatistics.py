@@ -188,61 +188,41 @@ class MoveCountTopic(StatsTopic):
 
 
 class ParityTopic(StatsTopic):
-    """Tracks parity flags detected during solving."""
+    """Tracks parity events detected during solving."""
 
     def __init__(self) -> None:
-        from cube.domain.solver.solver import ParityFix
-        self._ParityFix = ParityFix  # keep reference for merge/format
-        self._edge_parity: ParityFix | None = None
-        self._corner_swap: ParityFix | None = None
-        self._partial_edge: ParityFix | None = None
+        from cube.domain.solver.solver import ParityFix, ParityType
+        self._ParityFix = ParityFix  # keep reference for format
+        self._ParityType = ParityType
+        self._parities: "list[tuple[ParityType, ParityFix]]" = []
 
     def set_from_results(self, sr: "SolverResults") -> None:
-        """Copy parity flags from SolverResults."""
-        self._edge_parity = sr.was_even_edge_parity
-        self._corner_swap = sr.was_corner_swap
-        self._partial_edge = sr.was_partial_edge_parity
+        """Copy accumulated parity list from SolverResults."""
+        self._parities = sr.parities
 
     def merge(self, other: StatsTopic) -> None:
         assert isinstance(other, ParityTopic)
-        # Keep non-None (if either detected parity, record it)
-        if other._edge_parity is not None:
-            self._edge_parity = other._edge_parity
-        if other._corner_swap is not None:
-            self._corner_swap = other._corner_swap
-        if other._partial_edge is not None:
-            self._partial_edge = other._partial_edge
-
-    @staticmethod
-    def _fmt(name: str, fix: "ParityFix | None") -> str | None:
-        if fix is None:
-            return None
-        suffix = " [Advanced]" if fix.advanced else " [non-Advanced]"
-        return name + suffix
+        self._parities.extend(other._parities)
 
     def format_lines(self) -> list[str]:
-        parities: list[str] = []
-        for name, fix in [
-            ("Even Edge(OLL)", self._edge_parity),
-            ("Corner(PLL)", self._corner_swap),
-            ("Partial Edge", self._partial_edge),
-        ]:
-            s = self._fmt(name, fix)
-            if s:
-                parities.append(s)
-        if parities:
-            return ["Parity: " + ", ".join(parities)]
+        from cube.domain.solver.solver import ParityType
+        parts: list[str] = []
+        for parity_type in (ParityType.EvenEdge, ParityType.CornerSwap, ParityType.PartialEdge):
+            fixes = [fix for pt, fix in self._parities if pt == parity_type]
+            if not fixes:
+                continue
+            suffix = " [Advanced]" if fixes[-1].advanced else " [non-Advanced]"
+            count = f" (×{len(fixes)})" if len(fixes) > 1 else ""
+            parts.append(parity_type.display_name + suffix + count)
+        if parts:
+            return ["Parity: " + ", ".join(parts)]
         return ["Parity: None"]
 
     def is_empty(self) -> bool:
-        return (self._edge_parity is None and
-                self._corner_swap is None and
-                self._partial_edge is None)
+        return not self._parities
 
     def reset(self) -> None:
-        self._edge_parity = None
-        self._corner_swap = None
-        self._partial_edge = None
+        self._parities = []
 
 
 class SolverStatistics:

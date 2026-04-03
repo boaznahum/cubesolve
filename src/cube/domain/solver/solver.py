@@ -115,61 +115,75 @@ class SolverResults:
 
     def __init__(self) -> None:
         super().__init__()
-        self._was_corner_swap : ParityFix | None = None
-        self._was_partial_edge_parity : ParityFix | None = None
-        self._was_even_edge_parity : ParityFix | None = None
+        self._parities: list[tuple[ParityType, ParityFix]] = []
+
+    # -------------------------------------------------------------------------
+    # Accumulation methods
+    # -------------------------------------------------------------------------
+
+    def add_parity(self, parity_type: ParityType, fix: ParityFix | None) -> None:
+        """Record a parity fix. Skips None."""
+        if fix is not None:
+            self._parities.append((parity_type, fix))
+
+    def add_corner_swap(self, fix: ParityFix | None) -> None:
+        self.add_parity(ParityType.CornerSwap, fix)
+
+    def add_even_edge_parity(self, fix: ParityFix | None) -> None:
+        self.add_parity(ParityType.EvenEdge, fix)
+
+    def add_partial_edge_parity(self, fix: ParityFix | None) -> None:
+        self.add_parity(ParityType.PartialEdge, fix)
+
+    def merge(self, other: "SolverResults") -> None:
+        """Accumulate parity info from a child SolverResults into this one."""
+        self._parities.extend(other._parities)
+
+    # -------------------------------------------------------------------------
+    # Accessors
+    # -------------------------------------------------------------------------
+
+    @property
+    def parities(self) -> list[tuple[ParityType, ParityFix]]:
+        """All recorded parity events in order."""
+        return list(self._parities)
+
+    def fixes_for(self, parity_type: ParityType) -> list[ParityFix]:
+        """All fixes recorded for a given parity type."""
+        return [fix for pt, fix in self._parities if pt == parity_type]
 
     @property
     def was_corner_swap(self) -> ParityFix | None:
-        return self._was_corner_swap
-
-    @was_corner_swap.setter
-    def was_corner_swap(self, value: ParityFix | None) -> None:
-        self._was_corner_swap = value
+        fixes = self.fixes_for(ParityType.CornerSwap)
+        return fixes[-1] if fixes else None
 
     @property
     def was_even_edge_parity(self) -> ParityFix | None:
-        return self._was_even_edge_parity
-
-    @was_even_edge_parity.setter
-    def was_even_edge_parity(self, value: ParityFix | None) -> None:
-        self._was_even_edge_parity = value
+        fixes = self.fixes_for(ParityType.EvenEdge)
+        return fixes[-1] if fixes else None
 
     @property
     def was_partial_edge_parity(self) -> ParityFix | None:
-        return self._was_partial_edge_parity
-
-    @was_partial_edge_parity.setter
-    def was_partial_edge_parity(self, value: ParityFix | None) -> None:
-        self._was_partial_edge_parity = value
+        fixes = self.fixes_for(ParityType.PartialEdge)
+        return fixes[-1] if fixes else None
 
     @property
     def has_parity(self) -> bool:
         """Check if any parity was detected."""
-        return (self._was_corner_swap is not None or
-                self._was_even_edge_parity is not None or
-                self._was_partial_edge_parity is not None)
-
-    @staticmethod
-    def _format_parity(name: str, fix: ParityFix | None) -> str | None:
-        if fix is None:
-            return None
-        suffix = " [Advanced]" if fix.advanced else " [non-Advanced]"
-        return name + suffix
+        return bool(self._parities)
 
     def parity_summary(self) -> str:
         """Return a summary of detected parities."""
-        parities: list[str] = []
-        for name, fix in [
-            ("Even Edge(OLL)", self._was_even_edge_parity),
-            ("Corner(PLL)", self._was_corner_swap),
-            ("Partial Edge", self._was_partial_edge_parity),
-        ]:
-            s = self._format_parity(name, fix)
-            if s:
-                parities.append(s)
-        if parities:
-            return "Parity: " + ", ".join(parities)
+        parts: list[str] = []
+        for parity_type in (ParityType.EvenEdge, ParityType.CornerSwap, ParityType.PartialEdge):
+            fixes = self.fixes_for(parity_type)
+            if not fixes:
+                continue
+            suffix = " [Advanced]" if fixes[-1].advanced else " [non-Advanced]"
+            count = f" (×{len(fixes)})" if len(fixes) > 1 else ""
+            parts.append(parity_type.display_name + suffix + count)
+        if parts:
+            return "Parity: " + ", ".join(parts)
         return "Parity: None"
 
 

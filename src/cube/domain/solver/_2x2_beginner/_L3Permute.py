@@ -24,7 +24,9 @@ from cube.domain.model.Face import Face
 from cube.domain.solver._2x2_beginner._l3_utils import find_yellow_color, find_white_face, bring_white_to_down
 from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.common.SolverHelper import StepSolver
+from cube.domain.solver.ParityFix import ParityFix
 from cube.domain.solver.protocols import SolverElementsProvider
+from cube.domain.solver.solver import SolverResults
 
 
 class L3Permute(StepSolver):
@@ -33,7 +35,7 @@ class L3Permute(StepSolver):
     Works purely with corner sticker colors — no face colors.
     """
 
-    __slots__: list[str] = ["_swap_detected", "_advance_swap"]
+    __slots__: list[str] = ["_advance_swap"]
 
 
     # R' F R' B2
@@ -51,12 +53,6 @@ class L3Permute(StepSolver):
     def __init__(self, slv: SolverElementsProvider) -> None:
         super().__init__(slv, "L3Permute")
         self._advance_swap = False
-        self._swap_detected: bool = False
-
-    @property
-    def swap_detected(self) -> bool:
-        """Whether a FLU↔BLU corner swap was detected during the last solve."""
-        return self._swap_detected
 
     @property
     def is_solved(self) -> bool:
@@ -80,17 +76,20 @@ class L3Permute(StepSolver):
 
         return self._is_u_aligned(yellow_face, white_face, white_color, yellow_color) >= 0
 
-    def solve(self, white_color: Color | None = None) -> None:
-        """Permute last-layer corners into correct positions."""
-        self._swap_detected = False
+    def solve(self, white_color: Color | None = None) -> SolverResults:
+        """Permute last-layer corners into correct positions.
+
+        Returns:
+            SolverResults with CornerSwap parity recorded if a FLU↔BLU swap was detected.
+        """
         wc: Color = white_color or self.cmn.white
         if self.is_solved_with(wc):
             self._align_u_layer(wc)
-            return
+            return SolverResults()
 
         with self._logger.tab("Doing L3 Permute"):
             with self.ann.annotate(h1="Doing L3 Permute"):
-                self._solve(wc)
+                return self._solve(wc)
 
     def _align_u_layer(self, white_color: Color) -> None:
         """Align top layer with bottom using U rotations."""
@@ -102,7 +101,7 @@ class L3Permute(StepSolver):
         yellow_face: Face = white_face.opposite
         self._try_u_alignment(yellow_face, white_face, white_color, yellow_color)
 
-    def _solve(self, white_color: Color) -> None:
+    def _solve(self, white_color: Color) -> SolverResults:
         yellow_color: Color = find_yellow_color(self.cube, white_color)
 
         bring_white_to_down(self, white_color)
@@ -110,20 +109,24 @@ class L3Permute(StepSolver):
         up: Face = self.cube.up
         down: Face = self.cube.down
 
-        self._do_permute(up, down, white_color, yellow_color)
+        return self._do_permute(up, down, white_color, yellow_color)
 
     def _do_permute(self, up: Face, down: Face, white_color: Color,
-                    yellow_color: Color) -> None:
+                    yellow_color: Color) -> SolverResults:
         """Place all 4 top-layer corners using the 3-cycle + U moves.
 
         Algorithm:
         A) U-rotate until FRU is in position.
         B) Apply 3-cycle until BRU is in position (max 2).
         C) If FLU↔BLU still swapped: 3-cycle, U2, 3-cycle → restart from A.
+
+        Returns:
+            SolverResults with CornerSwap parity recorded if a swap was detected.
         """
 
         #U R U' L' U R' U' L — 3-corner cycle, fixes FRU, cycles FLU/BRU/BLU
         c3c = self.cmn.top_3_corner_cycle
+        sr = SolverResults()
 
         for attempt in range(3):
             # Step A: U-rotate until FRU is in position
@@ -151,10 +154,9 @@ class L3Permute(StepSolver):
             # Now all in position, or FLU and BLU swapped
             if self._all_in_position(up, down, white_color, yellow_color):
                 self._logger.debug_lazy(lambda: f"solved on iteration {attempt + 1}")
-                return  # done!
+                return sr  # done!
 
             # FLU↔BLU are swapped — break the swap with cycle, U2, cycle
-            self._swap_detected = True
 
             self._logger.debug_lazy(lambda: f"FLU↔BLU corner swap detected on iteration {attempt + 1}")
 
@@ -179,6 +181,9 @@ class L3Permute(StepSolver):
                 assert self._try_u_alignment(up, down, white_color, yellow_color), (
                     "L3 Permute failed"
                 )
+
+                sr.add_corner_swap(ParityFix.Advanced)
+
             else:
 
                 self._logger.debug_lazy(lambda: f"FLU↔BLU swap on iteration {attempt + 1}, "
@@ -191,6 +196,9 @@ class L3Permute(StepSolver):
                     self.op.play(c3c)
                     self.op.play((Algs.U * 2).simplify())
                     self.op.play(c3c)
+
+                sr.add_corner_swap(ParityFix.NonAdvanced)
+
 
             self._logger.debug("retrying from step A")
 

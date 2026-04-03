@@ -181,8 +181,7 @@ class NxNSolverOrchestrator(AbstractSolver):
             return sr
 
         if what == SolveStep.NxNEdges:
-            results = self._reducer.reduce(self._is_debug_enabled)
-            sr.was_partial_edge_parity = results.partial_edge_parity_fix
+            sr.merge(self._reducer.reduce(self._is_debug_enabled))
             return sr
 
         # Debug state is now handled by AbstractSolver.solve() template method
@@ -209,8 +208,7 @@ class NxNSolverOrchestrator(AbstractSolver):
         # - Only detected later in L3Cross when 1 or 3 edges are flipped
         # - Handled by the retry loop below via EvenCubeEdgeParityException
         #
-        reduction_results = self._reducer.reduce(debug)
-        partial_edge_fix: ParityFix | None = reduction_results.partial_edge_parity_fix
+        reduction_sr = self._reducer.reduce(debug)
 
         # =================================================================
         # STEP 2: SOLVE AS 3x3 WITH PARITY HANDLING
@@ -220,8 +218,7 @@ class NxNSolverOrchestrator(AbstractSolver):
         # TODO: replace with cube.with_3x3_mode() to prevent inner slice operations
         self._solve_3x3_with_parity(sr, debug, what)
 
-        if partial_edge_fix is not None:
-            sr.was_partial_edge_parity = partial_edge_fix
+        sr.merge(reduction_sr)
 
         return sr
 
@@ -246,9 +243,9 @@ class NxNSolverOrchestrator(AbstractSolver):
         - Iteration 2: After edge fix → normal solve OR corner parity
         - Iteration 3: After corner fix → should complete
         """
-        even_edge_parity_fix: ParityFix | None = None
-        even_edge_swap_parity_fix: ParityFix | None = None  # CFOP
-        corner_swap_fix: ParityFix | None = None
+        even_edge_parity_detected = False
+        even_edge_swap_parity_detected = False
+        corner_swap_detected = False
 
         is_even_cube = self._cube.n_slices % 2 == 0
         _3x3_can_detect_parity = self._solver_3x3.can_detect_parity
@@ -275,9 +272,9 @@ class NxNSolverOrchestrator(AbstractSolver):
                 if parity_detector is not None:
                     with self._op.with_query_restore_state():
                         parity_detector.solve_3x3(debug, what)
-                    self._solver_3x3.solve_3x3(debug, what)
+                    sr.merge(self._solver_3x3.solve_3x3(debug, what))
                 else:
-                    self._solver_3x3.solve_3x3(debug, what)
+                    sr.merge(self._solver_3x3.solve_3x3(debug, what))
 
             except EvenCubeEdgeParityException:
                 # =============================================================
@@ -287,29 +284,25 @@ class NxNSolverOrchestrator(AbstractSolver):
                 # L3Cross throws, orchestrator catches and fixes via reducer.
                 # After fix, edges are disturbed -> need to re-reduce
                 self._logger.log_lazy(logging.DEBUG, lambda: f"Catch even edge parity in iteration #{attempt}")
-                if even_edge_parity_fix is not None:
+                if even_edge_parity_detected:
                     raise InternalSWError("Edge parity detected twice - fix_edge_parity failed")
+                even_edge_parity_detected = True
                 self._op.enter_single_step_mode(SSCode.NxN_EDGE_PARITY_FIX)
-                even_edge_fix = self._reducer.fix_edge_parity(
-                    advanced=self._advanced_edge_parity
-                )
-                even_edge_parity_fix = even_edge_fix
+                sr.merge(self._reducer.fix_edge_parity(advanced=self._advanced_edge_parity))
 
                 # not need in case of advanced
-                self._reducer.reduce(debug)
+                sr.merge(self._reducer.reduce(debug))
                 continue
 
             except EvenCubeEdgeSwapParityException:
                 self._logger.debug_lazy(lambda: f"Catch even edge swap (CFOP) parity in iteration #{attempt}")
-                if even_edge_swap_parity_fix is not None:
+                if even_edge_swap_parity_detected:
                     raise InternalSWError("Even Edge swap (CFOP) parity detected twice - fix_edge_parity failed")
-                even_edge_swap_fix = self._reducer.fix_edge_parity(
-                    advanced=self._advanced_edge_parity
-                )
-                even_edge_swap_parity_fix = even_edge_swap_fix
+                even_edge_swap_parity_detected = True
+                sr.merge(self._reducer.fix_edge_parity(advanced=self._advanced_edge_parity))
 
                 # not need in case of advanced
-                self._reducer.reduce(debug)
+                sr.merge(self._reducer.reduce(debug))
                 continue
 
             # CFOP handle EvenEdge parity, but it might decide to throw
@@ -324,8 +317,9 @@ class NxNSolverOrchestrator(AbstractSolver):
                 # The corner swap algorithm swaps diagonal corners on U face.
                 # Any diagonal swap fixes parity - only requirement is yellow up.
                 self._logger.log_lazy(logging.DEBUG, lambda: f"Catch corner swap in iteration #{attempt}")
-                if corner_swap_fix is not None:
+                if corner_swap_detected:
                     raise InternalSWError("Corner parity detected twice - fix_corner_parity failed")
+                corner_swap_detected = True
                 self._op.enter_single_step_mode(SSCode.NxN_CORNER_PARITY_FIX)
                 # If parity was detected by the parity_detector (not the 3x3 solver
                 # itself), the cube is not L1/L2 solved — any two-corner swap suffices
@@ -334,21 +328,15 @@ class NxNSolverOrchestrator(AbstractSolver):
                 corner_fix = self._reducer.fix_corner_parity(
                     advanced=self._advanced_corner_parity and _3x3_can_detect_parity
                 )
-                corner_swap_fix = ParityFix.of(not corner_fix.need_resolve_3x3)
+                sr.add_corner_swap(ParityFix.of(not corner_fix.need_resolve_3x3))
                 if corner_fix.cube_unreduced:
-                    self._reducer.reduce(debug)
+                    sr.merge(self._reducer.reduce(debug))
                 continue
 
             if what == SolveStep.ALL and not self.is_solved:
                 raise InternalSWError(
                     f"Not solved after iteration {attempt}, but no parity detected"
                 )
-
-        # Record parity results
-        if even_edge_parity_fix is not None:
-            sr.was_even_edge_parity = even_edge_parity_fix
-        if corner_swap_fix is not None:
-            sr.was_corner_swap = corner_swap_fix
 
     # =========================================================================
     # Statistics (override AbstractSolver)

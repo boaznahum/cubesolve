@@ -206,7 +206,7 @@ class ConfigData:
     # ── Core ──
     cube_size: int = 6
     enable_cube_cache: bool = True
-    prevent_random_face_pick_up_in_geometry: bool = False
+    prevent_random_face_pick_up_in_geometry: bool = True
 
     # ── Solvers ──
     default_solver: str = "Beginner Reducer"

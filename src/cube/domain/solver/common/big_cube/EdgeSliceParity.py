@@ -25,6 +25,7 @@ from cube.domain.solver.AnnWhat import AnnWhat
 from cube.domain.solver.ParityFix import ParityFix
 from cube.domain.solver.common.CommonOp import EdgeSliceTracker
 from cube.domain.solver.common.SolverHelper import SolverHelper
+from cube.domain.solver.solver import SolverResults
 
 if TYPE_CHECKING:
     from cube.domain.solver.protocols import SolverElementsProvider
@@ -47,7 +48,7 @@ class EdgeSliceParity(SolverHelper):
     def __init__(self, solver: SolverElementsProvider) -> None:
         super().__init__(solver, "EdgeSliceParity")
 
-    def fix_edge_parity(self, advanced: bool) -> ParityFix:
+    def fix_edge_parity(self, advanced: bool) -> SolverResults:
         """Fix even cube full edge parity on front-left edge.
 
         Args:
@@ -56,15 +57,15 @@ class EdgeSliceParity(SolverHelper):
                       (disrupts edge pairing, caller must re-reduce).
 
         Returns:
-            True if advanced algorithm was used (no re-reduce needed),
-            False if basic algorithm was used (re-reduce needed).
+            SolverResults with EvenEdge parity recorded.
         """
         assert self.cube.n_slices % 2 == 0
-        return self._do_edge_parity_on_edge(self.cube.front.edge_left, advanced)
-
+        sr = SolverResults()
+        sr.add_even_edge_parity(self._do_edge_parity_on_edge(self.cube.front.edge_left, advanced))
+        return sr
 
     def do_edge_parity_on_edge(self, edge: Edge, advanced: bool = False) -> ParityFix:
-        """Fix edge parity on a specific edge.
+        """Fix edge parity on a specific edge. Returns the ParityFix algorithm used.
 
         Brings edge to front-top position, determines which slices need fixing,
         then applies either M-based (basic) or R/L-based (advanced) parity alg.

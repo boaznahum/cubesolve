@@ -257,9 +257,7 @@ class CageNxNSolver(BaseSolver):
 
                 # PHASE 1a: EDGE SOLVING (pair all edges)
                 if not self._are_edges_solved():
-                    had_parity: ParityFix | None = self._solve_edges()
-                    if had_parity:
-                        sr.was_partial_edge_parity = had_parity
+                    sr.merge(self._solve_edges())
 
                 # PHASE 1b: CORNER SOLVING
                 try:
@@ -273,8 +271,7 @@ class CageNxNSolver(BaseSolver):
                         raise  # Give up after 5 attempts
 
                     self._logger.log_lazy(logging.DEBUG, "Edge parity detected during corner solve, fixing...")
-                    edge_parity_fix: ParityFix = self._edge_parity.fix_edge_parity(self._cube.config.cage_advanced_parity)
-                    sr.was_even_edge_parity = edge_parity_fix
+                    sr.merge(self._edge_parity.fix_edge_parity(self._cube.config.cage_advanced_parity))
 
                 except EvenCubeCornerSwapException:
                     if attempt >= 4:
@@ -285,7 +282,7 @@ class CageNxNSolver(BaseSolver):
                     # see CornerSwapParity.fix_corner_parity docstring.
                     with self._cube.with_faces_color_provider(tracker_holder):
                         corner_parity_fix: CornerFixResults = self._corner_swap.fix_corner_parity(self._cube.config.cage_advanced_parity)
-                        sr.was_corner_swap = ParityFix.of(not corner_parity_fix.need_resolve_3x3)
+                        sr.add_corner_swap(ParityFix.of(not corner_parity_fix.need_resolve_3x3))
 
                 # get rid of this excpetion, it is the smae issue
                 except EvenCubeEdgeSwapParityException:
@@ -293,8 +290,7 @@ class CageNxNSolver(BaseSolver):
                         raise  # Give up after 5 attempts
 
                     self._logger.log_lazy(logging.DEBUG, "Edge swap parity (PLL) detected during corner solve, fixing...")
-                    edge_swap_parity_fix: ParityFix = self._edge_parity.fix_edge_parity(self._cube.config.cage_advanced_parity)
-                    sr.was_even_edge_parity = edge_swap_parity_fix
+                    sr.merge(self._edge_parity.fix_edge_parity(self._cube.config.cage_advanced_parity))
 
             # PHASE 2: CENTER SOLVING
             if not self._are_centers_solved():
@@ -310,9 +306,7 @@ class CageNxNSolver(BaseSolver):
         if self._are_edges_solved():
             return sr
 
-        had_parity: ParityFix | None = self._solve_edges()
-        if had_parity:
-            sr.was_partial_edge_parity = had_parity
+        sr.merge(self._solve_edges())
         return sr
 
     def _solve_cage_only(self, sr: SolverResults) -> SolverResults:
@@ -340,9 +334,7 @@ class CageNxNSolver(BaseSolver):
 
                 # PHASE 1a: EDGE SOLVING
                 if not self._are_edges_solved():
-                    had_parity: ParityFix | None = self._solve_edges()
-                    if had_parity:
-                        sr.was_partial_edge_parity = had_parity
+                    sr.merge(self._solve_edges())
 
                 # PHASE 1b: CORNER SOLVING
                 try:
@@ -356,8 +348,7 @@ class CageNxNSolver(BaseSolver):
                         raise
 
                     self._logger.log_lazy(logging.DEBUG, "Edge parity detected during corner solve, fixing...")
-                    edge_parity_fix: ParityFix = self._edge_parity.fix_edge_parity(self._cube.config.cage_advanced_parity)
-                    sr.was_even_edge_parity = edge_parity_fix
+                    sr.merge(self._edge_parity.fix_edge_parity(self._cube.config.cage_advanced_parity))
 
                 except EvenCubeCornerSwapException:
                     if attempt >= 4:
@@ -366,15 +357,14 @@ class CageNxNSolver(BaseSolver):
                     self._logger.log_lazy(logging.DEBUG, "Corner swap parity detected during corner solve, fixing...")
                     with self._cube.with_faces_color_provider(tracker_holder):
                         corner_fix = self._corner_swap.fix_corner_parity(self._cube.config.cage_advanced_parity)
-                    sr.was_corner_swap = ParityFix.of(not corner_fix.need_resolve_3x3)
+                    sr.add_corner_swap(ParityFix.of(not corner_fix.need_resolve_3x3))
 
                 except EvenCubeEdgeSwapParityException:
                     if attempt >= 4:
                         raise
 
                     self._logger.log_lazy(logging.DEBUG, "Edge swap parity (PLL) detected during corner solve, fixing...")
-                    edge_swap_parity_fix: ParityFix = self._edge_parity.fix_edge_parity(self._cube.config.cage_advanced_parity)
-                    sr.was_even_edge_parity = edge_swap_parity_fix
+                    sr.merge(self._edge_parity.fix_edge_parity(self._cube.config.cage_advanced_parity))
 
         return sr
 
@@ -395,7 +385,7 @@ class CageNxNSolver(BaseSolver):
     # Phase 1a: Edge solving (reuses NxNEdges)
     # =========================================================================
 
-    def _solve_edges(self) -> ParityFix | None:
+    def _solve_edges(self) -> SolverResults:
         """
         Solve all edges - pair wings and place correctly.
 
@@ -420,10 +410,9 @@ class CageNxNSolver(BaseSolver):
            - Re-solves remaining edges
 
         Returns:
-            True if partial edge parity was detected and fixed, full even cannot be detected
+            SolverResults with PartialEdge parity recorded if detected.
         """
         self._logger.log_lazy(logging.DEBUG, "Starting edge solving (using NxNEdges)")
-        # NxNEdges.solve() returns True if parity was detected/fixed
         return self._nxn_edges.solve()
 
     # =========================================================================

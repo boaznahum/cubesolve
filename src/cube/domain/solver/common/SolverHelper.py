@@ -20,6 +20,7 @@ from ...model.CubeQueries2 import CubeQueries2
 
 if TYPE_CHECKING:
     from .CommonOp import CommonOp
+    from cube.domain.solver.solver import SolverResults
 
 _Common: TypeAlias = "CommonOp"
 
@@ -119,7 +120,7 @@ class StepSolver(SolverHelper):
         super().__init__(solver, debug_prefix)
 
     @abstractmethod
-    def solve(self):
+    def solve(self) -> "SolverResults | None":
         pass
 
     @property
