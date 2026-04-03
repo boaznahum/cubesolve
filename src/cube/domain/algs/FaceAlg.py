@@ -52,13 +52,7 @@ class FaceAlg(FaceAlgBase, SliceAbleAlg):
         """
         Slice this face algorithm, returning a SlicedFaceAlg.
 
-        The returned SlicedFaceAlg cannot be sliced again (no __getitem__).
-
-        Args:
-            items: Slice specification (int, slice, or sequence of ints)
-
-        Returns:
-            A new SlicedFaceAlg with the slice applied
+        Negative indices are resolved at play time: [:-1] = all but last layer.
         """
         from cube.domain.algs.SlicedFaceAlg import SlicedFaceAlg
 

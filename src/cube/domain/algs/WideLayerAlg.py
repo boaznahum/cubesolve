@@ -17,10 +17,10 @@ Lowercase form is equivalent:
 
 WCA uses the uppercase+w form officially. Lowercase is informal but widely used.
 
-ALL-BUT-LAST MODE (layers=ALL_BUT_LAST)
+ALL-BUT-LAST MODE (layers=-1)
 =======================================
 
-When layers=-1 (ALL_BUT_LAST sentinel), the move adapts to cube size at play time,
+When layers=-1 (-1 sentinel), the move adapts to cube size at play time,
 turning ALL layers except the opposite face (= cube.size - 1 layers).
 
     str() = "[:-1]Rw" or "[:-1]r"
@@ -56,8 +56,6 @@ from cube.domain.algs.SimpleAlg import SimpleAlg
 from cube.domain.exceptions import InternalSWError
 from cube.domain.model import Cube, FaceName, PartSlice
 
-# Sentinel value: all layers except the opposite face (adaptive to cube size)
-ALL_BUT_LAST = -1
 
 
 class WideLayerAlg(AnimationAbleAlg, SliceAbleAlg):
@@ -66,7 +64,7 @@ class WideLayerAlg(AnimationAbleAlg, SliceAbleAlg):
 
     Default layers=2 (omitted in str). Rw = r = 2 layers.
     3Rw = 3r = 3 layers. nRw = nr = n layers.
-    layers=ALL_BUT_LAST (-1): adaptive, all-but-last (str = [:-1]Rw / [:-1]r).
+    layers=-1 (-1): adaptive, all-but-last (str = [:-1]Rw / [:-1]r).
 
     Two display modes:
     - uppercase+w: Rw, 3Rw, [:-1]Rw (WCA official)
@@ -101,12 +99,11 @@ class WideLayerAlg(AnimationAbleAlg, SliceAbleAlg):
         object.__setattr__(instance, "_frozen", True)
         return instance
 
-    def __getitem__(self, items: int | slice | Sequence[int]) -> SlicedFaceAlg:
+    def __getitem__(self, items: int | slice | Sequence[int]) -> "SlicedFaceAlg":
         """Slice this wide move, returning a SlicedFaceAlg.
 
-        When explicit layers are specified via slicing, the wide/non-wide
-        distinction is irrelevant — Rw[3:4] == R[3:4]. Returns SlicedFaceAlg
-        on the same face.
+        Negative indices are resolved at play time: [:-1] = all but last layer.
+        Wide/non-wide distinction is irrelevant with explicit slicing.
         """
         from cube.domain.algs.SlicedFaceAlg import SlicedFaceAlg
 
@@ -120,7 +117,18 @@ class WideLayerAlg(AnimationAbleAlg, SliceAbleAlg):
         else:
             raise InternalSWError(f"Unknown type for slice: {items} {type(items)}")
 
-        return SlicedFaceAlg(self._face, self._n, a_slice)
+        # Preserve wide display code only for negative slices (adaptive: [:-1]Rw)
+        # Positive slices use face code to avoid ambiguity (2f vs 2F)
+        display_code: str | None = None
+        has_negative = (isinstance(a_slice, slice) and
+                        (a_slice.start is not None and a_slice.start < 0 or
+                         a_slice.stop is not None and a_slice.stop < 0))
+        if has_negative:
+            if self._lowercase:
+                display_code = self._face.value.lower()
+            else:
+                display_code = self._face.value + "w"
+        return SlicedFaceAlg(self._face, self._n, a_slice, display_code=display_code)
 
     def __rmul__(self, layers: int) -> "WideLayerAlg":
         """4 * Algs.r → 4r (4-layer wide move)."""
@@ -135,10 +143,10 @@ class WideLayerAlg(AnimationAbleAlg, SliceAbleAlg):
     def _effective_layers(self, cube: Cube) -> int:
         """Compute actual layer count for this cube.
 
-        For ALL_BUT_LAST (-1): returns cube.size - 1 (adaptive).
+        For -1 (-1): returns cube.size - 1 (adaptive).
         For fixed layers: clamps to cube.size - 1 (can't exceed available layers).
         """
-        if self._layers == ALL_BUT_LAST:
+        if self._layers == -1:
             return cube.size - 1
         return min(self._layers, cube.size - 1)
 
@@ -166,7 +174,7 @@ class WideLayerAlg(AnimationAbleAlg, SliceAbleAlg):
     def atomic_str(self) -> str:
         """Return nRw or nr notation.
 
-        layers=-1 (ALL_BUT_LAST): [:-1]Rw / [:-1]r
+        layers=-1 (-1): [:-1]Rw / [:-1]r
         layers=2: Rw / r (prefix omitted, 2 is default)
         layers=3: 3Rw / 3r
         layers=n: nRw / nr
@@ -176,7 +184,7 @@ class WideLayerAlg(AnimationAbleAlg, SliceAbleAlg):
         else:
             base = self._face.value + "w"
 
-        if self._layers == ALL_BUT_LAST:
+        if self._layers == -1:
             return "[:-1]" + n_to_str(base, self._n)
 
         prefix = str(self._layers) if self._layers != 2 else ""

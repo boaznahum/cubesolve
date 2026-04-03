@@ -399,22 +399,7 @@ On bigger cubes, you need to move ALL inner layers together to preserve edge pai
 The `[:-1]` notation computes the layer count at play time, so the same algorithm
 works on any cube size.
 
-**Code:**
-
-| Notation | Code | Sugar | Notes |
-|----------|------|-------|-------|
-| `[:-1]Rw` | `Algs.RRw` | uppercase+w form | Used in commands/registry |
-| `[:-1]r` | `Algs.rr` | lowercase form | Used in CFOP solver (`Algs.dd`, etc.) |
-| `[:-1]Lw` | `Algs.LLw` | | |
-| `[:-1]l` | `Algs.ll` | | |
-| `[:-1]Uw` | `Algs.UUw` | | |
-| `[:-1]u` | `Algs.uu` | | |
-| `[:-1]Dw` | `Algs.DDw` | | |
-| `[:-1]d` | `Algs.dd` | | |
-| `[:-1]Fw` | `Algs.FFw` | | |
-| `[:-1]f` | `Algs.ff` | | |
-| `[:-1]Bw` | `Algs.BBw` | | |
-| `[:-1]b` | `Algs.bb` | | |
+**Code:** `Algs.Rw[:-1]`, `Algs.r[:-1]`, `Algs.Dw[:-1]`, etc. — works on any face via Python slicing.
 
 ### Parser: compat_3x3 Mode
 
@@ -508,7 +493,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <th colspan="4">Ours</th>
 </tr>
 <tr>
-  <th><a href="https://alpha.twizzle.net/edit/">Twizzle</a></th>
+  <th style="min-width:120px"><a href="https://alpha.twizzle.net/edit/">Twizzle</a></th>
   <th><a href="https://mzrg.com/rubik/nota.shtml">MZRG</a></th>
   <th><a href="https://www.speedsolving.com/wiki/index.php?title=NxNxN_Notation">SS Wiki</a></th>
   <th>Code</th>
@@ -521,7 +506,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
 <tr>
   <td>1</td>
   <td>Turn outermost R layer CW</td>
-  <td><code>R</code></td>
+  <td>✅ <code>R</code></td>
   <td><code>R</code></td>
   <td><code>R</code></td>
   <td><code>Algs.R</code></td>
@@ -532,7 +517,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
 <tr>
   <td>2</td>
   <td>Turn outermost R layer CCW</td>
-  <td><code>R'</code></td>
+  <td>✅ <code>R'</code></td>
   <td><code>R'</code></td>
   <td><code>R'</code></td>
   <td><code>Algs.R.prime</code></td>
@@ -543,7 +528,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
 <tr>
   <td>3</td>
   <td>Turn outermost R layer 180°</td>
-  <td><code>R2</code></td>
+  <td>✅ <code>R2</code></td>
   <td><code>R2</code></td>
   <td><code>R2</code></td>
   <td><code>Algs.R * 2</code></td>
@@ -556,7 +541,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
 <tr>
   <td>4</td>
   <td>Turn only the nth inner slice from R<br>(can span)</td>
-  <td><code>2R</code>, <code>3R</code></td>
+  <td>✅ <code>2R</code>, <code>3R</code></td>
   <td><code>2R</code>, <code>3R</code></td>
   <td>—</td>
   <td><code>2 * Algs.R</code>, <code>3 * Algs.R</code><br><code>Algs.R[2]</code>, <code>Algs.R[3]</code><br><code>Algs.R[2:2]</code>, <code>Algs.R[3:3]</code></td>
@@ -578,8 +563,8 @@ At play time, `_effective_layers(cube)` computes the actual count:
 <tr>
   <td>8</td>
   <td>Turn all slices from nth to last</td>
-  <td>?</td>
-  <td>?</td>
+  <td><span style="color:#00aa00;font-size:1.4em;font-weight:bold">≈</span> <code>x 1-2r'</code><br><code>x 1-2R'</code><br><code>x 2Rw'</code></td>
+  <td>—</td>
   <td>—</td>
   <td><code>Algs.R[3:]</code><br><code>Algs.r[3:]</code></td>
   <td><code>[3:]R</code></td>
@@ -589,7 +574,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
 <tr>
   <td>9</td>
   <td>Turn ALL R layers (≡ X, whole cube like R)</td>
-  <td><code>x</code></td>
+  <td><span style="color:#00aa00;font-size:1.4em;font-weight:bold">≈</span> <code>x</code></td>
   <td><code>x</code></td>
   <td><code>x</code></td>
   <td>✅ <code>Algs.X</code><br>
@@ -614,21 +599,21 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>Turn n outermost R-side layers<br>
       <em>n=2 default, ≡ <code>R[:n]</code></em></td>
   <td>✅ <code>Rw</code>, <code>r</code><br>✅ <code>3Rw</code>, <code>3r</code></td>
-  <td><code>r</code>, <code>3r</code><sup>③</sup></td>
+  <td><code>r</code>, <code>3r</code><b>[3]</b></td>
   <td><code>Rw</code>/<code>r</code><br><code>3Rw</code>/<code>3r</code></td>
   <td><code>Algs.Rw</code>, <code>Algs.r</code><br><code>3 * Algs.Rw</code>, <code>3 * Algs.r</code><br><code>Algs.R[:2]</code>, <code>Algs.R[:3]</code><br><code>Algs.r[:2]</code>, <code>Algs.r[:3]</code></td>
   <td><code>Rw</code>, <code>r</code><br><code>3Rw</code>, <code>3r</code><br><code>[1:2]R</code>, <code>[1:3]R</code></td>
   <td>✅ <code>"Rw"</code>, <code>"r"</code><br>✅ <code>"3Rw"</code>, <code>"3r"</code><br>✅ <code>"[:2]R"</code>, <code>"[:3]R"</code><br>✅ <code>"[:2]r"</code> → <code>[1:2]R</code><br>✅ <code>"[:3]r"</code> → <code>[1:3]R</code><br>✅ <code>"1-3R"</code></td>
-  <td>⚠ <code>Rw</code>/<code>r</code>:<br>see RRw in next row<sup>④</sup></td>
+  <td>⚠ <code>Rw</code>/<code>r</code>:<br>see RRw in next row<b>[4]</b></td>
 </tr>
 <tr>
   <td>13</td>
   <td>Turn all layers except opposite face (adaptive)<br>
       <em>3×3: 2 · 4×4: 3 · 5×5: 4 · NxN: N−1</em></td>
+  <td><span style="color:#00aa00;font-size:1.4em;font-weight:bold">≈</span> <code>x L</code></td>
   <td>—</td>
   <td>—</td>
-  <td>—</td>
-  <td><code>Algs.RRw</code> / <code>Algs.rr</code></td>
+  <td><code>Algs.Rw[:-1]</code> / <code>Algs.r[:-1]</code></td>
   <td><code>[:-1]Rw</code> / <code>[:-1]r</code></td>
   <td><code>"[:-1]Rw"</code> / <code>"[:-1]r"</code></td>
   <td>same</td>
@@ -639,92 +624,32 @@ At play time, `_effective_layers(cube)` computes the actual count:
   <td>14</td>
   <td>Turn single center slice between L&amp;R, like L<br>
       <em>3×3: 1 slice · 4×4: N/A · 5×5: 1 slice</em></td>
-  <td><code>M</code></td>
-  <td>—<sup>①</sup></td>
+  <td>✅ <code>M</code><br><em>odd only</em></td>
+  <td>—<b>[1]</b></td>
   <td><code>M</code></td>
   <td><code>Algs.M</code></td>
   <td><code>M</code></td>
   <td><code>"M"</code></td>
-  <td>⚠ ≡ <code>Algs.m</code><sup>②</sup></td>
+  <td>⚠ ≡ <code>Algs.m</code><b>[2]</b></td>
 </tr>
 <tr>
   <td>15</td>
   <td>Turn ALL inner slices between L&amp;R, like L<br>
       <em>3×3: 1 · 4×4: 2 · 5×5: 3 slices</em></td>
-  <td><code>m</code> (lowercase)</td>
-  <td><code>M</code><sup>①</sup></td>
+  <td>✅ <code>m</code><br><em>odd only</em></td>
+  <td><code>M</code><b>[1]</b></td>
   <td>—</td>
   <td><code>Algs.m</code></td>
   <td><code>m</code></td>
   <td>✅ <code>"m"</code></td>
   <td>same</td>
 </tr>
-<!-- ═══════════════════ 5. Slice Range & Indexing ═══════════════════ -->
-<tr style="border-top:2px solid #888;"><td></td><td style="font-weight:bold;">Slice Range &amp; Indexing (ours only)</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-<tr>
-  <td>16</td>
-  <td>Turn R face + 1st inner slice (= Rw)</td>
-  <td>—</td>
-  <td>—</td>
-  <td>—</td>
-  <td><code>Algs.R[1:2]</code></td>
-  <td><code>[1:2]R</code></td>
-  <td><code>"[1:2]R"</code></td>
-  <td>same</td>
-</tr>
-<tr>
-  <td>17</td>
-  <td>Turn R layers 2–3 (no outer face)<br>
-      <em>5×5+: 2 inner slices</em></td>
-  <td>—</td>
-  <td>—</td>
-  <td>—</td>
-  <td><code>Algs.R[2:3]</code></td>
-  <td><code>[2:3]R</code></td>
-  <td><code>"[2:3]R"</code></td>
-  <td>same</td>
-</tr>
-<tr>
-  <td>18</td>
-  <td>Turn 1st M slice only (closest to L)</td>
-  <td>—</td>
-  <td>—</td>
-  <td>—</td>
-  <td><code>Algs.m[1]</code></td>
-  <td><code>[1:1]M</code></td>
-  <td><code>"[1]M"</code></td>
-  <td>same</td>
-</tr>
-<tr>
-  <td>19</td>
-  <td>Turn M slices 1–2<br>
-      <em>4×4+: 2 slices</em></td>
-  <td>—</td>
-  <td>—</td>
-  <td>—</td>
-  <td><code>Algs.m[1:2]</code></td>
-  <td><code>[1:2]M</code></td>
-  <td><code>"[1:2]M"</code></td>
-  <td>same</td>
-</tr>
-<tr>
-  <td>20</td>
-  <td>Turn all M slices from 1st to last<br>
-      <em>= m, all inner slices</em></td>
-  <td>—</td>
-  <td>—</td>
-  <td>—</td>
-  <td><code>Algs.m[1:]</code></td>
-  <td><code>[1:]M</code></td>
-  <td><code>"[1:]M"</code></td>
-  <td>same</td>
-</tr>
-<!-- ═══════════════════ 6. Whole Cube Rotations ═══════════════════ -->
-<tr style="border-top:2px solid #888;"><td></td><td style="font-weight:bold;">Whole Cube Rotations<sup>⑤</sup></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+<!-- ═══════════════════ 5. Whole Cube Rotations ═══════════════════ -->
+<tr style="border-top:2px solid #888;"><td></td><td style="font-weight:bold;">Whole Cube Rotations</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
 <tr>
   <td>21</td>
   <td>Rotate whole cube like R</td>
-  <td><code>x</code></td>
+  <td>✅ <code>x</code></td>
   <td><code>x</code></td>
   <td><code>x</code></td>
   <td><code>Algs.X</code></td>
@@ -735,7 +660,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
 <tr>
   <td>22</td>
   <td>Rotate whole cube like U</td>
-  <td><code>y</code></td>
+  <td>✅ <code>y</code></td>
   <td><code>y</code></td>
   <td><code>y</code></td>
   <td><code>Algs.Y</code></td>
@@ -746,7 +671,7 @@ At play time, `_effective_layers(cube)` computes the actual count:
 <tr>
   <td>23</td>
   <td>Rotate whole cube like F</td>
-  <td><code>z</code></td>
+  <td>✅ <code>z</code></td>
   <td><code>z</code></td>
   <td><code>z</code></td>
   <td><code>Algs.Z</code></td>
@@ -758,16 +683,10 @@ At play time, `_effective_layers(cube)` computes the actual count:
 
 **Notes:**
 
-<sup>①</sup> MZRG defines `M` as ALL inner slices (portable across sizes), not single center.<br>
-<sup>②</sup> In `compat_3x3` mode, `parse("M")` → all-slices (`m`), so 3×3 algs work on bigger cubes.<br>
-<sup>③</sup> MZRG (SiGN) uses only lowercase for wide moves — no `Rw` form.<br>
-<sup>④</sup> In `compat_3x3` mode, `parse("Rw")`/`parse("r")`/`parse("3Rw")` → adaptive (`[:-1]Rw`/`[:-1]r`).<br>
-<sup>⑤</sup> Standards use lowercase `x`/`y`/`z`. Our parser accepts uppercase `X`/`Y`/`Z`.<br>
-❌<sup>⑥</sup> In standard notation, `3Rw` on a 3×3 is an error (only 2 non-opposite layers exist). Our implementation clamps to `min(3, size-1)` = 2 layers, equivalent to `Rw`.<br>
-✅<sup>⑦</sup> Parser now supports SiGN range syntax (`3-4R`, `3-4Rw`, `3-4r`) — equivalent to bracket `[3:4]R`.<br>
-✅<sup>⑧</sup> Bracket slicing on wide moves (`[3:4]Rw`, `[3:4]r`) now works — produces same result as `[3:4]R` (wide distinction irrelevant with explicit layers).<br>
-✅<sup>⑨</sup> `[3:4]R` on 4×4 now works — spans to opposite face (layer 4 = L face rotated in R direction = L').<br>
-✅<sup>⑩</sup> `nR` where n = cube size now rotates the opposite face (e.g. `4R` on 4×4 ≡ `L'`). Tested for all 6 faces on 3×3, 4×4, 5×5.
+<b>[1]</b> MZRG defines `M` as ALL inner slices (portable across sizes), not single center.<br>
+<b>[2]</b> In `compat_3x3` mode, `parse("M")` → all-slices (`m`), so 3×3 algs work on bigger cubes.<br>
+<b>[3]</b> MZRG (SiGN) uses only lowercase for wide moves — no `Rw` form.<br>
+<b>[4]</b> In `compat_3x3` mode, `parse("Rw")`/`parse("r")`/`parse("3Rw")` → adaptive (`[:-1]Rw`/`[:-1]r`).
 
 ---
 

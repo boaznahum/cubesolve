@@ -155,11 +155,11 @@ class AppWindowBase(ABC):
         """
         ...
 
-    def get_system_mouse_cursor(self, cursor_type: str) -> None:
+    def get_system_mouse_cursor(self, _cursor_type: str) -> None:
         """Get a system mouse cursor. Returns None for non-pyglet backends."""
         return None
 
-    def set_mouse_cursor(self, cursor: object) -> None:
+    def set_mouse_cursor(self, _cursor: object) -> None:
         """Set the mouse cursor. No-op for non-pyglet backends."""
         pass
 

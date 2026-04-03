@@ -323,38 +323,27 @@ def _token_to_alg(t: str, *, compat_3x3: bool = False) -> _Alg:
 
     # Apply slice to base algorithm FIRST (before modifiers)
     if slice_spec is not None:
-        # Special case: [:-1]Rw or [:-1]r → all-but-last wide move (RRw/rr)
-        # Simple list lookup returns WideLayerAlg — swap to ALL_BUT_LAST mode.
-        if isinstance(slice_spec, slice) and slice_spec.start is None and slice_spec.stop == -1:
-            from cube.domain.algs.WideLayerAlg import WideLayerAlg
-            if isinstance(base_alg, WideLayerAlg):
-                base_alg = _wide_to_all_but_last(base_alg)
-                slice_spec = None  # Consumed — don't apply as regular slice
-            else:
-                raise InternalSWError(f"[:-1] notation only supported for wide moves (Rw/r), got {base_alg}")
+        # M/E/S (MiddleSliceAlg) is NOT sliceable — use lowercase m/e/s
+        from cube.domain.algs.MiddleSliceAlg import MiddleSliceAlg
+        if isinstance(base_alg, MiddleSliceAlg):
+            raise InternalSWError(
+                f"'{base_alg._code}' is not sliceable — use lowercase '{base_alg._code.lower()}'"
+            )
 
-        if slice_spec is not None:
-            # M/E/S (MiddleSliceAlg) is NOT sliceable — use lowercase m/e/s
-            from cube.domain.algs.MiddleSliceAlg import MiddleSliceAlg
-            if isinstance(base_alg, MiddleSliceAlg):
-                raise InternalSWError(
-                    f"'{base_alg._code}' is not sliceable — use lowercase '{base_alg._code.lower()}'"
-                )
-
-            from cube.domain.algs.SliceAbleAlg import SliceAbleAlg
-            if not isinstance(base_alg, SliceAbleAlg):
-                raise InternalSWError(f"Slice notation not supported for {base_alg}")
-            # [:]X means "all slices/layers"
-            if isinstance(slice_spec, slice) and slice_spec.start is None and slice_spec.stop is None:
-                from cube.domain.algs.SliceAlg import SliceAlg
-                if isinstance(base_alg, SliceAlg):
-                    pass  # [:]m is redundant but harmless — already all slices
-                else:
-                    base_alg = base_alg[:]  # FaceAlg: [:]R, WideLayerAlg: [:]Rw = all layers
-            elif isinstance(slice_spec, slice):
-                base_alg = base_alg[slice_spec.start:slice_spec.stop]
+        from cube.domain.algs.SliceAbleAlg import SliceAbleAlg
+        if not isinstance(base_alg, SliceAbleAlg):
+            raise InternalSWError(f"Slice notation not supported for {base_alg}")
+        # [:]X means "all slices/layers"
+        if isinstance(slice_spec, slice) and slice_spec.start is None and slice_spec.stop is None:
+            from cube.domain.algs.SliceAlg import SliceAlg
+            if isinstance(base_alg, SliceAlg):
+                pass  # [:]m is redundant but harmless — already all slices
             else:
-                base_alg = base_alg[slice_spec]
+                base_alg = base_alg[:]  # FaceAlg: [:]R, WideLayerAlg: [:]Rw = all layers
+        elif isinstance(slice_spec, slice):
+            base_alg = base_alg[slice_spec.start:slice_spec.stop]
+        else:
+            base_alg = base_alg[slice_spec]
 
     # For bare uppercase M/E/S with compat_3x3: remap to all-slices (SliceAlg)
     # because on 3x3, M = m (single slice = all slices)
@@ -371,7 +360,7 @@ def _token_to_alg(t: str, *, compat_3x3: bool = False) -> _Alg:
     if not had_slice_prefix and compat_3x3:
         from cube.domain.algs.WideLayerAlg import WideLayerAlg
         if isinstance(base_alg, WideLayerAlg) and base_alg._layers == 2:
-            base_alg = _wide_to_all_but_last(base_alg)
+            base_alg = base_alg[:-1]
 
     # Apply modifiers in order
     result = base_alg
@@ -418,12 +407,3 @@ def _token_to_alg_no_slice(t: str) -> _Alg:
 
     raise InternalSWError(f"Unknown token {t}")
 
-
-def _wide_to_all_but_last(wide: _Alg) -> _Alg:
-    """Convert a WideLayerAlg to all-but-last mode (layers=ALL_BUT_LAST).
-
-    Used for [:-1]Rw notation and compat_3x3 mode.
-    """
-    from cube.domain.algs.WideLayerAlg import ALL_BUT_LAST, WideLayerAlg
-    assert isinstance(wide, WideLayerAlg)
-    return wide.with_layers(ALL_BUT_LAST)

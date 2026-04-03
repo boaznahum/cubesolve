@@ -52,8 +52,8 @@ DOC_ROWS: list[DocRow] = [
            equivalent=Algs.parse("3R 4R"), equiv_sizes=(5,)),
     DocRow("[3:4]Rw: slices 3–4 via Rw",        Algs.Rw[3:4],                    "[3:4]Rw",  "[3:4]R", sizes=(4, 5)),
     DocRow("[3:4]r: slices 3–4 via r",           Algs.r[3:4],                     "[3:4]r",   "[3:4]R", sizes=(4, 5)),
-    DocRow("[3:]R: all from 3rd to last",         Algs.R[3:],                      "[3:]R",    "[3:]R", sizes=(5,),
-           equivalent=Algs.parse("3R 4R") + Algs.L.prime, equiv_sizes=(5,)),
+    DocRow("[3:]R: all from 3rd to last (≡ X Rw')", Algs.R[3:],                     "[3:]R",    "[3:]R", sizes=(5,),
+           equivalent=Algs.X + Algs.Rw.prime, equiv_sizes=(3, 4, 5)),
     DocRow("[3:]r: all from 3rd to last via r",  Algs.r[3:],                      "[3:]r",    "[3:]R", sizes=(5,)),
     DocRow("[:]R: all R layers (≡ X)",             Algs.R[:],                       "[:]R",     "[:]R",
            equivalent=Algs.X, equiv_sizes=(3, 4, 5)),
@@ -83,9 +83,9 @@ DOC_ROWS: list[DocRow] = [
     DocRow("3r: 3 outermost R-side layers",       3 * Algs.r, "3r", "3r",
            compat_3x3_parser_str="3r", compat_3x3_expected_str="3r",
            equivalent=Algs.parse("R 2R 3R"), equiv_sizes=(5,)),
-    DocRow("[:-1]Rw: all-but-last (adaptive)",    Algs.RRw,                        "[:-1]Rw",  "[:-1]Rw",
+    DocRow("[:-1]Rw: all-but-last (adaptive)",     Algs.Rw[:-1],  "[:-1]Rw",  "[:-1]Rw",
            equivalent=Algs.parse("R 2R 3R 4R"), equiv_sizes=(5,)),
-    DocRow("[:-1]r: all-but-last (adaptive)",     Algs.rr,                         "[:-1]r",   "[:-1]r",
+    DocRow("[:-1]r: all-but-last (adaptive)",     Algs.r[:-1],   "[:-1]r",   "[:-1]r",
            equivalent=Algs.parse("R 2R 3R 4R"), equiv_sizes=(5,)),
 
     # §4 Slice Moves
@@ -94,17 +94,7 @@ DOC_ROWS: list[DocRow] = [
     DocRow("m: ALL inner slices, like L",         Algs.m,                         "m",        "m",
            equivalent=Algs.parse("[1:1]m [2:2]m [3:3]m"), equiv_sizes=(5,)),
 
-    # §5 Slice Range & Indexing
-    DocRow("[1:2]R: R face + 1st inner (= Rw)",  Algs.R[1:2],                     "[1:2]R",   "[1:2]R",
-           equivalent=Algs.parse("R 2R"), equiv_sizes=(3, 4, 5)),
-    DocRow("[2:3]R: R layers 2–3 (no outer)",     Algs.R[2:3],                     "[2:3]R",   "[2:3]R", sizes=(5,),
-           equivalent=Algs.parse("2R 3R"), equiv_sizes=(5,)),
-    DocRow("[1:1]m: 1st m slice only",            Algs.m[1],                      "[1]m",     "[1:1]m"),
-    DocRow("[1:2]m: m slices 1–2",                Algs.m[1:2],                    "[1:2]m",   "[1:2]m", sizes=(4, 5),
-           equivalent=Algs.parse("[1:1]m [2:2]m"), equiv_sizes=(4, 5)),
-    DocRow("[1:]m: all m slices from 1st",        Algs.m[1:],                     "[1:]m",    "[1:]m"),
-
-    # §6 Whole Cube Rotations
+    # §5 Whole Cube Rotations
     DocRow("X: rotate whole cube like R",         Algs.X,                          "X",        "X"),
     DocRow("Y: rotate whole cube like U",         Algs.Y,                          "Y",        "Y"),
     DocRow("Z: rotate whole cube like F",         Algs.Z,                          "Z",        "Z"),
@@ -198,14 +188,46 @@ class TestSpecialCases:
     # --- Size-dependent: Rw vs adaptive ---
 
     def test_3x3_Rw_equals_adaptive(self) -> None:
-        """On 3x3, Rw (2 layers) == [:-1]Rw (also 2 layers)."""
-        assert_algs_equivalent(Algs.Rw, Algs.RRw, 3)
+        """On 3x3, Rw (2 layers) == Rw[:-1] (also 2 layers)."""
+        assert_algs_equivalent(Algs.Rw, Algs.Rw[:-1], 3)
 
     def test_5x5_Rw_not_equals_adaptive(self) -> None:
-        """On 5x5, Rw (2 layers) != [:-1]Rw (4 layers)."""
-        assert_algs_equivalent(Algs.Rw, Algs.RRw, 5, expect_equal=False)
+        """On 5x5, Rw (2 layers) != Rw[:-1] (4 layers)."""
+        assert_algs_equivalent(Algs.Rw, Algs.Rw[:-1], 5, expect_equal=False)
 
-    # --- Known unsupported: bracket on wide moves ---
+    # --- R[3:] Twizzle workaround equivalences ---
+
+    @pytest.mark.parametrize("cube_size", [3, 4, 5])
+    def test_R_3_to_end_equals_X_Rw_prime(self, cube_size: int) -> None:
+        """R[3:] == X Rw' (whole cube R, undo 2 outermost layers)."""
+        assert_algs_equivalent(Algs.R[3:], Algs.X + Algs.Rw.prime, cube_size)
+
+    @pytest.mark.parametrize("cube_size", [3, 4, 5])
+    def test_R_3_to_end_equals_X_2Rw_prime(self, cube_size: int) -> None:
+        """R[3:] == X 2Rw' (explicit 2-layer wide)."""
+        assert_algs_equivalent(Algs.R[3:], Algs.X + Algs.parse("2Rw'"), cube_size)
+
+    @pytest.mark.parametrize("cube_size", [3, 4, 5])
+    def test_R_3_to_end_equals_X_1_2R_prime(self, cube_size: int) -> None:
+        """R[3:] == X 1-2R' (SiGN range)."""
+        assert_algs_equivalent(Algs.R[3:], Algs.X + Algs.parse("1-2R'"), cube_size)
+
+    # --- [:-1]Rw Twizzle workaround equivalence ---
+
+    @pytest.mark.parametrize("cube_size", [3, 4, 5])
+    def test_R_adaptive_equals_X_L(self, cube_size: int) -> None:
+        """R[:-1] == X L (all R layers except opposite face)."""
+        assert_algs_equivalent(Algs.R[:-1], Algs.X + Algs.L, cube_size)
+
+    @pytest.mark.parametrize("cube_size", [3, 4, 5])
+    def test_Rw_adaptive_equals_X_L(self, cube_size: int) -> None:
+        """Rw[:-1] == X L (same as R[:-1])."""
+        assert_algs_equivalent(Algs.Rw[:-1], Algs.X + Algs.L, cube_size)
+
+    @pytest.mark.parametrize("cube_size", [3, 4, 5])
+    def test_D_adaptive_equals_Y_prime_U(self, cube_size: int) -> None:
+        """D[:-1] == Y' U (all D layers except opposite face)."""
+        assert_algs_equivalent(Algs.D[:-1], Algs.Y.prime + Algs.U, cube_size)
 
     # --- Opposite face via inner slice indexing ---
 

@@ -18,13 +18,14 @@ class SlicedFaceAlg(FaceAlgBase):
     All instances are frozen (immutable) after construction.
     """
 
-    __slots__ = ("_slices",)
+    __slots__ = ("_slices", "_display_code")
 
     def __init__(
         self,
         face: FaceName,
         n: int,
         slices: "slice | Sequence[int]",
+        display_code: str | None = None,
     ) -> None:
         """
         Create a sliced face algorithm.
@@ -33,15 +34,22 @@ class SlicedFaceAlg(FaceAlgBase):
             face: The face name (R, L, U, D, F, B)
             n: The rotation count (1, -1, 2, etc.)
             slices: The slice specification (always set, never None)
+            display_code: Override code for str() (e.g. "Rw", "r"). None = use face code.
         """
         super().__init__(face, n)
         self._slices: slice | Sequence[int] = slices
+        self._display_code: str | None = display_code
         self._freeze()
 
     @property
     def slices(self) -> "slice | Sequence[int]":
         """Return slice info. Always set for SlicedFaceAlg."""
         return self._slices
+
+    def atomic_str(self) -> str:
+        from cube.domain.algs._internal_utils import n_to_str
+        code = self._display_code if self._display_code else self._code
+        return self._add_to_str(n_to_str(code, self._n))
 
     def _create_with_n(self, n: int) -> Self:
         """Create a new SlicedFaceAlg with the given n value."""
@@ -51,6 +59,7 @@ class SlicedFaceAlg(FaceAlgBase):
         object.__setattr__(instance, "_n", n)
         object.__setattr__(instance, "_face", self._face)
         object.__setattr__(instance, "_slices", self._slices)
+        object.__setattr__(instance, "_display_code", self._display_code)
         object.__setattr__(instance, "_frozen", True)
         return instance
 
