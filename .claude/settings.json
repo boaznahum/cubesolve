@@ -31,6 +31,7 @@
     "frontend-design@claude-code-plugins": true,
     "code-review@claude-plugins-official": true,
     "claude-code-setup@claude-plugins-official": true,
-    "code-simplifier@claude-plugins-official": true
+    "code-simplifier@claude-plugins-official": true,
+    "token-optimizer@alexgreensh-token-optimizer": true
   }
 }
