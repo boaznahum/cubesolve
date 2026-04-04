@@ -28,7 +28,7 @@ from cube.presentation.gui.backends.webgl.CubeStateSerializer import apply_cube_
 from cube.presentation.gui.backends.webgl.FlowStateMachine import FlowEvent, FlowState, FlowStateMachine
 from cube.presentation.gui.backends.webgl.SessionState import SessionStateSnapshot
 from cube.presentation.gui.commands import Command, CommandContext
-from cube.utils.logging import ColonPrefixFormatter, LogStreamBuffer, WebSocketLogHandler
+from cube.utils.logging import LogStreamBuffer
 from cube.version import get_version
 
 if TYPE_CHECKING:
@@ -151,8 +151,10 @@ class ClientSession:
         self._log_buffer: LogStreamBuffer = LogStreamBuffer(max_lines=500)
         self._app.vs.logger.add_stream(self._log_buffer.append)
 
-        # Live console handler (added/removed on subscribe/unsubscribe)
-        self._console_ws_handler: WebSocketLogHandler | None = None
+        # Console notification state (index-based pull protocol)
+        self._console_subscribed: bool = False
+        self._console_last_notified: int = -1  # last head index we notified
+        self._console_notify_task: asyncio.Task[None] | None = None
 
         # Client count — set externally by SessionManager
         self._client_count: int = 0
@@ -225,7 +227,7 @@ class ClientSession:
         self._fsm.send_reconnect(has_redo=has_redo)
         actions = self._fsm.allowed_actions(has_redo=has_redo, has_history=has_history)
         print(
-            f"Session reattached: {self.client_info.session_id[:8]} → {self._fsm.state.value} "
+            f"Session reattached: {self.client_info.session_id[:8]} -> {self._fsm.state.value} "
             f"redo={len(self._app.op.redo_queue())} history={len(self._app.op.history())} "
             f"play_all={actions.get('play_all')}",
             flush=True,
@@ -674,10 +676,13 @@ class ClientSession:
             self._handle_set_config(data.get("settings", {}))
 
         elif msg_type == "console_subscribe":
-            self._handle_console_subscribe()
+            self._handle_console_subscribe(data.get("from", 0))
 
         elif msg_type == "console_unsubscribe":
             self._handle_console_unsubscribe()
+
+        elif msg_type == "console_fetch":
+            self._handle_console_fetch(data.get("from", 0))
 
         elif msg_type == "parse_alg":
             self._handle_parse_alg(data.get("text", ""))
@@ -777,24 +782,57 @@ class ClientSession:
 
     # -- Console stream handlers --
 
-    def _handle_console_subscribe(self) -> None:
-        """Client opened the console — send snapshot and add live handler."""
-        lines = self._log_buffer.snapshot()
-        self._send(json.dumps({"type": "console_snapshot", "lines": lines}))
-
-        # Remove previous handler if any, then add a fresh one
+    def _handle_console_subscribe(self, from_index: int = 0) -> None:
+        """Client opened the console — send buffered lines and start notifications."""
+        # Stop previous notification loop if any
         self._handle_console_unsubscribe()
 
-        handler = WebSocketLogHandler(self._send)
-        handler.setFormatter(ColonPrefixFormatter())
-        self._console_ws_handler = handler
-        self._app.vs.logger.addHandler(handler)
+        # Send buffered lines from requested index
+        result = self._log_buffer.fetch(from_index)
+        lines_payload = [{"i": entry.idx, "t": entry.text} for entry in result.lines]
+        self._send(json.dumps({
+            "type": "console_data",
+            "from": result.lines[0].idx if result.lines else from_index,
+            "head": result.head,
+            "lines": lines_payload,
+            "truncated": result.truncated,
+        }))
+
+        # Start periodic notification loop
+        self._console_subscribed = True
+        self._console_last_notified = result.head
+        self._console_notify_task = asyncio.ensure_future(self._console_notify_loop())
 
     def _handle_console_unsubscribe(self) -> None:
-        """Client closed the console — remove live handler."""
-        if self._console_ws_handler is not None:
-            self._app.vs.logger.removeHandler(self._console_ws_handler)
-            self._console_ws_handler = None
+        """Client closed the console — stop notifications."""
+        self._console_subscribed = False
+        if self._console_notify_task is not None:
+            self._console_notify_task.cancel()
+            self._console_notify_task = None
+
+    def _handle_console_fetch(self, from_index: int) -> None:
+        """Client requests missing lines from a specific index."""
+        result = self._log_buffer.fetch(from_index)
+        lines_payload = [{"i": entry.idx, "t": entry.text} for entry in result.lines]
+        self._send(json.dumps({
+            "type": "console_data",
+            "from": result.lines[0].idx if result.lines else from_index,
+            "head": result.head,
+            "lines": lines_payload,
+            "truncated": result.truncated,
+        }))
+
+    async def _console_notify_loop(self) -> None:
+        """Periodically send console_head notifications while subscribed."""
+        try:
+            while self._console_subscribed:
+                await asyncio.sleep(0.1)  # 100ms interval
+                head = self._log_buffer.head
+                if head > self._console_last_notified:
+                    self._console_last_notified = head
+                    self._send(json.dumps({"type": "console_head", "index": head}))
+        except asyncio.CancelledError:
+            pass
 
     def _handle_command(self, command_name: str) -> None:
         from cube.presentation.gui.commands import Commands

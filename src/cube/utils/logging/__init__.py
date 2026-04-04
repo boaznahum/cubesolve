@@ -10,7 +10,6 @@ from cube.utils.logging._logger import (
 )
 from cube.utils.logging._std_logging import (
     ColonPrefixFormatter,
-    WebSocketLogHandler,
 )
 
 __all__ = [
@@ -18,5 +17,4 @@ __all__ = [
     "setup_root_logger",
     "LogStreamBuffer",
     "ColonPrefixFormatter",
-    "WebSocketLogHandler",
 ]

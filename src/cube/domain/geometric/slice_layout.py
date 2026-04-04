@@ -566,7 +566,7 @@ class _SliceLayout(SliceLayout):
             # If tests fail non-deterministically, it reveals hidden assumptions.
             prevent_random_face_in = self._config.prevent_random_face_pick_up_in_geometry
             if prevent_random_face_in:
-                print("❌❌❌❌❌❌❌ PREVENT_RANDOM_FACE_PICK_UP_IN_GEOMETRY is True ❌❌❌❌❌❌❌")
+                print("[WARNING] PREVENT_RANDOM_FACE_PICK_UP_IN_GEOMETRY is True")
             fidx = 0 if prevent_random_face_in else random.randint(0, 3)
             first_face = cycle_faces_ordered[fidx]
             second_face = cycle_faces_ordered[(fidx + 1) % 4]

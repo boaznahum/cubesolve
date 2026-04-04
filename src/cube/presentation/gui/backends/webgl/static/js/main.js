@@ -303,6 +303,8 @@ wsClient.onConnected = () => {
     // Force-exit paint mode and edit mode on reconnect — server state may have changed
     if (colorPicker.active) colorPicker.exit(true);
     if (algEditor.active) algEditor.exit();
+    // Re-subscribe console if it was open — resumes from last known index
+    consolePanel.onReconnect();
 };
 
 // ── Message handler ──
@@ -428,12 +430,12 @@ function handleMessage(msg) {
             algEditor.onParseResult(msg.valid, msg.error);
             break;
 
-        case 'console_snapshot':
-            consolePanel.onSnapshot(msg.lines || []);
+        case 'console_head':
+            consolePanel.onHead(msg.index);
             break;
 
-        case 'console_lines':
-            consolePanel.onLines(msg.lines || []);
+        case 'console_data':
+            consolePanel.onData(msg);
             break;
     }
 }
