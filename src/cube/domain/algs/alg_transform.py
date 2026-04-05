@@ -21,6 +21,8 @@ Transforming any algorithm reduces to remapping face names through that permutat
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 from cube.domain.algs.Alg import Alg
 from cube.domain.algs.FaceAlg import FaceAlg
 from cube.domain.algs.SlicedFaceAlg import SlicedFaceAlg
@@ -174,35 +176,40 @@ def compute_permutation(w: Alg) -> FacePermutation:
 def _remap_by_rotation_face(
     p: FacePermutation, rotation_face: FaceName, n: int,
     face_to_name: dict[FaceName, SliceName | AxisName],
-) -> tuple[SliceName | AxisName, int]:
+) -> tuple[SliceName | AxisName, int, bool]:
     """Remap a slice or axis based on where its rotation face maps to.
 
     If the rotation face maps to a known rotation face → same direction.
     If it maps to the OPPOSITE of a known rotation face → negate direction.
 
     Returns:
-        (new_name, new_n)
+        (new_name, new_n, direction_negated)
     """
     new_face = p(rotation_face)
 
     if new_face in face_to_name:
-        return face_to_name[new_face], n
+        return face_to_name[new_face], n, False
 
     opp = _OPPOSITE[new_face]
     if opp in face_to_name:
-        return face_to_name[opp], -n
+        return face_to_name[opp], -n, True
 
     raise ValueError(f"Cannot remap rotation face {rotation_face}→{new_face}")
 
 
 def _transform_slice(
     p: FacePermutation, slice_name: SliceName, n: int,
-) -> tuple[SliceName, int]:
-    """Transform a slice name and direction by the face permutation."""
+) -> tuple[SliceName, int, bool]:
+    """Transform a slice name and direction by the face permutation.
+
+    Returns:
+        (new_slice_name, new_n, direction_negated)
+        When direction_negated is True, sliced indices must be mirrored.
+    """
     rotation_face = SLICE_ROTATION_FACE[slice_name]
-    new_name, new_n = _remap_by_rotation_face(p, rotation_face, n, _FACE_TO_SLICE)
+    new_name, new_n, negated = _remap_by_rotation_face(p, rotation_face, n, _FACE_TO_SLICE)
     assert isinstance(new_name, SliceName)
-    return new_name, new_n
+    return new_name, new_n, negated
 
 
 def _transform_axis(
@@ -210,16 +217,43 @@ def _transform_axis(
 ) -> tuple[AxisName, int]:
     """Transform a whole-cube axis and direction by the face permutation."""
     rotation_face = AXIS_FACE[axis]
-    new_name, new_n = _remap_by_rotation_face(p, rotation_face, n, _FACE_TO_AXIS)
+    new_name, new_n, _ = _remap_by_rotation_face(p, rotation_face, n, _FACE_TO_AXIS)
     assert isinstance(new_name, AxisName)
     return new_name, new_n
+
+
+def _mirror_slice_indices(
+    slices: slice | Sequence[int], n_slices: int,
+) -> slice | Sequence[int]:
+    """Mirror slice indices when direction is negated.
+
+    When a slice's rotation face maps to the OPPOSITE of the new rotation face,
+    slice index 1 (closest to the old rotation face) must become index n_slices
+    (closest to the new rotation face's opposite = where the old face mapped).
+
+    Formula: index i → n_slices + 1 - i
+
+    Example on 5x5 (n_slices=3):
+        M[3] (closest to R) → S[1] (closest to F)
+        M[1] (closest to L) → S[3] (closest to B)
+        M[1:2] → S[2:3]
+    """
+    if isinstance(slices, slice):
+        start, stop = slices.start, slices.stop
+        # Mirror: i → n_slices + 1 - i, and swap start/stop since order reverses
+        new_start = (n_slices + 1 - stop) if stop is not None else None
+        new_stop = (n_slices + 1 - start) if start is not None else None
+        return slice(new_start, new_stop)
+    else:
+        # Sequence of ints — mirror each and re-sort
+        return sorted(n_slices + 1 - i for i in slices)
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Main transformation API
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-def transform(w: Alg, a: Alg) -> Alg:
+def transform(w: Alg, a: Alg, cube_size: int | None = None) -> Alg:
     """Transform algorithm A by whole-cube rotation W.
 
     Returns WA such that W' A W ≡ WA.
@@ -229,6 +263,10 @@ def transform(w: Alg, a: Alg) -> Alg:
     Args:
         w: Whole-cube rotation sequence (only X, Y, Z moves).
         a: Any cube algorithm to transform.
+        cube_size: Required when A contains sliced slice moves (e.g., M[2:3])
+            AND the transform negates the slice direction. On direction negation,
+            slice indices must be mirrored, which requires knowing n_slices = cube_size - 2.
+            Not needed for face moves, unsliced slices, middle slices, or wide moves.
 
     Returns:
         The transformed algorithm WA.
@@ -243,18 +281,23 @@ def transform(w: Alg, a: Alg) -> Alg:
         U
     """
     p = compute_permutation(w)
-    return _transform_alg(p, a)
+    n_slices = cube_size - 2 if cube_size is not None else None
+    return _transform_alg(p, a, n_slices)
 
 
-def transform_by_permutation(p: FacePermutation, a: Alg) -> Alg:
+def transform_by_permutation(
+    p: FacePermutation, a: Alg, cube_size: int | None = None,
+) -> Alg:
     """Transform algorithm A by a precomputed face permutation.
 
     Useful when applying the same rotation to multiple algorithms.
+    See transform() for cube_size semantics.
     """
-    return _transform_alg(p, a)
+    n_slices = cube_size - 2 if cube_size is not None else None
+    return _transform_alg(p, a, n_slices)
 
 
-def _transform_alg(p: FacePermutation, a: Alg) -> Alg:
+def _transform_alg(p: FacePermutation, a: Alg, n_slices: int | None) -> Alg:
     """Recursively transform an algorithm by a face permutation."""
 
     # --- Face moves ---
@@ -276,33 +319,42 @@ def _transform_alg(p: FacePermutation, a: Alg) -> Alg:
 
     # --- Slice moves (check subclasses before base) ---
     if isinstance(a, MiddleSliceAlg):
-        new_slice, new_n = _transform_slice(p, a.slice_name, a.n)
+        new_slice, new_n, _ = _transform_slice(p, a.slice_name, a.n)
         return MiddleSliceAlg(new_slice).with_n(new_n)
 
     if isinstance(a, SlicedSliceAlg):
-        new_slice, new_n = _transform_slice(p, a.slice_name, a.n)
-        return SlicedSliceAlg(new_slice, new_n, a.slices)
+        new_slice, new_n, negated = _transform_slice(p, a.slice_name, a.n)
+        slices = a.slices
+        if negated:
+            # When direction is negated, slice indices must be mirrored:
+            # the "near side" of the axis swaps. See _mirror_slice_indices.
+            if n_slices is None:
+                raise ValueError(
+                    f"cube_size is required to transform sliced slice {a} "
+                    f"(direction negated: indices must be mirrored)"
+                )
+            slices = _mirror_slice_indices(slices, n_slices)
+        return SlicedSliceAlg(new_slice, new_n, slices)
 
     if isinstance(a, SliceAlg):
-        new_slice, new_n = _transform_slice(p, a.slice_name, a.n)
+        new_slice, new_n, _ = _transform_slice(p, a.slice_name, a.n)
         from cube.domain.algs.Algs import Algs
         return Algs.of_slice(new_slice).with_n(new_n)
 
     # --- Whole-cube rotations ---
     if isinstance(a, WholeCubeAlg):
         new_axis, new_n = _transform_axis(p, a.axis_name, a.n)
-        from cube.domain.algs.Algs import Algs
         return _get_axis_alg(new_axis).with_n(new_n)
 
     # --- Composite algorithms ---
     if isinstance(a, _Inv):
-        return _transform_alg(p, a._alg).inv()  # noqa: SLF001
+        return _transform_alg(p, a._alg, n_slices).inv()  # noqa: SLF001
 
     if isinstance(a, _Mul):
-        return _transform_alg(p, a._alg) * a._n  # noqa: SLF001
+        return _transform_alg(p, a._alg, n_slices) * a._n  # noqa: SLF001
 
     if isinstance(a, SeqAlg):
-        transformed = [_transform_alg(p, sub) for sub in a.algs]
+        transformed = [_transform_alg(p, sub, n_slices) for sub in a.algs]
         return SeqAlg(a._name, *transformed)  # noqa: SLF001
 
     # --- Pass-through for annotations ---
