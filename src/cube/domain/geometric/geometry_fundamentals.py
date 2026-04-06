@@ -38,3 +38,10 @@ AXIS_FACE: dict[AxisName, FaceName] = {
     AxisName.Y: FaceName.U,
     AxisName.Z: FaceName.F,
 }
+
+# ━━ Reverse lookups (derived from the above) ━━━━━━━━━━━━━━━━━━━━━━━
+#
+#   Given a face, find which slice or axis rotates like it.
+#
+FACE_TO_SLICE: dict[FaceName, SliceName] = {v: k for k, v in SLICE_ROTATION_FACE.items()}
+FACE_TO_AXIS: dict[FaceName, AxisName] = {v: k for k, v in AXIS_FACE.items()}

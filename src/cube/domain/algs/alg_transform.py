@@ -39,7 +39,13 @@ from cube.domain.algs.MarkerMeetAlg import MarkerMeetAlg
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.cube_slice import SliceName
 from cube.domain.model._elements import AxisName
-from cube.domain.geometric.geometry_fundamentals import SLICE_ROTATION_FACE, AXIS_FACE
+from cube.domain.geometric.geometry_fundamentals import (
+    AXIS_FACE,
+    FACE_TO_AXIS,
+    FACE_TO_SLICE,
+    SLICE_ROTATION_FACE,
+)
+from cube.domain.geometric.schematic_cube import SchematicCube
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Face permutation tables — one CW quarter-turn per axis
@@ -72,16 +78,6 @@ _AXIS_PERM: dict[AxisName, dict[FaceName, FaceName]] = {
     AxisName.X: _X_PERM,
     AxisName.Y: _Y_PERM,
     AxisName.Z: _Z_PERM,
-}
-
-# Reverse lookups: face → slice/axis that rotates like it
-_FACE_TO_SLICE: dict[FaceName, SliceName] = {v: k for k, v in SLICE_ROTATION_FACE.items()}
-_FACE_TO_AXIS: dict[FaceName, AxisName] = {v: k for k, v in AXIS_FACE.items()}
-
-_OPPOSITE: dict[FaceName, FaceName] = {
-    FaceName.F: FaceName.B, FaceName.B: FaceName.F,
-    FaceName.U: FaceName.D, FaceName.D: FaceName.U,
-    FaceName.L: FaceName.R, FaceName.R: FaceName.L,
 }
 
 
@@ -190,7 +186,7 @@ def _remap_by_rotation_face(
     if new_face in face_to_name:
         return face_to_name[new_face], n, False
 
-    opp = _OPPOSITE[new_face]
+    opp = SchematicCube.inst().opposite(new_face)
     if opp in face_to_name:
         return face_to_name[opp], -n, True
 
@@ -207,7 +203,7 @@ def _transform_slice(
         When direction_negated is True, sliced indices must be mirrored.
     """
     rotation_face = SLICE_ROTATION_FACE[slice_name]
-    new_name, new_n, negated = _remap_by_rotation_face(p, rotation_face, n, _FACE_TO_SLICE)
+    new_name, new_n, negated = _remap_by_rotation_face(p, rotation_face, n, FACE_TO_SLICE)
     assert isinstance(new_name, SliceName)
     return new_name, new_n, negated
 
@@ -217,7 +213,7 @@ def _transform_axis(
 ) -> tuple[AxisName, int]:
     """Transform a whole-cube axis and direction by the face permutation."""
     rotation_face = AXIS_FACE[axis]
-    new_name, new_n, _ = _remap_by_rotation_face(p, rotation_face, n, _FACE_TO_AXIS)
+    new_name, new_n, _ = _remap_by_rotation_face(p, rotation_face, n, FACE_TO_AXIS)
     assert isinstance(new_name, AxisName)
     return new_name, new_n
 
@@ -231,6 +227,7 @@ def _mirror_slice_indices(
     slice index 1 (closest to the old rotation face) must become index n_slices
     (closest to the new rotation face's opposite = where the old face mapped).
 
+    Slice indices are 1-based (see SliceAlgBase.normalize_slice_index).
     Formula: index i → n_slices + 1 - i
 
     Example on 5x5 (n_slices=3):
@@ -238,15 +235,16 @@ def _mirror_slice_indices(
         M[1] (closest to L) → S[3] (closest to B)
         M[1:2] → S[2:3]
     """
+    mirror = n_slices + 1  # 1-based: mirror point
     if isinstance(slices, slice):
         start, stop = slices.start, slices.stop
-        # Mirror: i → n_slices + 1 - i, and swap start/stop since order reverses
-        new_start = (n_slices + 1 - stop) if stop is not None else None
-        new_stop = (n_slices + 1 - start) if start is not None else None
+        # Mirror: i → mirror - i, and swap start/stop since order reverses
+        new_start = (mirror - stop) if stop is not None else None
+        new_stop = (mirror - start) if start is not None else None
         return slice(new_start, new_stop)
     else:
         # Sequence of ints — mirror each and re-sort
-        return sorted(n_slices + 1 - i for i in slices)
+        return sorted(mirror - i for i in slices)
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
