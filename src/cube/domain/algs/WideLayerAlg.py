@@ -51,7 +51,9 @@ from cube.domain.algs.AnimationAbleAlg import AnimationAbleAlg
 from cube.domain.algs.SliceAbleAlg import SliceAbleAlg
 
 if TYPE_CHECKING:
+    from cube.domain.algs.Alg import Alg
     from cube.domain.algs.SlicedFaceAlg import SlicedFaceAlg
+    from cube.domain.algs.face_permutation import FacePermutation
 from cube.domain.algs.SimpleAlg import SimpleAlg
 from cube.domain.exceptions import InternalSWError
 from cube.domain.model import Cube, FaceName, PartSlice
@@ -202,3 +204,9 @@ class WideLayerAlg(AnimationAbleAlg, SliceAbleAlg):
     @property
     def layers(self) -> int:
         return self._layers
+
+    def transform_by(self, p: "FacePermutation", n_slices: int | None) -> "Alg":
+        return WideLayerAlg(
+            p(self._face), self._layers, self._n,
+            lowercase=self._lowercase,
+        )

@@ -8,6 +8,7 @@ from .Alg import Alg
 if TYPE_CHECKING:
     from .SeqAlg import SeqSimpleAlg
     from .SimpleAlg import SimpleAlg
+    from .face_permutation import FacePermutation
 
 
 class _Inv(Alg):
@@ -76,6 +77,9 @@ class _Inv(Alg):
 
     def count_simple(self) -> int:
         return self._alg.count_simple()
+
+    def transform_by(self, p: "FacePermutation", n_slices: int | None) -> Alg:
+        return self._alg.transform_by(p, n_slices).inv()
 
 
 

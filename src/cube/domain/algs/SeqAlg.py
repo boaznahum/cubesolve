@@ -1,13 +1,15 @@
 import functools
 import typing
 from collections.abc import Iterator, MutableSequence, Sequence
+from typing import TYPE_CHECKING
 from typing_extensions import override
 
 from cube.domain.algs.Alg import Alg
 from cube.domain.model.Cube import Cube
 
-if typing.TYPE_CHECKING:
+if TYPE_CHECKING:
     from cube.domain.algs.SimpleAlg import SimpleAlg
+    from cube.domain.algs.face_permutation import FacePermutation
 
 
 class SeqAlg(Alg):
@@ -148,6 +150,10 @@ class SeqAlg(Alg):
 
     def count_simple(self) -> int:
         return sum(a.count_simple() for a in self._algs)
+
+    def transform_by(self, p: "FacePermutation", n_slices: int | None) -> "Alg":
+        transformed = [sub.transform_by(p, n_slices) for sub in self._algs]
+        return SeqAlg(self._name, *transformed)
 
 
 class SeqSimpleAlg(SeqAlg):

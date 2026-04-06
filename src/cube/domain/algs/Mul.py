@@ -1,6 +1,6 @@
 from abc import ABC
 from collections.abc import Iterator
-from typing import final
+from typing import TYPE_CHECKING, final
 from typing_extensions import override
 
 from cube.domain.algs._internal_utils import _normalize_for_count
@@ -9,6 +9,9 @@ from cube.domain.algs.AnnotationAlg import AnnotationAlg
 from cube.domain.algs.SeqAlg import SeqAlg, SeqSimpleAlg
 from cube.domain.algs.SimpleAlg import NSimpleAlg, SimpleAlg
 from cube.domain.model.Cube import Cube
+
+if TYPE_CHECKING:
+    from cube.domain.algs.face_permutation import FacePermutation
 
 
 @final
@@ -89,6 +92,9 @@ class _Mul(Alg, ABC):
     @override
     def count_simple(self) -> int:
         return self._n * self._alg.count_simple()
+
+    def transform_by(self, p: "FacePermutation", n_slices: int | None) -> Alg:
+        return self._alg.transform_by(p, n_slices) * self._n
 
 
 

@@ -4,7 +4,9 @@ from cube.domain.algs.SliceAlgBase import SliceAlgBase
 from cube.domain.model.cube_slice import SliceName
 
 if TYPE_CHECKING:
+    from cube.domain.algs.Alg import Alg
     from cube.domain.algs.SimpleAlg import SimpleAlg
+    from cube.domain.algs.face_permutation import FacePermutation
 
 
 @final
@@ -90,6 +92,19 @@ class SlicedSliceAlg(SliceAlgBase):
         """Return the base unsliced alg. For sliced algs, we construct it."""
         from cube.domain.algs.Algs import Algs
         return Algs.of_slice(self._slice_name)
+
+    def transform_by(self, p: "FacePermutation", n_slices: int | None) -> "Alg":
+        from cube.domain.algs.face_permutation import transform_slice, mirror_slice_indices
+        new_slice, new_n, negated = transform_slice(p, self._slice_name, self._n)
+        slices = self._slices
+        if negated:
+            if n_slices is None:
+                raise ValueError(
+                    f"cube_size is required to transform sliced slice {self} "
+                    f"(direction negated: indices must be mirrored)"
+                )
+            slices = mirror_slice_indices(slices, n_slices)
+        return SlicedSliceAlg(new_slice, new_n, slices)
 
     # NOTE: No __getitem__ method - this class cannot be sliced again!
     # This is intentional type-level enforcement.

@@ -1,10 +1,14 @@
 from abc import ABC
-from typing import Collection, Self, Tuple, final
+from typing import TYPE_CHECKING, Collection, Self, Tuple, final
 
 from cube.domain.algs._internal_utils import _inv
 from cube.domain.algs.AnimationAbleAlg import AnimationAbleAlg
 from cube.domain.algs.SimpleAlg import NSimpleAlg
 from cube.domain.model import AxisName, Cube, FaceName, PartSlice
+
+if TYPE_CHECKING:
+    from cube.domain.algs.Alg import Alg
+    from cube.domain.algs.face_permutation import FacePermutation
 
 
 class WholeCubeAlg(AnimationAbleAlg, NSimpleAlg, ABC):
@@ -45,6 +49,17 @@ class WholeCubeAlg(AnimationAbleAlg, NSimpleAlg, ABC):
     @property
     def axis_name(self) -> AxisName:
         return self._axis_name
+
+    def transform_by(self, p: "FacePermutation", n_slices: int | None) -> "Alg":
+        from cube.domain.algs.Algs import Algs
+        from cube.domain.algs.face_permutation import transform_axis
+        new_axis, new_n = transform_axis(p, self._axis_name, self._n)
+        if new_axis == AxisName.X:
+            return Algs.X.with_n(new_n)
+        elif new_axis == AxisName.Y:
+            return Algs.Y.with_n(new_n)
+        else:
+            return Algs.Z.with_n(new_n)
 
 
 @final

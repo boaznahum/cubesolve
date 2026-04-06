@@ -80,11 +80,11 @@ from cube.domain.algs.Scramble import scramble as cube_scramble
 from cube.domain.algs.SeqAlg import SeqAlg
 from cube.domain.algs.WholeCubeAlg import WholeCubeAlg
 from cube.domain.algs.alg_transform import (
-    FacePermutation,
     compute_permutation,
     transform,
     transform_by_permutation,
 )
+from cube.domain.algs.face_permutation import FacePermutation
 from cube.domain.model._elements import AxisName
 from cube.domain.model.Cube import Cube
 from cube.domain.model.FaceName import FaceName
