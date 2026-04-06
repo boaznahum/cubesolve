@@ -89,10 +89,10 @@ T(W, A) = the algorithm obtained by remapping every atomic
 
 We write **WA** as shorthand for T(W, A).
 
-**Code**: `transform(w, a)` is the public API. Internally, each `Alg`
-subclass implements `transform_by(p, n_slices)` — the class itself
+**Code**: `a.transform(w)` is the public API (method on `Alg`). Internally,
+each `Alg` subclass implements `transform_by(p, n_slices)` — the class itself
 decides how to remap its face/slice/axis.
-→ `alg_transform.py:transform()`
+→ `Alg.py:transform()` (public method)
 → `Alg.py:transform_by()` (abstract, implemented by every subclass)
 
 ### 2.4 Piece-Position Set (S)
@@ -444,7 +444,7 @@ arbitrary algorithms.
 ```
 src/cube/domain/algs/
 ├── face_permutation.py      ← FacePermutation class + helper functions
-├── alg_transform.py         ← Public API: transform(), compute_permutation()
+├── alg_transform.py         ← compute_permutation() helper
 ├── Alg.py                   ← Base class: abstract transform_by()
 ├── FaceAlg.py               ← transform_by(): remap face
 ├── SlicedFaceAlg.py          ← transform_by(): remap face, keep slices
@@ -459,23 +459,23 @@ src/cube/domain/algs/
 └── AnnotationAlg.py           ← transform_by(): return self (no-op)
 
 tests/algs/
-└── test_alg_transform.py    ← 302 tests (unit + randomized + exhaustive)
+└── test_alg_transform.py    ← 329 tests (unit + randomized + exhaustive)
 ```
 
 ### Public API
 
 ```python
-from cube.domain.algs.alg_transform import transform, compute_permutation, transform_by_permutation
-from cube.domain.algs.face_permutation import FacePermutation
+from cube.domain.algs.Algs import Algs
 
 # Transform algorithm A by whole-cube rotation W
-result = transform(Algs.Y.prime, Algs.F)                # → R
-result = transform(Algs.Y.prime, sexy_move, cube_size=3) # → B U B' U'
+result = Algs.F.transform(Algs.Y.prime)                # → R
+result = sexy_move.transform(Algs.Y.prime, cube_size=3) # → B U B' U'
 
-# Precompute permutation for multiple transforms
+# Precompute permutation for reuse
+from cube.domain.algs.alg_transform import compute_permutation
 p = compute_permutation(Algs.Y.prime + Algs.X)
-r1 = transform_by_permutation(p, alg1)
-r2 = transform_by_permutation(p, alg2)
+r1 = alg1.transform_by(p, n_slices=None)
+r2 = alg2.transform_by(p, n_slices=None)
 ```
 
 ### Design: Polymorphic Dispatch
