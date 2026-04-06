@@ -8,24 +8,12 @@ from cube.domain.algs import Algs, Alg
 from cube.domain.algs.Scramble import scramble
 from cube.domain.model.Cube import Cube
 from tests.test_utils import _test_sp
+from tests.utils._alg_utils import assert_algs_equivalent
 
 
 def _compare_two_algs(cube_size: int, algs1: Iterable[Alg], algs2: Iterable[Alg]):
     """Compare two sequences of algorithms produce the same cube state."""
-    cube = Cube(cube_size, sp=_test_sp)
-
-    for alg in algs1:
-        alg.play(cube)
-
-    s1 = cube.cqr.get_sate()
-
-    cube.reset()
-    for alg in algs2:
-        alg.play(cube)
-
-    s2 = cube.cqr.get_sate()
-
-    assert cube.cqr.compare_states(s1, s2)
+    assert_algs_equivalent(Algs.seq(*algs1), Algs.seq(*algs2), cube_size)
 
 
 def _compare_inv(cube_size: int, algs_list: Iterable[Alg]):

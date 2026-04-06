@@ -25,7 +25,7 @@ def assert_algs_equivalent(alg1: Alg, alg2: Alg, cube_size: int, *, expect_equal
         cube_size: Size of the cube to test on
         expect_equal: If True, assert states match. If False, assert they differ.
     """
-    scramble_alg = scramble(cube_size, seed=42, n=20)
+    scramble_alg = scramble(cube_size, seed=42, n=20 + (cube_size-3)*10)
 
     # Method 1: scramble + alg1 vs scramble + alg2 → compare states
     cube1 = Cube(cube_size, sp=_test_sp)
