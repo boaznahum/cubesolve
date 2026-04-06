@@ -26,6 +26,3 @@ node_modules/**
 
 # Test fixture temp dir (conftest renames dist/ during webgl tests)
 _dist_hidden_by_test/
-
-# Generated parity report files
-tests/solvers/parity_report_*.json
