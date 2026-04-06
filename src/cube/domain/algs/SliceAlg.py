@@ -6,8 +6,10 @@ from cube.domain.exceptions import InternalSWError
 from cube.domain.model.cube_slice import SliceName
 
 if TYPE_CHECKING:
+    from cube.domain.algs.Alg import Alg
     from cube.domain.algs.SlicedSliceAlg import SlicedSliceAlg
     from cube.domain.algs.SimpleAlg import SimpleAlg
+    from cube.domain.algs.face_permutation import FacePermutation
 
 
 class SliceAlg(SliceAlgBase, SliceAbleAlg):
@@ -92,5 +94,11 @@ class SliceAlg(SliceAlgBase, SliceAbleAlg):
         if not isinstance(a, SliceAlg):
             return False
         return self._slice_name == a._slice_name
+
+    def transform_by(self, p: "FacePermutation", n_slices: int | None) -> "Alg":
+        from cube.domain.algs.Algs import Algs
+        from cube.domain.algs.face_permutation import transform_slice
+        new_slice, new_n, _ = transform_slice(p, self._slice_name, self._n)
+        return Algs.of_slice(new_slice).with_n(new_n)
 
 

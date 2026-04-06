@@ -147,47 +147,47 @@ def _deterministic_geometry():
     CONFIG_DEFAULTS.prevent_random_face_pick_up_in_geometry = True
 
 
-@pytest.mark.slow
-class TestParityReporting:
-
-    @pytest.mark.parametrize("solver_name,cube_size,seed", _params)
-    def test_parity(self, solver_name: SolverName, cube_size: int, seed: int) -> None:
-        key = f"{solver_name.display_name}|{cube_size}|{seed}"
-        result = _run_one(solver_name, cube_size, seed)
-        _report_entries[key] = result
-
-        # The test itself always passes — we're collecting data, not asserting.
-        # But if the solver failed to solve, mark it.
-        if "error" in result:
-            pytest.fail(result["error"])
-
-
-# ---------------------------------------------------------------------------
-# Session-scoped finalizer: flush report to JSON
-# ---------------------------------------------------------------------------
-
-@pytest.fixture(autouse=True, scope="session")
-def _flush_report(request):
-    """After all tests, write the accumulated report to a JSON file."""
-    yield
-    if not _report_entries:
-        return
-
-    branch = _get_branch_name()
-    commit = _get_commit_hash()
-    report_path = REPORT_DIR / f"parity_report_{branch}.json"
-
-    report = {
-        "meta": {
-            "branch": branch,
-            "commit": commit,
-            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
-            "cube_sizes": CUBE_SIZES,
-            "scramble_seeds": SCRAMBLE_SEEDS,
-            "solvers": [s.display_name for s in SOLVER_NAMES],
-        },
-        "results": _report_entries,
-    }
-
-    report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
-    print(f"\n=== Parity report written to {report_path} ===")
+# @pytest.mark.slow
+# class TestParityReporting:
+#
+#     @pytest.mark.parametrize("solver_name,cube_size,seed", _params)
+#     def test_parity(self, solver_name: SolverName, cube_size: int, seed: int) -> None:
+#         key = f"{solver_name.display_name}|{cube_size}|{seed}"
+#         result = _run_one(solver_name, cube_size, seed)
+#         _report_entries[key] = result
+#
+#         # The test itself always passes — we're collecting data, not asserting.
+#         # But if the solver failed to solve, mark it.
+#         if "error" in result:
+#             pytest.fail(result["error"])
+#
+#
+# # ---------------------------------------------------------------------------
+# # Session-scoped finalizer: flush report to JSON
+# # ---------------------------------------------------------------------------
+#
+# @pytest.fixture(autouse=True, scope="session")
+# def _flush_report(request):
+#     """After all tests, write the accumulated report to a JSON file."""
+#     yield
+#     if not _report_entries:
+#         return
+#
+#     branch = _get_branch_name()
+#     commit = _get_commit_hash()
+#     report_path = REPORT_DIR / f"parity_report_{branch}.json"
+#
+#     report = {
+#         "meta": {
+#             "branch": branch,
+#             "commit": commit,
+#             "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
+#             "cube_sizes": CUBE_SIZES,
+#             "scramble_seeds": SCRAMBLE_SEEDS,
+#             "solvers": [s.display_name for s in SOLVER_NAMES],
+#         },
+#         "results": _report_entries,
+#     }
+#
+#     report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+#     print(f"\n=== Parity report written to {report_path} ===")

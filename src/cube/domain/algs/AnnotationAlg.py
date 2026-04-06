@@ -1,7 +1,11 @@
-from typing import Iterator, Self
+from typing import TYPE_CHECKING, Iterator, Self
 
 from cube.domain.algs.SimpleAlg import SimpleAlg
 from cube.domain.model.Cube import Cube
+
+if TYPE_CHECKING:
+    from cube.domain.algs.Alg import Alg
+    from cube.domain.algs.face_permutation import FacePermutation
 
 
 class AnnotationAlg(SimpleAlg):
@@ -35,6 +39,9 @@ class AnnotationAlg(SimpleAlg):
 
     def simple_inverse(self) -> Self:
         return self  # not really an alg
+
+    def transform_by(self, p: "FacePermutation", n_slices: int | None) -> "Alg":
+        return self
 
     def __str__(self) -> str:
         return "AnnotationAlg"

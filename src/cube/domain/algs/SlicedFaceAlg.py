@@ -4,7 +4,9 @@ from cube.domain.algs.FaceAlgBase import FaceAlgBase
 from cube.domain.model import FaceName
 
 if TYPE_CHECKING:
+    from cube.domain.algs.Alg import Alg
     from cube.domain.algs.SimpleAlg import SimpleAlg
+    from cube.domain.algs.face_permutation import FacePermutation
 
 
 @final
@@ -94,6 +96,9 @@ class SlicedFaceAlg(FaceAlgBase):
             return list(my) == list(other)
         else:
             return False
+
+    def transform_by(self, p: "FacePermutation", n_slices: int | None) -> "Alg":
+        return SlicedFaceAlg(p(self._face), self._n, self._slices)
 
     # NOTE: No __getitem__ method - this class cannot be sliced again!
     # This is intentional type-level enforcement.

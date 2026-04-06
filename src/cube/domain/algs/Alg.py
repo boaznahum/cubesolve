@@ -7,6 +7,7 @@ from cube.domain.model.Cube import Cube
 if TYPE_CHECKING:
     from .SeqAlg import SeqAlg, SeqSimpleAlg
     from .SimpleAlg import SimpleAlg
+    from .face_permutation import FacePermutation
 
 
 class Alg(ABC):
@@ -75,6 +76,20 @@ class Alg(ABC):
     @abstractmethod
     def flatten(self) -> Iterator["SimpleAlg"]:
         pass
+
+    @abstractmethod
+    def transform_by(self, p: "FacePermutation", n_slices: int | None) -> "Alg":
+        """Transform this algorithm by a face permutation.
+
+        Each subclass knows how to remap its own face/slice/axis through
+        the permutation. Composite algorithms delegate to their children.
+
+        Args:
+            p: The face permutation induced by whole-cube rotation W.
+            n_slices: Number of inner slices (cube_size - 2). Required only
+                when SlicedSliceAlg direction is negated (indices must be mirrored).
+        """
+        ...
 
     def flatten_alg(self) -> "SeqAlg":
         from .SeqAlg import SeqAlg

@@ -94,7 +94,7 @@ def test_cage_solver_solves_edges(size: int) -> None:
     assert solver.status == "Solved", f"Expected 'Solved', got '{solver.status}'"
 
     # Print parity info for visibility
-    print(f"\n  Size {size}x{size}: parity={results._was_partial_edge_parity}")
+    print(f"\n  Size {size}x{size}: parity={results.was_partial_edge_parity}")
 
 
 @pytest.mark.parametrize("seed", range(10))
@@ -112,7 +112,7 @@ def test_cage_solver_parity_detection(seed: int) -> None:
     assert solver._are_edges_solved()
 
     # Print parity for each seed
-    parity = "YES" if results._was_partial_edge_parity else "no"
+    parity = "YES" if results.was_partial_edge_parity else "no"
     print(f"  seed={seed}: parity={parity}")
 
 
