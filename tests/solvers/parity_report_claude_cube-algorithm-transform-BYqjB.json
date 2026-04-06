@@ -1,8 +1,8 @@
 {
   "meta": {
     "branch": "claude_cube-algorithm-transform-BYqjB",
-    "commit": "0dd4c84",
-    "timestamp": "2026-04-06T14:16:14",
+    "commit": "b104fab",
+    "timestamp": "2026-04-06T14:21:24",
     "cube_sizes": [
       2,
       3,
@@ -34,170 +34,7 @@
     ]
   },
   "results": {
-    "Beginner Reducer|3|6": {
-      "has_parity": false,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [],
-      "summary": "Parity: None"
-    },
-    "Beginner Reducer|3|7": {
-      "has_parity": false,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [],
-      "summary": "Parity: None"
-    },
-    "Beginner Reducer|3|8": {
-      "has_parity": false,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [],
-      "summary": "Parity: None"
-    },
-    "Beginner Reducer|3|9": {
-      "has_parity": false,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [],
-      "summary": "Parity: None"
-    },
-    "Beginner Reducer|4|0": {
-      "has_parity": true,
-      "was_corner_swap": "NonAdvanced",
-      "was_even_edge_parity": "NonAdvanced",
-      "was_partial_edge_parity": null,
-      "parities": [
-        {
-          "type": "Even Edge(OLL)",
-          "fix": "NonAdvanced"
-        },
-        {
-          "type": "Corner(PLL)",
-          "fix": "NonAdvanced"
-        }
-      ],
-      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [non-Advanced]"
-    },
-    "Beginner Reducer|4|1": {
-      "has_parity": true,
-      "was_corner_swap": null,
-      "was_even_edge_parity": "NonAdvanced",
-      "was_partial_edge_parity": null,
-      "parities": [
-        {
-          "type": "Even Edge(OLL)",
-          "fix": "NonAdvanced"
-        }
-      ],
-      "summary": "Parity: Even Edge(OLL) [non-Advanced]"
-    },
-    "Beginner Reducer|4|2": {
-      "has_parity": true,
-      "was_corner_swap": "NonAdvanced",
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [
-        {
-          "type": "Corner(PLL)",
-          "fix": "NonAdvanced"
-        }
-      ],
-      "summary": "Parity: Corner(PLL) [non-Advanced]"
-    },
-    "Beginner Reducer|4|3": {
-      "has_parity": true,
-      "was_corner_swap": null,
-      "was_even_edge_parity": "NonAdvanced",
-      "was_partial_edge_parity": null,
-      "parities": [
-        {
-          "type": "Even Edge(OLL)",
-          "fix": "NonAdvanced"
-        }
-      ],
-      "summary": "Parity: Even Edge(OLL) [non-Advanced]"
-    },
-    "Beginner Reducer|4|4": {
-      "has_parity": false,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [],
-      "summary": "Parity: None"
-    },
-    "Beginner Reducer|4|5": {
-      "has_parity": true,
-      "was_corner_swap": "NonAdvanced",
-      "was_even_edge_parity": "NonAdvanced",
-      "was_partial_edge_parity": null,
-      "parities": [
-        {
-          "type": "Even Edge(OLL)",
-          "fix": "NonAdvanced"
-        },
-        {
-          "type": "Corner(PLL)",
-          "fix": "NonAdvanced"
-        }
-      ],
-      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [non-Advanced]"
-    },
-    "Beginner Reducer|4|6": {
-      "has_parity": false,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [],
-      "summary": "Parity: None"
-    },
-    "Beginner Reducer|4|7": {
-      "has_parity": false,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [],
-      "summary": "Parity: None"
-    },
-    "Beginner Reducer|4|8": {
-      "has_parity": true,
-      "was_corner_swap": null,
-      "was_even_edge_parity": "NonAdvanced",
-      "was_partial_edge_parity": null,
-      "parities": [
-        {
-          "type": "Even Edge(OLL)",
-          "fix": "NonAdvanced"
-        }
-      ],
-      "summary": "Parity: Even Edge(OLL) [non-Advanced]"
-    },
-    "Beginner Reducer|4|9": {
-      "has_parity": true,
-      "was_corner_swap": null,
-      "was_even_edge_parity": "NonAdvanced",
-      "was_partial_edge_parity": null,
-      "parities": [
-        {
-          "type": "Even Edge(OLL)",
-          "fix": "NonAdvanced"
-        }
-      ],
-      "summary": "Parity: Even Edge(OLL) [non-Advanced]"
-    },
-    "Beginner Reducer|5|0": {
-      "has_parity": false,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [],
-      "summary": "Parity: None"
-    },
-    "Beginner Reducer|5|1": {
+    "CFOP|5|6": {
       "has_parity": true,
       "was_corner_swap": null,
       "was_even_edge_parity": null,
@@ -210,39 +47,7 @@
       ],
       "summary": "Parity: Partial Edge [non-Advanced]"
     },
-    "Beginner Reducer|5|2": {
-      "has_parity": false,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [],
-      "summary": "Parity: None"
-    },
-    "Beginner Reducer|5|3": {
-      "has_parity": false,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [],
-      "summary": "Parity: None"
-    },
-    "Beginner Reducer|5|4": {
-      "has_parity": false,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [],
-      "summary": "Parity: None"
-    },
-    "Beginner Reducer|5|5": {
-      "has_parity": false,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [],
-      "summary": "Parity: None"
-    },
-    "Beginner Reducer|5|6": {
+    "CFOP|5|7": {
       "has_parity": true,
       "was_corner_swap": null,
       "was_even_edge_parity": null,
@@ -255,20 +60,7 @@
       ],
       "summary": "Parity: Partial Edge [non-Advanced]"
     },
-    "Beginner Reducer|5|7": {
-      "has_parity": true,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": "NonAdvanced",
-      "parities": [
-        {
-          "type": "Partial Edge",
-          "fix": "NonAdvanced"
-        }
-      ],
-      "summary": "Parity: Partial Edge [non-Advanced]"
-    },
-    "Beginner Reducer|5|8": {
+    "CFOP|5|8": {
       "has_parity": false,
       "was_corner_swap": null,
       "was_even_edge_parity": null,
@@ -276,7 +68,7 @@
       "parities": [],
       "summary": "Parity: None"
     },
-    "Beginner Reducer|5|9": {
+    "CFOP|5|9": {
       "has_parity": false,
       "was_corner_swap": null,
       "was_even_edge_parity": null,
@@ -284,7 +76,7 @@
       "parities": [],
       "summary": "Parity: None"
     },
-    "Beginner Reducer|6|0": {
+    "CFOP|6|0": {
       "has_parity": false,
       "was_corner_swap": null,
       "was_even_edge_parity": null,
@@ -292,7 +84,7 @@
       "parities": [],
       "summary": "Parity: None"
     },
-    "Beginner Reducer|6|1": {
+    "CFOP|6|1": {
       "has_parity": true,
       "was_corner_swap": null,
       "was_even_edge_parity": "NonAdvanced",
@@ -305,7 +97,7 @@
       ],
       "summary": "Parity: Even Edge(OLL) [non-Advanced]"
     },
-    "Beginner Reducer|6|2": {
+    "CFOP|6|2": {
       "has_parity": true,
       "was_corner_swap": null,
       "was_even_edge_parity": "NonAdvanced",
@@ -322,7 +114,7 @@
       ],
       "summary": "Parity: Even Edge(OLL) [non-Advanced], Partial Edge [non-Advanced]"
     },
-    "Beginner Reducer|6|3": {
+    "CFOP|6|3": {
       "has_parity": true,
       "was_corner_swap": null,
       "was_even_edge_parity": null,
@@ -335,7 +127,7 @@
       ],
       "summary": "Parity: Partial Edge [non-Advanced]"
     },
-    "Beginner Reducer|6|4": {
+    "CFOP|6|4": {
       "has_parity": false,
       "was_corner_swap": null,
       "was_even_edge_parity": null,
@@ -343,24 +135,7 @@
       "parities": [],
       "summary": "Parity: None"
     },
-    "Beginner Reducer|6|5": {
-      "has_parity": true,
-      "was_corner_swap": "NonAdvanced",
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": "NonAdvanced",
-      "parities": [
-        {
-          "type": "Corner(PLL)",
-          "fix": "NonAdvanced"
-        },
-        {
-          "type": "Partial Edge",
-          "fix": "NonAdvanced"
-        }
-      ],
-      "summary": "Parity: Corner(PLL) [non-Advanced], Partial Edge [non-Advanced]"
-    },
-    "Beginner Reducer|6|6": {
+    "CFOP|6|5": {
       "has_parity": true,
       "was_corner_swap": null,
       "was_even_edge_parity": null,
@@ -373,9 +148,22 @@
       ],
       "summary": "Parity: Partial Edge [non-Advanced]"
     },
-    "Beginner Reducer|6|7": {
+    "CFOP|6|6": {
       "has_parity": true,
       "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "parities": [
+        {
+          "type": "Partial Edge",
+          "fix": "NonAdvanced"
+        }
+      ],
+      "summary": "Parity: Partial Edge [non-Advanced]"
+    },
+    "CFOP|6|7": {
+      "has_parity": true,
+      "was_corner_swap": "Advanced",
       "was_even_edge_parity": "NonAdvanced",
       "was_partial_edge_parity": "NonAdvanced",
       "parities": [
@@ -384,43 +172,17 @@
           "fix": "NonAdvanced"
         },
         {
-          "type": "Partial Edge",
-          "fix": "NonAdvanced"
-        }
-      ],
-      "summary": "Parity: Even Edge(OLL) [non-Advanced], Partial Edge [non-Advanced]"
-    },
-    "Beginner Reducer|6|8": {
-      "has_parity": true,
-      "was_corner_swap": "NonAdvanced",
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": "NonAdvanced",
-      "parities": [
-        {
           "type": "Corner(PLL)",
-          "fix": "NonAdvanced"
+          "fix": "Advanced"
         },
         {
           "type": "Partial Edge",
           "fix": "NonAdvanced"
         }
       ],
-      "summary": "Parity: Corner(PLL) [non-Advanced], Partial Edge [non-Advanced]"
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [Advanced], Partial Edge [non-Advanced]"
     },
-    "Beginner Reducer|6|9": {
-      "has_parity": true,
-      "was_corner_swap": "NonAdvanced",
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [
-        {
-          "type": "Corner(PLL)",
-          "fix": "NonAdvanced"
-        }
-      ],
-      "summary": "Parity: Corner(PLL) [non-Advanced]"
-    },
-    "Beginner Reducer|7|0": {
+    "CFOP|6|8": {
       "has_parity": true,
       "was_corner_swap": null,
       "was_even_edge_parity": null,
@@ -433,7 +195,15 @@
       ],
       "summary": "Parity: Partial Edge [non-Advanced]"
     },
-    "Beginner Reducer|7|1": {
+    "CFOP|6|9": {
+      "has_parity": false,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "parities": [],
+      "summary": "Parity: None"
+    },
+    "CFOP|7|0": {
       "has_parity": true,
       "was_corner_swap": null,
       "was_even_edge_parity": null,
@@ -446,15 +216,7 @@
       ],
       "summary": "Parity: Partial Edge [non-Advanced]"
     },
-    "Beginner Reducer|7|2": {
-      "has_parity": false,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [],
-      "summary": "Parity: None"
-    },
-    "Beginner Reducer|7|3": {
+    "CFOP|7|1": {
       "has_parity": true,
       "was_corner_swap": null,
       "was_even_edge_parity": null,
@@ -467,7 +229,7 @@
       ],
       "summary": "Parity: Partial Edge [non-Advanced]"
     },
-    "Kociemba|2|8": {
+    "CFOP|7|2": {
       "has_parity": false,
       "was_corner_swap": null,
       "was_even_edge_parity": null,
@@ -475,226 +237,7 @@
       "parities": [],
       "summary": "Parity: None"
     },
-    "Kociemba|2|9": {
-      "has_parity": false,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [],
-      "summary": "Parity: None"
-    },
-    "Kociemba|3|0": {
-      "has_parity": false,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [],
-      "summary": "Parity: None"
-    },
-    "Kociemba|3|1": {
-      "has_parity": false,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [],
-      "summary": "Parity: None"
-    },
-    "Kociemba|3|2": {
-      "has_parity": false,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [],
-      "summary": "Parity: None"
-    },
-    "Kociemba|3|3": {
-      "has_parity": false,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [],
-      "summary": "Parity: None"
-    },
-    "Kociemba|3|4": {
-      "has_parity": false,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [],
-      "summary": "Parity: None"
-    },
-    "Kociemba|3|5": {
-      "has_parity": false,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [],
-      "summary": "Parity: None"
-    },
-    "Kociemba|3|6": {
-      "has_parity": false,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [],
-      "summary": "Parity: None"
-    },
-    "Kociemba|3|7": {
-      "has_parity": false,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [],
-      "summary": "Parity: None"
-    },
-    "Kociemba|3|8": {
-      "has_parity": false,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [],
-      "summary": "Parity: None"
-    },
-    "Kociemba|3|9": {
-      "has_parity": false,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [],
-      "summary": "Parity: None"
-    },
-    "Kociemba|4|0": {
-      "has_parity": true,
-      "was_corner_swap": "NonAdvanced",
-      "was_even_edge_parity": "NonAdvanced",
-      "was_partial_edge_parity": null,
-      "parities": [
-        {
-          "type": "Even Edge(OLL)",
-          "fix": "NonAdvanced"
-        },
-        {
-          "type": "Corner(PLL)",
-          "fix": "NonAdvanced"
-        }
-      ],
-      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [non-Advanced]"
-    },
-    "Kociemba|4|1": {
-      "has_parity": true,
-      "was_corner_swap": null,
-      "was_even_edge_parity": "NonAdvanced",
-      "was_partial_edge_parity": null,
-      "parities": [
-        {
-          "type": "Even Edge(OLL)",
-          "fix": "NonAdvanced"
-        }
-      ],
-      "summary": "Parity: Even Edge(OLL) [non-Advanced]"
-    },
-    "Kociemba|4|2": {
-      "has_parity": true,
-      "was_corner_swap": "NonAdvanced",
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [
-        {
-          "type": "Corner(PLL)",
-          "fix": "NonAdvanced"
-        }
-      ],
-      "summary": "Parity: Corner(PLL) [non-Advanced]"
-    },
-    "Kociemba|4|3": {
-      "has_parity": true,
-      "was_corner_swap": null,
-      "was_even_edge_parity": "NonAdvanced",
-      "was_partial_edge_parity": null,
-      "parities": [
-        {
-          "type": "Even Edge(OLL)",
-          "fix": "NonAdvanced"
-        }
-      ],
-      "summary": "Parity: Even Edge(OLL) [non-Advanced]"
-    },
-    "Kociemba|4|4": {
-      "has_parity": false,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [],
-      "summary": "Parity: None"
-    },
-    "Kociemba|4|5": {
-      "has_parity": true,
-      "was_corner_swap": "NonAdvanced",
-      "was_even_edge_parity": "NonAdvanced",
-      "was_partial_edge_parity": null,
-      "parities": [
-        {
-          "type": "Even Edge(OLL)",
-          "fix": "NonAdvanced"
-        },
-        {
-          "type": "Corner(PLL)",
-          "fix": "NonAdvanced"
-        }
-      ],
-      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [non-Advanced]"
-    },
-    "Kociemba|4|6": {
-      "has_parity": false,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [],
-      "summary": "Parity: None"
-    },
-    "Kociemba|4|7": {
-      "has_parity": false,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [],
-      "summary": "Parity: None"
-    },
-    "Kociemba|4|8": {
-      "has_parity": true,
-      "was_corner_swap": null,
-      "was_even_edge_parity": "NonAdvanced",
-      "was_partial_edge_parity": null,
-      "parities": [
-        {
-          "type": "Even Edge(OLL)",
-          "fix": "NonAdvanced"
-        }
-      ],
-      "summary": "Parity: Even Edge(OLL) [non-Advanced]"
-    },
-    "Kociemba|4|9": {
-      "has_parity": true,
-      "was_corner_swap": null,
-      "was_even_edge_parity": "NonAdvanced",
-      "was_partial_edge_parity": null,
-      "parities": [
-        {
-          "type": "Even Edge(OLL)",
-          "fix": "NonAdvanced"
-        }
-      ],
-      "summary": "Parity: Even Edge(OLL) [non-Advanced]"
-    },
-    "Kociemba|5|0": {
-      "has_parity": false,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [],
-      "summary": "Parity: None"
-    },
-    "Kociemba|5|1": {
+    "CFOP|7|3": {
       "has_parity": true,
       "was_corner_swap": null,
       "was_even_edge_parity": null,
@@ -707,7 +250,7 @@
       ],
       "summary": "Parity: Partial Edge [non-Advanced]"
     },
-    "Kociemba|5|2": {
+    "CFOP|7|4": {
       "has_parity": false,
       "was_corner_swap": null,
       "was_even_edge_parity": null,
@@ -715,7 +258,7 @@
       "parities": [],
       "summary": "Parity: None"
     },
-    "Kociemba|5|3": {
+    "CFOP|7|5": {
       "has_parity": false,
       "was_corner_swap": null,
       "was_even_edge_parity": null,
@@ -723,7 +266,7 @@
       "parities": [],
       "summary": "Parity: None"
     },
-    "Kociemba|5|4": {
+    "CFOP|7|6": {
       "has_parity": false,
       "was_corner_swap": null,
       "was_even_edge_parity": null,
@@ -731,7 +274,7 @@
       "parities": [],
       "summary": "Parity: None"
     },
-    "Kociemba|5|5": {
+    "CFOP|7|7": {
       "has_parity": false,
       "was_corner_swap": null,
       "was_even_edge_parity": null,
@@ -739,7 +282,7 @@
       "parities": [],
       "summary": "Parity: None"
     },
-    "Kociemba|5|6": {
+    "CFOP|7|8": {
       "has_parity": true,
       "was_corner_swap": null,
       "was_even_edge_parity": null,
@@ -752,7 +295,7 @@
       ],
       "summary": "Parity: Partial Edge [non-Advanced]"
     },
-    "Kociemba|5|7": {
+    "CFOP|7|9": {
       "has_parity": true,
       "was_corner_swap": null,
       "was_even_edge_parity": null,
@@ -764,47 +307,10 @@
         }
       ],
       "summary": "Parity: Partial Edge [non-Advanced]"
-    },
-    "Kociemba|5|8": {
-      "has_parity": false,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [],
-      "summary": "Parity: None"
-    },
-    "Kociemba|5|9": {
-      "has_parity": false,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [],
-      "summary": "Parity: None"
-    },
-    "Kociemba|6|0": {
-      "has_parity": false,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [],
-      "summary": "Parity: None"
-    },
-    "Kociemba|6|1": {
-      "has_parity": true,
-      "was_corner_swap": null,
-      "was_even_edge_parity": "NonAdvanced",
-      "was_partial_edge_parity": null,
-      "parities": [
-        {
-          "type": "Even Edge(OLL)",
-          "fix": "NonAdvanced"
-        }
-      ],
-      "summary": "Parity: Even Edge(OLL) [non-Advanced]"
     },
     "Kociemba|6|2": {
       "has_parity": true,
-      "was_corner_swap": null,
+      "was_corner_swap": "NonAdvanced",
       "was_even_edge_parity": "NonAdvanced",
       "was_partial_edge_parity": "NonAdvanced",
       "parities": [
@@ -813,34 +319,17 @@
           "fix": "NonAdvanced"
         },
         {
-          "type": "Partial Edge",
+          "type": "Corner(PLL)",
           "fix": "NonAdvanced"
-        }
-      ],
-      "summary": "Parity: Even Edge(OLL) [non-Advanced], Partial Edge [non-Advanced]"
-    },
-    "Kociemba|6|3": {
-      "has_parity": true,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": "NonAdvanced",
-      "parities": [
+        },
         {
           "type": "Partial Edge",
           "fix": "NonAdvanced"
         }
       ],
-      "summary": "Parity: Partial Edge [non-Advanced]"
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [non-Advanced], Partial Edge [non-Advanced]"
     },
-    "Kociemba|6|4": {
-      "has_parity": false,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [],
-      "summary": "Parity: None"
-    },
-    "Kociemba|6|5": {
+    "Kociemba|6|3": {
       "has_parity": true,
       "was_corner_swap": "NonAdvanced",
       "was_even_edge_parity": null,
@@ -856,6 +345,32 @@
         }
       ],
       "summary": "Parity: Corner(PLL) [non-Advanced], Partial Edge [non-Advanced]"
+    },
+    "Kociemba|6|4": {
+      "has_parity": true,
+      "was_corner_swap": "NonAdvanced",
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": null,
+      "parities": [
+        {
+          "type": "Corner(PLL)",
+          "fix": "NonAdvanced"
+        }
+      ],
+      "summary": "Parity: Corner(PLL) [non-Advanced]"
+    },
+    "Kociemba|6|5": {
+      "has_parity": true,
+      "was_corner_swap": null,
+      "was_even_edge_parity": null,
+      "was_partial_edge_parity": "NonAdvanced",
+      "parities": [
+        {
+          "type": "Partial Edge",
+          "fix": "NonAdvanced"
+        }
+      ],
+      "summary": "Parity: Partial Edge [non-Advanced]"
     },
     "Kociemba|6|6": {
       "has_parity": true,
@@ -872,7 +387,7 @@
     },
     "Kociemba|6|7": {
       "has_parity": true,
-      "was_corner_swap": null,
+      "was_corner_swap": "NonAdvanced",
       "was_even_edge_parity": "NonAdvanced",
       "was_partial_edge_parity": "NonAdvanced",
       "parities": [
@@ -881,11 +396,15 @@
           "fix": "NonAdvanced"
         },
         {
+          "type": "Corner(PLL)",
+          "fix": "NonAdvanced"
+        },
+        {
           "type": "Partial Edge",
           "fix": "NonAdvanced"
         }
       ],
-      "summary": "Parity: Even Edge(OLL) [non-Advanced], Partial Edge [non-Advanced]"
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [non-Advanced], Partial Edge [non-Advanced]"
     },
     "Kociemba|6|8": {
       "has_parity": true,
@@ -905,17 +424,12 @@
       "summary": "Parity: Corner(PLL) [non-Advanced], Partial Edge [non-Advanced]"
     },
     "Kociemba|6|9": {
-      "has_parity": true,
-      "was_corner_swap": "NonAdvanced",
+      "has_parity": false,
+      "was_corner_swap": null,
       "was_even_edge_parity": null,
       "was_partial_edge_parity": null,
-      "parities": [
-        {
-          "type": "Corner(PLL)",
-          "fix": "NonAdvanced"
-        }
-      ],
-      "summary": "Parity: Corner(PLL) [non-Advanced]"
+      "parities": [],
+      "summary": "Parity: None"
     },
     "Kociemba|7|0": {
       "has_parity": true,
@@ -1024,37 +538,28 @@
     },
     "Kociemba|8|0": {
       "has_parity": true,
-      "was_corner_swap": "NonAdvanced",
+      "was_corner_swap": null,
       "was_even_edge_parity": null,
       "was_partial_edge_parity": "NonAdvanced",
       "parities": [
-        {
-          "type": "Corner(PLL)",
-          "fix": "NonAdvanced"
-        },
         {
           "type": "Partial Edge",
           "fix": "NonAdvanced"
         }
       ],
-      "summary": "Parity: Corner(PLL) [non-Advanced], Partial Edge [non-Advanced]"
+      "summary": "Parity: Partial Edge [non-Advanced]"
     },
     "Kociemba|8|1": {
-      "has_parity": true,
-      "was_corner_swap": "NonAdvanced",
+      "has_parity": false,
+      "was_corner_swap": null,
       "was_even_edge_parity": null,
       "was_partial_edge_parity": null,
-      "parities": [
-        {
-          "type": "Corner(PLL)",
-          "fix": "NonAdvanced"
-        }
-      ],
-      "summary": "Parity: Corner(PLL) [non-Advanced]"
+      "parities": [],
+      "summary": "Parity: None"
     },
     "Kociemba|8|2": {
       "has_parity": true,
-      "was_corner_swap": "NonAdvanced",
+      "was_corner_swap": null,
       "was_even_edge_parity": "NonAdvanced",
       "was_partial_edge_parity": "NonAdvanced",
       "parities": [
@@ -1063,15 +568,11 @@
           "fix": "NonAdvanced"
         },
         {
-          "type": "Corner(PLL)",
-          "fix": "NonAdvanced"
-        },
-        {
           "type": "Partial Edge",
           "fix": "NonAdvanced"
         }
       ],
-      "summary": "Parity: Even Edge(OLL) [non-Advanced], Corner(PLL) [non-Advanced], Partial Edge [non-Advanced]"
+      "summary": "Parity: Even Edge(OLL) [non-Advanced], Partial Edge [non-Advanced]"
     },
     "Kociemba|8|3": {
       "has_parity": true,
@@ -1109,20 +610,16 @@
     },
     "Kociemba|8|5": {
       "has_parity": true,
-      "was_corner_swap": "NonAdvanced",
+      "was_corner_swap": null,
       "was_even_edge_parity": null,
       "was_partial_edge_parity": "NonAdvanced",
       "parities": [
-        {
-          "type": "Corner(PLL)",
-          "fix": "NonAdvanced"
-        },
         {
           "type": "Partial Edge",
           "fix": "NonAdvanced"
         }
       ],
-      "summary": "Parity: Corner(PLL) [non-Advanced], Partial Edge [non-Advanced]"
+      "summary": "Parity: Partial Edge [non-Advanced]"
     },
     "Kociemba|8|6": {
       "has_parity": true,
@@ -1261,48 +758,6 @@
       "summary": "Parity: Partial Edge [non-Advanced]"
     },
     "Kociemba|9|6": {
-      "has_parity": false,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [],
-      "summary": "Parity: None"
-    },
-    "Kociemba|9|7": {
-      "has_parity": true,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": "NonAdvanced",
-      "parities": [
-        {
-          "type": "Partial Edge",
-          "fix": "NonAdvanced"
-        }
-      ],
-      "summary": "Parity: Partial Edge [non-Advanced]"
-    },
-    "Kociemba|9|8": {
-      "has_parity": true,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": "NonAdvanced",
-      "parities": [
-        {
-          "type": "Partial Edge",
-          "fix": "NonAdvanced"
-        }
-      ],
-      "summary": "Parity: Partial Edge [non-Advanced]"
-    },
-    "Kociemba|9|9": {
-      "has_parity": false,
-      "was_corner_swap": null,
-      "was_even_edge_parity": null,
-      "was_partial_edge_parity": null,
-      "parities": [],
-      "summary": "Parity: None"
-    },
-    "Cage|2|0": {
       "has_parity": false,
       "was_corner_swap": null,
       "was_even_edge_parity": null,
