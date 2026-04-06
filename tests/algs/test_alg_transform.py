@@ -800,24 +800,26 @@ class TestTransformationPrinciple:
         assert _l1_solved(cube)
         assert _l2_solved(cube)
 
-    def test_all_four_variants_cover_all_adjacent_pairs(self):
-        """One algorithm generates all 4 adjacent edge-swap variants via Y rotations.
+    def test_all_four_y_variants(self):
+        """One algorithm generates all 4 adjacent edge-swap variants via Y and Y'.
+
+        Both Y and Y' are tested — the principle is not specific to either direction.
 
         | W   | S₂ = W({FU,LU}) | Swaps     |
         |-----|-----------------|-----------|
         | —   | {FU, LU}        | FU ↔ LU   |
+        | Y   | {LU, BU}        | LU ↔ BU   |
         | Y'  | {RU, FU}        | RU ↔ FU   |
         | Y2  | {BU, RU}        | BU ↔ RU   |
-        | Y   | {LU, BU}        | LU ↔ BU   |
         """
-        rotations = [Algs.NOOP, Algs.Y.prime, Algs.Y * 2, Algs.Y]
+        rotations = [Algs.NOOP, Algs.Y, Algs.Y.prime, Algs.Y * 2]
         # Expected swapped pair for each rotation (as edge positions on U face)
         # edge_bottom=FU, edge_right=RU, edge_top=BU, edge_left=LU
         expected_swapped = [
             ("edge_bottom", "edge_left"),    # FU, LU
-            ("edge_right", "edge_bottom"),   # RU, FU
-            ("edge_top", "edge_right"),      # BU, RU
-            ("edge_left", "edge_top"),       # LU, BU
+            ("edge_left", "edge_top"),       # LU, BU  (Y)
+            ("edge_right", "edge_bottom"),   # RU, FU  (Y')
+            ("edge_top", "edge_right"),      # BU, RU  (Y2)
         ]
         all_edges = {"edge_bottom", "edge_right", "edge_top", "edge_left"}
 
@@ -836,6 +838,26 @@ class TestTransformationPrinciple:
             for e in all_edges - {e1, e2}:
                 assert getattr(up, e).match_faces, f"W={w}: {e} should be preserved"
 
-            # L1 and L2 always preserved
+            # L1 and L2 always preserved (Y rotations keep S₂ within U layer)
             assert _l1_solved(cube), f"W={w}: L1 should be solved"
             assert _l2_solved(cube), f"W={w}: L2 should be solved"
+
+    @pytest.mark.parametrize("w", [
+        Algs.X, Algs.X.prime,
+        Algs.Y, Algs.Y.prime,
+        Algs.Z, Algs.Z.prime,
+        Algs.X + Algs.Y,
+        Algs.Z.prime + Algs.X,
+    ], ids=lambda w: str(w))
+    def test_conjugation_holds_for_all_axes(self, w):
+        """The principle works for ALL rotations, not just Y.
+
+        For any W: W' · A · W ≡ T(W, A).
+        This is the conjugation identity applied to a real L3 algorithm.
+
+        X and Z rotations move U-layer edges across layers (e.g., FU→BU,
+        LU→BL), so we don't check L1/L2 — we verify equivalence directly.
+        """
+        transformed = transform(w, _L3_RU, cube_size=3)
+        conjugated = w.inv() + _L3_RU + w
+        assert_algs_equivalent(conjugated, transformed, cube_size=3)
