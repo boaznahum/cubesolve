@@ -88,6 +88,7 @@ from cube.domain.algs.face_permutation import FacePermutation
 from cube.domain.model._elements import AxisName
 from cube.domain.model.Cube import Cube
 from cube.domain.model.FaceName import FaceName
+from cube.domain.model.Part import Part
 from tests.test_utils import _test_sp
 from tests.utils._alg_utils import assert_algs_equivalent
 
@@ -643,3 +644,198 @@ class TestTheoremAllSingleMovesAllAxes:
         wa = transform(w, a, cube_size=3)
         conjugated = w.inv() + a + w
         assert_algs_equivalent(conjugated, wa, cube_size=3)
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# TRANSFORMATION PRINCIPLE DEMONSTRATION
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#
+# The Transformation Principle:
+#   If algorithm A acts on piece-set S₁, and W is a whole-cube rotation
+#   such that W(S₁) = S₂, then T(W, A) acts on S₂.
+#
+# Demonstrated using a real L3 algorithm from the 3x3 beginner solver:
+#   _ru = R U R' U R U2 R' U
+# This algorithm swaps two adjacent U-layer edges while preserving
+# L1, L2, and U-edge orientation.
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# L3 edge-swap algorithm from _L3Cross._ru:
+#   R U R' U R U2 R' U
+# On a solved cube, this swaps the FU and LU edges (while disrupting L3 corners).
+_L3_RU = Algs.R + Algs.U + Algs.R.prime + Algs.U + Algs.R + (Algs.U * 2) + Algs.R.prime + Algs.U
+
+
+def _l1_solved(cube: Cube) -> bool:
+    """Check that L1 (white face cross + corners) is solved."""
+    white = cube.face(FaceName.D)  # white is on D for standard orientation
+    return Part.all_match_faces(white.edges) and Part.all_match_faces(white.corners)
+
+
+def _l2_solved(cube: Cube) -> bool:
+    """Check that all 4 middle-layer edges are solved."""
+    up = cube.face(FaceName.U)
+    down = cube.face(FaceName.D)
+    edges = []
+    for fn in [FaceName.F, FaceName.R, FaceName.B, FaceName.L]:
+        f = cube.face(fn)
+        for e in f.edges:
+            if not e.on_face(up) and not e.on_face(down):
+                if e not in edges:
+                    edges.append(e)
+    return Part.all_match_faces(edges)
+
+
+class TestTransformationPrinciple:
+    """Transformation Principle: T(W, A) acts on S₂ = W(S₁).
+
+    Uses the L3 edge-swap algorithm R U R' U R U2 R' U from the beginner
+    solver (_L3Cross._ru). On a solved cube this swaps FU ↔ LU edges
+    (while disrupting L3 corners but preserving edge orientation).
+
+    S₁ = {FU, LU}
+
+    Y' maps: F→R, L→F, so Y'({FU, LU}) = {RU, FU}
+
+    The four Y variants:
+        | W   | S₂ = W({FU,LU}) | Swaps     |
+        |-----|-----------------|-----------|
+        | —   | {FU, LU}        | FU ↔ LU   |
+        | Y'  | {RU, FU}        | RU ↔ FU   |
+        | Y2  | {BU, RU}        | BU ↔ RU   |
+        | Y   | {LU, BU}        | LU ↔ BU   |
+
+    Each test verifies:
+      - The expected pair is swapped
+      - The other two U-edges remain solved
+      - L1 and L2 remain solved
+    """
+
+    def test_original_swaps_fu_lu(self):
+        """Baseline: _ru swaps FU ↔ LU on a solved cube."""
+        cube = Cube(3, sp=_test_sp)
+        up = cube.face(FaceName.U)
+
+        # Before: all edges match
+        assert up.edge_bottom.match_faces  # FU
+        assert up.edge_right.match_faces   # RU
+        assert up.edge_top.match_faces     # BU
+        assert up.edge_left.match_faces    # LU
+
+        _L3_RU.play(cube)
+
+        # After: FU and LU are swapped
+        assert not up.edge_bottom.match_faces  # FU — swapped
+        assert not up.edge_left.match_faces    # LU — swapped
+        # RU and BU preserved
+        assert up.edge_right.match_faces   # RU — unchanged
+        assert up.edge_top.match_faces     # BU — unchanged
+        # L1 and L2 preserved
+        assert _l1_solved(cube)
+        assert _l2_solved(cube)
+
+    def test_y_prime_transform_swaps_ru_fu(self):
+        """Transformation Principle: T(Y', _ru) swaps RU ↔ FU.
+
+        Y' maps: F→R, L→F
+        So Y'({FU, LU}) = {RU, FU}
+        """
+        cube = Cube(3, sp=_test_sp)
+        up = cube.face(FaceName.U)
+
+        transformed = transform(Algs.Y.prime, _L3_RU, cube_size=3)
+        transformed.play(cube)
+
+        # RU and FU are swapped (S₂)
+        assert not up.edge_right.match_faces   # RU — swapped
+        assert not up.edge_bottom.match_faces  # FU — swapped
+        # BU and LU preserved (not in S₂)
+        assert up.edge_top.match_faces     # BU — unchanged
+        assert up.edge_left.match_faces    # LU — unchanged
+        # L1 and L2 preserved
+        assert _l1_solved(cube)
+        assert _l2_solved(cube)
+
+    def test_y2_transform_swaps_bu_ru(self):
+        """T(Y2, _ru) swaps BU ↔ RU.
+
+        Y2 maps: F→B, L→R
+        So Y2({FU, LU}) = {BU, RU}
+        """
+        cube = Cube(3, sp=_test_sp)
+        up = cube.face(FaceName.U)
+
+        transformed = transform(Algs.Y * 2, _L3_RU, cube_size=3)
+        transformed.play(cube)
+
+        # BU and RU are swapped (S₂)
+        assert not up.edge_top.match_faces     # BU — swapped
+        assert not up.edge_right.match_faces   # RU — swapped
+        # FU and LU preserved
+        assert up.edge_bottom.match_faces  # FU — unchanged
+        assert up.edge_left.match_faces    # LU — unchanged
+        # L1 and L2 preserved
+        assert _l1_solved(cube)
+        assert _l2_solved(cube)
+
+    def test_y_transform_swaps_lu_bu(self):
+        """T(Y, _ru) swaps LU ↔ BU.
+
+        Y maps: F→L, L→B
+        So Y({FU, LU}) = {LU, BU}
+        """
+        cube = Cube(3, sp=_test_sp)
+        up = cube.face(FaceName.U)
+
+        transformed = transform(Algs.Y, _L3_RU, cube_size=3)
+        transformed.play(cube)
+
+        # LU and BU are swapped (S₂)
+        assert not up.edge_left.match_faces    # LU — swapped
+        assert not up.edge_top.match_faces     # BU — swapped
+        # FU and RU preserved
+        assert up.edge_bottom.match_faces  # FU — unchanged
+        assert up.edge_right.match_faces   # RU — unchanged
+        # L1 and L2 preserved
+        assert _l1_solved(cube)
+        assert _l2_solved(cube)
+
+    def test_all_four_variants_cover_all_adjacent_pairs(self):
+        """One algorithm generates all 4 adjacent edge-swap variants via Y rotations.
+
+        | W   | S₂ = W({FU,LU}) | Swaps     |
+        |-----|-----------------|-----------|
+        | —   | {FU, LU}        | FU ↔ LU   |
+        | Y'  | {RU, FU}        | RU ↔ FU   |
+        | Y2  | {BU, RU}        | BU ↔ RU   |
+        | Y   | {LU, BU}        | LU ↔ BU   |
+        """
+        rotations = [Algs.NOOP, Algs.Y.prime, Algs.Y * 2, Algs.Y]
+        # Expected swapped pair for each rotation (as edge positions on U face)
+        # edge_bottom=FU, edge_right=RU, edge_top=BU, edge_left=LU
+        expected_swapped = [
+            ("edge_bottom", "edge_left"),    # FU, LU
+            ("edge_right", "edge_bottom"),   # RU, FU
+            ("edge_top", "edge_right"),      # BU, RU
+            ("edge_left", "edge_top"),       # LU, BU
+        ]
+        all_edges = {"edge_bottom", "edge_right", "edge_top", "edge_left"}
+
+        for w, (e1, e2) in zip(rotations, expected_swapped):
+            cube = Cube(3, sp=_test_sp)
+            up = cube.face(FaceName.U)
+
+            transformed = transform(w, _L3_RU, cube_size=3)
+            transformed.play(cube)
+
+            # The two edges in S₂ are swapped
+            assert not getattr(up, e1).match_faces, f"W={w}: {e1} should be swapped"
+            assert not getattr(up, e2).match_faces, f"W={w}: {e2} should be swapped"
+
+            # The other two edges are preserved
+            for e in all_edges - {e1, e2}:
+                assert getattr(up, e).match_faces, f"W={w}: {e} should be preserved"
+
+            # L1 and L2 always preserved
+            assert _l1_solved(cube), f"W={w}: L1 should be solved"
+            assert _l2_solved(cube), f"W={w}: L2 should be solved"
