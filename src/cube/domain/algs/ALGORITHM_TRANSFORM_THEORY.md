@@ -28,9 +28,12 @@ If we can find a whole-cube rotation W that maps S₁ → S₂, then we don't
 need to discover a new algorithm — we can **derive** it from A.
 
 In this example: **W = Y'** maps L→F and F→R, so Y'({LU, FU}) = {FU, RU}.
+Equally, **W = Y** maps L→B and F→L, so Y({LU, FU}) = {BU, LU}.
 
 The **Algorithm Transformation** T(W, A) gives us exactly that derived
-algorithm. One base algorithm + whole-cube rotations = all positional variants.
+algorithm. Any rotation direction works — the choice of W determines which
+target set S₂ you reach. One base algorithm + whole-cube rotations = all
+positional variants.
 
 This document formalizes the theory behind this transformation, proves
 that it works, and maps every definition to its implementation in code.
@@ -250,10 +253,12 @@ S₁ = { LU, FU }
 S₂ = { FU, RU }
 ```
 
-**Find W**: We need W such that W({LU, FU}) = {FU, RU}.
+**Example 1 — W = Y' (swap FU ↔ RU)**:
+
+We need W such that W({LU, FU}) = {FU, RU}.
 Y' maps L→F and F→R, so **W = Y'**.
 
-**Compute T(Y', A)**: Every move in A has its face remapped by P_{Y'}:
+Compute T(Y', A): every move in A has its face remapped by P_{Y'}:
 
 ```
 P_{Y'}:  F→R, R→B, B→L, L→F, U→U, D→D
@@ -273,14 +278,39 @@ The result is a new algorithm T(Y', A) that swaps FU ↔ RU:
         F
 ```
 
-**Verification**: The conjugation identity confirms correctness:
+Verification: Y · A · Y' ≡ T(Y', A).
+
+**Example 2 — W = Y (swap BU ↔ LU)**:
+
+We need W such that W({LU, FU}) = {BU, LU}.
+Y maps L→B and F→L, so **W = Y**.
+
+Compute T(Y, A): every move in A has its face remapped by P_Y:
 
 ```
-Y · A · Y'  ≡  T(Y', A)
+P_Y:  F→L, L→B, B→R, R→F, U→U, D→D
 ```
 
-Apply Y (rotate cube so F→L), do A (swap LU ↔ FU in the rotated frame),
-then Y' (rotate back). The net effect is swapping FU ↔ RU.
+The result is a new algorithm T(Y, A) that swaps BU ↔ LU:
+
+```
+           B
+        ┌──┬──┬──┐
+        │  │BU│  │       T(Y, A) swaps the edges
+        ├──┼──┼──┤       marked BU and LU
+     LU │  │  │  │
+        ├──┼──┼──┤
+        │  │  │  │
+        └──┴──┴──┘
+           U
+```
+
+Verification: Y' · A · Y ≡ T(Y, A).
+
+**Both directions work.** The Transformation Principle is not tied to a
+specific rotation direction — any W that maps S₁ → S₂ gives a valid
+transform. The choice of Y vs Y' simply determines *which* target set S₂
+you reach.
 
 ### Generating All Variants
 
