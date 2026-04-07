@@ -3,7 +3,8 @@ name: fixrun
 user_invocable: true
 description: |
   Fix PyCharm project structure, interpreter, and run configurations.
-  Triggered by "/fixrun", "fix run", "fix pycharm". Use "/fixrun help" for quick reference.
+  Subcommands: "/fixrun fix-diffs" (fix phantom git diffs), "/fixrun help" (quick reference).
+  Triggered by "/fixrun", "fix run", "fix pycharm".
 ---
 
 # Fix PyCharm Project, Interpreter & Run Configurations
@@ -16,13 +17,14 @@ If the user runs `/fixrun help`, do NOT run the full skill. Instead, display thi
 /fixrun help — Quick Reference
 ═══════════════════════════════
 
+/fixrun              Full fix (interpreter, project, filter, run configs)
+/fixrun fix-diffs    Fix phantom git diffs on .idea/runConfigurations/*.xml
+/fixrun help         This help text
+
 PHANTOM GIT DIFFS on .idea/runConfigurations/*.xml
   Cause: The committed blob was stored before the git clean filter existed,
          or PyCharm changed SDK_NAME/trailing whitespace.
-  Fix:
-    git rm --cached .idea/runConfigurations/*.xml
-    git add .idea/runConfigurations/*.xml
-  This re-stages files through the clean filter. No commit needed — diff disappears.
+  Fix: Run /fixrun fix-diffs (or manually: git rm --cached + git add)
 
 SDK_NAME MISMATCH (PyCharm shows wrong interpreter)
   Fix: Run /fixrun (full skill)
@@ -41,6 +43,31 @@ AFTER SWITCHING BRANCHES
 ```
 
 **STOP after displaying the help text.** Do not continue to the full skill.
+
+---
+
+## Subcommand: `/fixrun fix-diffs`
+
+If the user runs `/fixrun fix-diffs`, fix phantom git diffs on run configuration files. Do NOT run the full skill.
+
+Run these commands in order. No confirmation needed — just run them and report the result.
+
+```bash
+# 1. Verify filter exists (if this returns empty, STOP and tell user to run /fixrun first)
+git config filter.normalize-sdk-name.clean
+
+# 2. Re-stage through the clean filter (this is the actual fix)
+git rm --cached .idea/runConfigurations/*.xml
+git add .idea/runConfigurations/*.xml
+
+# 3. Verify clean
+git status --short .idea/runConfigurations/
+```
+
+If step 3 shows no output: report "Phantom diffs fixed."
+If step 3 still shows diffs: report "Some diffs remain — these may be real changes."
+
+**STOP after fix-diffs completes.** Do not continue to the full skill.
 
 ---
 
