@@ -14,7 +14,7 @@ face permutations, used by each Alg subclass's transform_by() method.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 
 from cube.domain.model.FaceName import FaceName
 from cube.domain.model.cube_slice import SliceName
@@ -143,7 +143,7 @@ class FacePermutation:
 
 def _remap_by_rotation_face(
     p: FacePermutation, rotation_face: FaceName, n: int,
-    face_to_name: dict[FaceName, SliceName | AxisName],
+    face_to_name: Mapping[FaceName, SliceName | AxisName],
 ) -> tuple[SliceName | AxisName, int, bool]:
     """Remap a slice or axis based on where its rotation face maps to.
 
