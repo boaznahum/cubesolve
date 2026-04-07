@@ -12,8 +12,9 @@ move in A through the face permutation P_W induced by W.
 
 Then the following identities hold on any NxN cube:
 
-  (1) Conjugation:    W' A W  ≡  T(W, A)
-  (2) Push-through:   A W     ≡  W T(W, A)
+  Definition:         W T(W, A) W'  ≡  A
+  (1) Conjugation:    T(W, A)  ≡  W' A W     (derived from definition)
+  (2) Push-through:   A W      ≡  W T(W, A)
   (3) Composition:    T(W₁ W₂, A)  ≡  T(W₂, T(W₁, A))
 
 where ≡ means "produces identical cube state from any starting position".
@@ -371,20 +372,20 @@ class TestTransformSequences:
         assert_algs_equivalent(result, expected, cube_size=3)
 
     def test_transform_preserves_algorithm_effect(self):
-        """T(Y', R U R' U') under Y' conjugation should equal R U R' U'"""
+        """W T(W,A) W' = A: Y' T(Y', sexy) Y = sexy"""
         sexy = Algs.R + Algs.U + Algs.R.prime + Algs.U.prime
         transformed = sexy.transform(Algs.Y.prime)
-        # Identity: W' A W = WA → Y (R U R' U') Y' = transformed
-        conjugated = Algs.Y + sexy + Algs.Y.prime
-        assert_algs_equivalent(conjugated, transformed, cube_size=3)
+        # Definition: W T(W,A) W' = A
+        sandwich = Algs.Y.prime + transformed + Algs.Y
+        assert_algs_equivalent(sandwich, sexy, cube_size=3)
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Conjugation identity verification: W' A W ≡ T(W, A)
+# Definition verification: W T(W, A) W' ≡ A
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 class TestConjugationIdentity:
-    """Verify the core identity: W' A W produces the same cube state as T(W, A)."""
+    """Verify the definition: W T(W, A) W' produces the same cube state as A."""
 
     @pytest.mark.parametrize("w,a", [
         (Algs.Y.prime, Algs.F),
@@ -397,11 +398,11 @@ class TestConjugationIdentity:
         (Algs.Y * 2, Algs.F),
         (Algs.X.prime, Algs.D),
     ])
-    def test_conjugation_equals_transform_single_moves(self, w, a):
-        """W' A W should produce the same state as T(W, A)."""
+    def test_definition_single_moves(self, w, a):
+        """W T(W, A) W' should produce the same state as A."""
         wa = a.transform(w, cube_size=3)
-        conjugated = w.inv() + a + w
-        assert_algs_equivalent(conjugated, wa, cube_size=3)
+        sandwich = w + wa + w.inv()
+        assert_algs_equivalent(sandwich, a, cube_size=3)
 
     @pytest.mark.parametrize("w,a", [
         (Algs.Y.prime, Algs.M),
@@ -409,10 +410,10 @@ class TestConjugationIdentity:
         (Algs.X, Algs.E),
         (Algs.Z, Algs.M),
     ])
-    def test_conjugation_equals_transform_slice_moves(self, w, a):
+    def test_definition_slice_moves(self, w, a):
         wa = a.transform(w, cube_size=3)
-        conjugated = w.inv() + a + w
-        assert_algs_equivalent(conjugated, wa, cube_size=3)
+        sandwich = w + wa + w.inv()
+        assert_algs_equivalent(sandwich, a, cube_size=3)
 
     @pytest.mark.parametrize("w", [
         Algs.Y.prime,
@@ -420,24 +421,24 @@ class TestConjugationIdentity:
         Algs.Z,
         Algs.Y * 2,
     ])
-    def test_conjugation_equals_transform_sequence(self, w):
-        """Verify identity holds for a multi-move algorithm."""
+    def test_definition_sequence(self, w):
+        """Verify definition holds for a multi-move algorithm."""
         a = Algs.R + Algs.U + Algs.R.prime + Algs.U.prime  # sexy move
         wa = a.transform(w, cube_size=3)
-        conjugated = w.inv() + a + w
-        assert_algs_equivalent(conjugated, wa, cube_size=3)
+        sandwich = w + wa + w.inv()
+        assert_algs_equivalent(sandwich, a, cube_size=3)
 
     @pytest.mark.parametrize("w", [
         Algs.Y.prime,
         Algs.X,
         Algs.Z,
     ])
-    def test_conjugation_on_5x5(self, w):
-        """Verify identity holds on 5x5 cubes too."""
+    def test_definition_on_5x5(self, w):
+        """Verify definition holds on 5x5 cubes too."""
         a = Algs.R + Algs.U + Algs.R.prime + Algs.U.prime
         wa = a.transform(w, cube_size=5)
-        conjugated = w.inv() + a + w
-        assert_algs_equivalent(conjugated, wa, cube_size=5)
+        sandwich = w + wa + w.inv()
+        assert_algs_equivalent(sandwich, a, cube_size=5)
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -476,20 +477,20 @@ class TestPushThroughIdentity:
 class TestComposedRotations:
 
     def test_y_prime_then_x(self):
-        """Compose Y' then X and verify the identity still holds."""
+        """Compose Y' then X and verify the definition still holds."""
         w = Algs.Y.prime + Algs.X
         a = Algs.F
         wa = a.transform(w, cube_size=3)
-        conjugated = w.inv() + a + w
-        assert_algs_equivalent(conjugated, wa, cube_size=3)
+        sandwich = w + wa + w.inv()
+        assert_algs_equivalent(sandwich, a, cube_size=3)
 
     def test_multiple_rotations(self):
         """Y' X Z applied to a sequence."""
         w = Algs.Y.prime + Algs.X + Algs.Z
         a = Algs.R + Algs.U + Algs.F
         wa = a.transform(w, cube_size=3)
-        conjugated = w.inv() + a + w
-        assert_algs_equivalent(conjugated, wa, cube_size=3)
+        sandwich = w + wa + w.inv()
+        assert_algs_equivalent(sandwich, a, cube_size=3)
 
     def test_double_y(self):
         """Y2 applied to F should give B."""
@@ -509,48 +510,27 @@ class TestComposedRotations:
 # no string comparison — pure black-box cube-state equivalence.
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-class TestTheoremConjugationRandomized:
-    """Theorem identity (1): W' A W ≡ T(W, A)
+class TestTheoremDefinitionRandomized:
+    """Definition: W T(W, A) W' ≡ A
 
     Verified with:
-      - W: random whole-cube rotation sequences (X, Y, Z, primes, doubles)
+      - W: random whole-cube rotation sequences (X, Y, Z, primes, multiplied)
       - A: random algorithm scrambles from the existing scramble generator
            (face moves, slices, wide moves, with inv/mul modifiers)
-
-    By Lemma 6 (sequence homomorphism), if the identity holds for each
-    atomic move type, it holds for any sequence. These tests provide
-    empirical confirmation across diverse random combinations.
-
-    Rules applied (Lemmas 3-5):
-      - Face moves: face name remapped by P_W, rotation count preserved
-      - Slice moves: rotation face remapped, direction negated if mapped to opposite
-      - Wide moves: face name remapped, layer count preserved
-      - Whole-cube moves in A: axis face remapped, same direction/opposite logic
-      - Inv/Mul: transform distributes through wrappers
-      - Sequences: transform applies element-wise (Lemma 6)
+      - cube_size: parametrized to cover 3x3 through 7x7 (all slice variants)
     """
 
-    @pytest.mark.parametrize("seed", range(20))
-    def test_conjugation_random_w_random_a_3x3(self, seed: int):
-        """Random W (whole-cube seq) × random A (scramble) on 3×3."""
-        w = _random_whole_cube_sequence(seed=seed * 100, length=5)
-        a = cube_scramble(cube_size=3, seed=seed * 100 + 1, n=20)
+    @pytest.mark.parametrize("cube_size", [3, 5, 7])
+    @pytest.mark.parametrize("seed", range(5))
+    def test_definition_random_w_random_a(self, seed: int, cube_size: int):
+        """W T(W,A) W' ≡ A with random W and A on various cube sizes."""
+        w = _random_whole_cube_sequence(seed=seed * 100 + cube_size, length=5)
+        a = cube_scramble(cube_size=cube_size, seed=seed * 100 + cube_size + 1, n=20)
 
-        wa = a.transform(w, cube_size=3)
-        conjugated = w.inv() + a + w
+        wa = a.transform(w, cube_size=cube_size)
+        sandwich = w + wa + w.inv()
 
-        assert_algs_equivalent(conjugated, wa, cube_size=3)
-
-    @pytest.mark.parametrize("seed", range(10))
-    def test_conjugation_random_w_random_a_5x5(self, seed: int):
-        """Random W × random A on 5×5 — tests sliced moves and wide layers."""
-        w = _random_whole_cube_sequence(seed=seed * 200, length=4)
-        a = cube_scramble(cube_size=5, seed=seed * 200 + 1, n=15)
-
-        wa = a.transform(w, cube_size=5)
-        conjugated = w.inv() + a + w
-
-        assert_algs_equivalent(conjugated, wa, cube_size=5)
+        assert_algs_equivalent(sandwich, a, cube_size=cube_size)
 
 
 class TestTheoremPushThroughRandomized:
@@ -564,31 +544,19 @@ class TestTheoremPushThroughRandomized:
     to eliminate mid-algorithm cube rotations.
     """
 
-    @pytest.mark.parametrize("seed", range(20))
-    def test_push_through_random_w_random_a_3x3(self, seed: int):
-        """A W ≡ W T(W, A) with random W and A on 3×3."""
-        w = _random_whole_cube_sequence(seed=seed * 300, length=5)
-        a = cube_scramble(cube_size=3, seed=seed * 300 + 1, n=20)
+    @pytest.mark.parametrize("cube_size", [3, 5, 7])
+    @pytest.mark.parametrize("seed", range(5))
+    def test_push_through_random(self, seed: int, cube_size: int):
+        """A W ≡ W T(W, A) with random W and A on various cube sizes."""
+        w = _random_whole_cube_sequence(seed=seed * 300 + cube_size, length=5)
+        a = cube_scramble(cube_size=cube_size, seed=seed * 300 + cube_size + 1, n=20)
 
-        wa = a.transform(w, cube_size=3)
+        wa = a.transform(w, cube_size=cube_size)
 
         left = a + w       # original: do A then W
         right = w + wa     # transformed: do W then T(W,A)
 
-        assert_algs_equivalent(left, right, cube_size=3)
-
-    @pytest.mark.parametrize("seed", range(10))
-    def test_push_through_random_w_random_a_5x5(self, seed: int):
-        """A W ≡ W T(W, A) with random W and A on 5×5."""
-        w = _random_whole_cube_sequence(seed=seed * 400, length=4)
-        a = cube_scramble(cube_size=5, seed=seed * 400 + 1, n=15)
-
-        wa = a.transform(w, cube_size=5)
-
-        left = a + w
-        right = w + wa
-
-        assert_algs_equivalent(left, right, cube_size=5)
+        assert_algs_equivalent(left, right, cube_size=cube_size)
 
 
 class TestTheoremCompositionRandomized:
@@ -604,21 +572,22 @@ class TestTheoremCompositionRandomized:
       - Comparing T(W₁W₂, A) vs T(W₂, T(W₁, A)) on actual cube state
     """
 
-    @pytest.mark.parametrize("seed", range(15))
-    def test_composition_random_3x3(self, seed: int):
-        """T(W₁W₂, A) ≡ T(W₂, T(W₁, A)) on 3×3."""
-        w1 = _random_whole_cube_sequence(seed=seed * 500, length=3)
-        w2 = _random_whole_cube_sequence(seed=seed * 500 + 1, length=3)
-        a = cube_scramble(cube_size=3, seed=seed * 500 + 2, n=20)
+    @pytest.mark.parametrize("cube_size", [3, 5, 7])
+    @pytest.mark.parametrize("seed", range(5))
+    def test_composition_random(self, seed: int, cube_size: int):
+        """T(W₁W₂, A) ≡ T(W₂, T(W₁, A)) on various cube sizes."""
+        w1 = _random_whole_cube_sequence(seed=seed * 500 + cube_size, length=3)
+        w2 = _random_whole_cube_sequence(seed=seed * 500 + cube_size + 1, length=3)
+        a = cube_scramble(cube_size=cube_size, seed=seed * 500 + cube_size + 2, n=20)
 
         # One-shot: transform by the composed rotation
         composed_w = w1 + w2
-        one_shot = a.transform(composed_w, cube_size=3)
+        one_shot = a.transform(composed_w, cube_size=cube_size)
 
         # Two-step: transform by W₁ first, then by W₂
-        two_step = a.transform(w1, cube_size=3).transform(w2, cube_size=3)
+        two_step = a.transform(w1, cube_size=cube_size).transform(w2, cube_size=cube_size)
 
-        assert_algs_equivalent(one_shot, two_step, cube_size=3)
+        assert_algs_equivalent(one_shot, two_step, cube_size=cube_size)
 
 
 class TestTheoremAllSingleMovesAllAxes:
@@ -626,7 +595,7 @@ class TestTheoremAllSingleMovesAllAxes:
 
     For each of the 6 basic whole-cube rotations {X, X', Y, Y', Z, Z'}
     and each of the atomic moves in Algs.Simple (face, wide, slice, axis),
-    verify the conjugation identity W' A W ≡ T(W, A) on 3×3.
+    verify the definition W T(W, A) W' ≡ A on 3×3.
 
     This is the exhaustive base case that, combined with Lemma 6
     (sequence homomorphism), guarantees correctness for all algorithms.
@@ -642,11 +611,11 @@ class TestTheoremAllSingleMovesAllAxes:
                              ids=lambda w: str(w))
     @pytest.mark.parametrize("a", Algs.Simple,
                              ids=lambda a: str(a))
-    def test_conjugation_all_single_moves(self, w: Alg, a: Alg):
-        """W' A W ≡ T(W, A) for every (W, A) pair."""
+    def test_definition_all_single_moves(self, w: Alg, a: Alg):
+        """W T(W, A) W' ≡ A for every (W, A) pair."""
         wa = a.transform(w, cube_size=3)
-        conjugated = w.inv() + a + w
-        assert_algs_equivalent(conjugated, wa, cube_size=3)
+        sandwich = w + wa + w.inv()
+        assert_algs_equivalent(sandwich, a, cube_size=3)
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -852,18 +821,18 @@ class TestTransformationPrinciple:
         Algs.X + Algs.Y,
         Algs.Z.prime + Algs.X,
     ], ids=lambda w: str(w))
-    def test_conjugation_holds_for_all_axes(self, w):
+    def test_definition_holds_for_all_axes(self, w):
         """The principle works for ALL rotations, not just Y.
 
-        For any W: W' · A · W ≡ T(W, A).
-        This is the conjugation identity applied to a real L3 algorithm.
+        For any W: W · T(W, A) · W' ≡ A.
+        This is the definition applied to a real L3 algorithm.
 
         X and Z rotations move U-layer edges across layers (e.g., FU→BU,
         LU→BL), so we don't check L1/L2 — we verify equivalence directly.
         """
         transformed = _L3_RU.transform(w, cube_size=3)
-        conjugated = w.inv() + _L3_RU + w
-        assert_algs_equivalent(conjugated, transformed, cube_size=3)
+        sandwich = w + transformed + w.inv()
+        assert_algs_equivalent(sandwich, _L3_RU, cube_size=3)
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1077,8 +1046,8 @@ class TestTransformationPrinciple3CornerCycle:
         Algs.X + Algs.Y,
         Algs.Z.prime + Algs.X,
     ], ids=lambda w: str(w))
-    def test_conjugation_holds_for_all_axes(self, w):
-        """W' · 3-cycle · W ≡ T(W, 3-cycle) for all rotation axes."""
+    def test_definition_holds_for_all_axes(self, w):
+        """W · T(W, 3-cycle) · W' ≡ 3-cycle for all rotation axes."""
         transformed = _CORNER_3_CYCLE.transform(w, cube_size=3)
-        conjugated = w.inv() + _CORNER_3_CYCLE + w
-        assert_algs_equivalent(conjugated, transformed, cube_size=3)
+        sandwich = w + transformed + w.inv()
+        assert_algs_equivalent(sandwich, _CORNER_3_CYCLE, cube_size=3)
