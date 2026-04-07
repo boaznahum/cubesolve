@@ -48,25 +48,35 @@ A's work, but at POS2.
 **Key insight**: if we apply T(W,A) alone — without the W/W' wrapper —
 it performs A's effect at POS2. That's exactly what we wanted.
 
-claude: we can put simple math here
-if we treate algs like matrix operation 
-or equivalent mathematical objrct we need 
-to find name to it then
+### Algebraic Derivation
 
-W  T(W, A)  W'  =  A
-now apply W' and W on both sudes
+Cube algorithms form a **group** under composition (like matrix multiplication).
+We can solve for T(W, A) algebraically from the defining equation:
 
-W' W  T(W, A)  W'W  =  W' A W
+```
+W · T(W, A) · W'  =  A
+```
 
-T(W, A)    =  W' A W
+Multiply both sides on the left by W' and on the right by W:
 
-si we see that TW is actually bring POS2 to 
-POS1 apply A on it and bring jt back
-POS2 , so simple so nice 
-what is conjunction?
+```
+W'· W · T(W, A) · W'· W  =  W'· A · W
+         T(W, A)          =  W'· A · W
+```
 
+So:
 
+```
+T(W, A)  =  W' A W
+```
 
+This operation — wrapping A between W' and W — is called **conjugation**
+in group theory. It is one of the most fundamental operations in algebra:
+conjugation preserves the structure of A while "relocating" its effect.
+
+The intuition matches the algebra: W' moves pieces from POS2 to POS1,
+A does its work at POS1, then W brings them back to POS2. The net effect
+is A's operation, transplanted to POS2.
 
 ### Example: Edge Swap
 
