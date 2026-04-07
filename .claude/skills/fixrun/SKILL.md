@@ -3,12 +3,7 @@ name: fixrun
 user_invocable: true
 description: |
   Fix PyCharm project structure, interpreter, and run configurations.
-  This skill should be used when the user says "fix run", "fixrun", "fix run config",
-  "fix run configuration", "fix run configurations", "run configurations",
-  "fix pycharm", "fix pycharm project", "pycharm broken", "run tests doesn't appear",
-  "no interpreter", "can't run tests", or runs "/fixrun". Repairs .iml file
-  (source/test roots), ensures correct interpreter, sets up git filter, and fixes run configs.
-  Use "/fixrun help" for quick reference on common issues (e.g., phantom git diffs).
+  Triggered by "/fixrun", "fix run", "fix pycharm". Use "/fixrun help" for quick reference.
 ---
 
 # Fix PyCharm Project, Interpreter & Run Configurations

@@ -2,9 +2,7 @@
 name: check
 user_invocable: true
 description: |
-  Code quality checker skill. This skill should be used when the user wants to:
-  (1) Run static analysis tools (mypy, pyright, ruff) on the codebase - triggered by "/check", "/check q", or "/check quality"
-  (2) Find dead/unused code (functions, imports, variables, unreachable code) - triggered by "/check d" or "/check dead"
+  Run static analysis (mypy, pyright, ruff) with "/check" or find dead code with "/check dead".
 ---
 
 # Code Quality Checker

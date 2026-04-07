@@ -3,11 +3,8 @@ name: clean-branches
 user_invocable: true
 context: conversation
 description: |
-  Clean up git branches by analyzing merged/unmerged status, archiving completed work,
-  and organizing active branches. This skill should be used when the user wants to clean
-  up branches, organize their git repository, or review branch status.
-  Triggered by "/clean-branches", "/branches", "clean branches", "check branches", "check branch", or "branches".
-  Accepts optional argument: branch name to compare against (e.g., "/clean-branches webgl-dev").
+  Clean up git branches by analyzing merged/unmerged status and archiving completed work.
+  Triggered by "/clean-branches" or "/branches".
 ---
 
 # Branch Cleanup Skill

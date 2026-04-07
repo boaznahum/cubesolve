@@ -61,21 +61,7 @@ Command Pattern (keyboard handling):
 - `docs/design/gui_abstraction.md` - Architecture design
 - `docs/design/keyboard_and_commands.md` - Command pattern
 
-### Current Status (2025-12-01)
-
-| Phase | Description | Status |
-|-------|-------------|--------|
-| Phase 1 | Core Abstraction Layer | ✅ Done |
-| Phase 2 | Move Pyglet to Backend | ✅ Done |
-| Phase 3 | Abstract Window Layer | ✅ Done |
-| Phase 4 | PascalCase File Naming | ✅ Done |
-| A2.1 | Command Pattern | ✅ Done |
-| A2.2 | GUI Tests with Commands | ✅ Done |
-
-**Tests:** 126 non-GUI tests, 2 GUI tests pass (8 skipped)
-
-All pyglet imports now only exist in:
-1. `src/cube/presentation/gui/backends/pyglet/` - The pyglet backend
+**Migration:** All 6 phases complete (see `docs/design/migration_state.md`). All pyglet imports isolated to `src/cube/presentation/gui/backends/pyglet/`.
 
 ### How to Run
 - GUI: `python -m cube.main_pyglet`
@@ -83,16 +69,7 @@ All pyglet imports now only exist in:
 - Tests (GUI): `python -m pytest tests/gui -v --speed-up 5`
 
 ### Environment Setup (Headless / Claude Code on Web)
-- **Python:** Use `python3.13` (not `python` which may be 3.11). Project requires Python 3.13+ (`from warnings import deprecated`).
-- **kociemba package:** Requires `--use-pep517` flag to build correctly:
-  ```bash
-  python3.13 -m pip install kociemba --use-pep517
-  python3.13 -m pip install -e ".[dev]" --use-pep517
-  ```
-- **Non-GUI, non-slow tests:** Use `-m "not gui and not slow"` to exclude GUI/WebGL/backend tests and slow tests:
-  ```bash
-  python3.13 -m pytest tests/ -m "not gui and not slow" --tb=short -q
-  ```
+- **Python 3.13+** required. On Linux use `python3.13`. Install kociemba with `--use-pep517`.
 
 ### All Checks (run before committing)
 
@@ -154,65 +131,10 @@ This helps identify known-good commits for easy rollback if needed.
 If you need to verify whether a test was failing before your changes, use `git checkout <commit> -- .` to temporarily restore the old code and run the tests, then restore your changes.
 
 ### Test Skipping Policy - NEVER SKIP TESTS
-**CRITICAL:** Do NOT add `pytest.skip()` or `@pytest.mark.skip` to tests. When a test fails:
-
-1. **NEVER skip** the test to make it pass - this hides bugs
-2. **ALWAYS fix** the underlying issue in the code
-3. If a feature is not supported by a backend:
-   - Fix the code so the feature works (add stub/no-op implementations)
-   - Or if truly impossible, discuss with user before adding skip
-
-**Why this matters:** When tests are skipped, real bugs go undetected. A skipped test that was added to reproduce a bug means the bug is never actually verified as fixed. Tests should:
-- FAIL when the bug exists (before fix)
-- PASS when the bug is fixed (after fix)
-- NEVER be skipped
-
-**Example - Wrong approach:**
-```python
-def test_feature_X(backend: str):
-    if backend == "console":
-        pytest.skip("Console doesn't support X")  # BAD - hides the bug!
-```
-
-**Example - Correct approach:**
-```python
-# Fix the code so console backend provides a stub/no-op for feature X
-# Then the test runs on ALL backends and verifies the fix works everywhere
-```
-
-**Note:** Use `--speed-up 5` (not 2) to work around the known animation timing bug (see "Known Issues" section below).
+**CRITICAL:** Do NOT add `pytest.skip()` or `@pytest.mark.skip`. Always fix the underlying issue instead. If a backend lacks a feature, add a stub/no-op. Discuss with user before any skip. Use `--speed-up 5` for GUI tests (animation timing workaround).
 
 ### Pyglet Backend Testing - SEPARATE ENVIRONMENTS
-
-**CRITICAL:** The `pyglet` (legacy) and `pyglet2` (modern) backends require DIFFERENT Python environments because they use incompatible pyglet versions.
-
-| Backend | Environment | Pyglet Version | OpenGL |
-|---------|-------------|----------------|--------|
-| `pyglet` | `.venv_pyglet_legacy` | pyglet 1.x (`<2.0`) | Legacy (display lists) |
-| `pyglet2` | `.venv` (default) | pyglet 2.x (`>=2.0`) | Modern (shaders/VBOs) |
-
-**Setup `.venv_pyglet_legacy` environment:**
-```bash
-python -m venv .venv_pyglet_legacy
-.venv_pyglet_legacy/Scripts/pip.exe install -e ".[dev]"
-.venv_pyglet_legacy/Scripts/pip.exe install --force-reinstall "pyglet>=1.5,<2.0"
-```
-
-**Running tests for each backend:**
-```bash
-# pyglet2 (modern) - uses default .venv
-.venv/Scripts/python.exe -m pytest tests/gui -v --speed-up 5 --backend=pyglet2
-
-# pyglet (legacy) - uses .venv_pyglet_legacy
-.venv_pyglet_legacy/Scripts/python.exe -m pytest tests/gui -v --speed-up 5 --backend=pyglet
-```
-
-**NEVER mix environments:** Running pyglet (legacy) tests with pyglet 2.x installed will fail with errors like `AttributeError: module 'pyglet.gl' has no attribute 'glGenLists'` because pyglet 2.x removed legacy OpenGL functions.
-
-### Check Pyglet Usage
-```bash
-grep -r "import pyglet\|from pyglet" src/cube --include="*.py" | grep -v "presentation/gui/backends/pyglet" | grep -v "__pycache__"
-```
+`pyglet` (legacy, pyglet 1.x) uses `.venv_pyglet_legacy`; `pyglet2` (modern, pyglet 2.x) uses `.venv`. **NEVER mix** — pyglet 2.x removed legacy GL functions. See `tests/TESTING.md` for setup details.
 
 ### Important Notes
 - Renderer is REQUIRED - RuntimeError if not configured
@@ -289,148 +211,33 @@ Never assume the user knows which changes require a restart. Always be explicit.
 
 ## Git Commit Policy
 
-**IMPORTANT**: Never commit changes without explicit user approval.
-
-### Rules:
-1. After making code changes, ALWAYS show the user what was changed
-2. WAIT for the user to explicitly say "commit" or "commit the changes"
-3. Even if the user asks you to implement a feature, implementation does NOT imply permission to commit
-4. The user wants to examine all changes before they are committed
+**IMPORTANT**: Never commit without explicit user approval. Implementation does NOT imply permission to commit.
 
 ### Workflow:
-1. Make requested changes
-2. **Review your own changes** — read the diff, check for redundant code, leftover patterns, or mistakes. Fix any issues BEFORE showing the user.
-3. Show the user what was changed
-4. Ask: "Would you like me to commit these changes?"
-5. Only commit after receiving explicit approval
+1. Make changes, self-review the diff, fix issues
+2. Show user what changed, ask "Would you like me to commit?"
+3. Only commit after explicit approval
 
-### Pre-Commit Checklist (MANDATORY):
-Before committing, ALWAYS do these steps:
-
-1. **List modified files:** `git diff --name-only`
-2. **Search for instructions:** `grep -i "claude"` in ALL modified files (catches `claude:`, `claud:`, `claude doc`, etc.)
-3. **Show context** for each `claude` match found
-4. **Ask what to do** with each instruction - iterate until user is satisfied
-5. **If user says skip** - leave that comment in place, do NOT remove it
-6. **Never undo user code** - never use `git checkout` or revert user changes without explicit permission
-7. **Review for new methods:** Scan modified files for any new methods/functions the user added. If found:
-   - Document what the method does (add docstring if missing)
-   - If the purpose is unclear, ASK the user before committing
-8. **Only then commit**
-
-### Example Pre-Commit Check:
-```bash
-# Step 1: List modified files
-git diff --name-only
-
-# Step 2: Search for claude instructions in each file
-grep -rn -i "claude" <file1> <file2> ...
-
-# Step 3: Show context and ask user about each match
-```
-
-### Examples:
-
-**Correct:**
-- User: "Add feature X"
-- Claude: [implements feature] "I've added feature X. Would you like me to commit these changes?"
-- User: "Yes, commit"
-- Claude: [commits]
-
-**Incorrect:**
-- User: "Add feature X"
-- Claude: [implements feature and commits without asking]
-
-## Summary
-When in doubt, always ask before committing. The user prefers to review changes first.
+### Pre-Commit Checklist:
+1. `git diff --name-only` — list modified files
+2. `grep -i "claude"` in all modified files — find embedded instructions, ask user about each
+3. Never undo user code or `git checkout` without permission
+4. Review new methods — add docstrings if missing, ask user if purpose unclear
 
 ---
 
 ## Test Infrastructure Maintenance
 
-**IMPORTANT**: When making changes to testing infrastructure, ALWAYS update related files.
-
-### When to Update
-
-Whenever you:
-- Add new pytest flags or options (e.g., `--animate`)
-- Reorganize test files or folders
-- Add new test markers
-- Change how tests are run
-- Add new test categories or fixtures
-
-### What to Update
-
-1. **`tests/TESTING.md`** - Update documentation with:
-   - New command-line options
-   - New test organization/structure
-   - New markers or fixtures
-   - Examples of how to run tests
-
-2. **PyCharm run configurations** (`.idea/runConfigurations/*.xml`) - Update paths when:
-   - Moving test files to new locations
-   - Renaming test files
-   - Adding new frequently-used test configurations
-
-3. **`tests/gui/conftest.py`** or root `conftest.py` - When adding:
-   - New pytest fixtures
-   - New command-line options
-   - New pytest hooks
-
-### Example Checklist
-
-When reorganizing tests:
-- [ ] Move files with `git mv` (preserves history)
-- [ ] Update PyCharm run configurations with new paths
-- [ ] Update TESTING.md project structure section
-- [ ] Create `__init__.py` in new test packages
-- [ ] Verify all tests still pass
+When changing test infrastructure (new flags, markers, fixtures, file moves), update: `tests/TESTING.md`, PyCharm run configs (`.idea/runConfigurations/`), and `conftest.py`. Use `git mv` for moves.
 
 ---
 
 ## Design Documentation Maintenance
 
-**CRITICAL**: When making ANY changes to code or architecture, you MUST update the design documents.
-This is NOT optional. Documentation that doesn't match code is worse than no documentation.
-
-### Design Documents
-
-| Document | Purpose |
-|----------|---------|
-| `docs/design/gui_abstraction.md` | GUI backend abstraction layer |
-| `docs/design/keyboard_and_commands.md` | Keyboard handling and command system |
-| `docs/design/migration_state.md` | Migration progress tracking |
-| `docs/design/phase3_migration_plan.md` | Phase 3 detailed plan |
-
-### PlantUML Diagrams
-
-- `docs/design/gui_abstraction.puml` - Class diagrams and relationships
-- `docs/design/gui_components.puml` - Component diagrams
-- `docs/design/gui_sequence.puml` - Sequence diagrams
-
-### MANDATORY Update Checklist
-
-After EVERY code change, verify:
-- [ ] Design documents reflect the current architecture
-- [ ] Code examples in docs match actual implementation
-- [ ] API signatures in docs match actual code
-- [ ] Status tables are up to date (✅ Done, 🔄 In Progress, etc.)
-- [ ] New files/classes are documented
-
-### When to Update
-
-- **ALWAYS** when adding/removing functions, classes, or protocols
-- **ALWAYS** when changing API signatures or method names
-- **ALWAYS** when adding/removing files or modules
-- **ALWAYS** when changing relationships between components
-- **ALWAYS** when fixing architectural issues
-
-### How to Update
-
-1. **Read the relevant doc** before making changes
-2. **Update the doc** immediately after code changes
-3. **Include the doc update** in the same commit as the code change
-4. **Show the user** the updated documentation
+**CRITICAL**: When changing code/architecture, update the matching design docs in the same commit.
+- Docs: `docs/design/gui_abstraction.md`, `keyboard_and_commands.md`, `migration_state.md`, `phase3_migration_plan.md`
+- Diagrams: `docs/design/*.puml` (class, component, sequence)
+- Update whenever adding/removing/renaming functions, classes, protocols, files, or APIs
 
 ---
 
@@ -450,80 +257,13 @@ Key rules (detailed in architecture_rules.md):
 
 ## Type Annotations - MANDATORY
 
-**CRITICAL:** ALL code must have complete type annotations. This catches bugs at write time, not runtime.
-
-### Requirements
-
-1. **All function parameters** must have type hints
-2. **All function return types** must be specified
-3. **All local variables** should have type hints when the type isn't obvious
-4. **Use `from __future__ import annotations`** for forward references
-
-### Example
-
-```python
-from __future__ import annotations
-from collections.abc import Collection
-
-def process_slices(cube: Cube, label: str = "default") -> None:
-    all_slices: Collection[PartSlice] = cube.get_all_parts()
-    for slice_ in all_slices:
-        colors_cache: PartColorsID | None = slice_._colors_id_by_colors
-        # ...
-```
-
-### Why This Matters
-
-Without type annotations, bugs like this go unnoticed:
-```python
-# BUG: get_all_parts() returns PartSlice, not Part
-# PartSlice doesn't have position_id - only Part does
-all_parts = cube.get_all_parts()  # No type hint = no IDE warning
-for part in all_parts:
-    pos = part.position_id  # Runtime error!
-```
-
-With type annotations, the IDE catches this immediately:
-```python
-all_slices: Collection[PartSlice] = cube.get_all_parts()
-for slice_ in all_slices:
-    pos = slice_.position_id  # IDE error: PartSlice has no attribute 'position_id'
-```
+ALL code must have complete type annotations: function parameters, return types, non-obvious locals. Use `from __future__ import annotations` for forward references.
 
 ---
 
 ## Domain Model - Understand Before Changing
 
-**CRITICAL:** Before modifying domain model code, read `docs/design/domain_model.md`.
-
-### Key Concepts
-
-```
-Cube
- ├── Part (Edge, Corner, Center) - has colors_id AND position_id
- │    └── PartSlice (EdgeWing, CornerSlice, CenterSlice) - has colors_id only
- │         └── PartEdge - single sticker on single face
-```
-
-### Important Distinctions
-
-| Class | Has `colors_id` | Has `position_id` | Returned by |
-|-------|-----------------|-------------------|-------------|
-| Part | Yes | Yes | - |
-| PartSlice | Yes | **No** | `cube.get_all_parts()` |
-| PartEdge | No | No | - |
-
-### Access Pattern
-
-```python
-# cube.get_all_parts() returns PartSlice objects, NOT Part
-all_slices: Collection[PartSlice] = cube.get_all_parts()
-for slice_ in all_slices:
-    slice_.colors_id       # OK - PartSlice has this
-    slice_.position_id     # ERROR - only Part has this
-    slice_._parent         # Access parent Part
-    slice_._parent.position_id  # OK - Part has position_id
-```
+Read `docs/design/domain_model.md` before modifying domain code. Key: `cube.get_all_parts()` returns `PartSlice` (has `colors_id`, no `position_id`). Access `position_id` via `slice_._parent`.
 
 ---
 
@@ -551,7 +291,18 @@ for slice_ in all_slices:
 - `src/cube/domain/solver/beginner/L3Cross.py` line 178 - Failing assertion
 
 **Workaround:** Press `+` key before scramble (or use `--speed-up 1+` in tests)
-- dont run tesest after midifcation without asking me i need to review the solution first dont waste my tokens
+- Do NOT run tests after modification without asking — user must review the solution first
+
+---
+
+## Model Routing for Subagents
+
+Default subagents to cheaper models when possible:
+- **Haiku**: Explore agents, file search/counting, data gathering, grep-heavy tasks
+- **Sonnet**: Code analysis, synthesis, judgment calls, implementation
+- **Opus**: Complex multi-step reasoning, architecture decisions (main thread only)
+
+Use the `model` parameter on Agent tool calls. Haiku is 60x cheaper than Opus for input tokens.
 
 ---
 

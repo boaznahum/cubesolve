@@ -24,6 +24,16 @@
       "mcp__pycharm2__list_directory_tree",
       "mcp__pycharm2__get_file_text_by_path",
       "mcp__pycharm2__read_file"
+    ],
+    "deny": [
+      "Read(node_modules/**)",
+      "Read(.git/**)",
+      "Read(**/*.pyc)",
+      "Read(.venv/**)",
+      "Read(.venv_pyglet_legacy/**)",
+      "Read(.venv_pyglet2/**)",
+      "Read(__pycache__/**)"
+
     ]
   },
   "enabledPlugins": {
