@@ -4,7 +4,7 @@ from collections.abc import Generator, Iterable, Iterator, Sequence
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Self
 
-from cube.domain.model._elements import CenterSliceIndex, SliceIndex
+from cube.domain.model._elements import CenterSliceIndex, PartColorsID, SliceIndex
 from cube.domain.model.Color import Color
 from cube.domain.model.Colorable import Colorable
 from cube.domain.model.PartSlice import CenterSlice
@@ -123,6 +123,21 @@ class Center(Part, Colorable):
         if not rep:
             raise ValueError("Center has no slices (2x2 cube)")
         return rep[0]
+
+    @property
+    def colors_id(self) -> PartColorsID:
+        """Override Part.colors_id to use provider color when active.
+
+        CRITICAL: This is a workaround — same pattern as Edge.colors_id.
+        The real fix is to make PartEdge.color provider-aware. See issue #161.
+
+        When a color provider is set (e.g., during Cage solver's 3x3 phase),
+        the center's identity color comes from the provider, not from the
+        actual sticker colors (which may not be uniform on even cubes).
+        """
+        if self._color_provider is not None:
+            return frozenset({self._color_provider.get_face_color(self.name)})
+        return super().colors_id
 
     @property
     def color(self) -> Color:

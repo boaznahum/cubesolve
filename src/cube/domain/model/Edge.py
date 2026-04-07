@@ -459,19 +459,34 @@ class Edge(Part):
 
     @property
     def colors_id(self) -> PartColorsID:
-        """Override Part.colors_id to use provider colors when active."""
+        """Override Part.colors_id to use provider colors when active.
+
+        CRITICAL: This is a workaround — it bypasses Part.colors_id which reads
+        from PartEdge.color (raw sticker). The real fix is to make PartEdge.color
+        respect the provider, so Part.colors_id returns correct values without
+        needing overrides in every Part subclass. See issue #161.
+        Center.colors_id has the same workaround pattern.
+        """
         if self._edges_provider is not None:
             return self._edges_provider.get_edge_colors(self)
         return super().colors_id
 
     def face_color(self, f: Face) -> Color:
-        """Override Part.face_color to use provider colors when active."""
+        """Override Part.face_color to use provider colors when active.
+
+        CRITICAL: Same workaround as colors_id — bypasses PartEdge.color.
+        See issue #161 for the real fix (provider-aware PartEdge.color).
+        """
         if self._edges_provider is not None:
             return self._edges_provider.get_edge_face_color(self, f)
         return super().face_color(f)
 
     def match_face(self, face: Face) -> bool:
-        """Override Part.match_face to use provider colors when active."""
+        """Override Part.match_face to use provider colors when active.
+
+        CRITICAL: Same workaround as colors_id — bypasses PartEdge.color.
+        See issue #161 for the real fix (provider-aware PartEdge.color).
+        """
         if self._edges_provider is not None:
             return self.face_color(face) == face.color
         return super().match_face(face)

@@ -9,12 +9,16 @@ from tests.test_utils import _test_sp
 
 def test_sanity_check_enabled():
     """Test basic operation with sanity check enabled."""
-    config.CONFIG_DEFAULTS.check_cube_sanity = True
+    original = config.CONFIG_DEFAULTS.check_cube_sanity
+    try:
+        config.CONFIG_DEFAULTS.check_cube_sanity = True
 
-    cube = Cube(3, sp=_test_sp)
+        cube = Cube(3, sp=_test_sp)
 
-    alg = Algs.U
-    alg.play(cube)
+        alg = Algs.U
+        alg.play(cube)
 
-    # If we get here without exception, sanity check passed
-    assert True
+        # If we get here without exception, sanity check passed
+        assert True
+    finally:
+        config.CONFIG_DEFAULTS.check_cube_sanity = original
