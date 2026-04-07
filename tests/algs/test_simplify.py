@@ -152,6 +152,31 @@ class TestFlatten:
         _test_simplify_flatten(a, cube_size)
 
 
+    def test_R1_Rw11_r11_simplify_to_prime(self):
+        """R[1], Rw[1:1], r[1:1] are same move — simplifier must combine 3→1 (prime)."""
+        a = Algs.R[1]
+        b = Algs.Rw[1:1]
+        c = Algs.r[1:1]
+        seq = a + b + c
+
+        # Verify same_form recognizes all three as equivalent
+        assert a.same_form(b), "R[1] and Rw[1:1] should have same form"
+        assert a.same_form(c), "R[1] and r[1:1] should have same form"
+
+        # Simplifier must reduce 3 moves to 1
+        simplified = seq.simplify()
+        assert simplified.count() == 1, (
+            f"Expected 1 move after simplification, got {simplified.count()}: {simplified}"
+        )
+
+        # Simplified must equal each input's prime on real cubes
+        for size in [3, 4, 5]:
+            _test_simplify(seq, size)
+            assert_algs_equivalent(simplified, a.prime, size)
+            assert_algs_equivalent(simplified, b.prime, size)
+            assert_algs_equivalent(simplified, c.prime, size)
+
+
 class TestSimplifyFlatten:
     """Combined simplify and flatten tests."""
 
