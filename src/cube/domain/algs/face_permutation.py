@@ -30,25 +30,49 @@ from cube.domain.geometric.schematic_cube import SchematicCube
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Face permutation tables — one CW quarter-turn per axis
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#
+# Each table maps face_before -> face_after for a single clockwise
+# quarter-turn of the whole cube around the given axis.
+#
+# These follow "content movement" — the direction the stickers move,
+# matching Cube.x_rotate / y_rotate / z_rotate in the domain model.
+#
+#   X (rotates like R): F->U->B->D->F cycle, R and L stay fixed
+#   Y (rotates like U): F->L->B->R->F cycle, U and D stay fixed
+#   Z (rotates like F): U->R->D->L->U cycle, F and B stay fixed
+#
+# For primes (e.g. X'), apply 3 times (since -1 % 4 = 3).
+# For doubles (e.g. X2), apply 2 times.
+# FacePermutation.from_axis() handles this via n % 4.
+#
+# _AXIS_PERM maps AxisName -> the corresponding table, so we can
+# look up the right table given any axis.
 
+# X axis (like R face): the 4 faces around the R-L axis cycle.
+# Imagine grabbing the R face and rotating CW — F goes up, U goes back, etc.
 _X_PERM: dict[FaceName, FaceName] = {
     FaceName.F: FaceName.U, FaceName.U: FaceName.B,
     FaceName.B: FaceName.D, FaceName.D: FaceName.F,
     FaceName.R: FaceName.R, FaceName.L: FaceName.L,
 }
 
+# Y axis (like U face): the 4 faces around the U-D axis cycle.
+# Imagine grabbing the U face and rotating CW — F goes left, L goes back, etc.
 _Y_PERM: dict[FaceName, FaceName] = {
     FaceName.F: FaceName.L, FaceName.L: FaceName.B,
     FaceName.B: FaceName.R, FaceName.R: FaceName.F,
     FaceName.U: FaceName.U, FaceName.D: FaceName.D,
 }
 
+# Z axis (like F face): the 4 faces around the F-B axis cycle.
+# Imagine grabbing the F face and rotating CW — U goes right, R goes down, etc.
 _Z_PERM: dict[FaceName, FaceName] = {
     FaceName.U: FaceName.R, FaceName.R: FaceName.D,
     FaceName.D: FaceName.L, FaceName.L: FaceName.U,
     FaceName.F: FaceName.F, FaceName.B: FaceName.B,
 }
 
+# Lookup: axis name -> its permutation table.
 _AXIS_PERM: dict[AxisName, dict[FaceName, FaceName]] = {
     AxisName.X: _X_PERM,
     AxisName.Y: _Y_PERM,
