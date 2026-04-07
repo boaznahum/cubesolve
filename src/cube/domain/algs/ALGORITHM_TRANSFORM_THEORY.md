@@ -225,39 +225,33 @@ This is the **practical theorem** that motivates the entire module.
 
 ### Proof (by unwrapping the conjugation)
 
-We know from identity (1) that:
+From the definition:
 
 ```
-W' A W  =  T(W, A)
+W · T(W, A) · W'  =  A
 ```
 
-Rearranging (multiply left by W, right by W'):
+A acts on S₁ (given). So **W · T(W, A) · W'** acts on S₁.
+
+Read left-to-right as three steps:
 
 ```
-A  =  W · T(W, A) · W'
-```
-
-Now, A acts on S₁ (given). So **W · T(W, A) · W'** acts on S₁.
-
-Read this right-to-left as three steps:
-
-```
-Step 1:  W'          — rotate the whole cube
+Step 1:  W           — rotate the whole cube
 Step 2:  T(W, A)     — do the work
-Step 3:  W           — rotate back
+Step 3:  W'          — rotate back
 ```
 
 Diagram — what happens to the pieces at S₁:
 
 ```
-          W'                T(W,A)              W
+          W                 T(W,A)              W'
 S₁ ──────────────▶ S₂ ──────────────▶ S₂ ──────────────▶ S₁
   (pieces move       (pieces at S₂     (pieces move
    from S₁ to S₂     are modified)      back to S₁)
    by rotation)                         by rotation)
 ```
 
-- **Step 1 (W')**: The whole cube rotates. Pieces that were at S₁ are
+- **Step 1 (W)**: The whole cube rotates. Pieces that were at S₁ are
   now sitting at S₂ = W(S₁). No pieces are actually changed — they
   just moved to different positions.
 
@@ -265,12 +259,12 @@ S₁ ──────────────▶ S₂ ────────
   pieces are at S₂, and T(W, A) modifies them — swapping, cycling,
   flipping — whatever A would have done, but at position S₂.
 
-- **Step 3 (W)**: The whole cube rotates back. The modified pieces
+- **Step 3 (W')**: The whole cube rotates back. The modified pieces
   return from S₂ to S₁. The net effect is: pieces at S₁ are modified
   exactly as A modifies them.
 
 The key insight: **T(W, A) does its work in Step 2, when the pieces
-are at S₂**. Therefore, if we apply T(W, A) alone (without the W'/W
+are at S₂**. Therefore, if we apply T(W, A) alone (without the W/W'
 wrapper), it acts on S₂.
 
 Formally: since W · T(W, A) · W' fixes everything outside S₁, and W'
