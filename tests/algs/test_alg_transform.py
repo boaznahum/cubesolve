@@ -94,21 +94,28 @@ from tests.utils._alg_utils import assert_algs_equivalent
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 # All atomic whole-cube rotations and their primes
-_WHOLE_CUBE_MOVES: list[Alg] = [
-    Algs.X, Algs.X.prime, Algs.X * 2,
-    Algs.Y, Algs.Y.prime, Algs.Y * 2,
-    Algs.Z, Algs.Z.prime, Algs.Z * 2,
-]
+_WHOLE_CUBE_BASE: list[Alg] = [Algs.X, Algs.Y, Algs.Z]
+
+_PROB_INV = 1.0 / 3.0
+_PROB_MUL = 1.0 / 4.0
 
 
 def _random_whole_cube_sequence(seed: int, length: int = 5) -> Alg:
     """Generate a random whole-cube rotation sequence W.
 
-    Draws from {X, X', X2, Y, Y', Y2, Z, Z', Z2} uniformly.
+    Each move starts from {X, Y, Z}, then randomly gets .inv() (prime)
+    and/or * n (multiply), similar to how scramble() works.
     Returns a SeqAlg of whole-cube moves.
     """
     rnd = Random(seed)
-    moves = [rnd.choice(_WHOLE_CUBE_MOVES) for _ in range(length)]
+    moves: list[Alg] = []
+    for _ in range(length):
+        a: Alg = rnd.choice(_WHOLE_CUBE_BASE)
+        if rnd.random() < _PROB_INV:
+            a = a.inv()
+        if rnd.random() < _PROB_MUL:
+            a = a * rnd.randint(2, 3)
+        moves.append(a)
     return SeqAlg(None, *moves)
 
 
