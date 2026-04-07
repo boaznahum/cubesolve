@@ -48,6 +48,26 @@ A's work, but at POS2.
 **Key insight**: if we apply T(W,A) alone — without the W/W' wrapper —
 it performs A's effect at POS2. That's exactly what we wanted.
 
+claude: we can put simple math here
+if we treate algs like matrix operation 
+or equivalent mathematical objrct we need 
+to find name to it then
+
+W  T(W, A)  W'  =  A
+now apply W' and W on both sudes
+
+W' W  T(W, A)  W'W  =  W' A W
+
+T(W, A)    =  W' A W
+
+si we see that TW is actually bring POS2 to 
+POS1 apply A on it and bring jt back
+POS2 , so simple so nice 
+what is conjunction?
+
+
+
+
 ### Example: Edge Swap
 
 Algorithm A swaps edges at {LU, FU} (U face, top-down view):
