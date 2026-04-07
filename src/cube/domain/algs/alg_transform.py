@@ -18,6 +18,11 @@ Example:
 Key insight: each whole-cube rotation is just a permutation of 6 face names.
 Transforming any algorithm reduces to remapping face names through that permutation.
 Each Alg subclass implements its own transform_by() method (polymorphic dispatch).
+
+Public API:
+  - a.transform(w)               — transform algorithm a by whole-cube rotation w
+  - a.transform(w, cube_size=5)  — same, with cube_size for sliced slice moves
+  - compute_permutation(w)       — extract the FacePermutation from a rotation sequence
 """
 
 from __future__ import annotations
@@ -48,48 +53,3 @@ def compute_permutation(w: Alg) -> FacePermutation:
         axis_p = FacePermutation.from_axis(move.axis_name, move.n)
         p = p.then(axis_p)
     return p
-
-
-def transform(w: Alg, a: Alg, cube_size: int | None = None) -> Alg:
-    """Transform algorithm A by whole-cube rotation W.
-
-    Returns WA such that W' A W ≡ WA.
-
-    Each move in A is remapped by the face permutation that W induces.
-    Each Alg subclass handles its own remapping via transform_by().
-
-    Args:
-        w: Whole-cube rotation sequence (only X, Y, Z moves).
-        a: Any cube algorithm to transform.
-        cube_size: Required when A contains sliced slice moves (e.g., M[2:3])
-            AND the transform negates the slice direction. On direction negation,
-            slice indices must be mirrored, which requires knowing n_slices = cube_size - 2.
-            Not needed for face moves, unsliced slices, middle slices, or wide moves.
-
-    Returns:
-        The transformed algorithm WA.
-
-    Examples:
-        >>> from cube.domain.algs.Algs import Algs
-        >>> transform(Algs.Y.prime, Algs.F)  # Y' transforms F → R
-        R
-        >>> transform(Algs.X, Algs.R)  # X transforms R → R (fixed axis)
-        R
-        >>> transform(Algs.X, Algs.F)  # X transforms F → U
-        U
-    """
-    p = compute_permutation(w)
-    n_slices = cube_size - 2 if cube_size is not None else None
-    return a.transform_by(p, n_slices)
-
-
-def transform_by_permutation(
-    p: FacePermutation, a: Alg, cube_size: int | None = None,
-) -> Alg:
-    """Transform algorithm A by a precomputed face permutation.
-
-    Useful when applying the same rotation to multiple algorithms.
-    See transform() for cube_size semantics.
-    """
-    n_slices = cube_size - 2 if cube_size is not None else None
-    return a.transform_by(p, n_slices)

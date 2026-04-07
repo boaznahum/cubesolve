@@ -81,8 +81,8 @@ class Alg(ABC):
     def transform_by(self, p: "FacePermutation", n_slices: int | None) -> "Alg":
         """Transform this algorithm by a face permutation.
 
-        Each subclass knows how to remap its own face/slice/axis through
-        the permutation. Composite algorithms delegate to their children.
+        Internal method — each subclass remaps its own face/slice/axis.
+        Use transform() for the public API.
 
         Args:
             p: The face permutation induced by whole-cube rotation W.
@@ -90,6 +90,24 @@ class Alg(ABC):
                 when SlicedSliceAlg direction is negated (indices must be mirrored).
         """
         ...
+
+    def transform(self, w: "Alg", cube_size: int | None = None) -> "Alg":
+        """Transform this algorithm by whole-cube rotation W.
+
+        Returns T(W, self) such that W' self W ≡ T(W, self).
+
+        Args:
+            w: Whole-cube rotation sequence (only X, Y, Z moves).
+            cube_size: Required when self contains sliced slice moves AND
+                the transform negates direction (see transform_by).
+
+        Example:
+            >>> Algs.F.transform(Algs.Y.prime)  # → R
+        """
+        from .alg_transform import compute_permutation
+        p = compute_permutation(w)
+        n_slices = cube_size - 2 if cube_size is not None else None
+        return self.transform_by(p, n_slices)
 
     def flatten_alg(self) -> "SeqAlg":
         from .SeqAlg import SeqAlg

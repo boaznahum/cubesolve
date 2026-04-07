@@ -79,15 +79,12 @@ from cube.domain.algs.Algs import Algs
 from cube.domain.algs.Scramble import scramble as cube_scramble
 from cube.domain.algs.SeqAlg import SeqAlg
 from cube.domain.algs.WholeCubeAlg import WholeCubeAlg
-from cube.domain.algs.alg_transform import (
-    compute_permutation,
-    transform,
-    transform_by_permutation,
-)
+from cube.domain.algs.alg_transform import compute_permutation
 from cube.domain.algs.face_permutation import FacePermutation
 from cube.domain.model._elements import AxisName
 from cube.domain.model.Cube import Cube
 from cube.domain.model.FaceName import FaceName
+from cube.domain.model.Part import Part
 from tests.test_utils import _test_sp
 from tests.utils._alg_utils import assert_algs_equivalent
 
@@ -234,46 +231,46 @@ class TestTransformFaceMoves:
 
     def test_y_prime_f_is_r(self):
         """User's example: T(Y', F) = R"""
-        result = transform(Algs.Y.prime, Algs.F)
+        result = Algs.F.transform(Algs.Y.prime)
         assert str(result) == "R"
 
     def test_y_prime_r_is_b(self):
-        result = transform(Algs.Y.prime, Algs.R)
+        result = Algs.R.transform(Algs.Y.prime)
         assert str(result) == "B"
 
     def test_y_prime_b_is_l(self):
-        result = transform(Algs.Y.prime, Algs.B)
+        result = Algs.B.transform(Algs.Y.prime)
         assert str(result) == "L"
 
     def test_y_prime_l_is_f(self):
-        result = transform(Algs.Y.prime, Algs.L)
+        result = Algs.L.transform(Algs.Y.prime)
         assert str(result) == "F"
 
     def test_y_prime_u_unchanged(self):
-        result = transform(Algs.Y.prime, Algs.U)
+        result = Algs.U.transform(Algs.Y.prime)
         assert str(result) == "U"
 
     def test_x_f_is_u(self):
-        result = transform(Algs.X, Algs.F)
+        result = Algs.F.transform(Algs.X)
         assert str(result) == "U"
 
     def test_z_u_is_r(self):
-        result = transform(Algs.Z, Algs.U)
+        result = Algs.U.transform(Algs.Z)
         assert str(result) == "R"
 
     def test_preserves_prime(self):
         """T(Y', F') = R'"""
-        result = transform(Algs.Y.prime, Algs.F.prime)
+        result = Algs.F.prime.transform(Algs.Y.prime)
         assert str(result) == "R'"
 
     def test_preserves_double(self):
         """T(Y', F2) = R2"""
-        result = transform(Algs.Y.prime, Algs.F * 2)
+        result = (Algs.F * 2).transform(Algs.Y.prime)
         assert_algs_equivalent(result, Algs.R * 2, cube_size=3)
 
     def test_identity_rotation(self):
         """T(identity, A) = A"""
-        result = transform(Algs.NOOP, Algs.R)
+        result = Algs.R.transform(Algs.NOOP)
         assert str(result) == "R"
 
 
@@ -285,34 +282,34 @@ class TestTransformSliceMoves:
 
     def test_y_prime_m_is_s(self):
         """M rotates like L. Y' sends L→F. S rotates like F. So M → S."""
-        result = transform(Algs.Y.prime, Algs.M)
+        result = Algs.M.transform(Algs.Y.prime)
         assert_algs_equivalent(result, Algs.S, cube_size=3)
 
     def test_y_prime_s_is_m_prime(self):
         """S rotates like F. Y' sends F→R. R is opposite of L (M's face).
         So S → M' (negated direction)."""
-        result = transform(Algs.Y.prime, Algs.S)
+        result = Algs.S.transform(Algs.Y.prime)
         assert_algs_equivalent(result, Algs.M.prime, cube_size=3)
 
     def test_y_prime_e_unchanged(self):
         """E rotates like D. Y' keeps D fixed. So E → E."""
-        result = transform(Algs.Y.prime, Algs.E)
+        result = Algs.E.transform(Algs.Y.prime)
         assert_algs_equivalent(result, Algs.E, cube_size=3)
 
     def test_x_e_is_s(self):
         """E rotates like D. X sends D→F. S rotates like F. So E → S."""
-        result = transform(Algs.X, Algs.E)
+        result = Algs.E.transform(Algs.X)
         assert_algs_equivalent(result, Algs.S, cube_size=3)
 
     def test_x_m_unchanged(self):
         """M rotates like L. X keeps L fixed. So M → M."""
-        result = transform(Algs.X, Algs.M)
+        result = Algs.M.transform(Algs.X)
         assert_algs_equivalent(result, Algs.M, cube_size=3)
 
     def test_z_m_is_e_prime(self):
         """M rotates like L. Z sends L→U. U is opposite of D (E's face).
         So M → E' (negated)."""
-        result = transform(Algs.Z, Algs.M)
+        result = Algs.M.transform(Algs.Z)
         assert_algs_equivalent(result, Algs.E.prime, cube_size=3)
 
 
@@ -324,12 +321,12 @@ class TestTransformWideMoves:
 
     def test_y_prime_rw_is_bw(self):
         """Y' sends R→B, so Rw → Bw"""
-        result = transform(Algs.Y.prime, Algs.Rw)
+        result = Algs.Rw.transform(Algs.Y.prime)
         assert_algs_equivalent(result, Algs.Bw, cube_size=5)
 
     def test_x_fw_is_uw(self):
         """X sends F→U, so Fw → Uw"""
-        result = transform(Algs.X, Algs.Fw)
+        result = Algs.Fw.transform(Algs.X)
         assert_algs_equivalent(result, Algs.Uw, cube_size=5)
 
 
@@ -342,13 +339,13 @@ class TestTransformWholeCubeMoves:
     def test_y_prime_x_stays_x(self):
         """X rotates like R. Y' sends R→B. B is opposite of F (Z's face).
         So X → Z' (negated)."""
-        result = transform(Algs.Y.prime, Algs.X)
+        result = Algs.X.transform(Algs.Y.prime)
         assert_algs_equivalent(result, Algs.Z.prime, cube_size=3)
 
     def test_x_y_becomes_z(self):
         """Y rotates like U. X sends U→B. B is opposite of F (Z's face).
         So Y → Z' (negated)."""
-        result = transform(Algs.X, Algs.Y)
+        result = Algs.Y.transform(Algs.X)
         assert_algs_equivalent(result, Algs.Z.prime, cube_size=3)
 
 
@@ -362,14 +359,14 @@ class TestTransformSequences:
         """T(Y', R U R' U') should be equivalent to B R B' R'
         (Y' maps R→B and U→U)"""
         sexy = Algs.R + Algs.U + Algs.R.prime + Algs.U.prime
-        result = transform(Algs.Y.prime, sexy)
+        result = sexy.transform(Algs.Y.prime)
         expected = Algs.B + Algs.U + Algs.B.prime + Algs.U.prime
         assert_algs_equivalent(result, expected, cube_size=3)
 
     def test_transform_preserves_algorithm_effect(self):
         """T(Y', R U R' U') under Y' conjugation should equal R U R' U'"""
         sexy = Algs.R + Algs.U + Algs.R.prime + Algs.U.prime
-        transformed = transform(Algs.Y.prime, sexy)
+        transformed = sexy.transform(Algs.Y.prime)
         # Identity: W' A W = WA → Y (R U R' U') Y' = transformed
         conjugated = Algs.Y + sexy + Algs.Y.prime
         assert_algs_equivalent(conjugated, transformed, cube_size=3)
@@ -395,7 +392,7 @@ class TestConjugationIdentity:
     ])
     def test_conjugation_equals_transform_single_moves(self, w, a):
         """W' A W should produce the same state as T(W, A)."""
-        wa = transform(w, a, cube_size=3)
+        wa = a.transform(w, cube_size=3)
         conjugated = w.inv() + a + w
         assert_algs_equivalent(conjugated, wa, cube_size=3)
 
@@ -406,7 +403,7 @@ class TestConjugationIdentity:
         (Algs.Z, Algs.M),
     ])
     def test_conjugation_equals_transform_slice_moves(self, w, a):
-        wa = transform(w, a, cube_size=3)
+        wa = a.transform(w, cube_size=3)
         conjugated = w.inv() + a + w
         assert_algs_equivalent(conjugated, wa, cube_size=3)
 
@@ -419,7 +416,7 @@ class TestConjugationIdentity:
     def test_conjugation_equals_transform_sequence(self, w):
         """Verify identity holds for a multi-move algorithm."""
         a = Algs.R + Algs.U + Algs.R.prime + Algs.U.prime  # sexy move
-        wa = transform(w, a, cube_size=3)
+        wa = a.transform(w, cube_size=3)
         conjugated = w.inv() + a + w
         assert_algs_equivalent(conjugated, wa, cube_size=3)
 
@@ -431,7 +428,7 @@ class TestConjugationIdentity:
     def test_conjugation_on_5x5(self, w):
         """Verify identity holds on 5x5 cubes too."""
         a = Algs.R + Algs.U + Algs.R.prime + Algs.U.prime
-        wa = transform(w, a, cube_size=5)
+        wa = a.transform(w, cube_size=5)
         conjugated = w.inv() + a + w
         assert_algs_equivalent(conjugated, wa, cube_size=5)
 
@@ -450,7 +447,7 @@ class TestPushThroughIdentity:
         (Algs.Z, Algs.U),
     ])
     def test_push_through_single(self, w, a):
-        wa = transform(w, a, cube_size=3)
+        wa = a.transform(w, cube_size=3)
         # a + w should equal w + wa
         left = a + w
         right = w + wa
@@ -459,7 +456,7 @@ class TestPushThroughIdentity:
     def test_push_through_sequence(self):
         w = Algs.Y.prime
         a = Algs.R + Algs.U + Algs.R.prime + Algs.U.prime
-        wa = transform(w, a, cube_size=3)
+        wa = a.transform(w, cube_size=3)
         left = a + w
         right = w + wa
         assert_algs_equivalent(left, right, cube_size=3)
@@ -475,7 +472,7 @@ class TestComposedRotations:
         """Compose Y' then X and verify the identity still holds."""
         w = Algs.Y.prime + Algs.X
         a = Algs.F
-        wa = transform(w, a, cube_size=3)
+        wa = a.transform(w, cube_size=3)
         conjugated = w.inv() + a + w
         assert_algs_equivalent(conjugated, wa, cube_size=3)
 
@@ -483,13 +480,13 @@ class TestComposedRotations:
         """Y' X Z applied to a sequence."""
         w = Algs.Y.prime + Algs.X + Algs.Z
         a = Algs.R + Algs.U + Algs.F
-        wa = transform(w, a, cube_size=3)
+        wa = a.transform(w, cube_size=3)
         conjugated = w.inv() + a + w
         assert_algs_equivalent(conjugated, wa, cube_size=3)
 
     def test_double_y(self):
         """Y2 applied to F should give B."""
-        result = transform(Algs.Y * 2, Algs.F)
+        result = Algs.F.transform(Algs.Y * 2)
         assert_algs_equivalent(result, Algs.B, cube_size=3)
 
 
@@ -532,7 +529,7 @@ class TestTheoremConjugationRandomized:
         w = _random_whole_cube_sequence(seed=seed * 100, length=5)
         a = cube_scramble(cube_size=3, seed=seed * 100 + 1, n=20)
 
-        wa = transform(w, a, cube_size=3)
+        wa = a.transform(w, cube_size=3)
         conjugated = w.inv() + a + w
 
         assert_algs_equivalent(conjugated, wa, cube_size=3)
@@ -543,7 +540,7 @@ class TestTheoremConjugationRandomized:
         w = _random_whole_cube_sequence(seed=seed * 200, length=4)
         a = cube_scramble(cube_size=5, seed=seed * 200 + 1, n=15)
 
-        wa = transform(w, a, cube_size=5)
+        wa = a.transform(w, cube_size=5)
         conjugated = w.inv() + a + w
 
         assert_algs_equivalent(conjugated, wa, cube_size=5)
@@ -566,7 +563,7 @@ class TestTheoremPushThroughRandomized:
         w = _random_whole_cube_sequence(seed=seed * 300, length=5)
         a = cube_scramble(cube_size=3, seed=seed * 300 + 1, n=20)
 
-        wa = transform(w, a, cube_size=3)
+        wa = a.transform(w, cube_size=3)
 
         left = a + w       # original: do A then W
         right = w + wa     # transformed: do W then T(W,A)
@@ -579,7 +576,7 @@ class TestTheoremPushThroughRandomized:
         w = _random_whole_cube_sequence(seed=seed * 400, length=4)
         a = cube_scramble(cube_size=5, seed=seed * 400 + 1, n=15)
 
-        wa = transform(w, a, cube_size=5)
+        wa = a.transform(w, cube_size=5)
 
         left = a + w
         right = w + wa
@@ -609,10 +606,10 @@ class TestTheoremCompositionRandomized:
 
         # One-shot: transform by the composed rotation
         composed_w = w1 + w2
-        one_shot = transform(composed_w, a, cube_size=3)
+        one_shot = a.transform(composed_w, cube_size=3)
 
         # Two-step: transform by W₁ first, then by W₂
-        two_step = transform(w2, transform(w1, a, cube_size=3), cube_size=3)
+        two_step = a.transform(w1, cube_size=3).transform(w2, cube_size=3)
 
         assert_algs_equivalent(one_shot, two_step, cube_size=3)
 
@@ -640,6 +637,441 @@ class TestTheoremAllSingleMovesAllAxes:
                              ids=lambda a: str(a))
     def test_conjugation_all_single_moves(self, w: Alg, a: Alg):
         """W' A W ≡ T(W, A) for every (W, A) pair."""
-        wa = transform(w, a, cube_size=3)
+        wa = a.transform(w, cube_size=3)
         conjugated = w.inv() + a + w
         assert_algs_equivalent(conjugated, wa, cube_size=3)
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# TRANSFORMATION PRINCIPLE DEMONSTRATION
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#
+# The Transformation Principle:
+#   If algorithm A acts on piece-set S₁, and W is a whole-cube rotation
+#   such that W(S₁) = S₂, then T(W, A) acts on S₂.
+#
+# Demonstrated using a real L3 algorithm from the 3x3 beginner solver:
+#   _ru = R U R' U R U2 R' U
+# This algorithm swaps two adjacent U-layer edges while preserving
+# L1, L2, and U-edge orientation.
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# L3 edge-swap algorithm from _L3Cross._ru:
+#   R U R' U R U2 R' U
+# On a solved cube, this swaps the FU and LU edges (while disrupting L3 corners).
+_L3_RU = Algs.R + Algs.U + Algs.R.prime + Algs.U + Algs.R + (Algs.U * 2) + Algs.R.prime + Algs.U
+
+
+def _l1_solved(cube: Cube) -> bool:
+    """Check that L1 (white face cross + corners) is solved."""
+    white = cube.face(FaceName.D)  # white is on D for standard orientation
+    return Part.all_match_faces(white.edges) and Part.all_match_faces(white.corners)
+
+
+def _l2_solved(cube: Cube) -> bool:
+    """Check that all 4 middle-layer edges are solved."""
+    up = cube.face(FaceName.U)
+    down = cube.face(FaceName.D)
+    edges = []
+    for fn in [FaceName.F, FaceName.R, FaceName.B, FaceName.L]:
+        f = cube.face(fn)
+        for e in f.edges:
+            if not e.on_face(up) and not e.on_face(down):
+                if e not in edges:
+                    edges.append(e)
+    return Part.all_match_faces(edges)
+
+
+class TestTransformationPrinciple:
+    """Transformation Principle: T(W, A) acts on S₂ = W(S₁).
+
+    Uses the L3 edge-swap algorithm R U R' U R U2 R' U from the beginner
+    solver (_L3Cross._ru). On a solved cube this swaps FU ↔ LU edges
+    (while disrupting L3 corners but preserving edge orientation).
+
+    S₁ = {FU, LU}
+
+    Y' maps: F→R, L→F, so Y'({FU, LU}) = {RU, FU}
+
+    The four Y variants:
+        | W   | S₂ = W({FU,LU}) | Swaps     |
+        |-----|-----------------|-----------|
+        | —   | {FU, LU}        | FU ↔ LU   |
+        | Y'  | {RU, FU}        | RU ↔ FU   |
+        | Y2  | {BU, RU}        | BU ↔ RU   |
+        | Y   | {LU, BU}        | LU ↔ BU   |
+
+    Each test verifies:
+      - The expected pair is swapped
+      - The other two U-edges remain solved
+      - L1 and L2 remain solved
+    """
+
+    def test_original_swaps_fu_lu(self):
+        """Baseline: _ru swaps FU ↔ LU on a solved cube."""
+        cube = Cube(3, sp=_test_sp)
+        up = cube.face(FaceName.U)
+
+        # Before: all edges match
+        assert up.edge_bottom.match_faces  # FU
+        assert up.edge_right.match_faces   # RU
+        assert up.edge_top.match_faces     # BU
+        assert up.edge_left.match_faces    # LU
+
+        _L3_RU.play(cube)
+
+        # After: FU and LU are swapped
+        assert not up.edge_bottom.match_faces  # FU — swapped
+        assert not up.edge_left.match_faces    # LU — swapped
+        # RU and BU preserved
+        assert up.edge_right.match_faces   # RU — unchanged
+        assert up.edge_top.match_faces     # BU — unchanged
+        # L1 and L2 preserved
+        assert _l1_solved(cube)
+        assert _l2_solved(cube)
+
+    def test_y_prime_transform_swaps_ru_fu(self):
+        """Transformation Principle: T(Y', _ru) swaps RU ↔ FU.
+
+        Y' maps: F→R, L→F
+        So Y'({FU, LU}) = {RU, FU}
+        """
+        cube = Cube(3, sp=_test_sp)
+        up = cube.face(FaceName.U)
+
+        transformed = _L3_RU.transform(Algs.Y.prime, cube_size=3)
+        transformed.play(cube)
+
+        # RU and FU are swapped (S₂)
+        assert not up.edge_right.match_faces   # RU — swapped
+        assert not up.edge_bottom.match_faces  # FU — swapped
+        # BU and LU preserved (not in S₂)
+        assert up.edge_top.match_faces     # BU — unchanged
+        assert up.edge_left.match_faces    # LU — unchanged
+        # L1 and L2 preserved
+        assert _l1_solved(cube)
+        assert _l2_solved(cube)
+
+    def test_y2_transform_swaps_bu_ru(self):
+        """T(Y2, _ru) swaps BU ↔ RU.
+
+        Y2 maps: F→B, L→R
+        So Y2({FU, LU}) = {BU, RU}
+        """
+        cube = Cube(3, sp=_test_sp)
+        up = cube.face(FaceName.U)
+
+        transformed = _L3_RU.transform(Algs.Y * 2, cube_size=3)
+        transformed.play(cube)
+
+        # BU and RU are swapped (S₂)
+        assert not up.edge_top.match_faces     # BU — swapped
+        assert not up.edge_right.match_faces   # RU — swapped
+        # FU and LU preserved
+        assert up.edge_bottom.match_faces  # FU — unchanged
+        assert up.edge_left.match_faces    # LU — unchanged
+        # L1 and L2 preserved
+        assert _l1_solved(cube)
+        assert _l2_solved(cube)
+
+    def test_y_transform_swaps_lu_bu(self):
+        """T(Y, _ru) swaps LU ↔ BU.
+
+        Y maps: F→L, L→B
+        So Y({FU, LU}) = {LU, BU}
+        """
+        cube = Cube(3, sp=_test_sp)
+        up = cube.face(FaceName.U)
+
+        transformed = _L3_RU.transform(Algs.Y, cube_size=3)
+        transformed.play(cube)
+
+        # LU and BU are swapped (S₂)
+        assert not up.edge_left.match_faces    # LU — swapped
+        assert not up.edge_top.match_faces     # BU — swapped
+        # FU and RU preserved
+        assert up.edge_bottom.match_faces  # FU — unchanged
+        assert up.edge_right.match_faces   # RU — unchanged
+        # L1 and L2 preserved
+        assert _l1_solved(cube)
+        assert _l2_solved(cube)
+
+    def test_all_four_y_variants(self):
+        """One algorithm generates all 4 adjacent edge-swap variants via Y and Y'.
+
+        Both Y and Y' are tested — the principle is not specific to either direction.
+
+        | W   | S₂ = W({FU,LU}) | Swaps     |
+        |-----|-----------------|-----------|
+        | —   | {FU, LU}        | FU ↔ LU   |
+        | Y   | {LU, BU}        | LU ↔ BU   |
+        | Y'  | {RU, FU}        | RU ↔ FU   |
+        | Y2  | {BU, RU}        | BU ↔ RU   |
+        """
+        rotations = [Algs.NOOP, Algs.Y, Algs.Y.prime, Algs.Y * 2]
+        # Expected swapped pair for each rotation (as edge positions on U face)
+        # edge_bottom=FU, edge_right=RU, edge_top=BU, edge_left=LU
+        expected_swapped = [
+            ("edge_bottom", "edge_left"),    # FU, LU
+            ("edge_left", "edge_top"),       # LU, BU  (Y)
+            ("edge_right", "edge_bottom"),   # RU, FU  (Y')
+            ("edge_top", "edge_right"),      # BU, RU  (Y2)
+        ]
+        all_edges = {"edge_bottom", "edge_right", "edge_top", "edge_left"}
+
+        for w, (e1, e2) in zip(rotations, expected_swapped):
+            cube = Cube(3, sp=_test_sp)
+            up = cube.face(FaceName.U)
+
+            transformed = _L3_RU.transform(w, cube_size=3)
+            transformed.play(cube)
+
+            # The two edges in S₂ are swapped
+            assert not getattr(up, e1).match_faces, f"W={w}: {e1} should be swapped"
+            assert not getattr(up, e2).match_faces, f"W={w}: {e2} should be swapped"
+
+            # The other two edges are preserved
+            for e in all_edges - {e1, e2}:
+                assert getattr(up, e).match_faces, f"W={w}: {e} should be preserved"
+
+            # L1 and L2 always preserved (Y rotations keep S₂ within U layer)
+            assert _l1_solved(cube), f"W={w}: L1 should be solved"
+            assert _l2_solved(cube), f"W={w}: L2 should be solved"
+
+    @pytest.mark.parametrize("w", [
+        Algs.X, Algs.X.prime,
+        Algs.Y, Algs.Y.prime,
+        Algs.Z, Algs.Z.prime,
+        Algs.X + Algs.Y,
+        Algs.Z.prime + Algs.X,
+    ], ids=lambda w: str(w))
+    def test_conjugation_holds_for_all_axes(self, w):
+        """The principle works for ALL rotations, not just Y.
+
+        For any W: W' · A · W ≡ T(W, A).
+        This is the conjugation identity applied to a real L3 algorithm.
+
+        X and Z rotations move U-layer edges across layers (e.g., FU→BU,
+        LU→BL), so we don't check L1/L2 — we verify equivalence directly.
+        """
+        transformed = _L3_RU.transform(w, cube_size=3)
+        conjugated = w.inv() + _L3_RU + w
+        assert_algs_equivalent(conjugated, transformed, cube_size=3)
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# TRANSFORMATION PRINCIPLE: 3-CORNER CYCLE
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#
+# The 3-corner cycle from CommonOp.top_3_corner_cycle:
+#   U R U' L' U R' U' L
+# Cycles three U-layer corners: FLU → BRU → BLU → FLU
+# Leaves FRU fixed.
+#
+# S₁ = {FLU, BRU, BLU}, fixed corner = FRU
+#
+# This is a more complex test than the edge swap:
+# - It's a 3-cycle (not a 2-swap)
+# - It involves corners (3 stickers each, not 2)
+# - We verify the cycle direction is preserved under transform
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# 3-corner cycle: U R U' L' U R' U' L
+# Cycles FLU → BRU → BLU → FLU, fixes FRU
+_CORNER_3_CYCLE = (
+    Algs.U + Algs.R + Algs.U.prime + Algs.L.prime
+    + Algs.U + Algs.R.prime + Algs.U.prime + Algs.L
+)
+
+
+def _corner_is_solved(corner) -> bool:
+    """Check if a corner is in its solved position (all stickers match faces)."""
+    return corner.match_faces
+
+
+class TestTransformationPrinciple3CornerCycle:
+    """Transformation Principle applied to the 3-corner cycle U R U' L' U R' U' L.
+
+    On a solved cube, this cycles three U-layer corners:
+        FLU → BRU → BLU → FLU
+    leaving FRU fixed.
+
+    Corner positions on U face (looking down):
+        corner_top_left = BLU     corner_top_right = BRU
+        corner_bottom_left = FLU  corner_bottom_right = FRU
+
+    S₁ = {FLU, BRU, BLU}
+
+    Under Y rotations:
+        | W   | S₂ = W(S₁)           | Fixed corner |
+        |-----|----------------------|--------------|
+        | —   | {FLU, BRU, BLU}      | FRU          |
+        | Y'  | {FRU, BLU, FLU}      | BRU          |
+        | Y   | {BLU, FRU, BRU}      | FLU          |
+        | Y2  | {BRU, FLU, FRU}      | BLU          |
+    """
+
+    def test_original_cycles_three_corners(self):
+        """Baseline: the 3-cycle moves FLU, BRU, BLU and fixes FRU."""
+        cube = Cube(3, sp=_test_sp)
+        up = cube.face(FaceName.U)
+
+        _CORNER_3_CYCLE.play(cube)
+
+        # FRU is fixed (the corner not in the cycle)
+        assert _corner_is_solved(up.corner_bottom_right), "FRU should be fixed"
+
+        # The three cycled corners are disturbed
+        assert not _corner_is_solved(up.corner_bottom_left), "FLU should be cycled"
+        assert not _corner_is_solved(up.corner_top_right), "BRU should be cycled"
+        assert not _corner_is_solved(up.corner_top_left), "BLU should be cycled"
+
+        # L1 and L2 are preserved (the cycle only touches U-layer corners)
+        assert _l1_solved(cube)
+        assert _l2_solved(cube)
+
+    def test_y_prime_transform_shifts_cycle(self):
+        """T(Y', 3-cycle): cycles FRU, BLU, FLU — fixes BRU.
+
+        Y' maps: F→R, R→B, B→L, L→F
+        S₂ = Y'({FLU, BRU, BLU}) = {RFU, LBU, FLU}
+        Fixed: Y'(FRU) = BRU (= corner_top_right)
+        """
+        cube = Cube(3, sp=_test_sp)
+        up = cube.face(FaceName.U)
+
+        transformed = _CORNER_3_CYCLE.transform(Algs.Y.prime, cube_size=3)
+        transformed.play(cube)
+
+        # BRU is the fixed corner under Y' transform
+        assert _corner_is_solved(up.corner_top_right), "BRU should be fixed"
+
+        # The other three are cycled
+        assert not _corner_is_solved(up.corner_bottom_right), "FRU should be cycled"
+        assert not _corner_is_solved(up.corner_top_left), "BLU should be cycled"
+        assert not _corner_is_solved(up.corner_bottom_left), "FLU should be cycled"
+
+        assert _l1_solved(cube)
+        assert _l2_solved(cube)
+
+    def test_y_transform_shifts_cycle(self):
+        """T(Y, 3-cycle): cycles BLU, FRU, BRU — fixes FLU.
+
+        Y maps: F→L, L→B, B→R, R→F
+        S₂ = Y({FLU, BRU, BLU}) = {BLU, FRU, BRU}
+        Fixed: Y(FRU) = FLU (= corner_bottom_left)
+        """
+        cube = Cube(3, sp=_test_sp)
+        up = cube.face(FaceName.U)
+
+        transformed = _CORNER_3_CYCLE.transform(Algs.Y, cube_size=3)
+        transformed.play(cube)
+
+        # FLU is the fixed corner under Y transform
+        assert _corner_is_solved(up.corner_bottom_left), "FLU should be fixed"
+
+        # The other three are cycled
+        assert not _corner_is_solved(up.corner_top_left), "BLU should be cycled"
+        assert not _corner_is_solved(up.corner_bottom_right), "FRU should be cycled"
+        assert not _corner_is_solved(up.corner_top_right), "BRU should be cycled"
+
+        assert _l1_solved(cube)
+        assert _l2_solved(cube)
+
+    def test_y2_transform_shifts_cycle(self):
+        """T(Y2, 3-cycle): cycles BRU, FLU, FRU — fixes BLU.
+
+        Y2 maps: F→B, B→F, L→R, R→L
+        S₂ = Y2({FLU, BRU, BLU}) = {BRU, FLU, FRU}
+        Fixed: Y2(FRU) = BLU (= corner_top_left)
+        """
+        cube = Cube(3, sp=_test_sp)
+        up = cube.face(FaceName.U)
+
+        transformed = _CORNER_3_CYCLE.transform(Algs.Y * 2, cube_size=3)
+        transformed.play(cube)
+
+        # BLU is the fixed corner under Y2 transform
+        assert _corner_is_solved(up.corner_top_left), "BLU should be fixed"
+
+        # The other three are cycled
+        assert not _corner_is_solved(up.corner_top_right), "BRU should be cycled"
+        assert not _corner_is_solved(up.corner_bottom_left), "FLU should be cycled"
+        assert not _corner_is_solved(up.corner_bottom_right), "FRU should be cycled"
+
+        assert _l1_solved(cube)
+        assert _l2_solved(cube)
+
+    def test_all_four_y_variants_each_fixes_different_corner(self):
+        """Each Y rotation fixes a different corner — one full orbit."""
+        corner_attrs = [
+            "corner_bottom_left",   # FLU
+            "corner_bottom_right",  # FRU
+            "corner_top_right",     # BRU
+            "corner_top_left",      # BLU
+        ]
+        rotations = [Algs.NOOP, Algs.Y.prime, Algs.Y, Algs.Y * 2]
+        # Which corner is fixed for each rotation
+        expected_fixed = [
+            "corner_bottom_right",  # original: FRU fixed
+            "corner_top_right",     # Y': BRU fixed
+            "corner_bottom_left",   # Y: FLU fixed
+            "corner_top_left",      # Y2: BLU fixed
+        ]
+
+        for w, fixed_attr in zip(rotations, expected_fixed):
+            cube = Cube(3, sp=_test_sp)
+            up = cube.face(FaceName.U)
+
+            transformed = _CORNER_3_CYCLE.transform(w, cube_size=3)
+            transformed.play(cube)
+
+            # The fixed corner is solved
+            fixed_corner = getattr(up, fixed_attr)
+            assert _corner_is_solved(fixed_corner), (
+                f"W={w}: {fixed_attr} should be fixed"
+            )
+
+            # The other three are NOT solved (they were cycled)
+            for attr in corner_attrs:
+                if attr != fixed_attr:
+                    corner = getattr(up, attr)
+                    assert not _corner_is_solved(corner), (
+                        f"W={w}: {attr} should be cycled"
+                    )
+
+            # L1 and L2 preserved
+            assert _l1_solved(cube), f"W={w}: L1 should be solved"
+            assert _l2_solved(cube), f"W={w}: L2 should be solved"
+
+    def test_applying_3_times_restores_cube(self):
+        """A 3-cycle applied 3 times = identity. Same for transforms."""
+        for w in [Algs.NOOP, Algs.Y, Algs.Y.prime, Algs.Y * 2]:
+            cube = Cube(3, sp=_test_sp)
+            transformed = _CORNER_3_CYCLE.transform(w, cube_size=3)
+
+            # Apply 3 times
+            transformed.play(cube)
+            transformed.play(cube)
+            transformed.play(cube)
+
+            # All corners should be back to solved
+            up = cube.face(FaceName.U)
+            for attr in ["corner_bottom_left", "corner_bottom_right",
+                         "corner_top_left", "corner_top_right"]:
+                assert _corner_is_solved(getattr(up, attr)), (
+                    f"W={w}: {attr} should be restored after 3 applications"
+                )
+
+    @pytest.mark.parametrize("w", [
+        Algs.X, Algs.X.prime,
+        Algs.Y, Algs.Y.prime,
+        Algs.Z, Algs.Z.prime,
+        Algs.X + Algs.Y,
+        Algs.Z.prime + Algs.X,
+    ], ids=lambda w: str(w))
+    def test_conjugation_holds_for_all_axes(self, w):
+        """W' · 3-cycle · W ≡ T(W, 3-cycle) for all rotation axes."""
+        transformed = _CORNER_3_CYCLE.transform(w, cube_size=3)
+        conjugated = w.inv() + _CORNER_3_CYCLE + w
+        assert_algs_equivalent(conjugated, transformed, cube_size=3)
