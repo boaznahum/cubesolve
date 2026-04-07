@@ -31,10 +31,20 @@ When deploying, execute these steps in order:
 
 ### 1. Version Check
 
-Read `src/cube/resources/version.txt` and compare with the last committed version.
-If the version has NOT been bumped since the last commit, bump it:
-- Patch (e.g. 1.22.3 -> 1.22.4) for bugfixes/polish
-- Minor (e.g. 1.22 -> 1.23) for features
+Check if there have been commits since the last version bump:
+
+```bash
+# Find the last commit that touched version.txt
+git log -1 --format=%H -- src/cube/resources/version.txt
+
+# Check if there are commits AFTER that one (i.e. changes without a version bump)
+git log --oneline <version-commit>..HEAD
+```
+
+If there are commits after the last version bump, OR if the user explicitly asks to bump:
+- Read `src/cube/resources/version.txt`
+- Bump it: patch (1.22.3 -> 1.22.4) for bugfixes/polish, minor (1.22 -> 1.23) for features
+- Commit the version bump
 
 ### 2. Commit
 
