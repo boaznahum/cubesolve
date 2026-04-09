@@ -15,7 +15,7 @@ This skill provides an iterative workflow for cleaning up git branches by analyz
 1. **NEVER just delete branches.** Always offer ARCHIVE as the first/recommended option for merged branches.
 2. **Follow the FULL workflow** including archive steps — do not shortcut to deletion.
 3. **Run the analysis script** — do not do ad-hoc analysis with a separate agent.
-4. **PROTECTED BRANCHES — NEVER archive or delete:** `main`, `dev`, `webgl-dev`. Always skip these in analysis and actions regardless of merge status.
+4. **PROTECTED BRANCHES — NEVER archive or delete:** `main`, `dev`, `webgl-dev`, 'p314'. Always skip these in analysis and actions regardless of merge status.
 
 ## Step 0: Determine Target Branch
 
@@ -295,6 +295,7 @@ git branch -D <branch>
 
 For each unmerged branch, ask the user using AskUserQuestion:
 
+- **Try-merge + test**: Attempt to merge into base via temp branch, run tests, promote if green (see Step 9.5)
 - **Keep**: Leave branch as-is
 - **WIP**: Move to `wip/<branch-name>`
 - **Stop**: Move to `zzarchive/stopped/<branch-name>`
@@ -312,6 +313,133 @@ git branch -m <branch> zzarchive/stopped/<branch>
 git push origin zzarchive/stopped/<branch>
 git push origin --delete <branch>
 ```
+
+### Step 9.5: Try-Merge-And-Test Option
+
+This option attempts to integrate an unmerged branch into the base branch *safely*: merge
+into a throwaway temp branch, run the test suite, and only promote to the base branch if
+tests pass. If anything fails, the base branch is untouched.
+
+**Preconditions (check before starting):**
+
+```bash
+# Working tree MUST be clean — abort if not
+git status --porcelain
+# If non-empty, stop and tell the user to commit/stash first.
+
+# Remember starting branch so we can return later
+START_BRANCH=$(git branch --show-current)
+```
+
+**Per-branch workflow:**
+
+```bash
+BRANCH=<the-unmerged-branch>
+BASE=<base-branch>                 # e.g. main / dev / p314
+TMP="tmp/merge-test-$BRANCH"
+
+# 1. Update base branch
+git checkout "$BASE"
+git pull --ff-only
+
+# 2. Create temp branch from base
+git checkout -b "$TMP" "$BASE"
+
+# 3. Attempt the merge
+if ! git merge --no-ff "$BRANCH"; then
+    git merge --abort
+    git checkout "$BASE"
+    git branch -D "$TMP"
+    echo "MERGE CONFLICT on $BRANCH — falling back to Keep/WIP/Stop question"
+    # Fall through to Step 9's Keep/WIP/Stop prompt for this branch
+fi
+
+# 4. Run tests (default: non-GUI, non-slow — matches CLAUDE.md "All Checks" §4)
+#    IMPORTANT: use -m (marker expression), NOT -k (keyword expression).
+#    Allow user to override the default test selector if asked.
+CUBE_QUIET_ALL=1 python -m pytest tests/ -v -m "not gui and not slow"
+TEST_EXIT=$?
+
+if [ "$TEST_EXIT" -eq 0 ]; then
+    # 5a. Tests PASSED — promote temp into base
+    git checkout "$BASE"
+    git merge --ff-only "$TMP"
+
+    # Tag the passing commit per CLAUDE.md "Tagging Passing Commits"
+    TAG="pass-$(date +%Y%m%d-%H%M%S)"
+    git tag "$TAG"
+
+    # AUTOMATIC push on green (user pre-approved via the "Try-merge + test" choice).
+    # No per-branch confirmation: green tests = push base + tag.
+    git push origin "$BASE"
+    git push origin --tags
+
+    # Clean up temp branch
+    git branch -D "$TMP"
+
+    # Archive the original branch using the SAME workflow as Step 8
+    # ("Archive remote + delete local"). Do not invent a new archive path here —
+    # reuse the existing archive commands so behavior stays consistent with the
+    # rest of the skill (including the zzarchive/* remote-tracking ref cleanup
+    # and the [gone] branch cleanup hook in Step 8).
+    #
+    # Per Step 8, for claude/ branches use zzarchive/claudez/ instead of
+    # zzarchive/completed/. Pick the archive prefix accordingly:
+    case "$BRANCH" in
+        claude/*) ARCHIVE_PREFIX="zzarchive/claudez" ;;
+        *)        ARCHIVE_PREFIX="zzarchive/completed" ;;
+    esac
+
+    if git ls-remote --heads origin "$BRANCH" | grep -q .; then
+        # Move remote branch to archive namespace
+        git push origin "origin/$BRANCH:refs/heads/$ARCHIVE_PREFIX/$BRANCH"
+        # Delete the old remote branch
+        git push origin --delete "$BRANCH"
+        # Prune stale remote-tracking refs (per Step 8)
+        git fetch --prune
+        # Drop the newly-created zzarchive remote-tracking ref — we don't
+        # want to track zzarchive/* locally (per Step 8)
+        git branch -dr "origin/$ARCHIVE_PREFIX/$BRANCH" 2>/dev/null || true
+    fi
+    # Delete the local branch copy (work is now in base AND archived on remote)
+    git branch -D "$BRANCH" 2>/dev/null || true
+
+    echo "✓ $BRANCH merged into $BASE, tagged $TAG, archived to $ARCHIVE_PREFIX/"
+else
+    # 5b. Tests FAILED — throw away the merge attempt entirely
+    git checkout "$BASE"
+    git branch -D "$TMP"
+    echo "✗ Tests failed for $BRANCH — base branch untouched"
+    # Fall through to Step 9's Keep/WIP/Stop question for this branch
+fi
+
+# 6. Return to starting branch before processing the next candidate
+git checkout "$START_BRANCH"
+```
+
+**Critical safety rules for this option:**
+
+1. **Automatic push on green.** Selecting "Try-merge + test" is itself the user's
+   pre-approval for pushing the updated base branch and tags when tests pass. Do NOT
+   prompt again per branch — just push. This is the one exception to the skill's
+   general "ask before remote-visible actions" rule, because the test gate already
+   guards the push.
+2. **NEVER force-push** the base branch. Use `--ff-only` merges only. If the ff-only
+   merge fails (because base moved during the test run), abort, delete temp, report,
+   and fall back to Keep/WIP/Stop.
+3. **Abort cleanly on conflict**: `git merge --abort`, delete temp, move on. Do not leave
+   the user in a half-merged state.
+4. **Honor protected branches** (Rule 4): never run this flow with `main`, `dev`, `webgl-dev`,
+   or `p314` as the *candidate* branch — only as the *base*.
+5. **Restore starting branch** at the end of each iteration, even on failure.
+6. **Continue the loop**: after each branch (pass or fail), move on to the next candidate
+   without prompting unless the user chose "Review each".
+7. **Test command override**: the default is `-m "not gui and not slow"`. If the user asks
+   for a different selector (e.g. include slow tests, or only a subset), use that instead.
+8. **Archive via Step 8's workflow.** Do not invent ad-hoc archive commands in this step.
+   The post-merge archive uses the same `zzarchive/completed/` (or `zzarchive/claudez/`
+   for `claude/*`) pattern, the same fetch-prune, and the same remote-tracking ref
+   cleanup as Step 8 so behavior stays consistent.
 
 ### Step 10: Clean Up Synced Archive Branches
 
@@ -382,11 +510,12 @@ selectable menu in the Claude Code UI where the user can scroll, choose, and pre
 
 3. **Use AskUserQuestion for EACH unmerged branch** (one question per branch):
    - Question: "What to do with `<branch>`? (N unique commits)" with header "<branch>"
-   - Options:
+   - Options (AskUserQuestion allows max 4 — pick the 4 most relevant; "Try-merge + test"
+     should always be included for branches that look like real work):
+     - "Try-merge + test" — description: "Merge into base via temp branch, run tests, promote if green (Step 9.5)"
      - "Archive stopped" — description: "Move to zzarchive/stopped/<branch>"
      - "Archive claudez" — description: "Move to zzarchive/claudez/<branch>" (for claude/ branches)
      - "Keep" — description: "Leave as-is"
-     - "Delete" — description: "Delete without archiving"
 
 4. **If "Review each" was selected for merged branches**, use AskUserQuestion per branch:
    - Question: "What to do with `<branch>`?" with header "<branch>"
