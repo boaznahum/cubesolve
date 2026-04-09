@@ -92,17 +92,58 @@ class Alg(ABC):
         ...
 
     def transform(self, w: "Alg", cube_size: int | None = None) -> "Alg":
-        """Transform this algorithm by whole-cube rotation W.
+        """Move this algorithm to a different position on the cube.
 
-        Returns T(W, self) such that W' self W ≡ T(W, self).
+        If this algorithm works on some pieces (e.g. edges LU, FU),
+        transform gives you the same algorithm working on different
+        pieces — wherever whole-cube rotation W would move them.
+
+        Definition:  W  T(W, A)  W'  =  A
+
+        W is a whole-cube rotation that moves positions POS1 to POS2.
+        T(W, A) is the algorithm that does A's work at POS2.
+        So if you apply T(W, A) alone (without W and W'), you get
+        A's effect at POS2 instead of POS1.
+
+        Example: algorithm A swaps edges {LU, FU} on the U face.
+        We want an algorithm that swaps {FU, RU} instead.
+
+        Pick W = Y', which maps L->F and F->R.
+        So Y' moves {LU, FU} to {FU, RU}.
+        A.transform(Y') gives us the algorithm that swaps {FU, RU}.
+
+        U face (top-down view)::
+
+            A acts on {LU, FU}:        A.transform(Y') acts on {FU, RU}:
+
+                  B                          B
+               +--+--+--+                +--+--+--+
+               |  |  |  |                |  |  |  |
+            L  +--+--+--+  R          L  +--+--+--+  R
+               |* |  |  |                |  |  |* |
+               +--+--+--+                +--+--+--+
+               |  |* |  |                |  |* |  |
+               +--+--+--+                +--+--+--+
+                  F                          F
+
+               * = edges swapped          * = edges swapped
+                   (LU and FU)                (FU and RU)
+
+        Usage::
+
+            # F move under Y' rotation becomes R
+            Algs.F.transform(Algs.Y.prime)          # -> R
+
+            # A sexy move on R face becomes one on B face
+            (R + U + R.prime + U.prime).transform(Algs.Y.prime)  # -> B U B' U'
+
+            # For algorithms with inner slices, pass cube_size
+            alg.transform(Algs.Y.prime, cube_size=5)
 
         Args:
-            w: Whole-cube rotation sequence (only X, Y, Z moves).
-            cube_size: Required when self contains sliced slice moves AND
-                the transform negates direction (see transform_by).
-
-        Example:
-            >>> Algs.F.transform(Algs.Y.prime)  # → R
+            w: Whole-cube rotation (X, Y, Z or a sequence of them).
+            cube_size: Only needed when the algorithm contains sliced
+                slice moves (e.g. M[2:3]) and the transform flips direction.
         """
         from .alg_transform import compute_permutation
         p = compute_permutation(w)

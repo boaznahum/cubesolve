@@ -3,46 +3,125 @@
 
 ## Table of Contents
 
-1. [Motivation](#1-motivation)
-2. [Definitions](#2-definitions)
-3. [The Three Identities](#3-the-three-identities-theorem)
-4. [The Transformation Principle](#4-the-transformation-principle)
-5. [Lemmas — How Each Move Type Transforms](#5-lemmas--how-each-move-type-transforms)
-6. [Implementation Reference](#6-implementation-reference)
-7. [Examples](#7-examples)
+1. [Definition](#1-definition)
+2. [Motivation — Why This Works](#2-motivation--why-this-works)
+3. [Formal Definitions](#3-formal-definitions)
+4. [The Three Identities](#4-the-three-identities-theorem)
+5. [The Transformation Principle](#5-the-transformation-principle)
+6. [Lemmas — How Each Move Type Transforms](#6-lemmas--how-each-move-type-transforms)
+7. [Implementation Reference](#7-implementation-reference)
+8. [Examples](#8-examples)
 
 ---
 
-## 1. Motivation
+## 1. Definition
 
-In cube solving, we often discover an algorithm A that achieves a specific
-effect — swapping two edges, cycling three corners, flipping an edge pair.
-That algorithm operates on a particular **set of piece-positions** S₁.
+Given a whole-cube rotation W and an algorithm A, find T(W, A) such that:
 
-But the same effect is needed at a **different position** S₂. For instance:
+```
+W  T(W, A)  W'  =  A
+```
 
-- A swaps edges **LU ↔ FU** (S₁ = {LU, FU})
-- We need an algorithm that swaps **FU ↔ RU** (S₂ = {FU, RU})
+- **W** — a whole-cube rotation (X, Y, Z, or any sequence of them)
+- **A** — any algorithm, acting on some positions POS1
+- **T(W, A)** — the transformed algorithm we want to find
 
-If we can find a whole-cube rotation W that maps S₁ → S₂, then we don't
-need to discover a new algorithm — we can **derive** it from A.
-
-In this example: **W = Y'** maps L→F and F→R, so Y'({LU, FU}) = {FU, RU}.
-Equally, **W = Y** maps L→B and F→L, so Y({LU, FU}) = {BU, LU}.
-
-The **Algorithm Transformation** T(W, A) gives us exactly that derived
-algorithm. Any rotation direction works — the choice of W determines which
-target set S₂ you reach. One base algorithm + whole-cube rotations = all
-positional variants.
-
-This document formalizes the theory behind this transformation, proves
-that it works, and maps every definition to its implementation in code.
+In words: find an algorithm that, applied between W and W', reproduces A.
 
 ---
 
-## 2. Definitions
+## 2. Motivation — Why This Works
 
-### 2.1 Whole-Cube Rotation (W)
+A acts on positions POS1. We need the same effect at positions POS2.
+
+W is a whole-cube rotation that moves POS1 to POS2.
+
+Read **W T(W,A) W'** left to right:
+
+1. **W** — rotate the cube. Pieces at POS1 move to POS2.
+2. **T(W,A)** — does work at POS2.
+3. **W'** — rotate back. Pieces return from POS2 to POS1.
+
+The net effect is A (which acts on POS1). So T(W,A) must be doing
+A's work, but at POS2.
+
+**Key insight**: if we apply T(W,A) alone — without the W/W' wrapper —
+it performs A's effect at POS2. That's exactly what we wanted.
+
+### Algebraic Derivation
+
+Cube algorithms form a **group** under composition (like matrix multiplication).
+We can solve for T(W, A) algebraically from the defining equation:
+
+```
+W · T(W, A) · W'  =  A
+```
+
+Multiply both sides on the left by W' and on the right by W:
+
+```
+W'· W · T(W, A) · W'· W  =  W'· A · W
+         T(W, A)          =  W'· A · W
+```
+
+So:
+
+```
+T(W, A)  =  W' A W
+```
+
+This operation — wrapping A between W' and W — is called **conjugation**
+in group theory. It is one of the most fundamental operations in algebra:
+conjugation preserves the structure of A while "relocating" its effect.
+
+The intuition matches the algebra: W' moves pieces from POS2 to POS1,
+A does its work at POS1, then W brings them back to POS2. The net effect
+is A's operation, transplanted to POS2.
+
+### Example: Edge Swap
+
+Algorithm A swaps edges at {LU, FU} (U face, top-down view):
+
+```
+      B
+   +--+--+--+
+   |  |  |  |
+L  +--+--+--+  R
+   |* |  |  |
+   +--+--+--+
+   |  |* |  |
+   +--+--+--+
+      F
+
+   * = LU and FU (the edges A swaps)
+```
+
+We want to swap {FU, RU} instead. Pick **W = Y'**, which maps
+L->F and F->R, so Y'({LU, FU}) = {FU, RU}.
+
+T(Y', A) acts on {FU, RU}:
+
+```
+      B
+   +--+--+--+
+   |  |  |  |
+L  +--+--+--+  R
+   |  |  |* |
+   +--+--+--+
+   |  |* |  |
+   +--+--+--+
+      F
+
+   * = FU and RU (the edges T(Y',A) swaps)
+```
+
+One base algorithm + whole-cube rotations = all positional variants.
+
+---
+
+## 3. Formal Definitions
+
+### 3.1 Whole-Cube Rotation (W)
 
 A whole-cube rotation is one of X, Y, Z (or their primes/doubles). It
 rotates the entire cube without changing any piece's relative position —
@@ -63,7 +142,7 @@ rotation. `compute_permutation(w)` composes the full sequence.
 → `face_permutation.py:FacePermutation.from_axis()`
 → `alg_transform.py:compute_permutation()`
 
-### 2.2 Face Permutation (P_W)
+### 3.2 Face Permutation (P_W)
 
 Each whole-cube rotation W induces a permutation P_W on the six face names
 {U, D, F, B, L, R}. This is a bijection — every face maps to exactly one
@@ -78,7 +157,7 @@ F → R,  R → B,  B → L,  L → F,  U → U,  D → D
 **Code**: `FacePermutation` class.
 → `face_permutation.py:FacePermutation`
 
-### 2.3 Algorithm Transformation T(W, A)
+### 3.3 Algorithm Transformation T(W, A)
 
 Given whole-cube rotation W and algorithm A, define:
 
@@ -95,7 +174,7 @@ decides how to remap its face/slice/axis.
 → `Alg.py:transform()` (public method)
 → `Alg.py:transform_by()` (abstract, implemented by every subclass)
 
-### 2.4 Piece-Position Set (S)
+### 3.4 Piece-Position Set (S)
 
 A set of piece-positions on the cube. For example:
 
@@ -106,7 +185,7 @@ A set of piece-positions on the cube. For example:
 An algorithm A **acts on S** if it only modifies pieces within S,
 leaving all other pieces unchanged.
 
-### 2.5 Equivalence (≡)
+### 3.5 Equivalence (≡)
 
 Two algorithms are **equivalent** (A₁ ≡ A₂) if they produce identical
 cube states from any starting position.
@@ -117,7 +196,7 @@ by applying both algorithms to a solved cube and comparing all faces.
 
 ---
 
-## 3. The Three Identities (Theorem)
+## 4. The Three Identities (Theorem)
 
 **Theorem**. Let W be a whole-cube rotation sequence and A any algorithm.
 Then:
@@ -164,7 +243,7 @@ T(W₁W₂, A) = (W₁W₂)' A (W₁W₂)
 
 ---
 
-## 4. The Transformation Principle
+## 5. The Transformation Principle
 
 This is the **practical theorem** that motivates the entire module.
 
@@ -176,39 +255,33 @@ This is the **practical theorem** that motivates the entire module.
 
 ### Proof (by unwrapping the conjugation)
 
-We know from identity (1) that:
+From the definition:
 
 ```
-W' A W  =  T(W, A)
+W · T(W, A) · W'  =  A
 ```
 
-Rearranging (multiply left by W, right by W'):
+A acts on S₁ (given). So **W · T(W, A) · W'** acts on S₁.
+
+Read left-to-right as three steps:
 
 ```
-A  =  W · T(W, A) · W'
-```
-
-Now, A acts on S₁ (given). So **W · T(W, A) · W'** acts on S₁.
-
-Read this right-to-left as three steps:
-
-```
-Step 1:  W'          — rotate the whole cube
+Step 1:  W           — rotate the whole cube
 Step 2:  T(W, A)     — do the work
-Step 3:  W           — rotate back
+Step 3:  W'          — rotate back
 ```
 
 Diagram — what happens to the pieces at S₁:
 
 ```
-          W'                T(W,A)              W
+          W                 T(W,A)              W'
 S₁ ──────────────▶ S₂ ──────────────▶ S₂ ──────────────▶ S₁
   (pieces move       (pieces at S₂     (pieces move
    from S₁ to S₂     are modified)      back to S₁)
    by rotation)                         by rotation)
 ```
 
-- **Step 1 (W')**: The whole cube rotates. Pieces that were at S₁ are
+- **Step 1 (W)**: The whole cube rotates. Pieces that were at S₁ are
   now sitting at S₂ = W(S₁). No pieces are actually changed — they
   just moved to different positions.
 
@@ -216,12 +289,12 @@ S₁ ──────────────▶ S₂ ────────
   pieces are at S₂, and T(W, A) modifies them — swapping, cycling,
   flipping — whatever A would have done, but at position S₂.
 
-- **Step 3 (W)**: The whole cube rotates back. The modified pieces
+- **Step 3 (W')**: The whole cube rotates back. The modified pieces
   return from S₂ to S₁. The net effect is: pieces at S₁ are modified
   exactly as A modifies them.
 
 The key insight: **T(W, A) does its work in Step 2, when the pieces
-are at S₂**. Therefore, if we apply T(W, A) alone (without the W'/W
+are at S₂**. Therefore, if we apply T(W, A) alone (without the W/W'
 wrapper), it acts on S₂.
 
 Formally: since W · T(W, A) · W' fixes everything outside S₁, and W'
@@ -236,13 +309,13 @@ S₁ = { LU, FU }
 ```
 
 ```
-        U
+        B
      ┌──┬──┬──┐
-     │  │LU│  │       A swaps the edges
-     ├──┼──┼──┤       marked LU and FU
      │  │  │  │
+  L  ├──┼──┼──┤  R    A swaps the edges
+     │* │  │  │        marked * (LU and FU)
      ├──┼──┼──┤
-     │  │FU│  │
+     │  │* │  │
      └──┴──┴──┘
         F
 ```
@@ -267,13 +340,13 @@ P_{Y'}:  F→R, R→B, B→L, L→F, U→U, D→D
 The result is a new algorithm T(Y', A) that swaps FU ↔ RU:
 
 ```
-        U
+        B
      ┌──┬──┬──┐
-     │  │FU│  │       T(Y', A) swaps the edges
-     ├──┼──┼──┤       marked FU and RU
-     │  │  │RU│
-     ├──┼──┼──┤
      │  │  │  │
+  L  ├──┼──┼──┤  R    T(Y', A) swaps the edges
+     │  │  │* │        marked * (FU and RU)
+     ├──┼──┼──┤
+     │  │* │  │
      └──┴──┴──┘
         F
 ```
@@ -294,15 +367,15 @@ P_Y:  F→L, L→B, B→R, R→F, U→U, D→D
 The result is a new algorithm T(Y, A) that swaps BU ↔ LU:
 
 ```
-           B
-        ┌──┬──┬──┐
-        │  │BU│  │       T(Y, A) swaps the edges
-        ├──┼──┼──┤       marked BU and LU
-     LU │  │  │  │
-        ├──┼──┼──┤
-        │  │  │  │
-        └──┴──┴──┘
-           U
+        B
+     ┌──┬──┬──┐
+     │  │* │  │
+  L  ├──┼──┼──┤  R    T(Y, A) swaps the edges
+     │* │  │  │        marked * (BU and LU)
+     ├──┼──┼──┤
+     │  │  │  │
+     └──┴──┴──┘
+        F
 ```
 
 Verification: Y' · A · Y ≡ T(Y, A).
@@ -331,7 +404,7 @@ edge flips, OLL, PLL — any algorithm that acts on a localizable set.
 
 ---
 
-## 5. Lemmas — How Each Move Type Transforms
+## 6. Lemmas — How Each Move Type Transforms
 
 These lemmas establish *how* T(W, A) is computed for each atomic move type.
 Combined with Lemma 6 (sequence homomorphism), they prove the conjugation
@@ -437,7 +510,7 @@ arbitrary algorithms.
 
 ---
 
-## 6. Implementation Reference
+## 7. Implementation Reference
 
 ### File Structure
 
@@ -510,9 +583,9 @@ The face permutation tables (X/Y/Z content movement) are defined in
 
 ---
 
-## 7. Examples
+## 8. Examples
 
-### 7.1 Simple Face Move
+### 8.1 Simple Face Move
 
 ```
 W = Y'      A = F       T(Y', F) = R
@@ -521,7 +594,7 @@ P_{Y'}: F→R, R→B, B→L, L→F, U→U, D→D
 F maps to R. Rotation count preserved.
 ```
 
-### 7.2 Slice Move with Direction Negation
+### 8.2 Slice Move with Direction Negation
 
 ```
 W = Y'      A = S       T(Y', S) = M'
@@ -531,7 +604,7 @@ R is the OPPOSITE of L (M's rotation face).
 So S → M with negated direction → M'
 ```
 
-### 7.3 Sequence (Sexy Move)
+### 8.3 Sequence (Sexy Move)
 
 ```
 W = Y'      A = R U R' U'
@@ -544,7 +617,7 @@ T(Y', U') = U'
 T(Y', A) = B U B' U'
 ```
 
-### 7.4 The Transformation Principle in Action
+### 8.4 The Transformation Principle in Action
 
 ```
 A swaps edges at {LU, FU}.

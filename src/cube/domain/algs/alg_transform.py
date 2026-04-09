@@ -1,26 +1,20 @@
 """Algorithm transformation by whole-cube rotations.
 
-Implements T(W, A) = WA where:
-  - W is a sequence of whole-cube rotations (X, Y, Z and their primes/multiples)
-  - A is any cube algorithm
-  - WA is A with all moves remapped by the face permutation W induces
+T(W, A) moves algorithm A to a different position on the cube.
+If A acts on positions POS1 and W maps POS1 to POS2, then T(W, A)
+acts on POS2.
 
-Mathematical identity: W' A W ≡ WA
-  (undo rotation, do original move, redo rotation = do transformed move)
+Definition:  W · T(W, A) · W'  =  A
 
-Equivalently: A W = W WA
-  (whole-cube rotations can be "pushed through" an algorithm by transforming each move)
+In practice, T just remaps face names in A through the permutation
+that W induces. No cube operations are performed.
 
 Example:
-  W = Y', A = F → WA = R
-  Because Y' sends the F face to the R position.
-
-Key insight: each whole-cube rotation is just a permutation of 6 face names.
-Transforming any algorithm reduces to remapping face names through that permutation.
-Each Alg subclass implements its own transform_by() method (polymorphic dispatch).
+  W = Y', A = F  ->  T(Y', F) = R
+  Because Y' maps F to R.
 
 Public API:
-  - a.transform(w)               — transform algorithm a by whole-cube rotation w
+  - a.transform(w)               — move algorithm a to W's position
   - a.transform(w, cube_size=5)  — same, with cube_size for sliced slice moves
   - compute_permutation(w)       — extract the FacePermutation from a rotation sequence
 """
