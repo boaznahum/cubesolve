@@ -345,7 +345,8 @@ git pull --ff-only
 # 2. Create temp branch from base
 git checkout -b "$TMP" "$BASE"
 
-# 3. Attempt the merge
+# 3. Capture pre-merge SHA, then attempt the merge
+PRE_MERGE_SHA=$(git rev-parse HEAD)
 if ! git merge --no-ff "$BRANCH"; then
     git merge --abort
     git checkout "$BASE"
@@ -353,29 +354,58 @@ if ! git merge --no-ff "$BRANCH"; then
     echo "MERGE CONFLICT on $BRANCH — falling back to Keep/WIP/Stop question"
     # Fall through to Step 9's Keep/WIP/Stop prompt for this branch
 fi
+POST_MERGE_SHA=$(git rev-parse HEAD)
 
-# 4. Run tests (default: non-GUI, non-slow — matches CLAUDE.md "All Checks" §4)
-#    IMPORTANT: use -m (marker expression), NOT -k (keyword expression).
-#    Allow user to override the default test selector if asked.
-CUBE_QUIET_ALL=1 python -m pytest tests/ -v -m "not gui and not slow"
-TEST_EXIT=$?
+# 3b. FAST-PATH: branch already fully contained in base.
+#     If the merge produced no new commit (SHA unchanged), $BRANCH is an
+#     ancestor of $BASE — its content is already identical to what's in
+#     base. There is nothing new to test, no commit to tag, and no change
+#     to push. Skip straight to the archive step.
+#
+#     Detection is SHA-based (not stderr parsing) so it's robust across
+#     git versions and locales. --no-ff does NOT create an empty merge
+#     commit when the incoming branch is an ancestor, so this check is
+#     sound.
+if [ "$POST_MERGE_SHA" = "$PRE_MERGE_SHA" ]; then
+    echo "Already up to date — $BRANCH is fully contained in $BASE"
+    echo "Skipping tests, tag, and push (no new content). Archiving directly."
+    git checkout "$BASE"
+    git branch -D "$TMP"
+    # Skip to the shared archive block below by setting TEST_EXIT=0 and
+    # MERGED_NEW=0. The archive block checks MERGED_NEW to decide whether
+    # to tag/push; when 0, it only archives.
+    TEST_EXIT=0
+    MERGED_NEW=0
+else
+    MERGED_NEW=1
+
+    # 4. Run tests (default: non-GUI, non-slow — matches CLAUDE.md "All Checks" §4)
+    #    IMPORTANT: use -m (marker expression), NOT -k (keyword expression).
+    #    Allow user to override the default test selector if asked.
+    CUBE_QUIET_ALL=1 python -m pytest tests/ -v -m "not gui and not slow"
+    TEST_EXIT=$?
+fi
 
 if [ "$TEST_EXIT" -eq 0 ]; then
-    # 5a. Tests PASSED — promote temp into base
-    git checkout "$BASE"
-    git merge --ff-only "$TMP"
+    if [ "$MERGED_NEW" -eq 1 ]; then
+        # 5a. Tests PASSED and merge produced a new commit — promote temp into base
+        git checkout "$BASE"
+        git merge --ff-only "$TMP"
 
-    # Tag the passing commit per CLAUDE.md "Tagging Passing Commits"
-    TAG="pass-$(date +%Y%m%d-%H%M%S)"
-    git tag "$TAG"
+        # Tag the passing commit per CLAUDE.md "Tagging Passing Commits"
+        TAG="pass-$(date +%Y%m%d-%H%M%S)"
+        git tag "$TAG"
 
-    # AUTOMATIC push on green (user pre-approved via the "Try-merge + test" choice).
-    # No per-branch confirmation: green tests = push base + tag.
-    git push origin "$BASE"
-    git push origin --tags
+        # AUTOMATIC push on green (user pre-approved via the "Try-merge + test" choice).
+        # No per-branch confirmation: green tests = push base + tag.
+        git push origin "$BASE"
+        git push origin --tags
 
-    # Clean up temp branch
-    git branch -D "$TMP"
+        # Clean up temp branch
+        git branch -D "$TMP"
+    fi
+    # If MERGED_NEW=0, the temp branch was already deleted in the fast-path
+    # above and $BASE is unchanged — skip straight to archiving.
 
     # Archive the original branch using the SAME workflow as Step 8
     # ("Archive remote + delete local"). Do not invent a new archive path here —
@@ -440,6 +470,13 @@ git checkout "$START_BRANCH"
    The post-merge archive uses the same `zzarchive/completed/` (or `zzarchive/claudez/`
    for `claude/*`) pattern, the same fetch-prune, and the same remote-tracking ref
    cleanup as Step 8 so behavior stays consistent.
+9. **Already-up-to-date fast-path.** If `git merge --no-ff "$BRANCH"` leaves HEAD
+   unchanged (detected by SHA-equality of HEAD before/after the merge), the branch is
+   already fully contained in base — its content is *identical* to what's already in
+   base. In that case: skip tests (nothing new to validate), skip the `pass-*` tag (base
+   didn't move, so any existing tag at that commit is still valid), skip the push, and
+   go straight to archiving the original branch. This is the only scenario where Step 9.5
+   skips the test run; do not extend the fast-path to other cases.
 
 ### Step 10: Clean Up Synced Archive Branches
 
