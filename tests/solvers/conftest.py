@@ -20,7 +20,9 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from cube.application.config_impl import AppConfig
 from cube.domain.solver.SolverName import SolverName
+from cube.utils.config_protocol import ConfigProtocol
 from cube.utils.service_provider import IServiceProvider
 
 from tests.seed_sequences import get_scramble_params as _get_scramble_params
@@ -28,6 +30,16 @@ from tests.test_utils import _test_sp
 
 if TYPE_CHECKING:
     pass
+
+# =============================================================================
+# Shared Solver Config (frozen — read-only, safe to share across tests)
+# =============================================================================
+
+# Solver tests require deterministic geometry — explicit even if it matches
+# the current default, because defaults may change in the future.
+_solver_config = AppConfig()
+_solver_config.prevent_random_face_pick_up_in_geometry = True
+_solver_config = _solver_config.get_frozen(_error_prefix="_solver_config")
 
 # =============================================================================
 # Test Configuration
@@ -85,6 +97,17 @@ def all_solver_names() -> list[SolverName]:
 def test_sp() -> IServiceProvider:
     """Fixture providing a StubServiceProvider for tests that create Cube directly."""
     return _test_sp
+
+
+@pytest.fixture
+def solver_config() -> ConfigProtocol:
+    """Frozen config with explicit deterministic solver settings.
+
+    Solver tests should use this to ensure reproducible results.
+    The config is frozen (shared, read-only) — safe to pass directly
+    to create_app(config=...) since solvers only read config.
+    """
+    return _solver_config
 
 
 # =============================================================================

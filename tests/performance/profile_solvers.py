@@ -46,7 +46,6 @@ sys.path.insert(0, str(project_root))
 # Suppress debug output
 os.environ["CUBE_QUIET_ALL"] = "1"
 
-from cube.application import _config as cfg
 from cube.application.config_impl import AppConfig
 from cube.utils.logging import CubeLogger, setup_root_logger
 from cube.application.markers import IMarkerFactory, IMarkerManager, MarkerFactory, MarkerManager
@@ -140,11 +139,13 @@ class BenchmarkReport:
 # Profiling Functions
 # ============================================================================
 
-def create_operator(cube_size: int) -> Operator:
+def create_operator(cube_size: int, cache_enabled: bool = True) -> Operator:
     """Create an operator and cube for testing."""
     sp = ProfileServiceProvider()
+    sp.config.enable_cube_cache = cache_enabled
     cube = Cube(cube_size, sp=sp)
     config = AppConfig()
+    config.enable_cube_cache = cache_enabled
     vs = ApplicationAndViewState(config)
     return Operator(cube, vs)
 
@@ -184,7 +185,8 @@ def profile_solver(
     cube_size: int,
     n_solves: int = 5,
     scramble_moves: int | None = None,
-    with_cprofile: bool = True
+    with_cprofile: bool = True,
+    cache_enabled: bool = True,
 ) -> ProfileResult:
     """Profile a solver with multiple solves."""
 
@@ -211,7 +213,7 @@ def profile_solver(
     profiler = cProfile.Profile() if with_cprofile else None
 
     for seed in range(n_solves):
-        op = create_operator(cube_size)
+        op = create_operator(cube_size, cache_enabled=cache_enabled)
         solver = Solvers.by_name(solver_name, op)
 
         # Scramble
@@ -437,9 +439,6 @@ def run_benchmark(
     """Run a complete benchmark."""
     import datetime
 
-    # Set cache mode
-    cfg.CONFIG_DEFAULTS.enable_cube_cache = cache_enabled
-
     # Default solvers and sizes
     if solvers is None:
         solvers = SolverName.implemented()
@@ -460,7 +459,7 @@ def run_benchmark(
     for solver in solvers:
         for size in sizes:
             print(f"\nProfiling {solver.display_name} on {size}x{size}...", end=" ", flush=True)
-            result = profile_solver(solver, size, n_solves, with_cprofile=with_cprofile)
+            result = profile_solver(solver, size, n_solves, with_cprofile=with_cprofile, cache_enabled=cache_enabled)
             results.append(result)
             if result.successful_solves > 0:
                 print(f"{result.avg_time_ms:.1f}ms avg")

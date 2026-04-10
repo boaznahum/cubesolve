@@ -17,6 +17,8 @@ from typing import TYPE_CHECKING, Generator
 
 import pytest
 
+from tests import test_utils
+
 if TYPE_CHECKING:
     from playwright.sync_api import Browser, Page, Playwright
 
@@ -55,11 +57,11 @@ def webgl_server(request: pytest.FixtureRequest) -> Generator[str, None, None]:
     Sets GUI_TEST_MODE so the server binds to localhost on a random port
     and does not open a browser.
     """
-    from cube.application import _config as cfg
+    from cube.application.config_impl import AppConfig
 
     # Enable test mode: localhost binding, random port, no browser
-    original_test_mode = cfg.CONFIG_DEFAULTS.gui_test_mode
-    cfg.CONFIG_DEFAULTS.gui_test_mode = True
+    cfg = AppConfig()
+    cfg.gui_test_mode = True
 
     # Temporarily hide dist/ so server serves from source static/
     # (dist/ may be stale and missing test-time JS changes like window.appState)
@@ -78,7 +80,7 @@ def webgl_server(request: pytest.FixtureRequest) -> Generator[str, None, None]:
     try:
         from cube.main_any_backend import create_app_window
 
-        window = create_app_window("webgl", quiet_all=True)
+        window = create_app_window("webgl", quiet_all=True, config=cfg)
         event_loop = window._event_loop  # type: ignore[attr-defined]
         port = event_loop._resolve_port()
         server_url = f"http://localhost:{port}"
@@ -112,7 +114,6 @@ def webgl_server(request: pytest.FixtureRequest) -> Generator[str, None, None]:
         window.cleanup()
 
     finally:
-        cfg.CONFIG_DEFAULTS.gui_test_mode = original_test_mode
         # Restore dist/ if we hid it
         if did_hide_dist and dist_hidden.exists():
             # Retry rename — on Windows, file locks may linger briefly

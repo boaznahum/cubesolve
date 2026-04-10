@@ -30,11 +30,22 @@ class AbstractApp(metaclass=ABCMeta):
         debug_all: bool = False,
         quiet_all: bool = False,
         solver: SolverName | None = None,
+        config: ConfigProtocol | None = None,
     ) -> "AbstractApp":
         """Create app without animation. For tests, scripts, and as first step for GUI.
 
         The app is always born without animation (Noop markers, no AnimationManager).
         Animation is injected later by the backend via ``enable_animation()``.
+
+        Args:
+            cube_size: Cube size (default: from config).
+            debug_all: Enable verbose logging.
+            quiet_all: Suppress all debug output.
+            solver: Solver to use (default: from config).
+            config: Pre-configured ConfigProtocol instance. If ``None`` (default),
+                a fresh ``AppConfig()`` is created from ``CONFIG_DEFAULTS``.
+                Tests/scripts can create an ``AppConfig()``, configure it via
+                ConfigProtocol setters, then pass it in.
 
         Creation flow::
 
@@ -66,7 +77,8 @@ class AbstractApp(metaclass=ABCMeta):
         from .app import _App
         from .config_impl import AppConfig
 
-        config = AppConfig()
+        if config is None:
+            config = AppConfig()
         vs = ApplicationAndViewState(config, debug_all=debug_all, quiet_all=quiet_all)
         app: _App = _App(config, vs, cube_size, solver)
 

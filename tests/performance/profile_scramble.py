@@ -12,7 +12,6 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from cube.application import _config as cfg
 from cube.domain.algs.Scramble import scramble
 from cube.domain.model.Cube import Cube
 from cube.application.config_impl import AppConfig
@@ -48,9 +47,10 @@ class ProfileServiceProvider(IServiceProvider):
         return self._logger
 
 
-def run_scramble(cube_size: int, n_moves: int, seed: int) -> None:
+def run_scramble(cube_size: int, n_moves: int, seed: int, with_cache: bool = True) -> None:
     """Run a scramble on a cube."""
     sp = ProfileServiceProvider()
+    sp.config.enable_cube_cache = with_cache
     cube = Cube(cube_size, sp=sp)
     alg = scramble(cube.size, seed, n_moves)
     alg.play(cube)
@@ -60,9 +60,6 @@ def profile_scramble(cube_size: int = 5, n_moves: int = 1000, seed: int = 42,
                      with_cache: bool = True) -> None:
     """Profile scramble and print results."""
 
-    # Set cache mode
-    cfg.CONFIG_DEFAULTS.enable_cube_cache = with_cache
-
     print(f"\n{'='*70}")
     print(f"Profiling {cube_size}x{cube_size} cube, {n_moves} moves, cache={'ON' if with_cache else 'OFF'}")
     print(f"{'='*70}\n")
@@ -71,7 +68,7 @@ def profile_scramble(cube_size: int = 5, n_moves: int = 1000, seed: int = 42,
     profiler = cProfile.Profile()
     profiler.enable()
 
-    run_scramble(cube_size, n_moves, seed)
+    run_scramble(cube_size, n_moves, seed, with_cache=with_cache)
 
     profiler.disable()
 

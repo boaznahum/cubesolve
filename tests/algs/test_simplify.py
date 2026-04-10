@@ -2,12 +2,12 @@
 import pytest
 from typing import Iterable
 
-from cube.application import _config as config
 from cube.domain import algs
 from cube.domain.algs import Algs, Alg
 from cube.domain.algs.Scramble import scramble
 from cube.domain.model.Cube import Cube
-from tests.test_utils import _test_sp
+from cube.utils.service_provider import IServiceProvider
+from tests.test_utils import StubServiceProvider, _test_sp
 from tests.utils._alg_utils import assert_algs_equivalent
 
 
@@ -16,9 +16,9 @@ def _compare_two_algs(cube_size: int, algs1: Iterable[Alg], algs2: Iterable[Alg]
     assert_algs_equivalent(Algs.seq(*algs1), Algs.seq(*algs2), cube_size)
 
 
-def _compare_inv(cube_size: int, algs_list: Iterable[Alg]):
+def _compare_inv(cube_size: int, algs_list: Iterable[Alg], sp: IServiceProvider | None = None):
     """Test that applying algorithms then their inverse returns to original state."""
-    cube = Cube(cube_size, sp=_test_sp)
+    cube = Cube(cube_size, sp=sp or _test_sp)
 
     scramble_ = scramble(cube_size)
     scramble_.play(cube)
@@ -34,24 +34,25 @@ def _compare_inv(cube_size: int, algs_list: Iterable[Alg]):
     assert cube.cqr.compare_state(s1)
 
 
-def _test_simplify(alg: Alg, cube_size: int):
+def _test_simplify(alg: Alg, cube_size: int, sp: IServiceProvider | None = None):
     """Test that simplifying an algorithm produces equivalent results."""
-    cube = Cube(cube_size, sp=_test_sp)
+    cube = Cube(cube_size, sp=sp or _test_sp)
     scramble_ = scramble(cube.size, "1")
 
     simplified = alg.simplify()
 
     _compare_two_algs(cube_size, (scramble_, alg), (scramble_, simplified))
-    _compare_inv(cube_size, (scramble_, alg))
+    _compare_inv(cube_size, (scramble_, alg), sp=sp)
 
     return simplified
 
 
 def _test_flatten(alg: Alg, cube_size: int):
     """Test that flattening an algorithm produces equivalent results."""
-    config.CONFIG_DEFAULTS.check_cube_sanity = False
+    sp = StubServiceProvider()
+    sp.config.check_cube_sanity = False
 
-    cube = Cube(cube_size, sp=_test_sp)
+    cube = Cube(cube_size, sp=sp)
     scramble_ = scramble(cube.size, "1")
 
     scramble_.play(cube)
@@ -79,19 +80,21 @@ class TestSimplify:
     def test_simplify_random_sequence(self):
         """Test simplification of a random sequence."""
         cube_size = 8
-        config.CONFIG_DEFAULTS.check_cube_sanity = False
+        sp = StubServiceProvider()
+        sp.config.check_cube_sanity = False
 
         alg = scramble(cube_size, n=5000, seed=None)
-        _test_simplify(alg, cube_size)
+        _test_simplify(alg, cube_size, sp=sp)
 
     def test_simplify_inverse(self):
         """Test simplification of an inverse algorithm."""
         cube_size = 8
-        config.CONFIG_DEFAULTS.check_cube_sanity = False
+        sp = StubServiceProvider()
+        sp.config.check_cube_sanity = False
 
         alg = (Algs.R * 2).inv()
 
-        _test_simplify(alg, cube_size)
+        _test_simplify(alg, cube_size, sp=sp)
         _test_flatten(alg, cube_size)
 
 

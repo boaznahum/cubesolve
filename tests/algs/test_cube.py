@@ -1,9 +1,9 @@
 import pytest
 
+from cube.application.config_impl import AppConfig
 from cube.domain.algs import Algs
 from cube.domain.algs.Scramble import scramble
 from cube.application.AbstractApp import AbstractApp
-from cube.application import _config as config
 from cube.domain.solver.SolverName import SolverName
 
 # All solvers (unsupported ones will be skipped via skip_if_not_supported)
@@ -17,23 +17,16 @@ def skip_if_not_supported(solver_name: SolverName, cube_size: int) -> None:
         pytest.skip(skip_reason)
 
 
-@pytest.fixture(autouse=True)
-def reset_sanity_config():
-    """Reset sanity config before each test to ensure clean state."""
-    original = config.CONFIG_DEFAULTS.check_cube_sanity
-    yield
-    config.CONFIG_DEFAULTS.check_cube_sanity = original
-
-
 @pytest.mark.parametrize("cube_size", [3, 5])
 @pytest.mark.parametrize("sanity_check", [True, False])
 @pytest.mark.parametrize("solver", ALL_SOLVERS)
 def test_scramble_and_solve(cube_size: int, sanity_check: bool, solver: SolverName):
     """Test that a scrambled cube can be solved correctly."""
     skip_if_not_supported(solver, cube_size)
-    config.CONFIG_DEFAULTS.check_cube_sanity = sanity_check
 
-    app = AbstractApp.create_app(cube_size, solver=solver)
+    cfg = AppConfig()
+    cfg.check_cube_sanity = sanity_check
+    app = AbstractApp.create_app(cube_size, solver=solver, config=cfg)
     cube = app.cube
 
     alg = scramble(cube.size, 4)

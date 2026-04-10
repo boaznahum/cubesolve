@@ -4,16 +4,24 @@ PRIVATE MODULE - DO NOT IMPORT DIRECTLY!
 This module contains configuration values for the application. It is intentionally
 named with a leading underscore to indicate it is private to the application package.
 
-To access configuration values from outside the application package:
-1. Use the ConfigProtocol via cube.config property (preferred for domain/presentation layers)
-2. Import as `from cube.application import _config as config` (for tests only)
+The ONLY module allowed to import this is ``config_impl.py``.
 
-DO NOT use `from cube.application._config import X` in production code.
-Access config values through the ConfigProtocol interface instead.
+To access configuration values:
+- Use ConfigProtocol via IServiceProvider.config (preferred for all code)
+- Tests: create an AppConfig() instance and interact via ConfigProtocol setters
+
+``CONFIG_DEFAULTS`` is **immutable** at runtime.  Any attempt to set a field
+(or a nested field) raises ``RuntimeError``.  The sole escape hatch is
+``.copy()`` which returns a fresh, fully mutable ``ConfigData``.
 """
+from __future__ import annotations
+
 import copy
+import dataclasses
+import enum
+import types
 from dataclasses import dataclass, field
-from typing import Tuple
+from typing import TYPE_CHECKING, Tuple
 
 from cube.config.face_tracer_config import FaceTrackerConfig, TrackerIndicatorConfig
 from cube.domain.solver.Solver2x2Name import Solver2x2Name as _Solver2x2Name
@@ -365,7 +373,132 @@ class ConfigData:
             self._notify("queue_heading_h2", value)
 
 
-# Module-level defaults instance — the single source of truth.
-# Tests may modify fields before creating an app (e.g., CONFIG_DEFAULTS.gui_test_mode = True).
-# Each AppConfig() copies from this at creation time.
-CONFIG_DEFAULTS = ConfigData()
+########## Deep-freeze infrastructure ##########
+
+# Cache of frozen subclasses keyed by (original class, error_prefix)
+_frozen_classes: dict[tuple[type, str], type] = {}
+
+
+def _make_frozen_class(cls: type, error_prefix: str = "CONFIG_DEFAULTS") -> type:
+    """Create or retrieve a frozen subclass that blocks ``__setattr__``."""
+    key = (cls, error_prefix)
+    if key not in _frozen_classes:
+        def frozen_setattr(self: object, name: str, value: object) -> None:
+            raise RuntimeError(
+                f"{error_prefix} is read-only (attempted to set "
+                f"{cls.__name__}.{name}). Use ConfigProtocol setters on "
+                f"a mutable AppConfig instance instead."
+            )
+
+        _frozen_classes[key] = type(f'_Frozen{cls.__name__}', (cls,), {
+            '__setattr__': frozen_setattr,
+        })
+    return _frozen_classes[key]
+
+
+def _freeze_value(value: object, error_prefix: str = "CONFIG_DEFAULTS") -> object:
+    """Convert mutable containers to immutable equivalents.
+
+    Returns the replacement value (may be the same object if no change needed).
+    """
+    if isinstance(value, dict):
+        # Recursively freeze dict values, then wrap in read-only proxy
+        for v in value.values():
+            _deep_freeze(v, error_prefix)
+        return types.MappingProxyType(value)
+    elif isinstance(value, list):
+        # Recursively freeze list items, then convert to immutable tuple
+        for item in value:
+            _deep_freeze(item, error_prefix)
+        return tuple(value)
+    return value
+
+
+def _deep_freeze(obj: object, error_prefix: str = "CONFIG_DEFAULTS") -> None:
+    """Recursively install ``__setattr__`` blockers on *obj* and descendants.
+
+    - Dataclass instances: freeze each field, then swap ``__class__`` to a
+      frozen subclass whose ``__setattr__`` raises ``RuntimeError``.
+    - Plain objects with ``__dict__`` (e.g. ``MarkersConfig``): same treatment.
+    - ``dict`` → ``MappingProxyType`` (done by ``_freeze_value``).
+    - ``list`` → ``tuple`` (done by ``_freeze_value``).
+    - Immutable primitives, enums, tuples: skip.
+    """
+    # Already immutable — nothing to do
+    if isinstance(obj, (str, int, float, bool, type(None), tuple, bytes,
+                        types.MappingProxyType, enum.Enum)):
+        return
+    if isinstance(obj, type):
+        return  # class objects (e.g. enum classes stored as values)
+
+    if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
+        for f in dataclasses.fields(obj):
+            if f.name.startswith('_'):
+                continue  # skip _listeners and other private state
+            value = getattr(obj, f.name)
+            frozen = _freeze_value(value, error_prefix)
+            if frozen is not value:
+                object.__setattr__(obj, f.name, frozen)
+            else:
+                _deep_freeze(value, error_prefix)
+        obj.__class__ = _make_frozen_class(type(obj), error_prefix)  # type: ignore[reportAttributeAccessIssue]
+
+    elif hasattr(obj, '__dict__') and not isinstance(obj, (types.FunctionType, types.ModuleType)):
+        # Non-dataclass with instance attributes (e.g. MarkersConfig)
+        for name in list(vars(obj)):
+            if name.startswith('_'):
+                continue
+            value = getattr(obj, name)
+            frozen = _freeze_value(value, error_prefix)
+            if frozen is not value:
+                object.__setattr__(obj, name, frozen)
+            else:
+                _deep_freeze(value, error_prefix)
+        obj.__class__ = _make_frozen_class(type(obj), error_prefix)  # type: ignore[reportAttributeAccessIssue]
+
+
+class _FrozenConfigDefaults:
+    """Read-only proxy around ``ConfigData`` defaults.
+
+    All attribute reads are delegated to a deep-frozen ``ConfigData`` snapshot.
+    All attribute writes raise ``RuntimeError``.
+    The only legitimate operation is ``.copy()`` → fresh, fully mutable ``ConfigData``.
+    """
+
+    def __init__(self, source: ConfigData) -> None:
+        # Keep an unfrozen template — .copy() deepcopies this
+        object.__setattr__(self, '_template', copy.deepcopy(source))
+        # Deep-freeze the source in-place — reads are served from this
+        _deep_freeze(source)
+        object.__setattr__(self, '_source', source)
+
+    def copy(self) -> ConfigData:
+        """Return a fresh, fully mutable ``ConfigData`` clone."""
+        new = copy.deepcopy(object.__getattribute__(self, '_template'))
+        new._listeners = []
+        return new
+
+    def __getattr__(self, name: str) -> object:
+        return getattr(object.__getattribute__(self, '_source'), name)
+
+    def __setattr__(self, name: str, value: object) -> None:
+        raise RuntimeError(
+            f"CONFIG_DEFAULTS is read-only (attempted to set '{name}'). "
+            f"To change config at runtime, use ConfigProtocol setters on "
+            f"an AppConfig instance (via IServiceProvider.config or "
+            f"create_app_window(config=...))."
+        )
+
+
+########## Module-level defaults — immutable at runtime ##########
+
+# CONFIG_DEFAULTS is the single source of truth for default values.
+# It is deeply frozen: any attempt to mutate a field (or nested field)
+# raises RuntimeError.  Use CONFIG_DEFAULTS.copy() to get a mutable clone.
+#
+# For type checkers, CONFIG_DEFAULTS appears as ConfigData so that
+# attribute access retains full type information.
+if TYPE_CHECKING:
+    CONFIG_DEFAULTS: ConfigData
+else:
+    CONFIG_DEFAULTS = _FrozenConfigDefaults(ConfigData())

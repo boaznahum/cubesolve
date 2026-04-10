@@ -136,15 +136,15 @@ _params = [
 ]
 
 
-@pytest.fixture(autouse=True, scope="session")
-def _deterministic_geometry():
-    """Disable random face pick-up in geometry to make solvers deterministic.
-
-    Must set on CONFIG_DEFAULTS BEFORE any AbstractApp.create_app() call,
-    because AppConfig.__init__ copies CONFIG_DEFAULTS.
-    """
-    from cube.application._config import CONFIG_DEFAULTS
-    CONFIG_DEFAULTS.prevent_random_face_pick_up_in_geometry = True
+@pytest.fixture(autouse=True, scope="module")
+def _deterministic_geometry_config():
+    """Provide a config factory with deterministic geometry for all tests in this module."""
+    # Note: This fixture is currently unused (test class is commented out).
+    # When re-enabled, tests should create AppConfig via:
+    #   cfg = AppConfig()
+    #   cfg.prevent_random_face_pick_up_in_geometry = True
+    #   app = AbstractApp.create_app(config=cfg)
+    pass
 
 
 # @pytest.mark.slow

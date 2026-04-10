@@ -34,6 +34,7 @@ from cube.presentation.gui.commands import Commands
 if TYPE_CHECKING:
     from cube.domain.solver.SolverName import SolverName
     from cube.presentation.gui.protocols import AppWindow
+    from cube.utils.config_protocol import ConfigProtocol
 
 
 def _inject_commands(window: "AppWindow", commands_str: str) -> None:
@@ -70,6 +71,7 @@ def create_app_window(
     debug_all: bool = False,
     quiet_all: bool = False,
     solver: "SolverName | None" = None,
+    config: "ConfigProtocol | None" = None,
     width: int = 900,
     height: int = 720,
     title: str = "Cube Solver",
@@ -88,6 +90,8 @@ def create_app_window(
         debug_all: Enable verbose logging.
         quiet_all: Suppress all debug output.
         solver: Solver to use (default: from config).
+        config: Pre-configured ConfigProtocol instance. If ``None`` (default),
+            a fresh ``AppConfig()`` is created from ``CONFIG_DEFAULTS``.
         width: Window width in pixels (ignored for console/headless).
         height: Window height in pixels (ignored for console/headless).
         title: Window title.
@@ -110,6 +114,7 @@ def create_app_window(
         debug_all=debug_all,
         quiet_all=quiet_all,
         solver=solver,
+        config=config,
     )
 
     window = backend.create_app_window(app, width, height, title)

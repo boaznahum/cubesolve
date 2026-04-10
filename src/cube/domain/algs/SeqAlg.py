@@ -1,5 +1,4 @@
 import functools
-import typing
 from collections.abc import Iterator, MutableSequence, Sequence
 from typing import TYPE_CHECKING
 from typing_extensions import override

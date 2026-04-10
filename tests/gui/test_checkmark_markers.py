@@ -17,7 +17,7 @@ import pytest
 
 pytestmark = pytest.mark.gui
 
-from cube.application import _config as config
+from cube.application.config_impl import AppConfig
 from cube.application.exceptions.app_exceptions import AppExit
 from cube.main_any_backend import create_app_window
 from cube.presentation.gui.commands import Commands
@@ -36,17 +36,15 @@ def test_checkmark_markers_on_centers(backend: str):
     backend : str
         Backend to use, parametrized from conftest.py.
     """
-    # Save original config
-    original_test_mode = config.CONFIG_DEFAULTS.gui_test_mode
-
     event_loop = None
     view_duration = 0.1  # seconds to view markers before quit
 
     try:
-        config.CONFIG_DEFAULTS.gui_test_mode = True
+        cfg = AppConfig()
+        cfg.gui_test_mode = True
 
         # Single point of creation: app + backend wired together
-        win = create_app_window(backend, cube_size=5, animation=False,
+        win = create_app_window(backend, cube_size=5, animation=False, config=cfg,
                                 width=720, height=720, title="Checkmark Markers Test")
         event_loop = win.backend.event_loop
         cube = win.app.cube
@@ -100,8 +98,6 @@ def test_checkmark_markers_on_centers(backend: str):
         except:
             pass
 
-        config.CONFIG_DEFAULTS.gui_test_mode = original_test_mode
-
     assert result.success, f"Test failed: {result.message}. Error: {result.error}"
 
 
@@ -120,15 +116,15 @@ def test_checkmark_markers_on_nxn_centers(cube_size: int, backend: str):
     backend : str
         Backend to use.
     """
-    original_test_mode = config.CONFIG_DEFAULTS.gui_test_mode
     event_loop = None
     view_duration = 3.0
 
     try:
-        config.CONFIG_DEFAULTS.gui_test_mode = True
+        cfg = AppConfig()
+        cfg.gui_test_mode = True
 
         # Single point of creation: app + backend wired together
-        win = create_app_window(backend, cube_size=cube_size, animation=False,
+        win = create_app_window(backend, cube_size=cube_size, animation=False, config=cfg,
                                 width=720, height=720,
                                 title=f"Checkmark Markers - {cube_size}x{cube_size}")
         event_loop = win.backend.event_loop
@@ -169,6 +165,4 @@ def test_checkmark_markers_on_nxn_centers(cube_size: int, backend: str):
                 win.close()
         except:
             pass
-        config.CONFIG_DEFAULTS.gui_test_mode = original_test_mode
-
     assert result.success, f"Test failed: {result.message}. Error: {result.error}"

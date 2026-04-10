@@ -40,10 +40,15 @@ class AppConfig(ConfigProtocol):
     ConfigData is populated from the current module-level constants at creation
     time, so tests that set cfg.X = value before creating an AppConfig get the
     right values.
+
+    Args:
+        _error_prefix: ignored if frozen is False.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *, frozen: bool = False, _error_prefix: str | None = None) -> None:
         self._data = cfg.CONFIG_DEFAULTS.copy()
+        if frozen:
+            cfg._deep_freeze(self._data, error_prefix=_error_prefix if _error_prefix else "AppConfig")
 
     # ==========================================================================
     # Model settings
@@ -89,10 +94,20 @@ class AppConfig(ConfigProtocol):
             return not env_disable  # DISABLE_CACHE=1 → enable=False
         return self._data.enable_cube_cache
 
+    @enable_cube_cache.setter
+    def enable_cube_cache(self, value: bool) -> None:
+        """Set cube cache flag."""
+        self._data.enable_cube_cache = value
+
     @property
     def prevent_random_face_pick_up_in_geometry(self) -> bool:
         """Prevent random face selection in geometry walking (debug flag)."""
         return self._data.prevent_random_face_pick_up_in_geometry
+
+    @prevent_random_face_pick_up_in_geometry.setter
+    def prevent_random_face_pick_up_in_geometry(self, value: bool) -> None:
+        """Set prevent random face pick up flag."""
+        self._data.prevent_random_face_pick_up_in_geometry = value
 
     # ==========================================================================
     # Solver settings
@@ -101,6 +116,11 @@ class AppConfig(ConfigProtocol):
     def default_solver(self) -> str:
         """Default solver name (case-insensitive, prefix matching allowed)."""
         return self._data.default_solver
+
+    @default_solver.setter
+    def default_solver(self, value: str) -> None:
+        """Set default solver name."""
+        self._data.default_solver = value
 
     @property
     def solver_for_tests(self) -> str:
@@ -285,6 +305,11 @@ class AppConfig(ConfigProtocol):
         """GUI testing mode - exceptions propagate."""
         return self._data.gui_test_mode
 
+    @gui_test_mode.setter
+    def gui_test_mode(self, value: bool) -> None:
+        """Set GUI test mode flag."""
+        self._data.gui_test_mode = value
+
     @property
     def quit_on_error_in_test_mode(self) -> bool:
         """Quit application on error in test mode."""
@@ -459,6 +484,21 @@ class AppConfig(ConfigProtocol):
         """Path for last scramble file."""
         return self._data.last_scramble_path
 
+    @property
+    def aggressive_2_test_number_sizes(self) -> list[int]:
+        """Cube sizes for aggressive stress tests."""
+        return self._data.aggressive_2_test_number_sizes
+
+    @property
+    def aggressive_2_test_number_of_scramble_start(self) -> int:
+        """Starting scramble key for aggressive stress tests."""
+        return self._data.aggressive_2_test_number_of_scramble_start
+
+    @property
+    def aggressive_2_test_number_of_scramble_iterations(self) -> int:
+        """Number of scramble iterations for aggressive stress tests."""
+        return self._data.aggressive_2_test_number_of_scramble_iterations
+
     # ==========================================================================
     # Input debug settings
     # ==========================================================================
@@ -466,6 +506,11 @@ class AppConfig(ConfigProtocol):
     def keyboard_input_debug(self) -> bool:
         """Enable keyboard input debug output."""
         return self._data.keyboard_input_debug
+
+    @keyboard_input_debug.setter
+    def keyboard_input_debug(self, value: bool) -> None:
+        """Set keyboard input debug flag."""
+        self._data.keyboard_input_debug = value
 
     @property
     def input_mouse_debug(self) -> bool:
@@ -506,3 +551,31 @@ class AppConfig(ConfigProtocol):
             True if the code is enabled in SS_CODES config, False otherwise
         """
         return self._data.ss_codes.get(code, False)
+
+    # ==========================================================================
+    # Freeze / unfreeze
+    # ==========================================================================
+    def get_frozen(self, _error_prefix: str | None = None) -> "AppConfig":
+        """Return a new frozen copy of this config's current state.
+
+        The returned AppConfig shares the same field values but all setters
+        raise RuntimeError.  Useful for creating shared read-only config
+        templates (e.g. ``_solver_defaults``).
+        """
+        new = AppConfig.__new__(AppConfig)
+        new._data = self._data.copy()
+        cfg._deep_freeze(new._data, error_prefix=_error_prefix or "AppConfig(frozen)")
+        return new
+
+    def get_unfrozen(self) -> "AppConfig":
+        """Return a new mutable copy of this config's current state.
+
+        Raises NotImplementedError — not yet needed.  When implemented,
+        will deep-copy from the unfrozen template (stored at freeze time)
+        so that all field values are preserved as plain mutable objects.
+        """
+        raise NotImplementedError(
+            "get_unfrozen() is not yet implemented. "
+            "Create a fresh AppConfig() and set fields manually, "
+            "or pass the frozen config directly if the consumer only reads."
+        )

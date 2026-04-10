@@ -7,7 +7,6 @@ import time
 
 import pytest
 
-from cube.application import _config as cfg
 from cube.domain.algs import Algs
 from cube.domain.algs.Scramble import scramble
 from cube.domain.model.Cube import Cube
@@ -36,54 +35,46 @@ def test_slice_cache_performance():
     n_scrambles = 20
     moves_per_scramble = 100
 
-    # Store original config value
-    original_cache_setting = cfg.CONFIG_DEFAULTS.enable_cube_cache
+    # ===== Test WITHOUT cache =====
+    sp_no_cache = StubServiceProvider()
+    sp_no_cache.config.enable_cube_cache = False
 
-    try:
-        # ===== Test WITHOUT cache =====
-        cfg.CONFIG_DEFAULTS.enable_cube_cache = False
-        sp_no_cache = StubServiceProvider()
+    total_time_no_cache = 0.0
+    for seed in range(n_scrambles):
+        cube = Cube(cube_size, sp=sp_no_cache)
+        elapsed = _scramble_cube(cube, moves_per_scramble, seed)
+        total_time_no_cache += elapsed
 
-        total_time_no_cache = 0.0
-        for seed in range(n_scrambles):
-            cube = Cube(cube_size, sp=sp_no_cache)
-            elapsed = _scramble_cube(cube, moves_per_scramble, seed)
-            total_time_no_cache += elapsed
+    # ===== Test WITH cache =====
+    sp_with_cache = StubServiceProvider()
+    sp_with_cache.config.enable_cube_cache = True
 
-        # ===== Test WITH cache =====
-        cfg.CONFIG_DEFAULTS.enable_cube_cache = True
-        sp_with_cache = StubServiceProvider()
+    total_time_with_cache = 0.0
+    for seed in range(n_scrambles):
+        cube = Cube(cube_size, sp=sp_with_cache)
+        elapsed = _scramble_cube(cube, moves_per_scramble, seed)
+        total_time_with_cache += elapsed
 
-        total_time_with_cache = 0.0
-        for seed in range(n_scrambles):
-            cube = Cube(cube_size, sp=sp_with_cache)
-            elapsed = _scramble_cube(cube, moves_per_scramble, seed)
-            total_time_with_cache += elapsed
+    # Calculate statistics
+    total_moves = n_scrambles * moves_per_scramble
+    speedup = total_time_no_cache / total_time_with_cache if total_time_with_cache > 0 else 0
 
-        # Calculate statistics
-        total_moves = n_scrambles * moves_per_scramble
-        speedup = total_time_no_cache / total_time_with_cache if total_time_with_cache > 0 else 0
+    # Report results
+    print(f"\n{'='*60}")
+    print(f"Slice Cache Performance Test")
+    print(f"{'='*60}")
+    print(f"Cube size: {cube_size}x{cube_size}")
+    print(f"Total moves: {total_moves} ({n_scrambles} scrambles x {moves_per_scramble} moves)")
+    print(f"")
+    print(f"WITHOUT cache: {total_time_no_cache:.3f}s ({total_moves/total_time_no_cache:.0f} moves/s)")
+    print(f"WITH cache:    {total_time_with_cache:.3f}s ({total_moves/total_time_with_cache:.0f} moves/s)")
+    print(f"")
+    print(f"Speedup: {speedup:.2f}x")
+    print(f"{'='*60}")
 
-        # Report results
-        print(f"\n{'='*60}")
-        print(f"Slice Cache Performance Test")
-        print(f"{'='*60}")
-        print(f"Cube size: {cube_size}x{cube_size}")
-        print(f"Total moves: {total_moves} ({n_scrambles} scrambles x {moves_per_scramble} moves)")
-        print(f"")
-        print(f"WITHOUT cache: {total_time_no_cache:.3f}s ({total_moves/total_time_no_cache:.0f} moves/s)")
-        print(f"WITH cache:    {total_time_with_cache:.3f}s ({total_moves/total_time_with_cache:.0f} moves/s)")
-        print(f"")
-        print(f"Speedup: {speedup:.2f}x")
-        print(f"{'='*60}")
-
-        # Basic sanity check - cache should not be slower
-        # (Allow some margin for measurement noise)
-        assert speedup >= 0.9, f"Cache unexpectedly slower: {speedup:.2f}x"
-
-    finally:
-        # Restore original config
-        cfg.CONFIG_DEFAULTS.enable_cube_cache = original_cache_setting
+    # Basic sanity check - cache should not be slower
+    # (Allow some margin for measurement noise)
+    assert speedup >= 0.9, f"Cache unexpectedly slower: {speedup:.2f}x"
 
 
 @pytest.mark.slow
@@ -97,51 +88,43 @@ def test_slice_only_rotations():
     cube_size = 5
     n_iterations = 100
 
-    # Store original config value
-    original_cache_setting = cfg.CONFIG_DEFAULTS.enable_cube_cache
+    # ===== Test WITHOUT cache =====
+    sp_no_cache = StubServiceProvider()
+    sp_no_cache.config.enable_cube_cache = False
+    cube = Cube(cube_size, sp=sp_no_cache)
 
-    try:
-        # ===== Test WITHOUT cache =====
-        cfg.CONFIG_DEFAULTS.enable_cube_cache = False
-        sp_no_cache = StubServiceProvider()
-        cube = Cube(cube_size, sp=sp_no_cache)
+    start = time.perf_counter()
+    for _ in range(n_iterations):
+        Algs.m.play(cube)
+        Algs.e.play(cube)
+        Algs.s.play(cube)
+    time_no_cache = time.perf_counter() - start
 
-        start = time.perf_counter()
-        for _ in range(n_iterations):
-            Algs.m.play(cube)
-            Algs.e.play(cube)
-            Algs.s.play(cube)
-        time_no_cache = time.perf_counter() - start
+    # ===== Test WITH cache =====
+    sp_with_cache = StubServiceProvider()
+    sp_with_cache.config.enable_cube_cache = True
+    cube = Cube(cube_size, sp=sp_with_cache)
 
-        # ===== Test WITH cache =====
-        cfg.CONFIG_DEFAULTS.enable_cube_cache = True
-        sp_with_cache = StubServiceProvider()
-        cube = Cube(cube_size, sp=sp_with_cache)
+    start = time.perf_counter()
+    for _ in range(n_iterations):
+        Algs.m.play(cube)
+        Algs.e.play(cube)
+        Algs.s.play(cube)
+    time_with_cache = time.perf_counter() - start
 
-        start = time.perf_counter()
-        for _ in range(n_iterations):
-            Algs.m.play(cube)
-            Algs.e.play(cube)
-            Algs.s.play(cube)
-        time_with_cache = time.perf_counter() - start
+    # Calculate statistics
+    total_moves = n_iterations * 3  # M, E, S each iteration
+    speedup = time_no_cache / time_with_cache if time_with_cache > 0 else 0
 
-        # Calculate statistics
-        total_moves = n_iterations * 3  # M, E, S each iteration
-        speedup = time_no_cache / time_with_cache if time_with_cache > 0 else 0
-
-        # Report results
-        print(f"\n{'='*60}")
-        print(f"Slice-Only Rotation Test (M, E, S)")
-        print(f"{'='*60}")
-        print(f"Cube size: {cube_size}x{cube_size}")
-        print(f"Total slice rotations: {total_moves}")
-        print(f"")
-        print(f"WITHOUT cache: {time_no_cache:.3f}s ({total_moves/time_no_cache:.0f} ops/s)")
-        print(f"WITH cache:    {time_with_cache:.3f}s ({total_moves/time_with_cache:.0f} ops/s)")
-        print(f"")
-        print(f"Speedup: {speedup:.2f}x")
-        print(f"{'='*60}")
-
-    finally:
-        # Restore original config
-        cfg.CONFIG_DEFAULTS.enable_cube_cache = original_cache_setting
+    # Report results
+    print(f"\n{'='*60}")
+    print(f"Slice-Only Rotation Test (M, E, S)")
+    print(f"{'='*60}")
+    print(f"Cube size: {cube_size}x{cube_size}")
+    print(f"Total slice rotations: {total_moves}")
+    print(f"")
+    print(f"WITHOUT cache: {time_no_cache:.3f}s ({total_moves/time_no_cache:.0f} ops/s)")
+    print(f"WITH cache:    {time_with_cache:.3f}s ({total_moves/time_with_cache:.0f} ops/s)")
+    print(f"")
+    print(f"Speedup: {speedup:.2f}x")
+    print(f"{'='*60}")

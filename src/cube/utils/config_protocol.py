@@ -218,9 +218,19 @@ class ConfigProtocol(Protocol):
         """Enable cube caching for performance optimization."""
         ...
 
+    @enable_cube_cache.setter
+    def enable_cube_cache(self, value: bool) -> None:
+        """Set cube cache flag."""
+        ...
+
     @property
     def prevent_random_face_pick_up_in_geometry(self) -> bool:
         """Prevent random face selection in geometry walking (debug flag)."""
+        ...
+
+    @prevent_random_face_pick_up_in_geometry.setter
+    def prevent_random_face_pick_up_in_geometry(self, value: bool) -> None:
+        """Set prevent random face pick up flag."""
         ...
 
     # ==========================================================================
@@ -229,6 +239,11 @@ class ConfigProtocol(Protocol):
     @property
     def default_solver(self) -> str:
         """Default solver name (case-insensitive, prefix matching allowed)."""
+        ...
+
+    @default_solver.setter
+    def default_solver(self, value: str) -> None:
+        """Set default solver name."""
         ...
 
     @property
@@ -419,6 +434,11 @@ class ConfigProtocol(Protocol):
         """GUI testing mode - exceptions propagate."""
         ...
 
+    @gui_test_mode.setter
+    def gui_test_mode(self, value: bool) -> None:
+        """Set GUI test mode flag."""
+        ...
+
     @property
     def quit_on_error_in_test_mode(self) -> bool:
         """Quit application on error in test mode."""
@@ -593,12 +613,32 @@ class ConfigProtocol(Protocol):
         """Path for last scramble file."""
         ...
 
+    @property
+    def aggressive_2_test_number_sizes(self) -> list[int]:
+        """Cube sizes for aggressive stress tests."""
+        ...
+
+    @property
+    def aggressive_2_test_number_of_scramble_start(self) -> int:
+        """Starting scramble key for aggressive stress tests."""
+        ...
+
+    @property
+    def aggressive_2_test_number_of_scramble_iterations(self) -> int:
+        """Number of scramble iterations for aggressive stress tests."""
+        ...
+
     # ==========================================================================
     # Input debug settings
     # ==========================================================================
     @property
     def keyboard_input_debug(self) -> bool:
         """Enable keyboard input debug output."""
+        ...
+
+    @keyboard_input_debug.setter
+    def keyboard_input_debug(self, value: bool) -> None:
+        """Set keyboard input debug flag."""
         ...
 
     @property
@@ -642,4 +682,15 @@ class ConfigProtocol(Protocol):
         Returns:
             True if the code is enabled in SS_CODES config, False otherwise
         """
+        ...
+
+    # ==========================================================================
+    # Freeze / unfreeze
+    # ==========================================================================
+    def get_frozen(self, _error_prefix: str | None = None) -> "ConfigProtocol":
+        """Return a new frozen (read-only) copy of this config."""
+        ...
+
+    def get_unfrozen(self) -> "ConfigProtocol":
+        """Return a new mutable copy of this config."""
         ...

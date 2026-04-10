@@ -1,24 +1,20 @@
 """Test for sanity check functionality."""
 import pytest
 
-from cube.application import _config as config
 from cube.domain.algs import Algs
 from cube.domain.model.Cube import Cube
-from tests.test_utils import _test_sp
+from tests.test_utils import StubServiceProvider
 
 
 def test_sanity_check_enabled():
     """Test basic operation with sanity check enabled."""
-    original = config.CONFIG_DEFAULTS.check_cube_sanity
-    try:
-        config.CONFIG_DEFAULTS.check_cube_sanity = True
+    sp = StubServiceProvider()
+    sp.config.check_cube_sanity = True
 
-        cube = Cube(3, sp=_test_sp)
+    cube = Cube(3, sp=sp)
 
-        alg = Algs.U
-        alg.play(cube)
+    alg = Algs.U
+    alg.play(cube)
 
-        # If we get here without exception, sanity check passed
-        assert True
-    finally:
-        config.CONFIG_DEFAULTS.check_cube_sanity = original
+    # If we get here without exception, sanity check passed
+    assert True

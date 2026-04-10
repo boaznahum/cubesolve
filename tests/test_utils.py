@@ -2,6 +2,10 @@
 Shared test utilities.
 
 Provides StubServiceProvider for tests that create Cube directly without full app.
+
+``_test_sp`` is a shared, **read-only** service provider for tests that only
+need default config.  Any attempt to mutate its config raises RuntimeError.
+Tests that need custom config must create their own ``StubServiceProvider()``.
 """
 
 from cube.application.config_impl import AppConfig
@@ -14,11 +18,19 @@ from cube.utils.service_provider import IServiceProvider
 class StubServiceProvider(IServiceProvider):
     """Service provider for tests that create Cube directly without full app.
 
-    Implements IServiceProvider protocol - can be passed to Cube(size, sp=test_sp).
+    Each test that needs custom config should create its own instance:
+        sp = StubServiceProvider()
+        sp.config.check_cube_sanity = True
+        cube = Cube(3, sp=sp)
+
+    For shared read-only access, use ``_test_sp`` (frozen=True).
     """
 
-    def __init__(self) -> None:
-        self._config = AppConfig()
+    def __init__(self, *, frozen: bool = False) -> None:
+        self._config = AppConfig(
+            frozen=frozen,
+            _error_prefix="_test_sp.config"
+        )
         self._marker_factory = MarkerFactory()
         self._marker_manager = MarkerManager()
         self._logger = setup_root_logger()  # Uses env var override if set
@@ -40,5 +52,6 @@ class StubServiceProvider(IServiceProvider):
         return self._logger
 
 
-# Create a shared instance for tests to use
-_test_sp = StubServiceProvider()
+# Shared READ-ONLY instance — any config mutation raises RuntimeError.
+# Tests that need custom config must create their own StubServiceProvider().
+_test_sp = StubServiceProvider(frozen=True)
